@@ -44,6 +44,9 @@ jobs:
       - name: Autoria dos commits
         run: npm run verify:authors
 
+      - name: Caractere literal em fonte
+        run: npm run verify:fontes
+
       - name: Tipos
         run: npm run typecheck
 

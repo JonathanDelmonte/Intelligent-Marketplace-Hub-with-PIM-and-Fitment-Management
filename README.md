@@ -61,6 +61,7 @@ estaria morto. Ver [ADR 0001](./docs/adr/0001-capacidades-nao-plataformas.md),
 | [Especificação](./docs/especificacao.md)              | escopo completo, 16 módulos, modelo de dados, riscos |
 | [Roadmap](./docs/roadmap.md)                          | fases por utilidade, com estado de cada entrega      |
 | [ADRs](./docs/adr/)                                   | as decisões de arquitetura e o porquê de cada uma    |
+| [Diário de bordo](./docs/diario-de-bordo.md)          | bugs, armadilhas e decisões pequenas, em ordem       |
 | [Matriz de capacidades](./docs/matriz-capacidades.md) | o que cada plataforma responde de verdade            |
 | [CLAUDE.md](./CLAUDE.md)                              | convenções obrigatórias para quem mexe no código     |
 

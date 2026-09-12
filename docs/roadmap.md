@@ -101,7 +101,7 @@ a `bloqueado`, com o status HTTP na mão.
 | 3.4  | Extrator de catálogo de distribuidor (LLM obrigatório)                | ⬜     |
 | 3.5  | Extrator de PDF de tabela de preços                                   | ⬜     |
 | 3.6  | Extrator de imagem de tabela (print de WhatsApp) — visão              | ⬜     |
-| 3.7  | Importadores de planilha de exportação das três plataformas           | ⬜     |
+| 3.7  | Importadores de planilha de exportação das três plataformas           | 🚧     |
 | 3.8  | Fila `job` idempotente e retomável + contagem por status              | ✅     |
 | 3.9  | `pendente_revisao` em vez de descarte quando o schema falha           | ✅     |
 | 3.10 | M2: repositório de `sku` com `perfil_id` exigido pelo compilador      | ✅     |
@@ -119,9 +119,16 @@ escrever extrator sem poder rodá-lo contra página de verdade produziria códig
 que parece funcionar.
 
 A fronteira está desenhada: `exigeLlm()` diz quais tipos de entrada gastam token
-e quais não, e o classificador já roteia. O próximo passo é implementar
-`planilha_exportacao` primeiro, porque é o único com mapeamento fixo de colunas
-e portanto o único que roda sem LLM nenhum.
+e quais não, e o classificador já roteia.
+
+**A 3.7 está 🚧 e não ✅, e o motivo é honesto.** O importador está completo e
+testado — leitor de CSV/TSV próprio, XLSX por `exceljs`, busca de cabeçalho,
+interpretação de preço por forma validada, `pendente_revisao` com o bruto
+preservado. O que falta não é código: é **confirmar os nomes de coluna** contra
+uma exportação real das plataformas, que não existe disponível aqui. O
+mapeamento relata toda coluna que não reconhece, então fechar a 3.7 é rodar uma
+importação de verdade e completar a tabela de sinônimos com o que o relatório
+apontar. Ver o diário de bordo.
 
 ---
 

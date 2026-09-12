@@ -21,17 +21,19 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
-    "check": "npm run typecheck && npm run lint && npm run format:check && npm run test",
+    "check": "npm run verify:fontes && npm run typecheck && npm run lint && npm run format:check && npm run test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/infra/banco/migrar.ts",
     "db:seed": "tsx src/infra/banco/semear.ts",
     "db:studio": "drizzle-kit studio",
     "sondar:capacidades": "tsx scripts/sondar-capacidades.ts",
     "verify:authors": "node scripts/verify-authors.mjs",
-    "prepare": "git config core.hooksPath .githooks"
+    "prepare": "git config core.hooksPath .githooks",
+    "verify:fontes": "node scripts/verificar-fontes-texto.mjs"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",
+    "exceljs": "4.4.0",
     "next": "16.3.5",
     "postgres": "3.4.9",
     "react": "19.3.0",

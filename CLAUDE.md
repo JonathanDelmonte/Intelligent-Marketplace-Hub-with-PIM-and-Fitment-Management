@@ -123,6 +123,19 @@ em `llm_call`. Agente sem teto de orçamento por execução não roda.
 
 ---
 
+## 3.6 Registrar problema, erro e decisão
+
+Todo problema encontrado, erro cometido, armadilha descoberta e decisão pequena
+vai para **`docs/diario-de-bordo.md`**, no topo, com a marcação de tipo. ADR é
+para decisão de arquitetura; o diário é para o resto — e o resto é o que
+desaparece da memória em duas semanas.
+
+O que vale registrar: bug que só o teste pegou, biblioteca que não serviu e por
+quê, número que não foi possível confirmar, atalho consciente com o custo
+anotado, e qualquer coisa que custou mais de meia hora para descobrir.
+
+---
+
 ## 4. Convenções de código
 
 - TypeScript `strict`, sem `any` implícito, sem `as` para calar o compilador.
