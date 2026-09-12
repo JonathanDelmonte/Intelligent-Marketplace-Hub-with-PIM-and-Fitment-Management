@@ -28,6 +28,29 @@ Convenção de marcação:
 
 ## 2026-09-12 — Fase 5: resolução de identidade (M3)
 
+### 🐛 `sql<number>` é asserção de tipo, não conversão — e o `bigint` chegou ao formatador
+
+A fila de revisão junta `produto_externo` duas vezes (um lado por coluna do par), e a
+primeira versão fez o alias do segundo lado com `sql\`produto_externo as pb\``. Com
+alias em `sql` cru, as **colunas** também têm de ser escritas em `sql` cru — e
+`sql<number>` é uma asserção: o compilador acredita, o driver devolve `bigint` para
+coluna `bigint`, e a tela morre em *Cannot mix BigInt and other types* dentro do
+formatador de dinheiro.
+
+`alias()` do Drizzle resolve: o mapeador de coluna continua valendo nos dois lados.
+Detalhe que custou uma segunda rodada — o nome do alias entra no **tipo** da tabela,
+então uma função comum para "as colunas de um lado" perde a tipagem; os dois lados
+são escritos lado a lado de propósito.
+
+**Só rodar a tela pegou isso.** Typecheck, lint e 899 testes passavam.
+
+### 🐛 "falta GTIN dos dois lados" era falso na tela
+
+O motivo do casamento indeciso dizia "falta GTIN ou código de peça **dos dois
+lados**". O caso comum é o anúncio ter GTIN e o catálogo do distribuidor não — então a
+frase era falsa exatamente no par mais frequente. Virou "em um dos lados". Tela de
+revisão existe para a pessoa confiar no que lê.
+
 ### 🔀 `next dev` escrevia no `CLAUDE.md`, e agora não escreve
 
 O Next 16 anexa um bloco de instruções para agentes ao `CLAUDE.md` do projeto a cada

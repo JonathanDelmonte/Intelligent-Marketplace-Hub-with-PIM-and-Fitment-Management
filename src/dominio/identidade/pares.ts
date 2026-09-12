@@ -12,6 +12,7 @@
  * discordar. Isso está no `setWhere` do upsert, e não em uma convenção.
  */
 import { and, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import type { Banco } from '@/infra/banco/cliente';
 import { parIdentidade, produtoExterno } from '@/infra/banco/schema';
 import type { Decisao, NivelDeCasamento } from './casamento';
@@ -72,6 +73,9 @@ export interface LadoDaFila {
   readonly url: string | null;
   readonly formaCanonica: string | null;
   readonly skuId: string | null;
+  /** Procedência, que é o que diz qual afirmação é mais forte (ADR 0002). */
+  readonly fonte: string;
+  readonly coletadoEm: Date;
 }
 
 export interface ParDaFila {
@@ -190,41 +194,16 @@ export class RepositorioDePares {
    * faz a fila andar. Par cru fica para depois.
    */
   async fila(limite = 50): Promise<readonly ParDaFila[]> {
-    const a = this.aliasLado('a');
-    const b = this.aliasLado('b');
-
     const linhas = await this.db
-      .select({
-        id: parIdentidade.id,
-        decisao: parIdentidade.decisao,
-        origem: parIdentidade.origem,
-        nivel: parIdentidade.nivel,
-        confiancaBp: parIdentidade.confiancaBp,
-        justificativa: parIdentidade.justificativa,
-        inconsistencias: parIdentidade.inconsistencias,
-        criadoEm: parIdentidade.criadoEm,
-        a,
-        b,
-      })
+      .select(this.colunas())
       .from(parIdentidade)
-      .innerJoin(produtoExterno, eq(produtoExterno.id, parIdentidade.produtoAId))
-      .innerJoin(sql`${produtoExterno} as pb`, sql`pb.id = ${parIdentidade.produtoBId}`)
+      .innerJoin(LADO_A, eq(LADO_A.id, parIdentidade.produtoAId))
+      .innerJoin(LADO_B, eq(LADO_B.id, parIdentidade.produtoBId))
       .where(eq(parIdentidade.status, 'pendente'))
       .orderBy(desc(parIdentidade.confiancaBp), desc(parIdentidade.criadoEm))
       .limit(limite);
 
-    return linhas.map((l) => ({
-      id: l.id,
-      decisao: l.decisao as Decisao,
-      origem: l.origem as OrigemDaDecisao,
-      nivel: l.nivel,
-      confiancaBp: l.confiancaBp,
-      justificativa: l.justificativa,
-      inconsistencias: Array.isArray(l.inconsistencias) ? (l.inconsistencias as string[]) : [],
-      criadoEm: l.criadoEm,
-      a: l.a,
-      b: l.b,
-    }));
+    return linhas.map((l) => montarPar(l));
   }
 
   /** Contagem por status, para a tela dizer quanto há sem carregar tudo. */
@@ -262,55 +241,103 @@ export class RepositorioDePares {
   /** Um par por id, com os dois lados. Para a ação da tela validar antes de gravar. */
   async porId(id: string): Promise<ParDaFila | null> {
     const linhas = await this.db
-      .select({
-        id: parIdentidade.id,
-        decisao: parIdentidade.decisao,
-        origem: parIdentidade.origem,
-        nivel: parIdentidade.nivel,
-        confiancaBp: parIdentidade.confiancaBp,
-        justificativa: parIdentidade.justificativa,
-        inconsistencias: parIdentidade.inconsistencias,
-        criadoEm: parIdentidade.criadoEm,
-        a: this.aliasLado('a'),
-        b: this.aliasLado('b'),
-      })
+      .select(this.colunas())
       .from(parIdentidade)
-      .innerJoin(produtoExterno, eq(produtoExterno.id, parIdentidade.produtoAId))
-      .innerJoin(sql`${produtoExterno} as pb`, sql`pb.id = ${parIdentidade.produtoBId}`)
+      .innerJoin(LADO_A, eq(LADO_A.id, parIdentidade.produtoAId))
+      .innerJoin(LADO_B, eq(LADO_B.id, parIdentidade.produtoBId))
       .where(eq(parIdentidade.id, id))
       .limit(1);
 
     const linha = linhas[0];
-    if (linha === undefined) return null;
-    return {
-      ...linha,
-      decisao: linha.decisao as Decisao,
-      origem: linha.origem as OrigemDaDecisao,
-      inconsistencias: Array.isArray(linha.inconsistencias)
-        ? (linha.inconsistencias as string[])
-        : [],
-    };
+    return linha === undefined ? null : montarPar(linha);
   }
 
-  /**
-   * As colunas de um lado do par.
-   *
-   * O lado B vem de um alias em `sql` cru porque o mesmo `produto_externo` aparece
-   * duas vezes no `join`. É o preço de guardar o par como duas colunas em uma linha —
-   * e guardar assim é o que dá a chave única que torna a reexecução idempotente.
-   */
-  private aliasLado(lado: 'a' | 'b') {
-    const p = lado === 'a' ? sql`produto_externo` : sql`pb`;
+  /** As colunas do par e dos dois lados, uma vez, para as duas consultas. */
+  private colunas() {
     return {
-      id: sql<string>`${p}.id`,
-      tituloBruto: sql<string>`${p}.titulo_bruto`,
-      ean: sql<string | null>`${p}.ean`,
-      preco: sql<number | null>`${p}.preco`,
-      vendedor: sql<string | null>`${p}.vendedor`,
-      plataformaOuSite: sql<string | null>`${p}.plataforma_ou_site`,
-      url: sql<string | null>`${p}.url`,
-      formaCanonica: sql<string | null>`${p}.forma_canonica`,
-      skuId: sql<string | null>`${p}.sku_id`,
+      id: parIdentidade.id,
+      decisao: parIdentidade.decisao,
+      origem: parIdentidade.origem,
+      nivel: parIdentidade.nivel,
+      confiancaBp: parIdentidade.confiancaBp,
+      justificativa: parIdentidade.justificativa,
+      inconsistencias: parIdentidade.inconsistencias,
+      criadoEm: parIdentidade.criadoEm,
+      // Escritos lado a lado em vez de por uma função comum: o nome do alias entra
+      // no tipo da tabela no Drizzle, então uma função que aceitasse os dois perderia
+      // a tipagem das colunas exatamente onde ela importa.
+      a: {
+        id: LADO_A.id,
+        tituloBruto: LADO_A.tituloBruto,
+        ean: LADO_A.ean,
+        preco: LADO_A.preco,
+        vendedor: LADO_A.vendedor,
+        plataformaOuSite: LADO_A.plataformaOuSite,
+        url: LADO_A.url,
+        formaCanonica: LADO_A.formaCanonica,
+        skuId: LADO_A.skuId,
+        fonte: LADO_A.fonte,
+        coletadoEm: LADO_A.coletadoEm,
+      },
+      b: {
+        id: LADO_B.id,
+        tituloBruto: LADO_B.tituloBruto,
+        ean: LADO_B.ean,
+        preco: LADO_B.preco,
+        vendedor: LADO_B.vendedor,
+        plataformaOuSite: LADO_B.plataformaOuSite,
+        url: LADO_B.url,
+        formaCanonica: LADO_B.formaCanonica,
+        skuId: LADO_B.skuId,
+        fonte: LADO_B.fonte,
+        coletadoEm: LADO_B.coletadoEm,
+      },
     };
   }
+}
+
+/**
+ * Os dois lados do par, como aliases da mesma tabela.
+ *
+ * `alias()` do Drizzle e **não** `sql\`produto_externo as pb\``, e a diferença
+ * custou um erro em produção de tela: com o alias em `sql` cru, as colunas também
+ * têm de ser escritas em `sql` cru, e `sql<number>` é uma **asserção de tipo, não
+ * uma conversão**. O driver devolve `bigint` para coluna `bigint`, o compilador
+ * acredita no `number` que eu escrevi, e o `bigint` chega ao formatador de dinheiro —
+ * que estoura com "Cannot mix BigInt and other types".
+ *
+ * Com `alias()`, o mapeador de coluna do Drizzle continua valendo nos dois lados, e o
+ * preço chega como o número que o tipo promete.
+ */
+const LADO_A = alias(produtoExterno, 'pa');
+const LADO_B = alias(produtoExterno, 'pb');
+
+interface LinhaDoPar {
+  readonly id: string;
+  readonly decisao: string;
+  readonly origem: string;
+  readonly nivel: string;
+  readonly confiancaBp: number;
+  readonly justificativa: string | null;
+  readonly inconsistencias: unknown;
+  readonly criadoEm: Date;
+  readonly a: LadoDaFila;
+  readonly b: LadoDaFila;
+}
+
+function montarPar(linha: LinhaDoPar): ParDaFila {
+  return {
+    id: linha.id,
+    decisao: linha.decisao as Decisao,
+    origem: linha.origem as OrigemDaDecisao,
+    nivel: linha.nivel,
+    confiancaBp: linha.confiancaBp,
+    justificativa: linha.justificativa,
+    inconsistencias: Array.isArray(linha.inconsistencias)
+      ? (linha.inconsistencias as string[])
+      : [],
+    criadoEm: linha.criadoEm,
+    a: linha.a,
+    b: linha.b,
+  };
 }

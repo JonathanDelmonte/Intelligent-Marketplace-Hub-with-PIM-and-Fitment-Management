@@ -222,6 +222,19 @@ describe.skipIf(!temBancoDeTeste())('resolução de identidade', () => {
       expect(fila[0]?.justificativa).toContain('quantidade');
     });
 
+    it('o nível determinístico chega à fila, para a tela não dizer "sem evidência"', async () => {
+      // O par fica pendente por quantidade divergente, mas a evidência que o trouxe
+      // foi marca e código de peça — e é isso que o revisor precisa ler.
+      const a = await ocorrencia('h1', { atributos: { ...REFIL_ANUNCIO, quantidadeEmbalagem: 1 } });
+      await ocorrencia('h2', { atributos: { ...REFIL_DISTRIBUIDOR, quantidadeEmbalagem: 3 } });
+      const resolvedor = new ResolvedorDeIdentidade(conexao.db);
+      await resolvedor.prepararLote();
+      await resolvedor.resolver(a);
+
+      const fila = await pares.fila();
+      expect(fila[0]?.nivel).toBe('marca_modelo');
+    });
+
     it('não reconsidera par já avaliado', async () => {
       const a = await ocorrencia('h1', { atributos: REFIL_ANUNCIO });
       const b = await ocorrencia('h2', { atributos: REFIL_DISTRIBUIDOR });

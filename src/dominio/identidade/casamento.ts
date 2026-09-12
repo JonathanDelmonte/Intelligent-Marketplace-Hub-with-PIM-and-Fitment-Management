@@ -212,7 +212,10 @@ export function casarDeterministicamente(
     decisao: 'indeciso',
     nivel: 'nenhum',
     confiancaBp: 0,
-    motivo: 'falta GTIN ou código de peça dos dois lados; precisa de julgamento',
+    // "em um dos lados" e não "nos dois": o caso comum é o anúncio ter GTIN e o
+    // catálogo do distribuidor não. Dizer "nos dois" seria falso na tela, e a tela
+    // de revisão existe justamente para a pessoa confiar no que lê.
+    motivo: 'falta GTIN ou código de peça em um dos lados; precisa de julgamento',
     inconsistencias,
   };
 }

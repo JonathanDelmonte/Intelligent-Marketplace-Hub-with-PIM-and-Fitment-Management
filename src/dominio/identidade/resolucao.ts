@@ -24,7 +24,12 @@ import type { Banco } from '@/infra/banco/cliente';
 import { produtoExterno } from '@/infra/banco/schema';
 import { OrcamentoEstourado, type Proposito, type ServicoDeLlm } from '@/infra/llm';
 import { chaveDeAgrupamento, formaCanonica } from './canonico';
-import { casarDeterministicamente, valeJulgamento, type LadoDoCasamento } from './casamento';
+import {
+  casarDeterministicamente,
+  valeJulgamento,
+  type LadoDoCasamento,
+  type NivelDeCasamento,
+} from './casamento';
 import { RepositorioDeExemplos, type Exemplo } from './exemplos';
 import { RepositorioDePares } from './pares';
 import { lerRegistro, riquezaDoRegistro, type RegistroDeProduto } from './registro';
@@ -263,6 +268,7 @@ export class ResolvedorDeIdentidade {
         candidato,
         exemplos,
         motivoDeterministico: deterministico.motivo,
+        nivelDeterministico: deterministico.nivel,
       });
       if (roteado.julgou) contagem.julgamentos += 1;
       contagem[roteado.balde] += 1;
@@ -309,6 +315,16 @@ export class ResolvedorDeIdentidade {
     readonly candidato: Candidato;
     readonly exemplos: readonly Exemplo[];
     readonly motivoDeterministico: string;
+    /**
+     * Nível que o casamento determinístico alcançou antes de desistir.
+     *
+     * Precisa chegar até a gravação, e o motivo apareceu na tela: gravando
+     * `'nenhum'` sempre, a fila de revisão dizia "sem evidência forte" para um par
+     * casado por marca e código de peça cuja única pendência era a quantidade
+     * divergente. Informação errada na tela de revisão é pior que informação
+     * nenhuma, porque a pessoa decide com base nela.
+     */
+    readonly nivelDeterministico: NivelDeCasamento;
   }): Promise<{
     readonly julgou: boolean;
     readonly balde: 'agrupados' | 'separados' | 'paraRevisao' | 'descartados' | 'pendenteDeLlm';
@@ -326,7 +342,7 @@ export class ResolvedorDeIdentidade {
         produtoB: outro.id,
         decisao: 'indeciso',
         origem: 'deterministico',
-        nivel: 'nenhum',
+        nivel: params.nivelDeterministico,
         confiancaBp: 0,
         status: 'pendente',
         justificativa: `${params.motivoDeterministico}; sem chave de LLM, então ninguém julgou`,
@@ -349,7 +365,7 @@ export class ResolvedorDeIdentidade {
         produtoB: outro.id,
         decisao: 'indeciso',
         origem: 'deterministico',
-        nivel: 'nenhum',
+        nivel: params.nivelDeterministico,
         confiancaBp: 0,
         status: 'pendente',
         justificativa: 'sem chave de LLM, então ninguém julgou',
@@ -368,7 +384,7 @@ export class ResolvedorDeIdentidade {
         produtoB: outro.id,
         decisao: 'indeciso',
         origem: 'llm',
-        nivel: 'nenhum',
+        nivel: params.nivelDeterministico,
         confiancaBp: 0,
         status: 'pendente',
         justificativa: motivo,
@@ -386,7 +402,7 @@ export class ResolvedorDeIdentidade {
         produtoB: outro.id,
         decisao: 'diferente',
         origem: 'llm',
-        nivel: candidato.via === 'embedding' ? 'embedding' : 'nenhum',
+        nivel: candidato.via === 'embedding' ? 'embedding' : params.nivelDeterministico,
         confiancaBp,
         status: 'automatico',
         justificativa: julgamento.justificativa,
@@ -407,7 +423,7 @@ export class ResolvedorDeIdentidade {
       produtoB: outro.id,
       decisao: status === 'descartado' ? 'indeciso' : 'mesmo',
       origem: 'llm',
-      nivel: candidato.via === 'embedding' ? 'embedding' : 'nenhum',
+      nivel: candidato.via === 'embedding' ? 'embedding' : params.nivelDeterministico,
       confiancaBp,
       status,
       justificativa: julgamento.justificativa,
