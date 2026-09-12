@@ -28,6 +28,12 @@ export function generateMetadata(): Metadata {
     description: 'Hub de operação e inteligência para venda em marketplaces.',
     authors: [{ name: marca.metaAutor }],
     applicationName: marca.nomeSistema,
+    /**
+     * Ícone declarado, senão o navegador pede `/favicon.ico` — que não existe, e o
+     * 404 aparecia no console de **toda** página do sistema. O SVG é o mesmo que o
+     * manifesto da PWA usa, então não há segundo arquivo para manter em sincronia.
+     */
+    icons: { icon: '/icone.svg' },
     robots: { index: false, follow: false },
   };
 }

@@ -28,6 +28,30 @@ Convenção de marcação:
 
 ## 2026-09-12 — Fase 5: resolução de identidade (M3)
 
+### 🔀 `next dev` escrevia no `CLAUDE.md`, e agora não escreve
+
+O Next 16 anexa um bloco de instruções para agentes ao `CLAUDE.md` do projeto a cada
+`dev` e a cada `build` — e o próprio bloco sugere commitá-lo "para manter a árvore
+limpa".
+
+Aqui esse arquivo é a **fonte da verdade das convenções**, inclusive da regra de
+autoria de commit. Ferramenta que edita sozinha o documento que define as regras é o
+começo de um problema que ninguém percebe: o bloco reaparece a cada build, entra num
+commit distraído, e dali em diante a diferença entre o que o dono escreveu e o que a
+ferramenta escreveu deixa de ser visível.
+
+`agentRules: false` no `next.config.ts` desliga na origem. A orientação útil que o
+bloco trazia fica registrada aqui, e é real: **esta versão do Next tem mudanças que
+quebram compatibilidade com o que se sabe de versões anteriores**, e a referência é
+`node_modules/next/dist/docs/`.
+
+### 🐛 Toda página do sistema dava 404 em `/favicon.ico`
+
+Sem `<link rel="icon">` declarado, o navegador pede `/favicon.ico` por conta própria —
+e o 404 aparecia no console de **todas** as telas. `public/icone.svg` já existia (o
+manifesto da PWA usa), então bastou declarar `icons` no metadata do layout. Um arquivo,
+duas referências, nenhuma duplicata para manter em sincronia.
+
 ### 🔀 Agrupar automático **não** liga SKU
 
 `produto_externo.sku_id` aponta para um `sku`, que é operacional e carrega
