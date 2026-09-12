@@ -43,6 +43,22 @@ export interface JobEnfileirado {
   readonly erro: string | null;
 }
 
+/**
+ * Job com tudo o que a tela de observabilidade precisa.
+ *
+ * Separado de `JobEnfileirado` de propósito. O executor só precisa do que usa
+ * para trabalhar, e `reivindicar` usa SQL cru por causa do `SKIP LOCKED` — cada
+ * coluna acrescentada ali entra em `returning` e em `paraJob`. A tela, que lê por
+ * caminho normal do Drizzle, pode pedir tudo sem custo nenhum no caminho quente.
+ */
+export interface JobDetalhado extends JobEnfileirado {
+  readonly resultado: unknown;
+  readonly criadoEm: Date;
+  readonly agendadoPara: Date;
+  readonly iniciadoEm: Date | null;
+  readonly terminadoEm: Date | null;
+}
+
 export class FilaError extends Error {
   override readonly name = 'FilaError';
 }
@@ -269,20 +285,27 @@ export class Fila {
   }
 
   /** Os últimos N jobs, mais recentes primeiro. É a tela de observabilidade. */
-  async ultimos(limite = 100): Promise<readonly JobEnfileirado[]> {
+  async ultimos(limite = 100): Promise<readonly JobDetalhado[]> {
     const linhas = await this.db.select().from(job).orderBy(desc(job.criadoEm)).limit(limite);
-    return linhas.map(paraJob);
+    return linhas.map(paraJobDetalhado);
   }
 
   /** Jobs esperando decisão humana. */
-  async aguardandoRevisao(limite = 100): Promise<readonly JobEnfileirado[]> {
+  async aguardandoRevisao(limite = 100): Promise<readonly JobDetalhado[]> {
     const linhas = await this.db
       .select()
       .from(job)
       .where(eq(job.status, 'pendente_revisao'))
       .orderBy(asc(job.criadoEm))
       .limit(limite);
-    return linhas.map(paraJob);
+    return linhas.map(paraJobDetalhado);
+  }
+
+  /** Um job com todos os campos, para a tela de detalhe e para a ação de retomar. */
+  async buscarDetalhado(id: string): Promise<JobDetalhado | null> {
+    const linhas = await this.db.select().from(job).where(eq(job.id, id)).limit(1);
+    const linha = linhas[0];
+    return linha === undefined ? null : paraJobDetalhado(linha);
   }
 
   /** Quantos jobs prontos para rodar agora. Para saber se o poller tem trabalho. */
@@ -392,4 +415,30 @@ function paraJob(linha: LinhaDeJob): JobEnfileirado {
     chaveIdempotencia: linha.chaveIdempotencia ?? linha.chave_idempotencia ?? '',
     erro: linha.erro,
   };
+}
+
+/**
+ * Converte linha completa do Drizzle para `JobDetalhado`.
+ *
+ * Só o caminho do Drizzle passa por aqui, então os nomes são sempre `camelCase` e
+ * os `timestamp` já vêm como `Date` — não há a ambiguidade que `paraJob` precisa
+ * tratar.
+ */
+function paraJobDetalhado(linha: LinhaCompletaDeJob): JobDetalhado {
+  return {
+    ...paraJob(linha),
+    resultado: linha.resultado ?? null,
+    criadoEm: linha.criadoEm,
+    agendadoPara: linha.agendadoPara,
+    iniciadoEm: linha.iniciadoEm,
+    terminadoEm: linha.terminadoEm,
+  };
+}
+
+interface LinhaCompletaDeJob extends LinhaDeJob {
+  resultado: unknown;
+  criadoEm: Date;
+  agendadoPara: Date;
+  iniciadoEm: Date | null;
+  terminadoEm: Date | null;
 }
