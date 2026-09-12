@@ -107,20 +107,30 @@ a `bloqueado`, com o status HTTP na mão.
 | 3.12 | Armazenamento de conteúdo por hash (cache de extração da seção 7)     | ✅     |
 | 3.9  | `pendente_revisao` em vez de descarte quando o schema falha           | ✅     |
 | 3.10 | M2: repositório de `sku` com `perfil_id` exigido pelo compilador      | ✅     |
+| 3.13 | Poller: o laço que consome a fila sozinho, com encerramento limpo     | ✅     |
+| 3.14 | Log estruturado (seção 7)                                             | ✅     |
+| 3.15 | Tela de jobs: campo único de entrada, contagem e erro visível (seção 7) | ✅   |
+| 3.16 | Tela de detalhe de job, com cada linha recusada e o motivo              | ✅     |
 
 **Entrega:** o sistema começa a acumular base.
 
 **Invariante:** tudo que entra vira `produto_externo`, nunca `sku` direto.
 
 **O que está pronto e o que não está.** O caminho determinístico da fase 3 está
-completo, **ligado de ponta a ponta** e testado contra Postgres e sistema de
-arquivos reais: a entrada chega ao orquestrador, é classificada, guardada por
-hash, enfileirada, consumida pelo executor, importada, e grava `produto_externo`
-— e daí um SKU é criado ligando as ocorrências. Vinte e dois testes cobrem o
-encaixe, que é onde mora a outra metade dos defeitos. **Os extratores (3.2 a 3.7) não
-começaram**, e é neles que o LLM entra — não há chave de LLM configurada, e
-escrever extrator sem poder rodá-lo contra página de verdade produziria código
-que parece funcionar.
+completo, **ligado de ponta a ponta**, **rodando sozinho** e testado contra
+Postgres e sistema de arquivos reais: a entrada chega pela tela ou por código, é
+classificada, guardada por hash, enfileirada, consumida pelo **poller** sem
+ninguém pedir, importada, e grava `produto_externo` — e daí um SKU é criado
+ligando as ocorrências. **Os extratores (3.2 a 3.6) não começaram**, e é neles que
+o LLM entra — não há chave de LLM configurada, e escrever extrator sem poder
+rodá-lo contra página de verdade produziria código que parece funcionar.
+
+**Como rodar.** `npm run poller` mantém o laço; `npm run poller:uma-vez` drena a
+fila e sai, o que serve para cron. Em contêiner ou supervisor, chamar
+`tsx scripts/poller.ts` direto em vez de passar pelo `npm` — o npm não repassa
+`SIGTERM` para o filho, e o encerramento limpo do poller nunca seria acionado (ver
+o diário). A tela fica em `/jobs` e funciona sem poller nenhum: tem um botão que
+processa alguns jobs na hora.
 
 A fronteira está desenhada: `exigeLlm()` diz quais tipos de entrada gastam token
 e quais não, e o classificador já roteia.
@@ -130,9 +140,26 @@ testado — leitor de CSV/TSV próprio, XLSX por `exceljs`, busca de cabeçalho,
 interpretação de preço por forma validada, `pendente_revisao` com o bruto
 preservado. O que falta não é código: é **confirmar os nomes de coluna** contra
 uma exportação real das plataformas, que não existe disponível aqui. O
-mapeamento relata toda coluna que não reconhece, então fechar a 3.7 é rodar uma
-importação de verdade e completar a tabela de sinônimos com o que o relatório
-apontar. Ver o diário de bordo.
+mapeamento relata toda coluna que não reconhece — e agora a tela mostra isso como
+alerta em cada job —, então fechar a 3.7 é rodar uma importação de verdade e
+completar a tabela de sinônimos com o que o relatório apontar. Ver o diário de
+bordo.
+
+Subir uma planilha pela tela nova já pagou parte disso: apareceu um defeito de
+detecção de separador que estava escondido havia semanas, porque o `;` do Mercado
+Livre coincidia com o valor de fallback. Uso encontra o que teste não encontra.
+
+**As linhas recusadas são visíveis.** O executor guarda cada linha que a
+importação não aceitou, e a tela de detalhe do job mostra todas: número da linha,
+motivo, e a linha **como está no arquivo** — nome de coluna original, inclusive as
+colunas que o mapeamento não reconheceu. É o que permite corrigir três linhas à mão
+em vez de reimportar quatro mil.
+
+**O que ainda não existe na interface.** Não há tela de catálogo, de SKU nem de
+precificação: o motor de margem (fase 1) e o repositório de SKU (3.10) são
+chamáveis por código e por teste, não por tela. A ordem do roadmap é deliberada —
+a tela de jobs vinha primeiro porque sem ela nada do que a ingestão faz é
+auditável.
 
 ---
 

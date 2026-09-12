@@ -88,13 +88,36 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 npm run db:migrate
 npm run db:seed        # cria o primeiro perfil de vendedor
-npm run dev
+npm run dev            # a tela de jobs fica em /jobs
 ```
+
+O sistema roda sozinho quando há um processo consumindo a fila:
+
+```sh
+npm run poller           # laço contínuo, até Ctrl-C
+npm run poller:uma-vez   # drena a fila e sai — serve para cron
+npm run poller -- --ajuda
+```
+
+A tela de `/jobs` funciona **sem** poller: tem um botão que processa alguns jobs
+na hora, e uma tela de detalhe por job com cada linha de planilha recusada e o
+motivo.
+
+Para rodar como **serviço** (contêiner, systemd), chamar node direto:
+
+```sh
+node --import tsx scripts/poller.ts
+```
+
+Não é preciosismo: `npm run` não repassa `SIGTERM` ao processo filho, então um
+supervisor que sinaliza o pid do npm deixa o poller órfão e o encerramento limpo
+nunca acontece. `Ctrl-C` no terminal funciona normalmente com `npm run`, porque
+aí o sinal vai para o grupo de processos inteiro. Medições no diário de bordo.
 
 Verificar tudo antes de commitar:
 
 ```sh
-npm run check          # typecheck + lint + formatação + testes
+npm run check          # fontes + typecheck + lint + formatação + testes
 ```
 
 ## Ordem de construção

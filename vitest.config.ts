@@ -20,7 +20,18 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      include: ['src/dominio/**', 'src/lib/**', 'src/plataformas/**'],
+      include: [
+        'src/dominio/**',
+        'src/lib/**',
+        'src/plataformas/**',
+        // Três arquivos de fora do domínio entram por arquivo, não por pasta: são
+        // lógica pura e testável, e ficariam sem bar se ficassem de fora. O resto
+        // de `src/infra` fica fora de propósito — migração e semeadura são script,
+        // e cobri-los mediria execução de script, não regra.
+        'src/infra/log.ts',
+        'src/infra/fila/poller.ts',
+        'src/app/jobs/apresentacao.ts',
+      ],
       // O domínio é onde mora a regra de negócio numérica. Cobertura alta aqui
       // não é vaidade: a saída de `calcularMargem` decide dinheiro.
       thresholds: { lines: 90, functions: 90, branches: 85, statements: 90 },
