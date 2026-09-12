@@ -75,6 +75,14 @@ recusa antes de chegar ao `URL`. Assim todo chamador futuro está protegido, e a
 lista de links continua caindo em `texto`, que é onde o classificador a reconhece
 como lista e o executor abre um job por link.
 
+### 🔀 O poller não conhece ingestão
+
+O laço recebe uma `Tarefa` — nome, mais um método que executa uma unidade e diz se
+havia trabalho. A tradução de `ResultadoDoProcessamento` para esse contrato mora em
+`dominio/ingestao/tarefa.ts`. Assim `infra/` não depende de `dominio/`, e o mesmo
+laço vai servir para extração, resolução de identidade e monitor de preço sem
+alteração.
+
 ### 🔀 Falha de job não é erro de poller
 
 `{ tipo: 'falhou' }` já foi tratado pela fila, com backoff e tentativa contada.
