@@ -63,16 +63,28 @@ dinheiro no mesmo dia em que existe, e não depende de nada.
 | 2.2 | Registro de capacidades com descoberta em runtime e cache de 24 h           | ✅     |
 | 2.3 | Adaptadores ML / Shopee / Amazon declarando modo por capacidade             | ✅     |
 | 2.4 | `matriz-capacidades.md` — arquivo de configuração, não surpresa em produção | ✅     |
-| 2.5 | Sonda de endpoints do ML (`scripts/sondar-capacidades.ts`)                  | ✅     |
-| 2.6 | Seed de `perfil_vendedor` + `credencial` (primeira linha, regime CPF)       | ✅     |
+| 2.5 | Sonda de capacidades — roda sem credencial, ainda não bate em endpoint | 🚧     |
+| 2.6 | Seed de `perfil_vendedor` (primeira linha, regime CPF)                 | ✅     |
+| 2.6b | Fluxo de OAuth que grava `credencial` cifrada                         | ⬜     |
 | 2.7 | Cifragem de credencial em repouso (AES-256-GCM), nunca em `.env`            | ✅     |
 
 **Entrega:** saber o que é possível em vez de supor, e nunca precisar refatorar
 marca para fora do código.
 
 **Nota sobre o 403:** `GET /sites/MLB/search` está registrado como
-`BLOQUEADO` na matriz, com a data e a evidência. A sonda confirma ou desmente
-isso a cada execução, e o resultado é dado, não opinião.
+`BLOQUEADO` na matriz, com a data e a evidência.
+
+**O que falta na 2.5, e por que está 🚧:** a sonda roda, roda sem credencial, e
+relata o estado honesto de cada capacidade — mas **ainda não bate em endpoint
+nenhum**, porque o app em `developers.mercadolivre.com.br` não existe. Ela
+reporta o que a matriz declara e diz explicitamente o que falta confirmar.
+Cadastrar um endpoint e sair chamando antes de haver app seria inventar
+resultado, e a matriz existe justamente para não confundir expectativa com fato:
+toda capacidade não confirmada aparece como `presumido`, não como disponível.
+
+Para fechar a 2.5, nesta ordem: criar o app no ML, passar pelo OAuth (2.6b), e
+rodar a sonda de novo — que então promove `presumido` a `disponivel` ou rebaixa
+a `bloqueado`, com o status HTTP na mão.
 
 ---
 

@@ -1,0 +1,66 @@
+name: verificar
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+
+    services:
+      # O schema usa pgvector, então o serviço precisa da extensão disponível.
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: bancada
+          POSTGRES_PASSWORD: bancada
+          POSTGRES_DB: bancada
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://bancada:bancada@localhost:5432/bancada
+      BANCADA_PERFIL_PADRAO: perfil-de-ci
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Histórico completo para a conferência de autoria alcançar todo commit.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Autoria dos commits
+        run: npm run verify:authors
+
+      - name: Tipos
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Formatação
+        run: npm run format:check
+
+      - name: Testes
+        run: npm run test
+
+      - name: Migrations contra Postgres real
+        run: |
+          echo "CREDENCIAL_CHAVE_MESTRA=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")" >> "$GITHUB_ENV"
+      - run: npm run db:migrate
+      - run: npm run db:seed -- --nome="Perfil de CI" --regime=cpf
+
+      - name: Build
+        run: npm run build
