@@ -22,6 +22,10 @@ const OPERACIONAIS = [
   'pedido',
   'consignacao',
   'acumulado_anual',
+  // Leitura de código de barras é operacional: é o que ESTE vendedor avaliou no
+  // balcão, com o que ele decidiu. Não é conhecimento do mundo — o preço
+  // praticado que embasou o veredito é, e mora em `produto_externo`.
+  'leitura',
 ] as const;
 
 /**

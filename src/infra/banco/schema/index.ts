@@ -6,7 +6,7 @@
  *
  * **Operacional — carrega `perfil_id`.** É de alguém.
  *   `perfil_vendedor`, `credencial`, `sku`, `anuncio`, `pedido`, `consignacao`,
- *   `acumulado_anual`.
+ *   `acumulado_anual`, `leitura`.
  *
  * **Conhecimento do mundo — não carrega `perfil_id`.** É base compartilhada entre
  * perfis, e é o que faz o sistema ficar mais valioso a cada perfil que entra.

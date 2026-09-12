@@ -1,5 +1,6 @@
 /**
- * Operação: anúncio, pedido e consignação. **Tudo aqui carrega `perfil_id`.**
+ * Operação: anúncio, pedido, consignação e leitura de balcão. **Tudo aqui carrega
+ * `perfil_id`.**
  *
  * É a metade de higiene do sistema — a que a especificação classifica como
  * commodity, e a primeira a ser trocada por hub de prateleira se o custo de
@@ -9,6 +10,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgTable,
   smallint,
   text,
@@ -151,4 +153,68 @@ export const acumuladoAnual = pgTable(
     ...auditoria,
   },
   (t) => [unique('unq_acumulado_perfil_ano').on(t.perfilId, t.ano)],
+);
+
+/**
+ * Leitura de código de barras, com o veredito e o que a pessoa decidiu (M14).
+ *
+ * Existe por duas razões, e a segunda é a que importa a longo prazo.
+ *
+ * **Primeira:** é o destino da fila de sincronização. A especificação pede que o
+ * leitor funcione offline porque loja tem sinal ruim, e fila que sincroniza não
+ * tem para onde sincronizar sem uma tabela.
+ *
+ * **Segunda:** `decisao` guarda o que a pessoa fez depois de ver o veredito. É o
+ * único lugar do sistema onde julgamento humano sobre uma recomendação fica
+ * registrado ao lado da recomendação — "cada decisão humana vira exemplo para os
+ * prompts seguintes", da seção 9 da especificação. Quarenta leituras num balcão
+ * com a decisão de cada uma valem mais que qualquer prompt.
+ *
+ * `id_local` é o identificador que o **cliente** gera antes de ter rede. É o que
+ * torna a sincronização idempotente: reenviar a fila depois de uma conexão que
+ * caiu no meio não duplica leitura. Mesma disciplina da fila de jobs.
+ */
+export const leitura = pgTable(
+  'leitura',
+  {
+    id: id(),
+    perfilId: uuid('perfil_id')
+      .notNull()
+      .references(() => perfilVendedor.id, { onDelete: 'cascade' }),
+    /** Identificador gerado no dispositivo, antes de haver rede. */
+    idLocal: text('id_local').notNull(),
+    /** Os dígitos como lidos, sem canonicalizar: é o registro do que aconteceu. */
+    gtin: text('gtin').notNull(),
+    /** Forma canônica de 13 dígitos, quando o código identifica a unidade. */
+    gtinCanonico: text('gtin_canonico'),
+    custoUnitario: centavos('custo_unitario'),
+    unidadesNoLote: integer('unidades_no_lote'),
+    veredito: text('veredito').notNull(),
+    precoDeReferencia: centavos('preco_de_referencia'),
+    /** Margem no preço de referência, em pontos-base. Inteiro, como todo percentual. */
+    margemBp: integer('margem_bp'),
+    confiancaBp: integer('confianca_bp'),
+    /** Motivos do veredito, como o domínio os produziu. */
+    motivos: jsonb('motivos'),
+    /**
+     * O que a pessoa fez. `null` enquanto ela não decidiu.
+     *
+     * Não é o veredito: é o julgamento humano sobre ele, e a diferença entre os
+     * dois é a informação mais valiosa desta tabela.
+     */
+    decisao: text('decisao'),
+    /** Onde foi, para a pessoa reconhecer a sessão depois: "saldão da loja X". */
+    local: text('local'),
+    /** Quando a leitura aconteceu no dispositivo, que não é quando sincronizou. */
+    lidoEm: timestamp('lido_em', { withTimezone: true }).notNull(),
+    sincronizadoEm: timestamp('sincronizado_em', { withTimezone: true }).notNull().defaultNow(),
+    ...auditoria,
+  },
+  (t) => [
+    // A chave da idempotência da sincronização.
+    unique('unq_leitura_perfil_local').on(t.perfilId, t.idLocal),
+    index('idx_leitura_perfil_data').on(t.perfilId, t.lidoEm),
+    // "O que eu já avaliei deste código?" é a segunda pergunta de quem escaneia.
+    index('idx_leitura_gtin').on(t.perfilId, t.gtinCanonico),
+  ],
 );

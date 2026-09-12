@@ -15,6 +15,13 @@
       "when": 1789219980299,
       "tag": "0001_uneven_rogue",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789221062900,
+      "tag": "0002_bouncy_viper",
+      "breakpoints": true
     }
   ]
 }
