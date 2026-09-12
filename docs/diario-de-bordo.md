@@ -51,6 +51,28 @@ chamada ser reproduzível, e não entra no hash. `llm_call.entrada` guarda
 `{pergunta, contexto}`, então quem audita a conta vê exatamente o que foi hasheado e
 o que mais o modelo viu.
 
+### 🔀 Decisão humana de identidade é a origem mais forte, e o `setWhere` é quem garante
+
+A regra de procedência do ADR 0002 — origem fraca não sobrescreve origem forte — vale
+para decisão de identidade também. Quem decidiu "não são o mesmo produto" não pode
+ser desfeito pela próxima varredura que discordar. Está no `setWhere` do
+`onConflictDoUpdate` (`origem <> 'humano'`), não em uma convenção, e `registrar`
+devolve `gravado: false` quando recusou — quem chamou sabe que não mudou nada.
+
+### 🐛 `exactOptionalPropertyTypes` e o `setWhere` condicional do Drizzle
+
+Passar `setWhere: undefined` não compila: o projeto distingue "propriedade ausente"
+de "presente e `undefined`", e o Drizzle só aceita a primeira forma. O jeito é
+espalhar o objeto condicionalmente (`...(cond ? {} : { setWhere: … })`). Vale para
+todo campo opcional de API de terceiro neste projeto.
+
+### 🐛 Constraint violada não aparece na mensagem de fora do erro do Drizzle
+
+O Drizzle embrulha o erro do driver em `Failed query: …` e põe o original em `cause`.
+Asserção de teste em `rejects.toThrow(/nome_da_constraint/)` **passa a impressão de
+testar e não testa** — a mensagem de fora nunca tem o nome. O teste agora lê
+`cause.constraint_name`.
+
 ## 2026-09-12 — Fase 4: leitor de código de barras (M14)
 
 ### 🐛 Offline não funcionava, e a tela mentia dizendo que sim
