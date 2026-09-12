@@ -75,6 +75,20 @@ recusa antes de chegar ao `URL`. Assim todo chamador futuro está protegido, e a
 lista de links continua caindo em `texto`, que é onde o classificador a reconhece
 como lista e o executor abre um job por link.
 
+### 🐛 A linha recusada guardava só as colunas reconhecidas
+
+Ao construir a tela de detalhe, a primeira versão mostrou os campos com nome
+normalizado — `preco`, `id_externo` — em vez do nome da coluna do arquivo. Olhando
+o motivo, o problema era maior que o rótulo: `LinhaRejeitada.bruto` é montado a
+partir do **mapeamento**, então só tem as colunas que o mapeador reconheceu.
+
+Uma linha recusada justamente porque a coluna de preço não foi reconhecida não
+guardava o preço em lugar nenhum. A promessa de "nada é descartado, corrija à mão"
+não se sustentava. Agora cada linha recusada carrega também `original`: nome de
+coluna como está no arquivo e valor, na ordem, **inclusive as colunas não
+reconhecidas**. Lista em vez de objeto, porque cabeçalho de painel repete nome mais
+do que devia, e coluna sem nome ganha rótulo por posição.
+
 ---
 
 ## 2026-09-12 — Ligação de ponta a ponta

@@ -570,3 +570,60 @@ describe('ImportadorDePlanilha', () => {
     expect(r.rejeitadas).toHaveLength(0);
   });
 });
+
+describe('a linha recusada guarda a linha original do arquivo', () => {
+  const CSV = [
+    'Codigo MLB;Titulo;Preco (R$);Estoque;Campo Que Eu Nao Previ',
+    'MLB111111111;Refil bom;69,90;10;guardar isto',
+    'MLB222222222;Refil ruim;1.2.3;7;e isto tambem',
+  ].join(String.fromCharCode(10));
+
+  it('traz o nome de coluna do arquivo, na ordem, inclusive a não reconhecida', async () => {
+    const r = await new ImportadorDePlanilha().importar({
+      conteudo: { formato: 'csv', texto: CSV },
+      plataforma: 'ml',
+    });
+    expect(r.tipo).toBe('importado');
+    if (r.tipo !== 'importado') return;
+
+    expect(r.rejeitadas).toHaveLength(1);
+    const recusada = r.rejeitadas[0]!;
+
+    expect(recusada.numeroDaLinha).toBe(3);
+    expect(recusada.original.map((c) => c.coluna)).toEqual([
+      'Codigo MLB',
+      'Titulo',
+      'Preco (R$)',
+      'Estoque',
+      'Campo Que Eu Nao Previ',
+    ]);
+    // O valor da coluna que o mapeamento NÃO reconheceu é justamente o que
+    // `bruto` perdia, e é o que permite corrigir à mão sem reimportar.
+    expect(recusada.original.at(-1)).toEqual({
+      coluna: 'Campo Que Eu Nao Previ',
+      valor: 'e isto tambem',
+    });
+    expect(Object.keys(recusada.bruto)).not.toContain('Campo Que Eu Nao Previ');
+  });
+
+  it('coluna sem nome ganha rótulo pela posição, e célula de sobra é descartada', async () => {
+    const texto = ['Titulo;;Preco (R$);', 'Refil ruim;valor solto;1.2.3;'].join(
+      String.fromCharCode(10),
+    );
+    const r = await new ImportadorDePlanilha().importar({
+      conteudo: { formato: 'csv', texto },
+      plataforma: 'ml',
+    });
+    if (r.tipo !== 'importado') {
+      expect(r.tipo).toBe('importado');
+      return;
+    }
+
+    const recusada = r.rejeitadas[0]!;
+    expect(recusada.original).toEqual([
+      { coluna: 'Titulo', valor: 'Refil ruim' },
+      { coluna: 'coluna 2', valor: 'valor solto' },
+      { coluna: 'Preco (R$)', valor: '1.2.3' },
+    ]);
+  });
+});

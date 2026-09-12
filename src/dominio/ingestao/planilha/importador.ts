@@ -46,8 +46,19 @@ export interface LinhaRejeitada {
   readonly numeroDaLinha: number;
   readonly motivo: string;
   readonly problemas: readonly string[];
-  /** A linha como veio, para revisão. */
+  /** A linha já mapeada para campos do domínio. É o que a conversão viu. */
   readonly bruto: Readonly<Record<string, string>>;
+  /**
+   * A linha como veio no **arquivo**: nome de coluna original e valor, na ordem
+   * das colunas, inclusive as que o mapeamento não reconheceu.
+   *
+   * `bruto` não serve para isso, e a diferença importa. Ele só tem as colunas
+   * **reconhecidas**, com o nome normalizado do campo — então uma linha recusada
+   * justamente porque a coluna de preço não foi reconhecida não guardava o preço
+   * em lugar nenhum. A promessa de "nada é descartado, corrija à mão" não se
+   * sustenta sem a linha original.
+   */
+  readonly original: readonly { readonly coluna: string; readonly valor: string }[];
 }
 
 export type ResultadoDaImportacao =
@@ -121,6 +132,7 @@ export class ImportadorDePlanilha {
 
     const linhas: LinhaImportada[] = [];
     const rejeitadas: LinhaRejeitada[] = [];
+    const cabecalho = grade[indiceDoCabecalho] ?? [];
 
     for (let i = indiceDoCabecalho + 1; i < grade.length; i += 1) {
       const celulas = grade[i] ?? [];
@@ -142,6 +154,7 @@ export class ImportadorDePlanilha {
           motivo: convertida.motivo,
           problemas: convertida.problemas,
           bruto,
+          original: montarOriginal(cabecalho, celulas),
         });
       }
     }
@@ -202,6 +215,31 @@ function montarBruto(
     bruto[coluna.campo] = (celulas[coluna.indice] ?? '').trim();
   }
   return bruto;
+}
+
+/**
+ * A linha como a pessoa a vê na planilha.
+ *
+ * Lista, e não objeto: mantém a **ordem** das colunas e sobrevive a cabeçalho com
+ * nome repetido, que planilha de painel tem mais do que devia. Coluna sem nome
+ * ganha rótulo pela posição, porque "coluna 7" ainda localiza a célula no arquivo.
+ */
+function montarOriginal(
+  cabecalho: readonly string[],
+  celulas: readonly string[],
+): readonly { readonly coluna: string; readonly valor: string }[] {
+  const total = Math.max(cabecalho.length, celulas.length);
+  const saida: { readonly coluna: string; readonly valor: string }[] = [];
+
+  for (let i = 0; i < total; i += 1) {
+    const nome = (cabecalho[i] ?? '').trim();
+    const valor = (celulas[i] ?? '').trim();
+    // Coluna sem nome e sem valor é célula de sobra à direita da tabela.
+    if (nome === '' && valor === '') continue;
+    saida.push({ coluna: nome === '' ? `coluna ${String(i + 1)}` : nome, valor });
+  }
+
+  return saida;
 }
 
 type Conversao =
