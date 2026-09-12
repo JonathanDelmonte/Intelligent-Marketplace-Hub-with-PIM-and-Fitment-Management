@@ -36,6 +36,21 @@ indexada, achar as outras ocorrências do mesmo `PA21G` da Electrolux é uma igu
 indexada; sem ela seria varredura da tabela inteira, ou nada. Nula quando falta marca
 ou modelo — nunca `''`, que casaria com toda outra string vazia.
 
+### 🔀 Cache por conteúdo e exemplo few-shot se contradizem; a saída é separar pergunta de contexto
+
+Duas regras do ADR 0005 colidem de frente. "Todo resultado é cacheado pela entrada
+que o gerou" e "cada decisão humana vira exemplo para os prompts seguintes": se os
+exemplos entram no hash, **cada decisão nova invalida o cache de todos os pares**, e
+o sistema passa a re-resolver a base inteira justamente por estar aprendendo. O
+inverso — ignorar os exemplos no registro — quebra "todo resultado é persistido com a
+entrada que o gerou".
+
+A saída é separar os dois papéis no próprio tipo do pedido: `entrada` é a **pergunta**
+e define o cache; `contexto` é o que mais foi enviado, fica gravado junto para a
+chamada ser reproduzível, e não entra no hash. `llm_call.entrada` guarda
+`{pergunta, contexto}`, então quem audita a conta vê exatamente o que foi hasheado e
+o que mais o modelo viu.
+
 ## 2026-09-12 — Fase 4: leitor de código de barras (M14)
 
 ### 🐛 Offline não funcionava, e a tela mentia dizendo que sim

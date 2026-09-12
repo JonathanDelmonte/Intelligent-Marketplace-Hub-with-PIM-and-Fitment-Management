@@ -147,7 +147,7 @@ describe.skipIf(!temBancoDeTeste())('ServicoDeLlm', () => {
     const [linha] = await conexao.db.select().from(llmCall);
     expect(linha).toBeDefined();
     expect(linha?.proposito).toBe('julgamento_identidade');
-    expect(linha?.entrada).toEqual({ a: 'x' });
+    expect(linha?.entrada).toEqual({ pergunta: { a: 'x' }, contexto: null });
     expect(linha?.custoCentavos).toBe(2);
     expect(linha?.tokensEntrada).toBe(120);
     expect(linha?.latenciaMs).toBeGreaterThanOrEqual(0);
@@ -275,6 +275,26 @@ describe.skipIf(!temBancoDeTeste())('ServicoDeLlm', () => {
     expect(orcamento.gasto).toEqual({ centavos: 0, chamadas: 0 });
     const linhas = await conexao.db.select().from(llmCall);
     expect(linhas).toHaveLength(0);
+  });
+
+  it('contexto vai para o registro e não para o hash — senão aprender invalidaria o cache', async () => {
+    const chamador = new ChamadorFalso(boa);
+    const s = servico(chamador);
+
+    await s.pedir({ ...pedido({ a: 1 }), contexto: { exemplos: ['um'] } });
+    // Mesmo par, exemplos diferentes: continua sendo cache.
+    const segunda = await s.pedir({ ...pedido({ a: 1 }), contexto: { exemplos: ['um', 'dois'] } });
+
+    expect(chamador.chamadas).toHaveLength(1);
+    expect(segunda.tipo).toBe('ok');
+    const [linha] = await conexao.db.select().from(llmCall);
+    expect(linha?.entrada).toEqual({ pergunta: { a: 1 }, contexto: { exemplos: ['um'] } });
+  });
+
+  it('o contexto chega ao chamador', async () => {
+    const chamador = new ChamadorFalso(boa);
+    await servico(chamador).pedir({ ...pedido({ a: 1 }), contexto: { exemplos: [] } });
+    expect(chamador.chamadas[0]?.contexto).toEqual({ exemplos: [] });
   });
 
   it('gastoPorProposito soma por finalidade', async () => {

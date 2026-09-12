@@ -46,8 +46,10 @@ export type Proposito = (typeof PROPOSITOS)[number];
 export interface PedidoAoModelo {
   readonly proposito: Proposito;
   readonly modelo: string;
-  /** Tudo que determina a resposta. É o que vai para o hash e para o `jsonb`. */
+  /** A pergunta: o que determina a resposta e define o cache. */
   readonly entrada: unknown;
+  /** Contexto enviado junto, fora do hash. Exemplo few-shot mora aqui. */
+  readonly contexto?: unknown;
 }
 
 export interface RespostaDoModelo {
@@ -203,7 +205,22 @@ export type ResultadoDoPedido<T> =
 export interface ParametrosDoPedido<T> {
   readonly proposito: Proposito;
   readonly modelo: string;
+  /** A pergunta. **É isto que vai para o hash de cache.** */
   readonly entrada: unknown;
+  /**
+   * O que mais foi enviado ao modelo e **não** entra no hash.
+   *
+   * Existe por uma tensão real entre duas regras do ADR 0005. "Todo resultado é
+   * cacheado pela entrada que o gerou" e "toda decisão humana vira exemplo para os
+   * prompts seguintes" se contradizem quando os exemplos entram no hash: cada
+   * decisão nova invalidaria o cache de **todos** os pares, e o sistema passaria a
+   * re-resolver a base inteira justamente por estar aprendendo.
+   *
+   * A resolução é separar pergunta de contexto. O par de produtos é a pergunta e
+   * define o cache; os exemplos são contexto, ficam gravados junto para a chamada
+   * ser reproduzível, e não invalidam nada.
+   */
+  readonly contexto?: unknown;
   readonly esquema: z.ZodType<T>;
   readonly jobId?: string | undefined;
 }
@@ -248,6 +265,7 @@ export class ServicoDeLlm {
         proposito: params.proposito,
         modelo: params.modelo,
         entrada: params.entrada,
+        ...(params.contexto === undefined ? {} : { contexto: params.contexto }),
       });
     } catch (erro) {
       const semChave = erro instanceof SemChaveDeLlm;
@@ -262,7 +280,7 @@ export class ServicoDeLlm {
         proposito: params.proposito,
         modelo: params.modelo,
         hashEntrada,
-        entrada: params.entrada,
+        entrada: { pergunta: params.entrada, contexto: params.contexto ?? null },
         saida: null,
         erro: mensagem,
         latenciaMs: Date.now() - comecou,
@@ -277,7 +295,9 @@ export class ServicoDeLlm {
       proposito: params.proposito,
       modelo: params.modelo,
       hashEntrada,
-      entrada: params.entrada,
+      // Forma uniforme: `pergunta` é o que foi hasheado, `contexto` é o resto do
+      // que o modelo viu. Quem audita a conta consegue reproduzir a chamada.
+      entrada: { pergunta: params.entrada, contexto: params.contexto ?? null },
       saida: resposta.saida,
       erro: null,
       latenciaMs: Date.now() - comecou,
