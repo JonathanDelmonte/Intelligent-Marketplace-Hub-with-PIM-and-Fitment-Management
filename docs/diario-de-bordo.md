@@ -28,6 +28,49 @@ Convenção de marcação:
 
 ## 2026-09-12 — Fase 5: resolução de identidade (M3)
 
+### 🐛 A chave única do cache de LLM transforma uma falha em bloqueio permanente
+
+`llm_call` tem chave única em `(proposito, modelo, hash_entrada)`, que é a chave de
+cache. A consequência que eu não tinha visto: quando uma chamada falha e a falha é
+registrada — e ela **precisa** ser registrada, senão não se sabe onde o dinheiro
+foi —, a linha de erro ocupa **exatamente o lugar** da resposta boa. Um `insert`
+simples na tentativa seguinte colide, e o `select` de cache serve a falha para
+sempre.
+
+Duas mudanças fecham: o `insert` é `onConflictDoUpdate`, então a resposta boa
+atualiza a linha de erro; e o `select` de cache exige `saida is not null and erro
+is null`. O teste que pegou é o que faz o provedor falhar na primeira chamada e
+responder na segunda, e depois confere que sobrou **uma** linha, sem erro.
+
+### 🔀 `ServicoDeLlm` só lança quando estourar o orçamento
+
+Falha de rede, schema inválido e ausência de chave voltam como valor no tipo de
+retorno, porque cada um é tratado de forma diferente por quem chamou. Orçamento é a
+única exceção, e a razão é concreta: um laço que trata "estourei o teto" como "esse
+par falhou" segue para o par seguinte e estoura de novo, uma vez por par — e é
+exatamente o laço com defeito que o teto existe para conter.
+
+### 🔀 Dois tetos de orçamento, não um
+
+Centavos é o teto que interessa ao bolso, e **chamadas** é o que continua valendo
+quando o provedor não informa custo. Sem o segundo, um provedor calado
+transformaria o teto em decoração. `Orcamento` recusa nascer sem os dois, no
+construtor — "agente sem teto por execução não roda" verificado, não combinado.
+
+### 🐛 Ausência de chave não vai para `llm_call`
+
+A primeira versão registrava tudo, inclusive a tentativa que morreu em
+`ChamadorAusente`. Errado por dois motivos: nada foi enviado, então não houve custo
+nem latência para registrar, e o relatório de gasto por finalidade ficaria cheio de
+linhas de chamadas que não aconteceram. Também não consome orçamento.
+
+### 🐛 `Date` em template `sql` cru não chega ao Postgres
+
+`sql\`${coluna} >= ${data}\`` manda a `Date` ao driver sem o tipo da coluna, e o
+`postgres` recusa com "The string argument must be of type string... Received an
+instance of Date". Com `gte(coluna, data)` o Drizzle informa o tipo. Vale para toda
+comparação de `timestamptz`: o operador tipado, não o template.
+
 ### 🐛 `W10295370` é peça de Whirlpool, e `W` é watt
 
 O reconhecedor de código de modelo recusava todo token de `letra + dígito` cujas
