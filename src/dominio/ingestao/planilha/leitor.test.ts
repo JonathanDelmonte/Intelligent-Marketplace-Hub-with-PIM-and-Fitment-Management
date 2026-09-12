@@ -24,13 +24,68 @@ describe('detectarSeparador', () => {
     expect(detectarSeparador('"Produto";"Preço";"Estoque"\n"Refil";"69,90";"10"')).toBe(';');
   });
 
-  it('olha só a primeira linha, respeitando aspas com quebra de linha', () => {
+  it('respeita aspas com quebra de linha dentro do campo', () => {
     const texto = '"Título";"Descrição"\n"Refil";"linha 1\nlinha 2, com vírgula"';
     expect(detectarSeparador(texto)).toBe(';');
   });
 
   it('cai no padrão quando não há separador nenhum', () => {
     expect(detectarSeparador('umacolunaso')).toBe(';');
+  });
+
+  /**
+   * Regressão do defeito mais consequente deste arquivo.
+   *
+   * A versão anterior olhava só a primeira linha útil. Exportação de painel quase
+   * sempre começa com linha de título ("Relatório de anúncios", "Gerado em ..."),
+   * que não tem separador — então toda contagem dava zero e a função devolvia o
+   * padrão `;`. Arquivo separado por vírgula era lido como uma coluna só, e o
+   * sintoma aparecia três camadas depois como "nenhuma linha parece um cabeçalho".
+   *
+   * O bug ficou escondido porque a planilha de teste era do Mercado Livre, que usa
+   * exatamente o `;` do padrão.
+   */
+  describe('linha de título antes do cabeçalho', () => {
+    it('acha a vírgula mesmo com título sem separador na primeira linha', () => {
+      const texto = [
+        'Relatorio de anuncios',
+        'ID do produto,Nome do produto,Preco,Estoque',
+        'SP1,Refil Consul CPB35,"59,90",7',
+        'SP2,Vedacao Consul,"14,90",3',
+      ].join('\n');
+
+      expect(detectarSeparador(texto)).toBe(',');
+      expect(lerCsv(texto)[1]).toEqual(['ID do produto', 'Nome do produto', 'Preco', 'Estoque']);
+    });
+
+    it('acha a tabulação com duas linhas de preâmbulo', () => {
+      const texto = ['Exportacao', 'Gerado em 12/09/2026', 'a\tb\tc', '1\t2\t3'].join('\n');
+      expect(detectarSeparador(texto)).toBe('\t');
+    });
+
+    it('não se deixa levar por vírgula que só aparece no título', () => {
+      // "Gerado em 12/09/2026, 09:14" tem uma vírgula; as linhas de dados têm
+      // quatro `;` cada. Consistência decide, não primeira ocorrência.
+      const texto = [
+        'Relatorio de anuncios, Mercado Livre',
+        'Gerado em 12/09/2026, 09:14',
+        'MLB;Titulo;Preco;Estoque',
+        'MLB1;Refil;69,90;10',
+        'MLB2;Vedacao;19,90;20',
+      ].join('\n');
+
+      expect(detectarSeparador(texto)).toBe(';');
+    });
+
+    it('ignora linha vazia entre o título e o cabeçalho', () => {
+      const texto = ['Relatorio', '', '', 'a,b,c', '1,2,3'].join('\n');
+      expect(detectarSeparador(texto)).toBe(',');
+    });
+
+    it('funciona com fim de linha do Windows', () => {
+      const texto = ['Relatorio de anuncios', 'a,b,c', '1,2,3'].join(String.fromCharCode(13, 10));
+      expect(detectarSeparador(texto)).toBe(',');
+    });
   });
 });
 

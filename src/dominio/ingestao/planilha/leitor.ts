@@ -26,25 +26,80 @@ export const MAX_LINHAS = 50_000;
 
 // ─── CSV e TSV ───────────────────────────────────────────────────────────────
 
+/** Candidatos a separador, em ordem de desempate. */
+const CANDIDATOS_DE_SEPARADOR = ['\t', ';', ',', '|'] as const;
+
+/** Quantas linhas a detecção olha. Cabeçalho de exportação raramente passa disso. */
+export const LINHAS_PARA_DETECTAR_SEPARADOR = 12;
+
 /**
- * Detecta o separador contando ocorrências fora de aspas na primeira linha útil.
+ * Detecta o separador pela **consistência** ao longo das primeiras linhas.
  *
  * Necessário porque planilha exportada de painel brasileiro usa `;` e a de painel
  * em inglês usa `,` — e o mesmo arquivo pode ter vírgula decimal dentro dos
- * campos, o que faz a contagem ingênua escolher errado. Contar **fora de aspas**
- * é o que resolve.
+ * campos. Contar fora de aspas resolve a vírgula decimal.
+ *
+ * ## Por que não basta olhar a primeira linha
+ *
+ * A primeira versão olhava só a primeira linha útil, e errava no caso mais comum
+ * que existe: **exportação de painel começa com linha de título**. "Relatório de
+ * anúncios" não tem separador nenhum, então toda contagem dava zero e a função
+ * caía no padrão `;`. Um arquivo separado por vírgula era então lido como uma
+ * coluna só, e o sintoma aparecia três camadas depois, como "nenhuma linha parece
+ * um cabeçalho" — mensagem que manda a pessoa conferir os nomes das colunas
+ * quando o problema era o separador.
+ *
+ * O defeito ficou escondido porque a planilha usada nos testes era do Mercado
+ * Livre, que usa `;` — exatamente o valor do padrão. Fallback que coincide com o
+ * caso de teste é a forma mais confiável de esconder um bug.
+ *
+ * ## O critério
+ *
+ * Para cada candidato, conta as ocorrências fora de aspas em cada uma das
+ * primeiras linhas não vazias, toma a contagem **mais repetida** entre as linhas
+ * que têm alguma, e pontua `linhas concordantes x contagem`.
+ *
+ * As duas metades são necessárias, e a primeira tentativa usou só a primeira —
+ * consistência — e errou. Neste arquivo:
+ *
+ * ```
+ * Relatorio de anuncios, Mercado Livre     uma vírgula
+ * Gerado em 12/09/2026, 09:14              uma vírgula
+ * MLB;Titulo;Preco;Estoque                 três ponto e vírgulas
+ * MLB1;Refil;69,90;10                      três, mais uma vírgula decimal
+ * MLB2;Vedacao;19,90;20                    três, mais uma vírgula decimal
+ * ```
+ *
+ * A vírgula aparece em **quatro** linhas e o ponto e vírgula em três, então
+ * consistência sozinha elegia a vírgula. Multiplicar pela contagem inverte isso
+ * (4x1 contra 3x3) e é o que corresponde à intuição certa: separador de verdade
+ * não aparece uma vez por linha, aparece uma vez por coluna.
+ *
+ * Empate vai para a maior contagem e, persistindo, para a ordem dos candidatos.
  */
 export function detectarSeparador(texto: string): string {
-  const candidatos = ['\t', ';', ',', '|'];
-  const primeiraLinha = primeiraLinhaUtil(texto);
+  const linhas = primeirasLinhasUteis(texto, LINHAS_PARA_DETECTAR_SEPARADOR);
 
   let melhor = ';';
-  let maisOcorrencias = 0;
+  let melhorPontuacao = 0;
+  let melhorContagem = 0;
 
-  for (const separador of candidatos) {
-    const n = contarForaDeAspas(primeiraLinha, separador);
-    if (n > maisOcorrencias) {
-      maisOcorrencias = n;
+  for (const separador of CANDIDATOS_DE_SEPARADOR) {
+    const contagens = linhas
+      .map((linha) => contarForaDeAspas(linha, separador))
+      .filter((n) => n > 0);
+    if (contagens.length === 0) continue;
+
+    const contagem = maisFrequente(contagens);
+    const concordantes = contagens.filter((n) => n === contagem).length;
+    const pontuacao = concordantes * contagem;
+
+    if (
+      pontuacao > melhorPontuacao ||
+      (pontuacao === melhorPontuacao && contagem > melhorContagem)
+    ) {
+      melhorPontuacao = pontuacao;
+      melhorContagem = contagem;
       melhor = separador;
     }
   }
@@ -52,17 +107,52 @@ export function detectarSeparador(texto: string): string {
   return melhor;
 }
 
-function primeiraLinhaUtil(texto: string): string {
+/** Valor mais frequente. Empate fica com o maior, que é o mais provável num CSV. */
+function maisFrequente(valores: readonly number[]): number {
+  const vezes = new Map<number, number>();
+  for (const v of valores) vezes.set(v, (vezes.get(v) ?? 0) + 1);
+
+  let melhor = 0;
+  let melhorVezes = 0;
+  for (const [valor, n] of vezes) {
+    if (n > melhorVezes || (n === melhorVezes && valor > melhor)) {
+      melhor = valor;
+      melhorVezes = n;
+    }
+  }
+  return melhor;
+}
+
+/**
+ * Primeiras linhas não vazias, respeitando aspas.
+ *
+ * Quebra de linha dentro de campo entre aspas **não** termina a linha — é o mesmo
+ * cuidado que o parser tem, e sem ele um campo multilinha bagunçaria a contagem.
+ */
+function primeirasLinhasUteis(texto: string, maximo: number): readonly string[] {
+  const linhas: string[] = [];
   let dentroDeAspas = false;
-  for (let i = 0; i < texto.length; i += 1) {
+  let inicio = 0;
+
+  const fechar = (fim: number): void => {
+    const linha = texto.slice(inicio, fim);
+    if (linha.trim() !== '') linhas.push(linha);
+  };
+
+  for (let i = 0; i < texto.length && linhas.length < maximo; i += 1) {
     const c = texto[i];
     if (c === '"') {
       dentroDeAspas = !dentroDeAspas;
     } else if (!dentroDeAspas && (c === '\n' || c === '\r')) {
-      return texto.slice(0, i);
+      fechar(i);
+      // Pula o `\n` de um `\r\n` para não produzir uma linha vazia no meio.
+      if (c === '\r' && texto[i + 1] === '\n') i += 1;
+      inicio = i + 1;
     }
   }
-  return texto;
+
+  if (linhas.length < maximo) fechar(texto.length);
+  return linhas;
 }
 
 function contarForaDeAspas(linha: string, separador: string): number {

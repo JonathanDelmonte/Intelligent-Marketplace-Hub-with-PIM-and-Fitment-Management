@@ -22,6 +22,48 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-12 — Poller e tela de jobs
+
+### 🐛 A detecção de separador olhava só a primeira linha, e o fallback escondia o bug
+
+**O defeito.** `detectarSeparador` contava ocorrências de `;`, `,`, tabulação e `|`
+**na primeira linha útil** do CSV. Exportação de painel quase sempre começa com
+linha de título — "Relatório de anúncios", "Gerado em 12/09/2026" — que não tem
+separador nenhum. Todas as contagens davam zero e a função caía no padrão `;`.
+
+Consequência: arquivo separado por vírgula era lido como **uma coluna só**. E o
+sintoma não aparecia ali: aparecia três camadas depois, como "nenhuma das
+primeiras 12 linhas parece um cabeçalho de exportação", mensagem que manda a
+pessoa conferir os nomes das colunas quando o problema era o separador.
+
+**Por que passou tanto tempo escondido.** A planilha usada nos testes é do Mercado
+Livre, que usa `;` — exatamente o valor do fallback. **Fallback que coincide com o
+caso de teste é a forma mais confiável de esconder um bug**, porque o teste passa
+pelo motivo errado. Só apareceu quando subi uma planilha separada por vírgula pela
+tela nova, que é o tipo de coisa que teste não faz e uso faz.
+
+**A primeira correção também estava errada.** Passei a olhar as 12 primeiras
+linhas e escolher o candidato com mais linhas **concordando** na contagem. Num
+arquivo real:
+
+```
+Relatorio de anuncios, Mercado Livre     uma vírgula
+Gerado em 12/09/2026, 09:14              uma vírgula
+MLB;Titulo;Preco;Estoque                 três ponto e vírgulas
+MLB1;Refil;69,90;10                      três, mais a vírgula decimal
+MLB2;Vedacao;19,90;20                    três, mais a vírgula decimal
+```
+
+A vírgula aparece em **quatro** linhas e o `;` em três: consistência sozinha
+elegia a vírgula. A pontuação final é `linhas concordantes x contagem` (4x1 contra
+3x3), que corresponde à intuição certa — **separador de verdade não aparece uma
+vez por linha, aparece uma vez por coluna**.
+
+Fixado em teste com cinco arranjos: título sem separador, dois preâmbulos,
+vírgula só no título, linha vazia no meio, e fim de linha do Windows.
+
+---
+
 ## 2026-09-12 — Ligação de ponta a ponta
 
 ### 🐛 A fila comparava dois relógios diferentes, e um job ficava invisível
