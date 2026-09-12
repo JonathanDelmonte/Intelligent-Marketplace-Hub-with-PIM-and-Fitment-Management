@@ -21,7 +21,7 @@ import type { Fonte } from '@/dominio/procedencia';
 import { FONTES } from '@/dominio/procedencia';
 import type { Banco } from '@/infra/banco/cliente';
 import { produtoExterno, precoHistorico } from '@/infra/banco/schema';
-import { ehGtinValido } from '@/dominio/gtin';
+import { normalizarGtin } from '@/dominio/gtin';
 
 /**
  * Schema de um produto externo capturado.
@@ -38,14 +38,21 @@ export const esquemaProdutoExternoCapturado = z.object({
   /**
    * GTIN, se houver e se o dígito verificador conferir.
    *
-   * Validado aqui de novo, e não só na origem: este é o ponto de entrada de
-   * **toda** captura, e um extrator futuro que leia EAN de uma página HTML não
-   * vai ter passado pelo mesmo caminho da planilha.
+   * Validado **e canonicalizado** aqui, e não só na origem: este é o ponto de
+   * entrada de toda captura, e um extrator futuro que leia EAN de uma página
+   * HTML não vai ter passado pelo caminho da planilha.
+   *
+   * A canonicalização tem que ser deste lado. Sem ela, um UPC-A de 12 dígitos
+   * gravado por um caminho não é achado pela consulta que procura a forma de 13
+   * — que foi exatamente o defeito que o teste da consulta pegou: o importador
+   * canonicalizava, o ingestor não, e duas portas com comportamentos diferentes
+   * viram uma base em que metade dos códigos não é encontrável.
    */
   ean: z
     .string()
-    .trim()
-    .refine((v) => ehGtinValido(v), 'GTIN com dígito verificador inválido')
+    .transform((v) => normalizarGtin(v))
+    .refine((g) => g !== null, 'GTIN com dígito verificador inválido')
+    .transform((g) => (g === null ? null : (g.ean13 ?? g.digitos)))
     .nullable()
     .default(null),
   url: z.string().url().nullable().default(null),

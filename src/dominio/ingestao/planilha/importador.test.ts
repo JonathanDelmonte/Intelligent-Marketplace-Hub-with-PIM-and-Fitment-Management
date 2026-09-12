@@ -255,14 +255,18 @@ describe('GTIN da linha', () => {
     expect(atributos['gtinTipo']).toBe('gtin13');
   });
 
-  it('UPC-A de 12 dígitos vira a mesma chave de 13 do EAN correspondente', async () => {
+  it('entrega o UPC-A validado como veio; quem canonicaliza é o ingestor', async () => {
     const r = await importar([
       'Codigo MLB;Titulo;Preco (R$);EAN',
       'MLB1;Refil importado;69,90;036000291452',
     ]);
     if (r.tipo !== 'importado') return;
 
-    expect(r.linhas[0]!.captura.ean).toBe('0036000291452');
+    // A fronteira é deliberada: o importador valida, o ingestor canonicaliza —
+    // porque o ingestor é a porta única de toda captura, inclusive de extrator
+    // futuro que nunca passe por planilha. Duplicar a canonicalização aqui
+    // criaria dois lugares para ela divergir.
+    expect(r.linhas[0]!.captura.ean).toBe('036000291452');
   });
 
   it('GTIN com dígito verificador errado NÃO vira chave, e não é descartado', async () => {

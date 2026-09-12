@@ -305,9 +305,10 @@ function converterLinha(params: {
       fonte: params.fonte,
       coletadoEm: params.coletadoEm,
       // Campo de primeira classe, não atributo: é a chave pela qual o leitor de
-      // código de barras acha o produto (M14). A forma canônica de 13 dígitos
-      // faz o mesmo item colapsar venha ele como UPC-A ou como EAN-13.
-      ...(gtin === null ? {} : { ean: gtin.ean13 ?? gtin.digitos }),
+      // código de barras acha o produto (M14). Quem canonicaliza para a forma de
+      // 13 dígitos é o ingestor, que é a porta única de toda captura — aqui vai o
+      // que a planilha trouxe, já validado.
+      ...(gtin === null ? {} : { ean: gtin.digitos }),
       atributos: {
         ...(linha.id_externo !== undefined && linha.id_externo !== ''
           ? { idExterno: linha.id_externo }
