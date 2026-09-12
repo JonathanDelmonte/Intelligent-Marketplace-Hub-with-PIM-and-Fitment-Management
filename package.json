@@ -26,6 +26,8 @@
     "db:migrate": "tsx src/infra/banco/migrar.ts",
     "db:seed": "tsx src/infra/banco/semear.ts",
     "db:studio": "drizzle-kit studio",
+    "poller": "node --import tsx scripts/poller.ts",
+    "poller:uma-vez": "node --import tsx scripts/poller.ts --uma-vez",
     "sondar:capacidades": "tsx scripts/sondar-capacidades.ts",
     "verify:authors": "node scripts/verify-authors.mjs",
     "prepare": "git config core.hooksPath .githooks",

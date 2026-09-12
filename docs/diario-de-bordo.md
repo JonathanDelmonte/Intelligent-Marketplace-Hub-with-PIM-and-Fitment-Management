@@ -84,6 +84,43 @@ componente esgotaria o `max_connections` do Postgres, e o sintoma apareceria com
 erro de conexão numa tela que não foi tocada. Agora mora em `globalThis`, que
 sobrevive à reavaliação. O núcleo montado (`montarNucleo`) usa o mesmo mecanismo.
 
+### ⚠️ `npm run poller` não repassa SIGTERM, mas `Ctrl-C` funciona
+
+Precisei medir duas vezes porque a primeira medição estava errada: mandei sinal
+para o pid que o `pgrep` achou, que era o do `npx`, e concluí coisa demais a partir
+disso. Refeito com `$!` e com o pid que o próprio poller registra no log, nas
+quatro situações que importam:
+
+| como sobe | quem recebe o sinal | encerramento limpo |
+| --- | --- | --- |
+| `npm run poller` | SIGTERM no pid do npm | **não** — o poller fica órfão |
+| `npm run poller` | SIGINT no **grupo** (o que o `Ctrl-C` faz) | sim, 107 ms |
+| `tsx scripts/poller.ts` | SIGTERM no pai | sim, 105 ms |
+| `node --import tsx scripts/poller.ts` | SIGTERM no processo | sim, 106 ms |
+
+A distinção é a que interessa na prática: **uso interativo com `npm run` está
+bem**, porque o terminal sinaliza o grupo de processos inteiro. O que quebra é
+supervisor — contêiner, systemd — mandando SIGTERM só para o pid do npm: npm não
+repassa, e isso não muda com a forma do script (testei com o script já num
+processo único e o comportamento é o mesmo).
+
+Duas consequências no código: os scripts `poller` e `poller:uma-vez` passaram a
+usar `node --import tsx`, que roda **no mesmo processo** em vez de o `tsx` abrir um
+segundo node; e o README manda chamar node direto para rodar como serviço.
+
+### 🐛 O poller morria se o banco estivesse fora no arranque
+
+A consulta de estado inicial da fila rodava solta, fora de qualquer tratamento. Um
+`ECONNREFUSED` ali derrubava o processo com código 1 — enquanto a **mesma falha**,
+três linhas depois, dentro do laço, entraria em backoff e se recuperaria sozinha.
+Duas políticas para a mesma falha, decididas por onde ela acontece.
+
+Aconteceu de verdade: o Postgres de teste caiu no meio da sessão e o poller morreu
+no arranque em vez de esperar. Agora o estado inicial é diagnóstico e não
+pré-requisito: a falha vira `fila.estado_inicial_indisponivel` em nível de aviso, e
+o laço começa e faz o backoff. Banco que volta em dez segundos não deve custar um
+reinício de serviço.
+
 ### 🔀 O poller não conhece ingestão
 
 O laço recebe uma `Tarefa` — nome, mais um método que executa uma unidade e diz se
