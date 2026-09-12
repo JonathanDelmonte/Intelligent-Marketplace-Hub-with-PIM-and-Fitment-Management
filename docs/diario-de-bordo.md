@@ -82,6 +82,13 @@ Função de limite que não respeita o limite. Sem consequência grave — é `t
 célula — mas é o tipo de coisa que nunca mais seria olhada. O teste agora varre
 máximos de 1 a 90 e exige que a saída **nunca** passe do pedido.
 
+### 🐛 Arquivo com `'use server'` só pode exportar função assíncrona
+
+Duas `export const` em `acoes.ts` derrubaram o build inteiro. A mensagem do
+Turbopack é enganosa: diz *"the module has no exports at all"*, que parece falha
+de resolução de módulo, e não violação de regra. As constantes foram para
+`constantes.ts`.
+
 ### 🐛 O pool de conexão vazava a cada recarga a quente
 
 `banco()` guardava a instância num `let` de módulo. O servidor de
@@ -90,6 +97,24 @@ abre **outro** pool de dez conexões, sem fechar o anterior. Meia hora editando
 componente esgotaria o `max_connections` do Postgres, e o sintoma apareceria como
 erro de conexão numa tela que não foi tocada. Agora mora em `globalThis`, que
 sobrevive à reavaliação. O núcleo montado (`montarNucleo`) usa o mesmo mecanismo.
+
+### 🐛 Um `span` de leitor de tela fazia a página rolar na horizontal
+
+A tabela tem `min-width: 54rem` dentro de um envelope com `overflow-x: auto`, e a
+tabela ficava corretamente contida. Mesmo assim, a **página** rolava na horizontal
+a 420 px de largura: `documentElement.scrollWidth` de 807 contra
+`body.scrollWidth` de 420.
+
+O culpado era o `<span class="sr-only">ações</span>` do cabeçalho da última
+coluna. `.sr-only` é `position: absolute`, e o envelope não tinha `position`, então
+o bloco contêiner do span era o **documento** — ele escapava do `overflow-x: auto`
+e ia parar na posição que ocuparia na tabela não cortada, 889 px. Um elemento de
+1 px, invisível, esticando a página.
+
+Corrigido com `position: relative` no envelope. A lição generaliza: **contêiner de
+rolagem precisa ser posicionado**, senão descendente absoluto não é cortado por
+ele. Achado medindo no navegador, não olhando: na captura de tela o conteúdo
+parecia certo, e só o `scrollWidth` denunciava.
 
 ### ⚠️ `npm run poller` não repassa SIGTERM, mas `Ctrl-C` funciona
 
@@ -191,12 +216,38 @@ injeção: é mentira, e numa tela de auditoria isso é pior. Só código previs
 `CODIGOS_DE_AVISO` produz mensagem; o único número que atravessa a URL é coagido
 para inteiro não negativo.
 
+### 🔀 `redirect` do Next lança, então nenhum dele fica dentro de `try`
+
+`redirect()` sinaliza por exceção (`NEXT_REDIRECT`). Um `try { ...; redirect() }
+catch {}` engoliria o redirecionamento e a tela ficaria parada sem explicação. Em
+`acoes.ts` o trabalho acontece, o resultado vira código, e o `redirect` é a última
+linha, fora de qualquer captura.
+
 ### 🔀 A tela não afirma se existe poller rodando
 
 Não há batimento gravado, então o sistema **não sabe**. Inventar um estado de
 processo que não se mede seria pior que não dizer nada. O aviso usa só o
 observável: há job pronto **e** nada terminou no último minuto. Diz isso, oferece
 as duas saídas — "Processar agora" ou rodar o poller — e não afirma a causa.
+
+### 🔀 Declaração de tipo escrita à mão para o módulo CSS
+
+A declaração que o Next injeta para `*.module.css` é assinatura de índice. Com
+`noPropertyAccessFromIndexSignature` isso obrigaria `estilo['pagina']` em toda
+classe e — pior — `estilo['paigna']` compilaria, devolvendo `undefined`. Com
+`jobs.module.css.d.ts` escrito à mão, erro de digitação de classe vira erro de
+compilação. A divergência possível falha para o lado seguro: classe no CSS que
+falta na declaração não compila; classe declarada que falta no CSS só produz
+elemento sem estilo.
+
+### 🧹 Teto de upload de 8 MB contra 32 MB do armazenamento
+
+`MAX_BYTES` do armazenamento de conteúdo é 32 MB; o formulário aceita 8 MB. Não é
+inconsistência: subir 32 MB por Server Action significa manter isso em memória no
+servidor durante a requisição. Planilha desse tamanho entra pelo caminho de linha
+de comando, que lê do disco. Os dois números vêm de `src/config/limites.ts`, e
+`next.config.ts` importa de lá — divergir faria o Next recusar o arquivo com erro
+genérico **antes** de a ação poder explicar o motivo.
 
 ### 🐛 A linha recusada guardava só as colunas reconhecidas
 
