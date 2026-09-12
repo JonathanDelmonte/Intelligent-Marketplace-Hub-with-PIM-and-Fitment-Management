@@ -220,16 +220,74 @@ o que comparar. As duas fases se completam, e é por isso que esta vem depois.
 
 | #   | Entrega                                                                  | Estado |
 | --- | ------------------------------------------------------------------------ | ------ |
-| 5.1 | Extração de registro estruturado por LLM, com `null` em vez de invenção  | ⬜     |
-| 5.2 | Forma canônica + embedding (`tipo + marca + modelo normalizado`)         | ⬜     |
-| 5.3 | Busca de vizinhos por `pgvector`                                         | ⬜     |
-| 5.4 | Julgamento binário por LLM com justificativa                             | ⬜     |
-| 5.5 | Agrupamento automático acima do limiar; fila de revisão na zona cinzenta | ⬜     |
-| 5.6 | Decisão humana vira exemplo few-shot para as chamadas seguintes          | ⬜     |
-| 5.7 | Cache por `hash_conteudo` — resolver o mesmo produto uma única vez       | ⬜     |
+| 5.1 | Extração de registro estruturado por LLM, com `null` em vez de invenção  | 🚧     |
+| 5.2 | Forma canônica + embedding (`tipo + marca + modelo normalizado`)         | 🚧     |
+| 5.3 | Busca de vizinhos por `pgvector`                                         | ✅     |
+| 5.4 | Julgamento binário por LLM com justificativa                             | 🚧     |
+| 5.5 | Agrupamento automático acima do limiar; fila de revisão na zona cinzenta | ✅     |
+| 5.6 | Decisão humana vira exemplo few-shot para as chamadas seguintes          | ✅     |
+| 5.7 | Cache por conteúdo — resolver o mesmo produto uma única vez              | ✅     |
+| 5.8 | Propagação de equivalência para SKU, com `perfil_id` exigido pelo tipo   | ✅     |
+| 5.9 | Tela de revisão em `/identidade`, de dois cliques                        | ✅     |
 
 **Entrega:** o grafo de identidade começa a existir. Qual fornecedor é mais
 barato, a que preço o mercado vende, e qual é a margem real.
+
+**O que já funciona hoje, sem chave de LLM.** É mais do que parecia quando a fase
+foi escrita, e o motivo é o ADR 0005: a regra de ouro manda usar LLM só onde a
+entrada é texto livre heterogêneo, e boa parte da resolução de identidade não é.
+
+O que decide de graça: **mesmo GTIN** é o único caso definitivo do sistema, e
+**mesma marca com mesmo código de peça** é justamente o caso que o M3 existe para
+resolver — o anúncio que diz `PA21G` e o catálogo do distribuidor que diz
+`EF-ELX-21`, ligados sem gastar um centavo. O casamento determinístico também
+**descarta** de graça o que é obviamente diferente, o que importa mais do que parece:
+sem esse filtro, cada vizinho que o `pgvector` devolvesse viraria uma chamada paga.
+
+O que fica na fila de revisão, com o motivo escrito: o par que só julgamento resolve.
+Sem chave, ele aparece em `/identidade` dizendo "sem chave de LLM, então ninguém
+julgou" — o sistema sabe que não sabe, e quem olha entende por quê.
+
+**O que as três linhas 🚧 esperam.** Não é código: é `LLM_API_KEY`. O contrato do
+registro extraído existe e aplica a regra de `null` em vez de invenção; a forma
+canônica existe e é determinística; o julgamento tem contrato, cache, teto de
+orçamento e roteamento por limiar, tudo exercitado por um chamador falso. Falta a
+chamada. Ligar é implementar `Chamador` e apontar `LLM_MODELO_JULGAMENTO` — ver
+`src/infra/llm/`.
+
+**A 5.3 está ✅ e a 5.2 não, e a diferença é honesta:** gerar embedding custa chamada
+de API; **buscar** é operação do banco. A busca inteira — ordenação por distância,
+corte, exclusão do próprio produto, separação por modelo — é exercitada com vetor
+sintético contra `pgvector` de verdade. O que falta na 5.2 é só o vetor.
+
+**A 5.7 desvia da especificação de propósito.** A especificação diz "cache por
+`hash_conteudo`". O cache é pela **pergunta** — o par de formas canônicas e atributos
+—, e não pelo `hash_conteudo` da ocorrência, que inclui a URL. Assim duas capturas do
+mesmo produto em vendedores diferentes compartilham a resposta em vez de pagarem duas
+vezes. E `par_identidade` memoriza no nível do par: par já avaliado não volta para
+julgamento, nem para o cache.
+
+Outra tensão resolvida no caminho: exemplo few-shot **não** entra no hash. Se
+entrasse, cada decisão humana invalidaria o cache de todos os pares, e o sistema
+re-resolveria a base inteira justamente por estar aprendendo. Pergunta define o cache;
+contexto vai gravado ao lado, para a chamada continuar reproduzível.
+
+**Como usar.** A tela fica em `/identidade`. O botão resolve algumas ocorrências na
+hora, sem processo de fundo. Cada par pendente mostra os dois lados no mesmo formato —
+preço, vendedor, procedência, GTIN, forma canônica —, a evidência que os aproximou e a
+justificativa de quem julgou. Três botões: é o mesmo, são diferentes, não sei dizer.
+
+"Não sei dizer" não é preguiça: forçar sim ou não em quem não sabe produz exemplo
+errado, ensinado com autoridade — e trava o topo da fila para sempre.
+
+Quando você diz "é o mesmo" e um dos lados já pertence a um SKU, a outra ocorrência
+entra no SKU na hora, e os preços de cada fonte passam a aparecer juntos. É a resposta
+que o grafo existe para dar.
+
+**O que ainda não roda sozinho.** A resolução não tem tipo de job, então ocorrência
+nova só é comparada quando alguém abre a tela e clica. Nada se perde — a resolução é
+idempotente e sabe quem falta —, mas o grafo só cresce quando alguém pede. Ver
+[pendências](./pendencias.md), 3.2.
 
 ---
 

@@ -23,16 +23,31 @@ Nada aqui é problema de código. São decisões, contas e chaves.
 
 `LLM_API_KEY` está vazia em `.env.example` e não há provedor configurado.
 
-**O que fica parado:** extração de registro estruturado (5.1), embedding da forma
-canônica (5.2), busca de vizinhos (5.3, que depende de embedding para ter o que
-buscar), julgamento binário (5.4) e exemplo few-shot (5.6). Também os extratores
-de ingestão 3.2 a 3.6 — anúncio, listagem, catálogo de distribuidor, PDF de tabela
-de preços e imagem de tabela.
+**O que fica parado, e é menos do que parecia:** a **chamada** de extração de
+registro estruturado (5.1), a **geração** de embedding (5.2) e a **execução** do
+julgamento binário (5.4). Também os extratores de ingestão 3.2 a 3.6 — anúncio,
+listagem, catálogo de distribuidor, PDF de tabela de preços e imagem de tabela.
 
-**O que NÃO depende dela**, e por isso foi construído: forma canônica
-determinística, casamento por GTIN e por código de modelo, o registro de custo em
-`llm_call` com teto de orçamento, e o cache por `hash_conteudo`. O caminho está
-pronto para a chave entrar — ver `src/dominio/identidade/`.
+**O que não depende dela, e por isso está pronto e testado:** o contrato do registro
+extraído com a regra de `null` em vez de invenção, a forma canônica, o reconhecedor de
+código de fabricante, o casamento por GTIN e por marca com código de peça, a busca de
+vizinhos por `pgvector` (5.3, exercitada com vetor sintético), o roteamento por
+limiar, a fila de revisão com tela, o exemplo few-shot equilibrado (5.6), o cache por
+conteúdo (5.7) e o registro de custo com teto de orçamento.
+
+O assento onde o LLM senta existe e é exercitado por um chamador falso: `ChamadorAusente`
+devolve `sem_chave` sem gastar orçamento nem sujar o registro de custo, e a resolução
+trata isso como caminho previsto — o par vai para a fila com "sem chave de LLM, então
+ninguém julgou" escrito. Ligar a chave é implementar `Chamador` e apontar
+`LLM_MODELO_JULGAMENTO`. Ver `src/infra/llm/` e `src/dominio/identidade/`.
+
+**O que não dá para calibrar sem ela:** `DISTANCIA_MAXIMA_PADRAO = 0.35` (o corte de
+vizinhança), `VIZINHOS_PADRAO = 20` e o mapeamento `CONFIANCA_POR_CERTEZA`
+(alta/média/baixa → 9 000/7 000/5 000 pontos-base). São números escolhidos, não
+medidos, e cada um mora numa constante nomeada em um lugar só justamente para ser
+ajustado quando houver base com embedding de verdade. `par_identidade.distancia_bp`
+guarda a distância de cada par decidido — é com algumas centenas dessas linhas que o
+corte sai de palpite para medida.
 
 **Quanto custa decidir:** a disciplina do ADR 0005 exige teto de orçamento por
 execução. O padrão está em `LLM_ORCAMENTO_PADRAO_CENTAVOS=500`, R$ 5 por execução
@@ -122,7 +137,7 @@ Ordem do roadmap, que é por utilidade e não por arquitetura. Nada aqui espera 
 
 | Fase | O que falta | Observação |
 | --- | --- | --- |
-| 5 | M3 — resolução de identidade | A metade determinística está feita; a metade de LLM espera 1.1 |
+| 5 | M3 — resolução de identidade | Determinístico, fila de revisão e tela prontos; a **chamada** de LLM espera 1.1 |
 | 6 | M4 — compatibilidade | **O fosso.** Não depende de API de plataforma nenhuma, e é o de maior retorno |
 | 7 | M5 fornecedores + M7 scanner | Depende do grafo da fase 5 para "qual fornecedor é mais barato" |
 | 8 | M9 anúncios, M10 pedidos, M11 consignação | A metade de higiene. Commodity, e é onde o dia a dia sai da planilha |
@@ -133,13 +148,36 @@ Ordem do roadmap, que é por utilidade e não por arquitetura. Nada aqui espera 
 
 ### 3.1 Telas que não existem
 
-Há três telas: início, `/jobs` (com detalhe por job) e `/leitor`. **Não há tela de
-catálogo, de SKU, de precificação nem de fornecedor.** O motor de margem (fase 1) e
-o repositório de SKU (3.10) seguem chamáveis por código e por teste, não por tela.
+Há quatro telas: início, `/jobs` (com detalhe por job), `/leitor` e `/identidade`.
+**Não há tela de catálogo, de SKU, de precificação nem de fornecedor.** O motor de
+margem (fase 1) e o repositório de SKU (3.10) seguem chamáveis por código e por teste,
+não por tela.
+
+A de identidade decide pares e **propaga** para um SKU que já exista, mas não **cria**
+SKU: criar é decisão humana, e a decisão humana não tem onde ser tomada ainda. Hoje
+isso se faz por código — `RepositorioDeSku.criar`. É a lacuna mais próxima de doer:
+a fila de revisão pode dizer "estes dois são o mesmo produto" sem que haja um SKU para
+receber os dois.
 
 A ordem é deliberada: a tela de jobs veio primeiro porque sem ela nada do que a
 ingestão faz é auditável, e o leitor veio depois porque é a primeira função que
 gera dinheiro. Mas a consequência é que **usar o M8 hoje exige escrever código**.
+
+### 3.2 A resolução de identidade não roda sozinha
+
+O poller consome a fila de `job` e sabe executar **ingestão**. A resolução de
+identidade não tem tipo de job: hoje ela roda pelo botão "Resolver 10 agora" da tela, ou
+por código (`ResolvedorDeIdentidade.resolverLote`).
+
+**O custo disso:** ocorrência nova não é comparada até alguém abrir a tela e clicar.
+Não há dado perdido — `semResolucao()` sabe quem falta, e a resolução é idempotente —,
+mas o grafo só cresce quando alguém pede.
+
+**O que falta:** um tipo de job `resolver_identidade`, com `chave_idempotencia` igual ao
+id da ocorrência, enfileirado pelo executor de ingestão ao gravar `produto_externo`. É
+trabalho de meia noite, e foi deixado de fora de propósito: enfileirar chamada de LLM
+antes de haver chave e antes de haver limiar calibrado é enfileirar trabalho que não se
+sabe quanto custa.
 
 ---
 

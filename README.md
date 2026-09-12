@@ -109,6 +109,13 @@ do celular. Informe o custo, leia o código, e o veredito sai com preço pratica
 margem, markup e até quanto dá para pagar. Funciona sem rede: a leitura fica no
 aparelho e sobe quando a conexão volta.
 
+A revisão de identidade fica em `/identidade`. O sistema liga sozinho as ocorrências
+que consegue provar que são o mesmo produto — mesmo GTIN, ou mesma marca com o mesmo
+código de peça — e manda para essa fila o que exige julgamento, com os dois lados no
+mesmo formato e a evidência à vista. Dois cliques por par, e cada decisão vira exemplo
+para os julgamentos seguintes. Quando um dos lados já é um SKU, dizer "é o mesmo" junta
+os preços de todas as fontes ali na hora.
+
 Para rodar como **serviço** (contêiner, systemd), chamar node direto:
 
 ```sh
