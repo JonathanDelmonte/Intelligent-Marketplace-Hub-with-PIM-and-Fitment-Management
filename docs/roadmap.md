@@ -12,6 +12,10 @@ a 4 existem para que cada noite de código tenha contrapartida em venda possíve
 Legenda de estado: ✅ pronto · 🚧 em andamento · ⬜ não começou · 🔒 bloqueado por
 dependência externa.
 
+Este arquivo diz **o que falta construir**, em ordem de utilidade. Para saber **o
+que está travado e por quem** — chave de LLM, app no Mercado Livre, exportação
+real de planilha, dívida consciente — ver [pendências](./pendencias.md).
+
 ---
 
 ## Fase 0 — Fundação (não está na especificação; é pré-requisito de tudo)

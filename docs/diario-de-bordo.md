@@ -12,6 +12,10 @@ diferente, e o próximo a mexer refaz o mesmo caminho.
 
 Ordem cronológica inversa: mais recente no topo.
 
+Este arquivo diz **o que aconteceu**. Para a lista do que continua aberto, com o
+que trava cada coisa, ver [pendências](./pendencias.md) — que é derivada daqui e do
+roadmap.
+
 Convenção de marcação:
 
 - 🐛 **Bug** — algo estava errado e foi corrigido
