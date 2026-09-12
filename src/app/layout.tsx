@@ -15,6 +15,7 @@ const NAVEGACAO: readonly { readonly href: string; readonly rotulo: string }[] =
   { href: '/', rotulo: 'Início' },
   { href: '/leitor', rotulo: 'Leitor' },
   { href: '/jobs', rotulo: 'Jobs' },
+  { href: '/identidade', rotulo: 'Identidade' },
 ];
 
 /**

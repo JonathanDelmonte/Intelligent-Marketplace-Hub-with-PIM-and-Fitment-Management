@@ -1,0 +1,289 @@
+/*
+ * Estilo da tela de identidade.
+ *
+ * As cores vêm de variável do tema (ADR 0003): nenhuma cor literal de marca entra
+ * aqui.
+ *
+ * A decisão de layout que manda no arquivo: os dois lados do par são um `grid` de
+ * duas colunas que **vira uma** abaixo de 52rem. Comparar dois produtos em telefone
+ * lado a lado não funciona — cada coluna fica com 20 caracteres de largura —, e
+ * empilhado funciona, porque os campos estão na mesma ordem nos dois lados.
+ */
+
+.pagina {
+  margin: 0 auto;
+  max-width: 76rem;
+  padding: 2.5rem 1.5rem 1rem;
+}
+
+.cabecalho {
+  margin-bottom: 1.5rem;
+}
+
+.titulo {
+  font-size: 1.5rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.subtitulo {
+  color: var(--cor-texto-fraco);
+  margin: 0.375rem 0 0;
+  max-width: 66ch;
+}
+
+.secao {
+  margin-top: 2.25rem;
+}
+
+.secaoTitulo {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+}
+
+/* ── Avisos ─────────────────────────────────────────────────────────────── */
+
+.aviso,
+.avisoAtencao,
+.avisoErro {
+  border: 1px solid var(--cor-borda);
+  border-left-width: 3px;
+  border-radius: var(--raio);
+  margin-top: 1.25rem;
+  padding: 0.75rem 1rem;
+}
+
+.aviso {
+  border-left-color: var(--cor-ok);
+}
+
+.avisoAtencao {
+  border-left-color: var(--cor-aviso);
+}
+
+.avisoErro {
+  border-left-color: var(--cor-erro);
+}
+
+.avisoTitulo {
+  font-weight: 600;
+}
+
+.avisoCorpo {
+  color: var(--cor-texto-fraco);
+  margin: 0.25rem 0 0;
+  max-width: 70ch;
+}
+
+/* ── Painel de contagem ─────────────────────────────────────────────────── */
+
+.painel {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cartao {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.875rem 1rem;
+}
+
+.cartaoNumero {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.cartaoRotulo {
+  font-weight: 500;
+}
+
+.cartaoNota {
+  color: var(--cor-texto-fraco);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+/* ── Botões ─────────────────────────────────────────────────────────────── */
+
+.botaoSecundario,
+.botaoSim,
+.botaoNao,
+.botaoNeutro {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  padding: 0.5rem 0.9rem;
+}
+
+.botaoSecundario,
+.botaoNeutro {
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+}
+
+.botaoSim {
+  background: var(--cor-ok);
+  border-color: var(--cor-ok);
+  color: #fff;
+}
+
+.botaoNao {
+  background: var(--cor-superficie);
+  border-color: var(--cor-erro);
+  color: var(--cor-erro);
+}
+
+.dica {
+  color: var(--cor-texto-fraco);
+  font-size: 0.8125rem;
+  margin: 0.5rem 0 0;
+  max-width: 70ch;
+}
+
+/* ── Fila de pares ──────────────────────────────────────────────────────── */
+
+.fila {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+
+.par {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  padding: 1rem 1.125rem 1.125rem;
+}
+
+.parCabecalho {
+  border-bottom: 1px solid var(--cor-borda);
+  padding-bottom: 0.75rem;
+}
+
+.motivo {
+  font-weight: 500;
+  margin: 0;
+  max-width: 80ch;
+}
+
+.evidencia {
+  color: var(--cor-texto-fraco);
+  font-size: 0.8125rem;
+  margin: 0.25rem 0 0;
+}
+
+/*
+ * Citação é itálico com barra à esquerda; detalhe é texto comum.
+ *
+ * A diferença não é decoração: aspas e itálico dizem que **alguém falou**, e só o
+ * julgamento por LLM falou. Motivo determinístico foi calculado, e vestir de citação
+ * sugeriria uma opinião onde há uma conta.
+ */
+.citacao {
+  border-left: 3px solid var(--cor-borda);
+  color: var(--cor-texto-fraco);
+  font-style: italic;
+  margin: 0.875rem 0 0;
+  max-width: 80ch;
+  padding-left: 0.75rem;
+}
+
+.detalhe {
+  color: var(--cor-texto-fraco);
+  margin: 0.875rem 0 0;
+  max-width: 80ch;
+}
+
+.inconsistencias {
+  color: var(--cor-aviso);
+  font-size: 0.8125rem;
+  margin: 0.75rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.lados {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 1rem;
+}
+
+@media (max-width: 52rem) {
+  .lados {
+    grid-template-columns: 1fr;
+  }
+}
+
+.lado {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  padding: 0.875rem 1rem;
+}
+
+.ladoTitulo {
+  font-size: 0.9375rem;
+  margin: 0 0 0.625rem;
+  /* Título de anúncio é longo e sem espaço em alguns casos; sem isto o cartão
+     empurra a página para a rolagem horizontal no telefone. */
+  overflow-wrap: anywhere;
+}
+
+.ladoEtiqueta {
+  color: var(--cor-texto-fraco);
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.campos {
+  display: grid;
+  gap: 0.125rem 0.75rem;
+  grid-template-columns: auto 1fr;
+  margin: 0;
+}
+
+.campos dt {
+  color: var(--cor-texto-fraco);
+  font-size: 0.8125rem;
+}
+
+.campos dd {
+  font-size: 0.8125rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.canonico {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.link {
+  color: var(--cor-primaria);
+  display: inline-block;
+  font-size: 0.8125rem;
+  margin-top: 0.625rem;
+}
+
+.acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  margin-top: 1rem;
+}

@@ -28,6 +28,30 @@ Convenção de marcação:
 
 ## 2026-09-12 — Fase 5: resolução de identidade (M3)
 
+### 🐛 A tela dizia "a decisão não foi gravada" com a decisão gravada
+
+`decidirPar` faz três coisas: grava a decisão, grava o exemplo, e — se um dos lados
+já é um SKU — propaga. A propagação é a última e a menos essencial, e estava dentro
+do mesmo `try`. Quando ela falhou (perfil padrão apontando para um slug que não
+existia no banco), o `catch` de fora respondeu **"a decisão não foi gravada"** — com a
+decisão gravada e o exemplo gravado.
+
+Mentira na pior direção: quem lê isso clica de novo. Agora a propagação tem captura
+própria e um aviso próprio — "decisão registrada, mas não deu para ligar ao SKU" —,
+que é o que aconteceu de fato.
+
+### 🔀 A frase mais útil vai no destaque, e a repetida sai
+
+Com três pares na tela ficou óbvio o que não aparecia lendo código: o destaque de
+todo cartão dizia a mesma frase inútil ("a comparação determinística não decidiu")
+enquanto a informação de verdade — "mesma marca e modelo, mas a quantidade de
+embalagem difere: 1 contra 3" — ficava em segundo plano. Em telefone isso custava duas
+linhas do espaço mais caro da tela.
+
+Agora, quando não há confiança para explicar, a **justificativa é o título**. E aspas
+com itálico ficaram reservadas a julgamento de LLM: aspas implicam que alguém falou, e
+motivo determinístico não foi dito por ninguém — foi calculado.
+
 ### 🐛 `sql<number>` é asserção de tipo, não conversão — e o `bigint` chegou ao formatador
 
 A fila de revisão junta `produto_externo` duas vezes (um lado por coluna do par), e a
