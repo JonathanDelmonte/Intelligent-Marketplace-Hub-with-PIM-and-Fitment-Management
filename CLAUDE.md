@@ -63,10 +63,18 @@ errado ou com trailer de atribuição proibido.
 
 ---
 
-## 2. Branch de trabalho
+## 2. Branches
 
-Desenvolver e publicar em `claude/epic-allen-1r2zyy`. Nunca em outra branch sem
-autorização explícita.
+`main` é a branch padrão e o estado publicado do projeto. É o que alguém vê ao
+abrir o repositório, e é dela que se lê o código como ele está.
+
+**Desenvolver e publicar em `claude/epic-allen-1r2zyy`.** Nunca em outra branch —
+`main` incluída — sem autorização explícita do dono do repositório.
+
+Levar trabalho para `main` é decisão explícita, não consequência de terminar uma
+tarefa. Hoje as duas apontam para o mesmo commit, então a passagem é
+`fast-forward`; quando divergirem, a integração é assunto de quem decide o que
+publicar, e não do agente que escreveu o código.
 
 ---
 
