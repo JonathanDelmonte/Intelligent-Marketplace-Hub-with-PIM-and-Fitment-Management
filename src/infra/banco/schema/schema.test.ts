@@ -48,7 +48,15 @@ const CONHECIMENTO = [
 ] as const;
 
 /** Infraestrutura: nem operacional nem conhecimento. */
-const INFRAESTRUTURA = ['job', 'llm_call', 'embedding', 'exemplo_identidade'] as const;
+const INFRAESTRUTURA = [
+  'job',
+  'llm_call',
+  'embedding',
+  'exemplo_identidade',
+  // `par_identidade` é a decisão de identidade e a fila de revisão. Sem `perfil_id`
+  // pelo mesmo motivo de `produto_externo`: o grafo é compartilhado entre perfis.
+  'par_identidade',
+] as const;
 
 /** A raiz do multi-perfil. Não carrega `perfil_id` porque *é* o perfil. */
 const RAIZ = ['perfil_vendedor'] as const;
@@ -215,6 +223,15 @@ describe('disciplina de custo de LLM (ADR 0005)', () => {
     expect(unica!.columns.map((c) => c.name).sort()).toEqual(
       ['hash_entrada', 'modelo', 'proposito'].sort(),
     );
+  });
+
+  it('par_identidade exige o par ordenado, no banco e não por convenção', () => {
+    // Sem isto, (A,B) e (B,A) são duas linhas para a mesma decisão, e nada impede
+    // que se contradigam. A ordenação também elimina o par de um produto com ele
+    // mesmo, que é o que um candidato mal filtrado produz.
+    const config = getTableConfig(todas.get('par_identidade')!);
+    expect(config.checks.some((c) => c.name === 'chk_par_identidade_ordenado')).toBe(true);
+    expect(config.uniqueConstraints.some((u) => u.name === 'unq_par_identidade')).toBe(true);
   });
 
   it('produto_externo tem hash_conteudo único, que é a chave de cache de M3', () => {

@@ -117,6 +117,19 @@ export const produtoExterno = pgTable(
     hashConteudo: text('hash_conteudo').notNull(),
     /** Forma canônica usada para gerar o embedding, não o título bruto. */
     formaCanonica: text('forma_canonica'),
+    /**
+     * Chave determinística de agrupamento: `marca|modelo da peça`, normalizados.
+     *
+     * Coluna e indexada porque é o **gerador de candidato que funciona sem
+     * embedding** — e sem chave de LLM não há embedding nenhum. Com ela, achar as
+     * outras ocorrências do mesmo `PA21G` da Electrolux é uma igualdade indexada;
+     * sem ela seria varredura da tabela inteira, ou nada.
+     *
+     * Nula quando falta marca ou modelo, e a nulidade é significativa: não há chave,
+     * então não há candidato por esta via. Nunca `''` — string vazia casaria com
+     * toda outra string vazia e fundiria a base.
+     */
+    chaveAgrupamento: text('chave_agrupamento'),
     ...procedencia,
     ...auditoria,
   },
@@ -126,6 +139,8 @@ export const produtoExterno = pgTable(
     index('idx_produto_externo_captura').on(t.coletadoEm),
     // A consulta do leitor de código de barras: GTIN para evidência de preço.
     index('idx_produto_externo_ean').on(t.ean),
+    // O gerador de candidato de M3 que roda sem embedding.
+    index('idx_produto_externo_chave_agrupamento').on(t.chaveAgrupamento),
   ],
 );
 

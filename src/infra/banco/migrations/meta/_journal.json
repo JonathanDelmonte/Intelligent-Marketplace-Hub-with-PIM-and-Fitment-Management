@@ -22,6 +22,20 @@
       "when": 1789221062900,
       "tag": "0002_bouncy_viper",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789246955147,
+      "tag": "0003_low_shriek",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789247157138,
+      "tag": "0004_abnormal_landau",
+      "breakpoints": true
     }
   ]
 }
