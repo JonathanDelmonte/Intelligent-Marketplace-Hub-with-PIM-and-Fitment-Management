@@ -75,6 +75,24 @@ recusa antes de chegar ao `URL`. Assim todo chamador futuro está protegido, e a
 lista de links continua caindo em `texto`, que é onde o classificador a reconhece
 como lista e o executor abre um job por link.
 
+### 🔀 O log é uma linha de JSON, e o registrador nunca lança
+
+Quatro formas reais de `JSON.stringify` derrubar o laço, todas tratadas antes da
+serialização: `bigint` lança `TypeError` (e o sistema guarda dinheiro em `bigint`),
+referência circular lança, `Error` serializa como `{}` porque `message` e `stack`
+não são enumeráveis, e texto colado de 8 KB não cabe numa linha. Acima disso, a
+escrita ainda vai dentro de `try/catch` com linha de recurso.
+
+Campo cujo nome sugere segredo é redigido por nome — grosseiro de propósito, erra
+para o lado de esconder. `chave_idempotencia` é a exceção explícita: é o que liga a
+linha de log ao registro no banco.
+
+### 🔀 Redação por nome de campo, e não por lista de campos conhecidos
+
+A alternativa seria marcar os campos sensíveis um a um. Não sobrevive: quem
+acrescenta um campo de token dentro de um objeto de erro não vai lembrar de
+registrá-lo. Por nome, `accessToken` novo já entra coberto.
+
 ### 🐛 A linha recusada guardava só as colunas reconhecidas
 
 Ao construir a tela de detalhe, a primeira versão mostrou os campos com nome
