@@ -22,6 +22,96 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-12 — Ligação de ponta a ponta
+
+### 🐛 A fila comparava dois relógios diferentes, e um job ficava invisível
+
+**O defeito.** `reivindicar` capturava `new Date()` do JavaScript e comparava com
+`agendado_para`, que é escrito pelo relógio do **banco** (`now()`). O JavaScript
+trunca em **milissegundo**; o Postgres tem precisão de **microssegundo**.
+
+Resultado: um job enfileirado em `.764154` era comparado contra `.764000`, e
+`agendado_para <= agora` dava **falso**. O job ficava invisível.
+
+**Por que isso é pior do que parece.** Num poller o defeito se cura sozinho no
+tique seguinte, então em produção seria **invisível**. Mas em qualquer fluxo que
+enfileira e processa em sequência — endpoint síncrono, comando de linha, teste —
+é intermitente, e a falha aparece como "fila vazia" sem nenhuma relação com a
+causa. Custou uma investigação inteira.
+
+**O caminho até a causa, porque o erro do meio importa.** Minha primeira hipótese
+foi exatamente a certa: truncamento de milissegundo. Escrevi um teste para
+confirmar e ele deu **0 de 60** — hipótese aparentemente refutada. O teste é que
+estava errado: eu capturava o relógio da aplicação **depois** de uma ida e volta
+extra ao banco, então ele estava sempre à frente.
+
+Só reproduzindo o caminho real, com o conteúdo real, e despejando a tabela no
+momento da falha, os números apareceram e a hipótese original se confirmou. Lição:
+um teste de hipótese que não reproduz o caminho real não refuta nada.
+
+**Correção.** O "agora" da fila passa a ser o do banco: `reivindicar` e
+`quantidadePronta` usam `now()` em SQL em vez de `Date` da aplicação. O parâmetro
+`agora` explícito continua aceito, para teste que precisa de tempo determinístico.
+
+Comparar `agendado_para` com o relógio da aplicação era o erro de origem: quem
+escreve o valor é o banco, então quem o compara também tem que ser.
+
+**Teste de regressão:** trinta repetições de enfileirar-e-reivindicar em
+sequência imediata, e vinte de `quantidadePronta`. Uma repetição só passaria por
+sorte.
+
+### 🔀 Conteúdo endereçado por hash, não no payload do job
+
+O payload do job carrega o **hash** do arquivo, não o arquivo. Três ganhos:
+
+1. **Idempotência por construção** — mesmo conteúdo, mesmo hash, sem comparar
+   nada.
+2. **A tabela `job` fica pequena.** Um XLSX de 4 MB em `jsonb` transformaria a
+   fila em depósito de arquivo, e a tela dos últimos 100 jobs ficaria impossível
+   de carregar.
+3. É o **cache de extração** que a seção 7 da especificação pede, e o mesmo
+   mecanismo serve depois para HTML, PDF e foto de fornecedor.
+
+Escrita atômica (arquivo temporário e `rename`): sem isso, um processo morto no
+meio da escrita deixaria um arquivo truncado **com o hash de um conteúdo
+completo**, e toda leitura seguinte confiaria nele.
+
+E o hash é validado antes de virar caminho — ele chega do payload de um job, e um
+valor como `../../etc/passwd` seria leitura de caminho arbitrário.
+
+### 🔀 Tipo sem extrator vai para revisão, não para erro
+
+Dos nove tipos de entrada, só dois têm extrator: planilha de exportação e lista
+de links. Os outros dependem de LLM e não existem.
+
+O executor **não finge**: manda para `pendente_revisao` com o motivo dizendo o
+tipo, a etapa do roadmap e o que falta. Falhar como erro faria o job entrar em
+backoff tentando para sempre um extrator que não existe, e a pessoa veria um erro
+genérico que parece defeito em vez de uma lacuna conhecida.
+
+### 🔀 Lista de links vira N jobs, não um job que percorre a lista
+
+Se o terceiro link falha, os outros já concluíram e só ele reagenda. Um job só
+perderia isso — e a lista de vinte links viraria tudo ou nada.
+
+### 🐛 Minhas URLs de teste tinham ID irreal, e o classificador estava certo
+
+Quatro testes de ponta a ponta falharam com `MLB-1-a` e `MLB-0-a`. O padrão de
+item do ML exige seis dígitos ou mais, então essas URLs caíam em "site conhecido,
+caminho não reconhecido" com confiança 5000 — abaixo do limiar de 6000 — e iam
+para revisão antes de chegar ao executor.
+
+Não era bug: era o limiar de confiança fazendo exatamente o trabalho dele. Corrigi
+as URLs de teste para IDs realistas.
+
+**Vale registrar o efeito colateral:** uma URL de plataforma conhecida com caminho
+em formato novo também cai em revisão. É o comportamento desejado — melhor
+perguntar que gastar LLM numa página que pode ser qualquer coisa — mas significa
+que mudança de formato de URL da plataforma aparece como fila de revisão
+crescendo, não como erro. É onde olhar quando isso acontecer.
+
+---
+
 ## 2026-09-12 — Importador de planilha de exportação (M1, etapa 3.7)
 
 ### 🐛 `interpretarPreco` corrompia preço em silêncio — o defeito mais grave até agora

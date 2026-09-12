@@ -103,6 +103,8 @@ a `bloqueado`, com o status HTTP na mão.
 | 3.6  | Extrator de imagem de tabela (print de WhatsApp) — visão              | ⬜     |
 | 3.7  | Importadores de planilha de exportação das três plataformas           | 🚧     |
 | 3.8  | Fila `job` idempotente e retomável + contagem por status              | ✅     |
+| 3.11 | Orquestrador e executor: entrada → fila → extração → `produto_externo` | ✅     |
+| 3.12 | Armazenamento de conteúdo por hash (cache de extração da seção 7)     | ✅     |
 | 3.9  | `pendente_revisao` em vez de descarte quando o schema falha           | ✅     |
 | 3.10 | M2: repositório de `sku` com `perfil_id` exigido pelo compilador      | ✅     |
 
@@ -111,9 +113,11 @@ a `bloqueado`, com o status HTTP na mão.
 **Invariante:** tudo que entra vira `produto_externo`, nunca `sku` direto.
 
 **O que está pronto e o que não está.** O caminho determinístico da fase 3 está
-completo e testado contra Postgres real: classificar a entrada, enfileirar com
-idempotência, retomar de progresso parcial, gravar com procedência e deduplicar
-por hash, criar SKU e ligar ocorrências. **Os extratores (3.2 a 3.7) não
+completo, **ligado de ponta a ponta** e testado contra Postgres e sistema de
+arquivos reais: a entrada chega ao orquestrador, é classificada, guardada por
+hash, enfileirada, consumida pelo executor, importada, e grava `produto_externo`
+— e daí um SKU é criado ligando as ocorrências. Vinte e dois testes cobrem o
+encaixe, que é onde mora a outra metade dos defeitos. **Os extratores (3.2 a 3.7) não
 começaram**, e é neles que o LLM entra — não há chave de LLM configurada, e
 escrever extrator sem poder rodá-lo contra página de verdade produziria código
 que parece funcionar.

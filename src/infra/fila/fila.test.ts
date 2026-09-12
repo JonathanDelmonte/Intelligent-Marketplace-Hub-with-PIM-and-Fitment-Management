@@ -175,6 +175,37 @@ describe.skipIf(!temBancoDeTeste())('Fila (contra Postgres real)', () => {
     it('devolve null quando a fila está vazia', async () => {
       expect(await fila.reivindicar()).toBeNull();
     });
+
+    it('enfileirar e reivindicar em sequência imediata sempre funciona', async () => {
+      // Regressão de um defeito intermitente que custou uma investigação inteira:
+      // `agendado_para` é escrito pelo relógio do banco, com precisão de
+      // microssegundo, e `new Date()` do JavaScript trunca em milissegundo.
+      // Comparar os dois deixava o job invisível quando enfileirado e reivindicado
+      // dentro do mesmo milissegundo.
+      //
+      // Trinta repetições porque a falha era de timing: uma só passaria por sorte.
+      for (let i = 0; i < 30; i += 1) {
+        await limparTabelas(conexao.db, ['job']);
+        await fila.enfileirar({
+          tipo: 't',
+          chaveIdempotencia: `imediato${String(i)}`,
+          entrada: {},
+        });
+
+        const reivindicado = await fila.reivindicar({ tipos: ['t'] });
+        expect(reivindicado, `repetição ${String(i)}`).not.toBeNull();
+      }
+    });
+
+    it('quantidadePronta conta job enfileirado no mesmo instante', async () => {
+      // Mesmo defeito, outra consulta: esta é a que decide se o poller tem
+      // trabalho, então contar zero faria a fila parecer vazia.
+      for (let i = 0; i < 20; i += 1) {
+        await limparTabelas(conexao.db, ['job']);
+        await fila.enfileirar({ tipo: 't', chaveIdempotencia: `conta${String(i)}`, entrada: {} });
+        expect(await fila.quantidadePronta(), `repetição ${String(i)}`).toBe(1);
+      }
+    });
   });
 
   describe('retomabilidade', () => {

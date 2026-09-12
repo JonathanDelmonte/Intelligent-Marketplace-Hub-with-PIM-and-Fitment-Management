@@ -130,17 +130,33 @@ export class Fila {
    *
    * Reivindica também job `rodando` cujo prazo estourou: se o processo morreu no
    * meio, o job voltaria a ficar preso para sempre.
+   *
+   * ## O "agora" é o do banco, não o da aplicação
+   *
+   * `agendado_para` é escrito pelo relógio do **banco** (`now()`), com precisão de
+   * microssegundo. `new Date()` do JavaScript trunca em **milissegundo**. Comparar
+   * os dois deixa um job invisível quando ele é enfileirado e reivindicado dentro
+   * do mesmo milissegundo: gravado em `.764154`, o relógio da aplicação diz
+   * `.764000`, e `agendado_para <= agora` é falso.
+   *
+   * O defeito se cura sozinho no tique seguinte de um poller, então em produção
+   * seria invisível — e em qualquer fluxo que enfileira e processa em sequência
+   * (endpoint síncrono, comando de linha, teste) seria intermitente e difícil de
+   * diagnosticar. Ver o diário de bordo.
+   *
+   * `agora` explícito continua aceito, para teste que precisa de tempo
+   * determinístico.
    */
   async reivindicar(
     params: {
       readonly tipos?: readonly string[];
+      /** Tempo de referência. Quando ausente, usa o relógio do banco. */
       readonly agora?: Date;
       /** Tempo após o qual um job `rodando` é considerado abandonado. */
       readonly prazoDeExecucaoMs?: number;
     } = {},
   ): Promise<JobEnfileirado | null> {
-    const agora = params.agora ?? new Date();
-    const prazo = new Date(agora.getTime() - (params.prazoDeExecucaoMs ?? 15 * 60_000));
+    const prazoMs = params.prazoDeExecucaoMs ?? 15 * 60_000;
 
     // `= any(array)` em vez de `in (...)`: funciona para qualquer quantidade de
     // tipos com um único parâmetro, enquanto `in ${array}` só acerta com um.
@@ -149,9 +165,15 @@ export class Fila {
         ? sql`true`
         : sql`${job.tipo} = any(${sql.param([...params.tipos])})`;
 
-    // Timestamp vai como texto ISO com cast explícito: o driver não serializa
+    // Timestamp explícito vai como texto ISO com cast: o driver não serializa
     // `Date` dentro de template de SQL cru, e o erro só apareceria em runtime.
-    const emTexto = (d: Date) => sql`${d.toISOString()}::timestamptz`;
+    const agoraSql =
+      params.agora === undefined ? sql`now()` : sql`${params.agora.toISOString()}::timestamptz`;
+
+    const prazoSql =
+      params.agora === undefined
+        ? sql`now() - make_interval(secs => ${prazoMs / 1000})`
+        : sql`${new Date(params.agora.getTime() - prazoMs).toISOString()}::timestamptz`;
 
     const reivindicados = await this.db.execute(sql`
       with proximo as (
@@ -159,8 +181,8 @@ export class Fila {
         from ${job}
         where ${filtroDeTipo}
           and (
-            (${job.status} = 'pendente' and ${job.agendadoPara} <= ${emTexto(agora)})
-            or (${job.status} = 'rodando' and ${job.iniciadoEm} <= ${emTexto(prazo)})
+            (${job.status} = 'pendente' and ${job.agendadoPara} <= ${agoraSql})
+            or (${job.status} = 'rodando' and ${job.iniciadoEm} <= ${prazoSql})
           )
         order by ${job.agendadoPara} asc
         limit 1
@@ -168,9 +190,9 @@ export class Fila {
       )
       update ${job}
       set status = 'rodando',
-          iniciado_em = ${emTexto(agora)},
+          iniciado_em = ${agoraSql},
           tentativas = ${job.tentativas} + 1,
-          atualizado_em = ${emTexto(agora)}
+          atualizado_em = ${agoraSql}
       where ${job.id} in (select id from proximo)
       returning ${job.id}, ${job.tipo}, ${job.status}, ${job.entrada}, ${job.progresso},
                 ${job.tentativas}, ${job.maxTentativas}, ${job.chaveIdempotencia}, ${job.erro}
@@ -264,11 +286,17 @@ export class Fila {
   }
 
   /** Quantos jobs prontos para rodar agora. Para saber se o poller tem trabalho. */
-  async quantidadePronta(agora: Date = new Date()): Promise<number> {
+  async quantidadePronta(agora?: Date): Promise<number> {
+    // O "agora" é o do banco pelo mesmo motivo de `reivindicar`: comparar o
+    // relógio da aplicação com `agendado_para` esconderia um job enfileirado no
+    // mesmo milissegundo, e esta contagem é o que decide se o poller tem trabalho.
+    const limite = agora === undefined ? sql`now()` : sql`${agora.toISOString()}::timestamptz`;
+
     const linhas = await this.db
       .select({ n: sql<number>`count(*)::int` })
       .from(job)
-      .where(and(eq(job.status, 'pendente'), lte(job.agendadoPara, agora)));
+      .where(and(eq(job.status, 'pendente'), sql`${job.agendadoPara} <= ${limite}`));
+
     return linhas[0]?.n ?? 0;
   }
 
