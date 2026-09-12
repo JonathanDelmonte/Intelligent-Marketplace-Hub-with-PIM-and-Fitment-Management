@@ -90,8 +90,18 @@ export function siteDaUrl(url: string): SiteReconhecido | null {
 }
 
 function analisarUrl(bruto: string): URL | null {
+  const limpo = bruto.trim();
+
+  // Espaço em branco no meio recusa antes de chegar ao `URL`, e não por
+  // preciosismo: o analisador do padrão WHATWG **remove** tabulação e quebra de
+  // linha em vez de recusar, então duas URLs coladas uma por linha viram uma URL
+  // só, válida e sem sentido — `https://a.com` + `https://b.com` resulta em
+  // `https://a.comhttps//b.com`. Numa caixa que aceita texto colado, isso é o
+  // caso comum, não o exótico.
+  if (/\s/u.test(limpo)) return null;
+
   try {
-    const url = new URL(bruto.trim());
+    const url = new URL(limpo);
     // Só http(s). `file:`, `javascript:` e `data:` não são entradas de ingestão,
     // e aceitá-las seria superfície de ataque numa caixa que recebe texto colado.
     return url.protocol === 'http:' || url.protocol === 'https:' ? url : null;
@@ -386,6 +396,22 @@ function classificarTexto(bruto: string): Classificacao {
 }
 
 /** Extrai URLs http(s) de um texto qualquer, sem duplicar. */
+/**
+ * Interpreta o que veio do campo único da tela: uma URL, ou texto.
+ *
+ * A especificação pede "um único campo de entrada que aceita qualquer coisa e faz
+ * a coisa certa". Esta é a primeira bifurcação desse "faz a coisa certa", e mora
+ * aqui — e não na tela — porque é decisão de classificação, não de apresentação.
+ *
+ * Lista de links cai em `texto` de propósito: `classificar` reconhece a lista e o
+ * executor abre um job por link, o que faz o terceiro link falhar sem levar os
+ * outros dois junto.
+ */
+export function entradaDeTextoLivre(valor: string): Entrada {
+  const limpo = valor.trim();
+  return ehUrlValida(limpo) ? { tipo: 'url', valor: limpo } : { tipo: 'texto', valor: limpo };
+}
+
 export function extrairUrls(texto: string): readonly string[] {
   const encontradas = texto.match(/https?:\/\/[^\s<>"')\]]+/gi) ?? [];
   const limpas = encontradas

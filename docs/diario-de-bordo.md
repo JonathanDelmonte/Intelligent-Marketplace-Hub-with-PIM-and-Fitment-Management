@@ -62,6 +62,19 @@ vez por linha, aparece uma vez por coluna**.
 Fixado em teste com cinco arranjos: título sem separador, dois preâmbulos,
 vírgula só no título, linha vazia no meio, e fim de linha do Windows.
 
+### 🐛 `new URL()` remove quebra de linha em vez de recusar
+
+Duas URLs coladas uma por linha — o caso **comum** numa caixa que aceita texto —
+passavam por `ehUrlValida`, porque o analisador do padrão WHATWG **remove**
+tabulação e quebra de linha do meio da URL em vez de rejeitar.
+`https://a.com` + `https://b.com` virava `https://a.comhttps//b.com`: uma URL
+válida, sem sentido, que teria ido para extração como se fosse um anúncio.
+
+Corrigido em `analisarUrl`, não no chamador: espaço em branco depois do `trim`
+recusa antes de chegar ao `URL`. Assim todo chamador futuro está protegido, e a
+lista de links continua caindo em `texto`, que é onde o classificador a reconhece
+como lista e o executor abre um job por link.
+
 ---
 
 ## 2026-09-12 — Ligação de ponta a ponta

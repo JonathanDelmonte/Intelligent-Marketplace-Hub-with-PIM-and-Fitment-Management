@@ -5,6 +5,7 @@ import {
   classificar,
   ehConfiavel,
   ehUrlValida,
+  entradaDeTextoLivre,
   exigeLlm,
   extrairUrls,
   siteDaUrl,
@@ -332,5 +333,74 @@ describe('invariantes do classificador', () => {
     expect([...semLlm].sort()).toEqual(
       ['desconhecido', 'lista_de_links', 'planilha_exportacao'].sort(),
     );
+  });
+});
+
+describe('URL com espaço em branco no meio', () => {
+  /**
+   * Regressão de uma armadilha do próprio padrão da web.
+   *
+   * `new URL()` **remove** tabulação e quebra de linha em vez de recusar, então
+   * duas URLs colocadas uma por linha viravam uma URL só, válida e sem sentido:
+   * `https://a.com` + `https://b.com` dava `https://a.comhttps//b.com`. Numa caixa
+   * que aceita texto colado, colar duas linhas é o caso comum.
+   */
+  it('recusa duas URLs coladas por quebra de linha', () => {
+    const duas = [
+      'https://produto.mercadolivre.com.br/MLB-111111',
+      'https://shopee.com.br/x-i.1.2',
+    ];
+
+    expect(ehUrlValida(duas.join(String.fromCharCode(10)))).toBe(false);
+    expect(ehUrlValida(duas.join(String.fromCharCode(13, 10)))).toBe(false);
+    expect(ehUrlValida(duas.join(String.fromCharCode(9)))).toBe(false);
+  });
+
+  it('recusa URL com espaço no meio, e aceita com espaço em volta', () => {
+    expect(ehUrlValida('https://exemplo.com/a b')).toBe(false);
+    expect(ehUrlValida('  https://exemplo.com/a  ')).toBe(true);
+  });
+
+  it('lista de links continua sendo reconhecida como lista', () => {
+    const duas = [
+      'https://produto.mercadolivre.com.br/MLB-111111111-a',
+      'https://produto.mercadolivre.com.br/MLB-222222222-b',
+    ].join(String.fromCharCode(10));
+
+    const c = texto(duas);
+    expect(c.tipoDeEntrada).toBe('lista_de_links');
+    expect(c.urls).toHaveLength(2);
+  });
+});
+
+describe('entradaDeTextoLivre', () => {
+  it('URL sozinha vira entrada de URL', () => {
+    expect(entradaDeTextoLivre('  https://produto.mercadolivre.com.br/MLB-123456  ')).toEqual({
+      tipo: 'url',
+      valor: 'https://produto.mercadolivre.com.br/MLB-123456',
+    });
+  });
+
+  it('duas URLs viram texto, para o classificador abrir um job por link', () => {
+    const duas = [
+      'https://produto.mercadolivre.com.br/MLB-111111111-a',
+      'https://produto.mercadolivre.com.br/MLB-222222222-b',
+    ].join(String.fromCharCode(10));
+
+    const entrada = entradaDeTextoLivre(duas);
+    expect(entrada.tipo).toBe('texto');
+    expect(classificar(entrada).tipoDeEntrada).toBe('lista_de_links');
+  });
+
+  it('texto comum vira entrada de texto', () => {
+    expect(entradaDeTextoLivre('refil de purificador consul')).toEqual({
+      tipo: 'texto',
+      valor: 'refil de purificador consul',
+    });
+  });
+
+  it('protocolo que não é http(s) não passa como URL', () => {
+    expect(entradaDeTextoLivre('javascript:alert(1)').tipo).toBe('texto');
+    expect(entradaDeTextoLivre('file:///etc/passwd').tipo).toBe('texto');
   });
 });
