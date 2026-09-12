@@ -1,0 +1,11 @@
+node_modules/
+.next/
+coverage/
+dist/
+package-lock.json
+src/infra/banco/migrations/
+
+# Markdown é prosa: o realinhamento de tabela do Prettier estica as colunas e
+# piora a leitura no editor sem mudar o render. Documentação se formata à mão.
+*.md
+docs/

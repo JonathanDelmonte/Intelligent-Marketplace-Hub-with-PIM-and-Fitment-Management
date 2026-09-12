@@ -1,0 +1,43 @@
+/*
+ * Nenhuma cor de marca é literal aqui: as variáveis de tema vêm do perfil ativo
+ * (`perfil_vendedor.marca_visual`) e são injetadas no `<html>` em runtime.
+ * Ver src/config/marca.ts e ADR 0003.
+ */
+:root {
+  --cor-primaria: #1d4ed8;
+  --cor-acento: #0f766e;
+  --cor-texto: #18181b;
+  --cor-texto-fraco: #52525b;
+  --cor-fundo: #fafaf9;
+  --cor-superficie: #ffffff;
+  --cor-borda: #e4e4e7;
+  --cor-aviso: #b45309;
+  --cor-erro: #b91c1c;
+  --cor-ok: #15803d;
+  --raio: 8px;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--cor-primaria);
+}

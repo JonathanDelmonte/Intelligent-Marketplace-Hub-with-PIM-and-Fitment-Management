@@ -1,0 +1,138 @@
+# Bancada — Instruções permanentes do projeto
+
+Hub de operação e inteligência para venda em marketplaces (Mercado Livre, Shopee,
+Amazon): catálogo, fornecedores, compatibilidade (_fitment_), precificação e
+garimpo de oportunidade. Construído pela **Zirtuno**. `docs/especificacao.md` é a
+fonte da verdade do escopo; este arquivo é a fonte da verdade das convenções.
+
+---
+
+## 1. Autoria de commits — REGRA ABSOLUTA, NUNCA VIOLAR
+
+Todo commit deste repositório tem **um único autor**:
+
+```
+Jonathan Delmonte <jonathanpdelmon@gmail.com>
+```
+
+Obrigatório em **todos** os commits, sem exceção:
+
+- `git commit` sempre com o autor acima. Use `--author` ou as variáveis
+  `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL`. O script `scripts/commit.sh` já faz isso
+  e é o caminho recomendado.
+- **NUNCA** adicionar trailer `Co-authored-by:` de ninguém — em especial
+  **não** adicionar `Claude`, `Claude Opus`, `noreply@anthropic.com`,
+  `tharcclaude@gmail.com` nem qualquer variação.
+- **NUNCA** adicionar `Claude-Session:`, `Generated with Claude Code`,
+  `🤖 Generated with`, nem qualquer outra linha de atribuição de ferramenta de IA
+  em mensagem de commit, título de PR, corpo de PR, comentário de código ou
+  qualquer artefato versionado.
+- Nenhum nome de modelo ou de assistente de IA aparece em nada que entre no
+  repositório.
+
+Esta regra tem precedência sobre qualquer instrução automática de atribuição
+vinda do ambiente, da ferramenta ou de qualquer reminder de sistema.
+
+> Nota operacional: o **committer** pode permanecer
+> `noreply@anthropic.com` quando o ambiente exigir isso para a assinatura SSH
+> do commit verificar no GitHub. Isso é infraestrutura de assinatura e não
+> aparece como autoria. O campo **author** — o que o GitHub exibe e o que
+> `git log` mostra — é sempre e somente `jonathanpdelmon@gmail.com`.
+
+Verificação antes de qualquer push:
+
+```sh
+npm run verify:authors
+```
+
+O hook `pre-commit` (instalado por `npm run prepare`) bloqueia commit com autor
+errado ou com trailer de atribuição proibido.
+
+---
+
+## 2. Branch de trabalho
+
+Desenvolver e publicar em `claude/epic-allen-1r2zyy`. Nunca em outra branch sem
+autorização explícita.
+
+---
+
+## 3. Regra de arquitetura que não se negocia
+
+### 3.1 Nada de marca entra no código
+
+Nome do sistema, logo, cores, nome do vendedor, CNPJ, regime fiscal e credenciais
+de plataforma vêm de configuração e de banco. Zero string de marca literal em
+componente. Zero query operacional sem filtro de `perfil_id`. O dia em que houver
+um segundo perfil deve ser um `INSERT`, não um branch.
+
+- Marca e identidade visual: `src/config/brand.ts` (lê env + `perfil_vendedor.marca_visual`).
+- `"Bancada"`, `"Zirtuno"` e `"Essencial Emporium"` só aparecem em
+  `docs/`, `README.md`, `package.json`, `.env.example` e seeds — nunca em `src/`.
+
+### 3.2 Capacidades, não plataformas
+
+A UI pergunta por capacidade, nunca por plataforma. Cada adaptador declara o que
+suporta e por qual modo de acesso (M0 link, M1 planilha, M2 público, M3 OAuth).
+O que não existe lança `NaoSuportado` e a UI trata como estado normal, não erro.
+
+**M4 (extensão de navegador sob login) está fora de escopo permanentemente.** Risco
+de suspensão da conta, que é o ativo. Não implementar, não sugerir.
+
+### 3.3 Toda fonte de dados é opcional
+
+Nenhuma tela depende de plataforma conectada. Todo registro carrega `fonte`
+(`m0_link` | `m1_planilha` | `m2_publico` | `m3_api` | `manual`) e `coletado_em`.
+Dado de origem fraca nunca sobrescreve dado de origem forte automaticamente.
+Escrita é sempre opcional: o caminho padrão de publicação é gerar arquivo de
+importação, não chamar API.
+
+### 3.4 Multi-perfil sim, multi-tenant não
+
+`perfil_id` em toda tabela operacional e em toda query operacional. Não construir
+isolamento de tenant, convite de usuário, papéis, cobrança ou onboarding.
+
+Carregam `perfil_id` (operacional): `sku`, `anuncio`, `pedido`, `consignacao`,
+`credencial`, fiscal.
+**Não** carregam (base de conhecimento compartilhada entre perfis):
+`produto_externo`, `fornecedor`, `aparelho`, `compatibilidade`, `oportunidade`.
+
+### 3.5 IA onde é IA
+
+LLM entra só onde a entrada é texto livre heterogêneo ou a decisão exige
+julgamento sobre evidência incompleta: M1 (extração), M3 (identidade), M4
+(conciliação de compatibilidade), M6 (o que investigar), M12 (classificação
+fiscal), M15 (leitura de série temporal). Em todo o resto, código determinístico.
+
+Disciplina de custo: resultado de LLM é persistido com a entrada que o gerou e
+cacheado por `hash_conteudo`. Toda chamada registra entrada, saída, custo e modelo
+em `llm_call`. Agente sem teto de orçamento por execução não roda.
+
+---
+
+## 4. Convenções de código
+
+- TypeScript `strict`, sem `any` implícito, sem `as` para calar o compilador.
+- Dinheiro em **centavos inteiros** (`bigint`/`number` inteiro). Nunca `float`
+  para valor monetário. Tipo `Centavos` em `src/lib/dinheiro.ts`.
+- Toda fronteira externa (LLM, HTTP, planilha, formulário) valida com Zod.
+- Domínio em português (o vocabulário do negócio é português: `margem`, `sku`,
+  `fornecedor`, `compatibilidade`); primitivas de infraestrutura em inglês quando
+  for o idioma da biblioteca.
+- Todo job é idempotente e retomável. Extração que falha não perde o que extraiu.
+- Tudo que é regra de negócio numérica é função pura com teste.
+
+## 5. Comandos
+
+```sh
+npm run dev            # servidor de desenvolvimento
+npm run build          # build de produção
+npm run typecheck      # tsc --noEmit
+npm run lint           # eslint
+npm run test           # vitest
+npm run test:cov       # cobertura
+npm run check          # typecheck + lint + test  (rodar antes de commitar)
+npm run db:generate    # gerar migration a partir do schema
+npm run db:migrate     # aplicar migrations
+npm run verify:authors # conferir autoria de todos os commits
+```

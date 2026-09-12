@@ -1,0 +1,106 @@
+/**
+ * Leitura e validação do ambiente.
+ *
+ * Único ponto do sistema que toca `process.env`. Tudo o mais recebe o objeto
+ * validado, o que torna o ambiente substituível em teste sem `vi.stubEnv`
+ * espalhado.
+ *
+ * O que este arquivo **não** guarda: credencial de plataforma. Token de Mercado
+ * Livre, Shopee e Amazon mora cifrado na tabela `credencial` (ADR 0007). A única
+ * chave que vive em ambiente é a chave mestra de cifragem.
+ */
+import { z } from 'zod';
+
+/** Papel que o construtor tem nesta instalação. Decide onde o nome aparece. */
+export const PAPEIS = ['interno', 'cliente', 'produto'] as const;
+export type Papel = (typeof PAPEIS)[number];
+
+const esquemaAmbiente = z.object({
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+
+  DATABASE_URL: z.string().min(1, 'DATABASE_URL é obrigatório'),
+
+  /**
+   * 32 bytes em base64. Validado no formato aqui, e no tamanho ao decodificar,
+   * porque uma chave de tamanho errado só falharia na primeira cifragem — que
+   * acontece no meio de um fluxo de OAuth, no pior momento possível.
+   */
+  CREDENCIAL_CHAVE_MESTRA: z
+    .string()
+    .regex(/^[A-Za-z0-9+/]+={0,2}$/, 'CREDENCIAL_CHAVE_MESTRA precisa ser base64')
+    .refine(
+      (v) => Buffer.from(v, 'base64').length === 32,
+      'CREDENCIAL_CHAVE_MESTRA precisa decodificar para exatamente 32 bytes',
+    ),
+
+  // Marca — nada disso é literal em componente. Ver ADR 0003.
+  BANCADA_NOME_SISTEMA: z.string().min(1).default('Bancada'),
+  BANCADA_CONSTRUTOR: z.string().min(1).default('Zirtuno'),
+  BANCADA_ANO_COPYRIGHT: z.coerce.number().int().min(2000).max(2200).default(2026),
+  BANCADA_PAPEL: z.enum(PAPEIS).default('interno'),
+  BANCADA_PERFIL_PADRAO: z.string().min(1),
+
+  // LLM — ver ADR 0005.
+  LLM_API_KEY: z.string().optional(),
+  LLM_MODELO_EXTRACAO: z.string().optional(),
+  LLM_MODELO_JULGAMENTO: z.string().optional(),
+  LLM_MODELO_EMBEDDING: z.string().optional(),
+  LLM_ORCAMENTO_PADRAO_CENTAVOS: z.coerce.number().int().positive().default(500),
+
+  // Extração — respeitar robots.txt e limite de requisição não é opcional.
+  EXTRACAO_USER_AGENT: z.string().min(1).default('BancadaBot/0.1'),
+  EXTRACAO_RPS_MAX: z.coerce.number().positive().max(10).default(1),
+  EXTRACAO_CACHE_DIR: z.string().min(1).default('.cache/extracao'),
+});
+
+export type Ambiente = z.infer<typeof esquemaAmbiente>;
+
+export class AmbienteInvalido extends Error {
+  override readonly name = 'AmbienteInvalido';
+  constructor(
+    mensagem: string,
+    readonly problemas: readonly string[],
+  ) {
+    super(mensagem);
+  }
+}
+
+/**
+ * Valida um mapa de variáveis. Exportado separado de `lerAmbiente` para o teste
+ * poder passar um objeto em vez de mexer em `process.env`.
+ */
+export function validarAmbiente(bruto: Record<string, string | undefined>): Ambiente {
+  const resultado = esquemaAmbiente.safeParse(bruto);
+
+  if (!resultado.success) {
+    const problemas = resultado.error.issues.map((i) => {
+      const campo = i.path.join('.');
+      return campo === '' ? i.message : `${campo}: ${i.message}`;
+    });
+    throw new AmbienteInvalido(
+      `Ambiente inválido:\n  ${problemas.join('\n  ')}\n\nVer .env.example para a lista completa.`,
+      problemas,
+    );
+  }
+
+  return resultado.data;
+}
+
+let cache: Ambiente | null = null;
+
+/**
+ * Lê e valida o ambiente do processo, uma vez.
+ *
+ * Falha ruidosamente na primeira chamada em vez de propagar `undefined` para
+ * dentro do domínio, que é como configuração errada se transforma em bug
+ * silencioso três camadas abaixo.
+ */
+export function lerAmbiente(): Ambiente {
+  cache ??= validarAmbiente(process.env);
+  return cache;
+}
+
+/** Só para teste: descarta o cache do módulo. */
+export function _limparCacheAmbiente(): void {
+  cache = null;
+}

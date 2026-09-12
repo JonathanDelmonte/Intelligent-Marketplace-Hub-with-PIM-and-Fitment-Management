@@ -1,0 +1,25 @@
+#!/bin/sh
+# Bloqueia qualquer trailer de co-autoria ou atribuição de ferramenta de IA
+# na mensagem de commit. Regra registrada em CLAUDE.md, seção 1.
+set -e
+
+msg_file="$1"
+[ -f "$msg_file" ] || exit 0
+
+# Padrões proibidos, case-insensitive.
+if grep -niE '^[[:space:]]*(co-authored-by|co-committed-by|signed-off-by[[:space:]]*:[[:space:]]*claude)' "$msg_file" >&2; then
+  echo "" >&2
+  echo "✖ Trailer de co-autoria encontrado acima." >&2
+  echo "  Este repositório tem um único autor e nenhum co-autor." >&2
+  echo "  Remova a linha e comite novamente." >&2
+  exit 1
+fi
+
+if grep -niE 'noreply@anthropic\.com|anthropic\.com|claude[- ]session|claude\.ai/code|claude\.com/claude-code|generated with \[?claude|🤖' "$msg_file" >&2; then
+  echo "" >&2
+  echo "✖ Atribuição de ferramenta de IA encontrada acima." >&2
+  echo "  Nenhum nome de assistente ou modelo entra em mensagem de commit." >&2
+  exit 1
+fi
+
+exit 0

@@ -1,0 +1,40 @@
+# dependências
+node_modules/
+.pnp
+.pnp.*
+
+# build
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# teste
+coverage/
+.vitest/
+
+# ambiente — nunca versionar. Ver ADR 0007: credencial mora em banco cifrado,
+# e a única coisa que o .env guarda é a chave mestra.
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# cache de extração (HTML baixado, PDF, imagem de fornecedor)
+.cache/
+/tmp-extracao/
+
+# sistema operacional e editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# log
+*.log
+npm-debug.log*
