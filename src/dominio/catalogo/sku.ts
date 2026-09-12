@@ -14,6 +14,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Centavos } from '@/lib/dinheiro';
 import type { Banco } from '@/infra/banco/cliente';
+import { ehGtinValido } from '@/dominio/gtin';
 import { produtoExterno, sku } from '@/infra/banco/schema';
 
 declare const marcaPerfilId: unique symbol;
@@ -43,10 +44,22 @@ export type TipoSku = (typeof TIPOS_SKU)[number];
 
 export const esquemaNovoSku = z.object({
   tituloInterno: z.string().trim().min(3, 'título interno muito curto'),
+  /**
+   * GTIN do produto, validado por dígito verificador.
+   *
+   * Conferir só a quantidade de dígitos deixaria passar código digitado errado, e
+   * é aqui que o erro é mais barato de corrigir — depois ele vira um SKU que o
+   * leitor de código de barras nunca acha. Código interno de fornecedor que não é
+   * GTIN tem campo próprio, e a mensagem aponta para ele.
+   */
   ean: z
     .string()
     .trim()
-    .regex(/^\d{8}$|^\d{12,14}$/, 'EAN precisa ter 8, 12, 13 ou 14 dígitos')
+    .transform((v) => v.replace(/[\s.\-_]/g, ''))
+    .refine(
+      (v) => ehGtinValido(v),
+      'não é um GTIN válido: confira os dígitos. Código interno de fornecedor vai em sku_vendedor',
+    )
     .nullable()
     .default(null),
   marca: z.string().trim().nullable().default(null),

@@ -14,6 +14,7 @@
 import { z } from 'zod';
 import type { Plataforma } from '@/dominio/precificacao/tipos';
 import type { Fonte } from '@/dominio/procedencia';
+import { normalizarGtin } from '@/dominio/gtin';
 import type { ProdutoExternoCapturado } from '../produto-externo';
 import { lerPlanilha, type ConteudoDePlanilha, type Grade } from './leitor';
 import {
@@ -284,7 +285,14 @@ function converterLinha(params: {
   }
 
   const url = linha.url !== undefined && linha.url !== '' ? linha.url : null;
-  const ean = normalizarEan(linha.ean);
+
+  // O GTIN passa por validação de dígito verificador (ver `dominio/gtin`). O que
+  // não valida **não é descartado**: vai para `eanInvalido`, porque célula com um
+  // dígito trocado é informação sobre a planilha, e some se a gente jogar fora.
+  // Para a coluna indexada vai só o que confere.
+  const gtin = normalizarGtin(linha.ean);
+  const eanBruto = (linha.ean ?? '').trim();
+  const eanInvalido = gtin === null && eanBruto !== '' ? eanBruto : null;
 
   return {
     ok: true,
@@ -296,11 +304,16 @@ function converterLinha(params: {
       vendedor: null,
       fonte: params.fonte,
       coletadoEm: params.coletadoEm,
+      // Campo de primeira classe, não atributo: é a chave pela qual o leitor de
+      // código de barras acha o produto (M14). A forma canônica de 13 dígitos
+      // faz o mesmo item colapsar venha ele como UPC-A ou como EAN-13.
+      ...(gtin === null ? {} : { ean: gtin.ean13 ?? gtin.digitos }),
       atributos: {
         ...(linha.id_externo !== undefined && linha.id_externo !== ''
           ? { idExterno: linha.id_externo }
           : {}),
-        ...(ean !== null ? { ean } : {}),
+        ...(gtin === null ? {} : { ean: gtin.digitos, gtinTipo: gtin.tipo }),
+        ...(eanInvalido === null ? {} : { eanInvalido }),
         ...(linha.sku_vendedor !== undefined && linha.sku_vendedor !== ''
           ? { skuVendedor: linha.sku_vendedor }
           : {}),
@@ -393,12 +406,4 @@ export function interpretarPreco(bruto: string | undefined): PrecoInterpretado {
   }
 
   return { tipo: 'ilegivel' };
-}
-
-/** Mantém só os dígitos do EAN, e devolve `null` quando o tamanho não serve. */
-export function normalizarEan(bruto: string | undefined): string | null {
-  if (bruto === undefined) return null;
-  const digitos = bruto.replace(/\D/g, '');
-  if (digitos === '') return null;
-  return /^\d{8}$|^\d{12,14}$/.test(digitos) ? digitos : null;
 }

@@ -40,7 +40,7 @@ describe('esquemaNovoSku', () => {
   });
 
   it('valida EAN de 8, 12, 13 e 14 dígitos', () => {
-    for (const ean of ['12345678', '123456789012', '7896541200123', '12345678901234']) {
+    for (const ean of ['12345670', '123456789012', '7896541200121', '12345678901231']) {
       expect(esquemaNovoSku.safeParse({ tituloInterno: 'Refil', ean }).success, ean).toBe(true);
     }
   });
@@ -143,20 +143,20 @@ describe.skipIf(!temBancoDeTeste())('RepositorioDeSku (contra Postgres real)', (
     it('buscar por EAN respeita o perfil', async () => {
       await repo.criar({
         perfil: perfilA,
-        dados: { tituloInterno: 'Refil', ean: '7896541200123' },
+        dados: { tituloInterno: 'Refil', ean: '7896541200121' },
       });
-      expect(await repo.buscarPorEan(perfilA, '7896541200123')).not.toBeNull();
-      expect(await repo.buscarPorEan(perfilB, '7896541200123')).toBeNull();
+      expect(await repo.buscarPorEan(perfilA, '7896541200121')).not.toBeNull();
+      expect(await repo.buscarPorEan(perfilB, '7896541200121')).toBeNull();
     });
 
     it('o mesmo EAN pode existir nos dois perfis', async () => {
       // São dois negócios diferentes vendendo o mesmo produto: legítimo.
       await repo.criar({
         perfil: perfilA,
-        dados: { tituloInterno: 'Refil', ean: '7896541200123' },
+        dados: { tituloInterno: 'Refil', ean: '7896541200121' },
       });
       await expect(
-        repo.criar({ perfil: perfilB, dados: { tituloInterno: 'Refil', ean: '7896541200123' } }),
+        repo.criar({ perfil: perfilB, dados: { tituloInterno: 'Refil', ean: '7896541200121' } }),
       ).resolves.toBeDefined();
     });
 
@@ -204,7 +204,7 @@ describe.skipIf(!temBancoDeTeste())('RepositorioDeSku (contra Postgres real)', (
         perfil: perfilA,
         dados: {
           tituloInterno: 'Refil Filtro Purificador Electrolux PA21G',
-          ean: '7896541200123',
+          ean: '7896541200121',
           marca: 'Electrolux',
           pesoG: 250,
           custoAtual: r(15),

@@ -15,7 +15,6 @@ import {
   MIN_COLUNAS_PARA_CABECALHO,
   acharCabecalho,
   interpretarPreco,
-  normalizarEan,
 } from './importador';
 import { lerCsv } from './leitor';
 
@@ -233,24 +232,80 @@ describe('interpretarPreco', () => {
   });
 });
 
-describe('normalizarEan', () => {
-  it('mantém só dígitos', () => {
-    expect(normalizarEan('789-6541-200123')).toBe('7896541200123');
-    expect(normalizarEan(' 7896541200123 ')).toBe('7896541200123');
+describe('GTIN da linha', () => {
+  const importar = async (linhas: readonly string[]) =>
+    new ImportadorDePlanilha().importar({
+      conteudo: { formato: 'csv', texto: linhas.join(String.fromCharCode(10)) },
+      plataforma: 'ml',
+    });
+
+  it('grava o GTIN válido como campo de primeira classe, na forma de 13 dígitos', async () => {
+    const r = await importar([
+      'Codigo MLB;Titulo;Preco (R$);EAN',
+      'MLB1;Refil bom;69,90;789-6541-20012-1',
+    ]);
+    if (r.tipo !== 'importado') {
+      expect(r.tipo).toBe('importado');
+      return;
+    }
+
+    const captura = r.linhas[0]!.captura;
+    expect(captura.ean).toBe('7896541200121');
+    const atributos = captura.atributos as Record<string, unknown>;
+    expect(atributos['gtinTipo']).toBe('gtin13');
   });
 
-  it('aceita os tamanhos válidos de GTIN', () => {
-    expect(normalizarEan('12345678')).toBe('12345678');
-    expect(normalizarEan('123456789012')).toBe('123456789012');
-    expect(normalizarEan('12345678901234')).toBe('12345678901234');
+  it('UPC-A de 12 dígitos vira a mesma chave de 13 do EAN correspondente', async () => {
+    const r = await importar([
+      'Codigo MLB;Titulo;Preco (R$);EAN',
+      'MLB1;Refil importado;69,90;036000291452',
+    ]);
+    if (r.tipo !== 'importado') return;
+
+    expect(r.linhas[0]!.captura.ean).toBe('0036000291452');
   });
 
-  it('devolve null para tamanho inválido, em vez de gravar lixo', () => {
-    expect(normalizarEan('123')).toBeNull();
-    expect(normalizarEan('123456789')).toBeNull();
-    expect(normalizarEan('')).toBeNull();
-    expect(normalizarEan('sem ean')).toBeNull();
-    expect(normalizarEan(undefined)).toBeNull();
+  it('GTIN com dígito verificador errado NÃO vira chave, e não é descartado', async () => {
+    const r = await importar([
+      'Codigo MLB;Titulo;Preco (R$);EAN',
+      'MLB1;Refil com ean torto;69,90;7896541200123',
+    ]);
+    if (r.tipo !== 'importado') {
+      expect(r.tipo).toBe('importado');
+      return;
+    }
+
+    const captura = r.linhas[0]!.captura;
+    // A linha continua sendo um produto: EAN errado não invalida o anúncio.
+    expect(captura.tituloBruto).toBe('Refil com ean torto');
+    expect(captura.ean ?? null).toBeNull();
+    // Mas o valor recusado fica visível, para dar para consertar a planilha.
+    const atributos = captura.atributos as Record<string, unknown>;
+    expect(atributos['eanInvalido']).toBe('7896541200123');
+    expect(atributos['ean']).toBeUndefined();
+  });
+
+  it('caixa (GTIN-14 com indicador 1) não vira chave de unidade', async () => {
+    const r = await importar([
+      'Codigo MLB;Titulo;Preco (R$);EAN',
+      'MLB1;Caixa com doze refis;699,00;17896541200128',
+    ]);
+    if (r.tipo !== 'importado') return;
+
+    const captura = r.linhas[0]!.captura;
+    // `ean13` é nulo para agrupamento, então o que vai para a coluna são os 14
+    // dígitos: a caixa é um item comercial, só não é a unidade.
+    expect(captura.ean).toBe('17896541200128');
+  });
+
+  it('coluna de EAN vazia não inventa campo nenhum', async () => {
+    const r = await importar(['Codigo MLB;Titulo;Preco (R$);EAN', 'MLB1;Refil sem ean;69,90;']);
+    if (r.tipo !== 'importado') return;
+
+    const captura = r.linhas[0]!.captura;
+    expect(captura.ean ?? null).toBeNull();
+    const atributos = captura.atributos as Record<string, unknown>;
+    expect(atributos['eanInvalido']).toBeUndefined();
   });
 });
 
@@ -350,7 +405,7 @@ describe('ImportadorDePlanilha', () => {
       conteudo: csv(
         [
           'Código MLB;Título;Preço;EAN;SKU',
-          'MLB1;Refil Filtro PA21G;69,90;789-6541-200123;EF-ELX-21',
+          'MLB1;Refil Filtro PA21G;69,90;789-6541-20012-1;EF-ELX-21',
         ].join('\n'),
       ),
       plataforma: 'ml',
@@ -359,10 +414,15 @@ describe('ImportadorDePlanilha', () => {
     expect(r.tipo).toBe('importado');
     if (r.tipo !== 'importado') return;
 
-    const atributos = r.linhas[0]?.captura.atributos as Record<string, unknown>;
+    const captura = r.linhas[0]!.captura;
+    const atributos = captura.atributos as Record<string, unknown>;
     expect(atributos['idExterno']).toBe('MLB1');
-    expect(atributos['ean']).toBe('7896541200123');
     expect(atributos['skuVendedor']).toBe('EF-ELX-21');
+    // O GTIN fica nos dois lugares e com propósitos diferentes: em `atributos`
+    // como veio (para auditoria), e no campo de primeira classe na forma
+    // canônica (para ser chave de consulta do leitor de código de barras).
+    expect(atributos['ean']).toBe('7896541200121');
+    expect(captura.ean).toBe('7896541200121');
   });
 
   it('linhas com o mesmo título mas ids diferentes são capturas diferentes', async () => {

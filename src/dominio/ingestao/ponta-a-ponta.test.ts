@@ -35,8 +35,8 @@ const CSV_ML = [
   'Gerado em 12/09/2026',
   '',
   'Código MLB;Título;Preço (R$);Estoque;EAN;Link do anúncio',
-  'MLB1111111111;Refil Filtro Purificador Electrolux PA21G;69,90;10;7896541200123;https://produto.mercadolivre.com.br/MLB-1111111111-a',
-  'MLB2222222222;Refil Filtro Purificador Electrolux PA26G;74,90;5;7896541200130;https://produto.mercadolivre.com.br/MLB-2222222222-b',
+  'MLB1111111111;Refil Filtro Purificador Electrolux PA21G;69,90;10;7896541200121;https://produto.mercadolivre.com.br/MLB-1111111111-a',
+  'MLB2222222222;Refil Filtro Purificador Electrolux PA26G;74,90;5;7896541200138;https://produto.mercadolivre.com.br/MLB-2222222222-b',
   'MLB3333333333;Vedação para Purificador Electrolux;19,90;20;;https://produto.mercadolivre.com.br/MLB-3333333333-c',
 ].join('\n');
 

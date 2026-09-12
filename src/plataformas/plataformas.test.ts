@@ -32,7 +32,7 @@ const r = reaisParaCentavos;
 const anuncioDeTeste: AnuncioParaExportar = {
   tituloInterno: 'Refil Filtro Purificador Electrolux PA21G PA26G PE11B',
   preco: r(69),
-  ean: '7896541200123',
+  ean: '7896541200121',
   categoria: 'MLB1234',
   descricao: 'Compatível com PA21G, PA26G e PE11B.',
   pesoGramas: 250,
@@ -369,7 +369,7 @@ describe('adaptadores concretos', () => {
     const texto = new TextDecoder().decode(arquivo.conteudo);
     expect(texto).toContain('PA21G');
     expect(texto).toContain('69,00');
-    expect(texto).toContain('7896541200123');
+    expect(texto).toContain('7896541200121');
   });
 
   it('a Amazon exporta TSV, que é o que o carregador dela espera', async () => {

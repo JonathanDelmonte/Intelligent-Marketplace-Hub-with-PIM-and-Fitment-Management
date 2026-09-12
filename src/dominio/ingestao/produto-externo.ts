@@ -21,6 +21,7 @@ import type { Fonte } from '@/dominio/procedencia';
 import { FONTES } from '@/dominio/procedencia';
 import type { Banco } from '@/infra/banco/cliente';
 import { produtoExterno, precoHistorico } from '@/infra/banco/schema';
+import { ehGtinValido } from '@/dominio/gtin';
 
 /**
  * Schema de um produto externo capturado.
@@ -34,6 +35,19 @@ import { produtoExterno, precoHistorico } from '@/infra/banco/schema';
  */
 export const esquemaProdutoExternoCapturado = z.object({
   tituloBruto: z.string().trim().min(3, 'título muito curto para identificar um produto'),
+  /**
+   * GTIN, se houver e se o dígito verificador conferir.
+   *
+   * Validado aqui de novo, e não só na origem: este é o ponto de entrada de
+   * **toda** captura, e um extrator futuro que leia EAN de uma página HTML não
+   * vai ter passado pelo mesmo caminho da planilha.
+   */
+  ean: z
+    .string()
+    .trim()
+    .refine((v) => ehGtinValido(v), 'GTIN com dígito verificador inválido')
+    .nullable()
+    .default(null),
   url: z.string().url().nullable().default(null),
   plataformaOuSite: z.string().trim().min(1).nullable().default(null),
   /** Preço em **reais**, como veio da página. Convertido para centavos ao gravar. */
@@ -166,6 +180,7 @@ export class IngestorDeProdutoExterno {
       .insert(produtoExterno)
       .values({
         tituloBruto: capturado.tituloBruto,
+        ean: capturado.ean,
         url: capturado.url,
         plataformaOuSite: capturado.plataformaOuSite,
         preco: precoCentavos,

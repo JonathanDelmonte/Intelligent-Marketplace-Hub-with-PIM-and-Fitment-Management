@@ -33,8 +33,8 @@ const CSV_ML = [
   'Gerado em 12/09/2026',
   '',
   'Código MLB;Título;Preço (R$);Estoque;EAN',
-  'MLB7111111111;Refil Filtro Purificador Electrolux PA21G;69,90;10;7896541200901',
-  'MLB7222222222;Refil Filtro Purificador Electrolux PA26G;74,90;5;7896541200902',
+  'MLB7111111111;Refil Filtro Purificador Electrolux PA21G;69,90;10;7896541200909',
+  'MLB7222222222;Refil Filtro Purificador Electrolux PA26G;74,90;5;7896541200916',
   'MLB7333333333;Vedação para Purificador Electrolux;19,90;20;',
 ].join(NL);
 

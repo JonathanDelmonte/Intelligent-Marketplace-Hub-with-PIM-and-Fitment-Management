@@ -89,6 +89,17 @@ export const produtoExterno = pgTable(
     url: text('url'),
     plataformaOuSite: text('plataforma_ou_site'),
     tituloBruto: text('titulo_bruto').notNull(),
+    /**
+     * GTIN na forma canônica de 13 dígitos, quando o dígito verificador confere.
+     *
+     * Coluna e não atributo do `jsonb` porque é a chave de **consulta** do leitor
+     * de código de barras (M14): a pessoa está na loja com o celular na mão, e
+     * varredura de `jsonb` para achar um EAN não responde em dois segundos.
+     *
+     * Não é único: o mesmo GTIN aparece em vários anúncios, de vários vendedores,
+     * e é justamente esse conjunto que forma a evidência de preço praticado.
+     */
+    ean: text('ean'),
     preco: centavos('preco'),
     moeda: text('moeda').notNull().default('BRL'),
     vendedor: text('vendedor'),
@@ -113,6 +124,8 @@ export const produtoExterno = pgTable(
     unique('unq_produto_externo_hash').on(t.hashConteudo),
     index('idx_produto_externo_sku').on(t.skuId),
     index('idx_produto_externo_captura').on(t.coletadoEm),
+    // A consulta do leitor de código de barras: GTIN para evidência de preço.
+    index('idx_produto_externo_ean').on(t.ean),
   ],
 );
 
