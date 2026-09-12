@@ -75,6 +75,20 @@ recusa antes de chegar ao `URL`. Assim todo chamador futuro está protegido, e a
 lista de links continua caindo em `texto`, que é onde o classificador a reconhece
 como lista e o executor abre um job por link.
 
+### 🔀 Falha de job não é erro de poller
+
+`{ tipo: 'falhou' }` já foi tratado pela fila, com backoff e tentativa contada.
+Aplicar backoff de poller em cima disso puniria a fila inteira pelo defeito de um
+job — exatamente o que a fila existe para evitar. Só **exceção** conta como erro
+de poller, porque só ela indica que o laço não tem como continuar.
+
+### 🔀 O sono do poller é interrompível, e o tique em andamento não é interrompido
+
+Duas metades da mesma decisão. `parar()` acorda a espera na hora, senão `Ctrl-C`
+durante uma espera de dois segundos parece travamento. Mas **não** interrompe o
+tique em andamento: job pela metade deixaria `rodando` no banco até o prazo de
+execução estourar, e job que demora é melhor que job partido.
+
 ### 🔀 O log é uma linha de JSON, e o registrador nunca lança
 
 Quatro formas reais de `JSON.stringify` derrubar o laço, todas tratadas antes da
