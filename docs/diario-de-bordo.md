@@ -28,50 +28,20 @@ Convenção de marcação:
 
 ## 2026-09-12 — Fase 5: resolução de identidade (M3)
 
-### 🔀 `chave_agrupamento` virou coluna indexada
+### 🔀 Agrupar automático **não** liga SKU
 
-O gerador de candidato precisa funcionar **sem embedding**, porque hoje não há chave
-de LLM e portanto não há embedding nenhum. Com a chave `marca|modelo` gravada e
-indexada, achar as outras ocorrências do mesmo `PA21G` da Electrolux é uma igualdade
-indexada; sem ela seria varredura da tabela inteira, ou nada. Nula quando falta marca
-ou modelo — nunca `''`, que casaria com toda outra string vazia.
+`produto_externo.sku_id` aponta para um `sku`, que é operacional e carrega
+`perfil_id`; a equivalência entre ocorrências é conhecimento compartilhado e não tem
+perfil. A resolução, que é compartilhada, não pode escolher em nome de um perfil.
 
-### 🔀 Cache por conteúdo e exemplo few-shot se contradizem; a saída é separar pergunta de contexto
+Então a resolução grava a aresta e para aí. Ligar é `propagarSku(perfil, skuId)`, que
+exige `PerfilId` no tipo — e dá um passo por chamada, sem fecho transitivo: `A ≡ B` e
+`B ≡ C` não implicam `A ≡ C`, e transitividade automática em grafo de identidade é o
+caminho conhecido para uma aresta errada transformar o componente inteiro em um SKU.
 
-Duas regras do ADR 0005 colidem de frente. "Todo resultado é cacheado pela entrada
-que o gerou" e "cada decisão humana vira exemplo para os prompts seguintes": se os
-exemplos entram no hash, **cada decisão nova invalida o cache de todos os pares**, e
-o sistema passa a re-resolver a base inteira justamente por estar aprendendo. O
-inverso — ignorar os exemplos no registro — quebra "todo resultado é persistido com a
-entrada que o gerou".
-
-A saída é separar os dois papéis no próprio tipo do pedido: `entrada` é a **pergunta**
-e define o cache; `contexto` é o que mais foi enviado, fica gravado junto para a
-chamada ser reproduzível, e não entra no hash. `llm_call.entrada` guarda
-`{pergunta, contexto}`, então quem audita a conta vê exatamente o que foi hasheado e
-o que mais o modelo viu.
-
-### 🔀 Decisão humana de identidade é a origem mais forte, e o `setWhere` é quem garante
-
-A regra de procedência do ADR 0002 — origem fraca não sobrescreve origem forte — vale
-para decisão de identidade também. Quem decidiu "não são o mesmo produto" não pode
-ser desfeito pela próxima varredura que discordar. Está no `setWhere` do
-`onConflictDoUpdate` (`origem <> 'humano'`), não em uma convenção, e `registrar`
-devolve `gravado: false` quando recusou — quem chamou sabe que não mudou nada.
-
-### 🐛 `exactOptionalPropertyTypes` e o `setWhere` condicional do Drizzle
-
-Passar `setWhere: undefined` não compila: o projeto distingue "propriedade ausente"
-de "presente e `undefined`", e o Drizzle só aceita a primeira forma. O jeito é
-espalhar o objeto condicionalmente (`...(cond ? {} : { setWhere: … })`). Vale para
-todo campo opcional de API de terceiro neste projeto.
-
-### 🐛 Constraint violada não aparece na mensagem de fora do erro do Drizzle
-
-O Drizzle embrulha o erro do driver em `Failed query: …` e põe o original em `cause`.
-Asserção de teste em `rejects.toThrow(/nome_da_constraint/)` **passa a impressão de
-testar e não testa** — a mensagem de fora nunca tem o nome. O teste agora lê
-`cause.constraint_name`.
+Ocorrência equivalente que **já** pertence a outro SKU não é religada: vira conflito
+reportado. Fundir SKU tem consequência fiscal e de anúncio, e automação que funde
+sozinha é automação que ninguém audita depois.
 
 ### 🔀 O par vai ordenado ao modelo, senão (A,B) e (B,A) são duas chamadas pagas
 
@@ -108,6 +78,222 @@ de agrupamento. Ou seja, o julgamento por LLM depende de embedding, que depende 
 chave — e o teste sintético é o único jeito de exercitar esse caminho hoje. Refeito
 assim, ele cobre o desenho da especificação de ponta a ponta: forma canônica,
 embedding, vizinho, julgamento, limiar.
+
+### 🔀 Decisão humana de identidade é a origem mais forte, e o `setWhere` é quem garante
+
+A regra de procedência do ADR 0002 — origem fraca não sobrescreve origem forte — vale
+para decisão de identidade também. Quem decidiu "não são o mesmo produto" não pode
+ser desfeito pela próxima varredura que discordar. Está no `setWhere` do
+`onConflictDoUpdate` (`origem <> 'humano'`), não em uma convenção, e `registrar`
+devolve `gravado: false` quando recusou — quem chamou sabe que não mudou nada.
+
+### 🐛 `exactOptionalPropertyTypes` e o `setWhere` condicional do Drizzle
+
+Passar `setWhere: undefined` não compila: o projeto distingue "propriedade ausente"
+de "presente e `undefined`", e o Drizzle só aceita a primeira forma. O jeito é
+espalhar o objeto condicionalmente (`...(cond ? {} : { setWhere: … })`). Vale para
+todo campo opcional de API de terceiro neste projeto.
+
+### 🐛 Constraint violada não aparece na mensagem de fora do erro do Drizzle
+
+O Drizzle embrulha o erro do driver em `Failed query: …` e põe o original em `cause`.
+Asserção de teste em `rejects.toThrow(/nome_da_constraint/)` **passa a impressão de
+testar e não testa** — a mensagem de fora nunca tem o nome. O teste agora lê
+`cause.constraint_name`.
+
+### 🔀 Cache por conteúdo e exemplo few-shot se contradizem; a saída é separar pergunta de contexto
+
+Duas regras do ADR 0005 colidem de frente. "Todo resultado é cacheado pela entrada
+que o gerou" e "cada decisão humana vira exemplo para os prompts seguintes": se os
+exemplos entram no hash, **cada decisão nova invalida o cache de todos os pares**, e
+o sistema passa a re-resolver a base inteira justamente por estar aprendendo. O
+inverso — ignorar os exemplos no registro — quebra "todo resultado é persistido com a
+entrada que o gerou".
+
+A saída é separar os dois papéis no próprio tipo do pedido: `entrada` é a **pergunta**
+e define o cache; `contexto` é o que mais foi enviado, fica gravado junto para a
+chamada ser reproduzível, e não entra no hash. `llm_call.entrada` guarda
+`{pergunta, contexto}`, então quem audita a conta vê exatamente o que foi hasheado e
+o que mais o modelo viu.
+
+### 🔀 `chave_agrupamento` virou coluna indexada
+
+O gerador de candidato precisa funcionar **sem embedding**, porque hoje não há chave
+de LLM e portanto não há embedding nenhum. Com a chave `marca|modelo` gravada e
+indexada, achar as outras ocorrências do mesmo `PA21G` da Electrolux é uma igualdade
+indexada; sem ela seria varredura da tabela inteira, ou nada. Nula quando falta marca
+ou modelo — nunca `''`, que casaria com toda outra string vazia.
+
+### 🐛 `cosineDistance` do Drizzle não casta o parâmetro para `vector`
+
+`cosineDistance(coluna, vetor)` gera `"vetor" <=> $1`, e o parâmetro chega como
+`double precision`. O Postgres recusa: *operator does not exist: vector <=> double
+precision*. O `customType` do schema sabe converter na **escrita**, e não em
+parâmetro de `sql` cru.
+
+A correção é montar o literal e castar: `${coluna} <=> ${'[1,0,…]'}::vector`. E a
+expressão inteira precisa de parênteses antes de `::float8`, senão o cast gruda no
+último token — que é o parâmetro, não a conta.
+
+### 🔀 `vizinhosDe` devolve `null`, não lista vazia, quando não há embedding
+
+Lista vazia significa "procurei e não achei parecido". `null` significa "não pude
+procurar". Tratar os dois como a mesma coisa faria todo produto sem embedding
+parecer um produto sem par — e hoje, sem chave de LLM, **nenhum** produto tem
+embedding. O tipo obriga quem chama a distinguir.
+
+### ❓ `DISTANCIA_MAXIMA_PADRAO = 0.35` não está calibrado
+
+É o corte de distância de cosseno para um vizinho virar candidato a julgamento.
+Calibrar exige uma base com embedding de verdade, que exige chave. Está como
+constante nomeada em um lugar só, justamente para ser ajustada quando houver com o
+que medir. O mesmo vale para `VIZINHOS_PADRAO = 20`.
+
+### 🔀 A busca vetorial é testável sem chave, e por isso a 5.3 fecha hoje
+
+Gerar embedding custa chamada de API; **buscar** é operação do banco. Vetor
+sintético — unitário em um eixo, ou a um ângulo calculado do eixo 0 — exercita
+ordenação por distância, corte, exclusão do próprio produto e separação por modelo.
+É o mesmo raciocínio do GTIN na fase 4: a parte determinística do módulo de IA fecha
+antes da parte que depende de chave.
+
+### 🐛 A chave única do cache de LLM transforma uma falha em bloqueio permanente
+
+`llm_call` tem chave única em `(proposito, modelo, hash_entrada)`, que é a chave de
+cache. A consequência que eu não tinha visto: quando uma chamada falha e a falha é
+registrada — e ela **precisa** ser registrada, senão não se sabe onde o dinheiro
+foi —, a linha de erro ocupa **exatamente o lugar** da resposta boa. Um `insert`
+simples na tentativa seguinte colide, e o `select` de cache serve a falha para
+sempre.
+
+Duas mudanças fecham: o `insert` é `onConflictDoUpdate`, então a resposta boa
+atualiza a linha de erro; e o `select` de cache exige `saida is not null and erro
+is null`. O teste que pegou é o que faz o provedor falhar na primeira chamada e
+responder na segunda, e depois confere que sobrou **uma** linha, sem erro.
+
+### 🔀 `ServicoDeLlm` só lança quando estourar o orçamento
+
+Falha de rede, schema inválido e ausência de chave voltam como valor no tipo de
+retorno, porque cada um é tratado de forma diferente por quem chamou. Orçamento é a
+única exceção, e a razão é concreta: um laço que trata "estourei o teto" como "esse
+par falhou" segue para o par seguinte e estoura de novo, uma vez por par — e é
+exatamente o laço com defeito que o teto existe para conter.
+
+### 🔀 Dois tetos de orçamento, não um
+
+Centavos é o teto que interessa ao bolso, e **chamadas** é o que continua valendo
+quando o provedor não informa custo. Sem o segundo, um provedor calado
+transformaria o teto em decoração. `Orcamento` recusa nascer sem os dois, no
+construtor — "agente sem teto por execução não roda" verificado, não combinado.
+
+### 🐛 Ausência de chave não vai para `llm_call`
+
+A primeira versão registrava tudo, inclusive a tentativa que morreu em
+`ChamadorAusente`. Errado por dois motivos: nada foi enviado, então não houve custo
+nem latência para registrar, e o relatório de gasto por finalidade ficaria cheio de
+linhas de chamadas que não aconteceram. Também não consome orçamento.
+
+### 🐛 `Date` em template `sql` cru não chega ao Postgres
+
+`sql\`${coluna} >= ${data}\`` manda a `Date` ao driver sem o tipo da coluna, e o
+`postgres` recusa com "The string argument must be of type string... Received an
+instance of Date". Com `gte(coluna, data)` o Drizzle informa o tipo. Vale para toda
+comparação de `timestamptz`: o operador tipado, não o template.
+
+### 🐛 `W10295370` é peça de Whirlpool, e `W` é watt
+
+O reconhecedor de código de modelo recusava todo token de `letra + dígito` cujas
+letras coincidissem com uma unidade de medida — a regra existe para que `500ml`,
+`12v` e `3x` não sejam confundidos com identificador. Só que a mesma regra,
+aplicada nas duas ordens, recusava `W10295370`, que é o número de peça de uma
+Whirlpool, e `A1234`, e todo prefixo de uma letra — que é o padrão de várias
+marcas de linha branca.
+
+A correção é a ordem: **medida é dígito seguido de unidade**, nunca o contrário.
+`500ml` sim, `W10295370` não. O teste que pegou usava justamente um número de peça
+real, e é por isso que ele estava lá.
+
+### 🐛 Juntar tokens vizinhos inventava código onde não havia
+
+`PA 21 G` e `PA21G` são o mesmo código escrito por duas fontes, então o extrator
+tenta juntar tokens vizinhos. A primeira versão juntava qualquer vizinho, e o
+resultado foi pior que não juntar:
+
+- `Refil PA 21` virava `REFILPA21`
+- `R$ 89,90` virava `R89`
+
+Três regras resolveram, cada uma atrás de um desses: fragmento é só letra ou só
+dígito e tem no máximo 4 caracteres (`Refil` tem 5 e não é fragmento); a classe
+alterna (`por R 89` tem duas palavras seguidas); e o primeiro fragmento tem 2
+caracteres ou mais (é o que recusa `R 89`).
+
+E a janela é tentada **da maior para a menor**, senão `PA 21 G` vira `PA21` e o
+sufixo — que é a variação de cor ou de voltagem — se perde.
+
+### 🔀 Hífen fica dentro do código, barra separa
+
+`EF-ELX-21` e `DA29-00020B` são um código cada; `PA21G/PA26G` são dois. O
+tokenizador trata `-`, `.` e `_` como parte do token e barra, vírgula e parêntese
+como separador. Sem isso, o código do distribuidor — que é justamente o registro
+pobre que o M3 existe para ligar aos ricos — era despedaçado antes de ser
+comparado.
+
+### 🧹 Corrida de letras: o limite é 5, e é escolha consciente
+
+`purificador-PA21G` tem letra, dígito e tamanho de código; o que o desqualifica é
+a palavra dentro. A regra é "nenhuma corrida de 6 letras ou mais", e ela recusa
+`FILTRO21` junto com os falsos positivos. Aceito: o custo de errar para o lado
+permissivo é agrupar produtos diferentes, e agrupamento errado não se desfaz
+sozinho — some dentro de um SKU e reaparece como margem calculada sobre o custo do
+produto errado.
+
+### 🐛 `"N/A"` como marca colapsa o grafo de identidade em um nó
+
+A regra da especificação é "atributo que não aparece vira `null`, nunca invenção",
+e eu li isso como "o modelo não deve inventar um valor plausível". Não é só isso, e
+o caso comum é mais bobo: o modelo escreve `"N/A"`, `"não informado"` ou `"-"` no
+lugar de `null`. A diferença parece cosmética e não é — `"N/A"` vira marca, entra
+na forma canônica, e a partir daí **todo produto de marca desconhecida fica
+semelhante a todo outro produto de marca desconhecida**.
+
+O schema do registro agora mapeia 30 formas de ausência para `null`, comparadas
+depois de normalizar caixa, acento e pontuação. `"sem marca"` ficou **fora** da
+lista de propósito: produto genérico sem marca é uma afirmação verdadeira sobre o
+produto, e apagá-la perderia informação.
+
+### 🔀 `chaveDeAgrupamento` devolve `null`, nunca string vazia
+
+A chave determinística é `marca|modelo`. Se ela devolvesse `''` quando falta um dos
+dois, todo registro sem marca teria a mesma chave de todo outro registro sem marca,
+e o casamento determinístico fundiria a base inteira em um SKU. O tipo é
+`string | null` e o `null` é a defesa.
+
+### 🔀 Confiança em pontos-base, não em fração
+
+A especificação fala de limiar e de confiança em fração (`0.7`, `0.8`). O sistema
+não tem um `float` em lugar nenhum — dinheiro é centavo inteiro, percentual é
+ponto-base — e abrir a primeira exceção para confiança de identidade seria começar
+a ter dois padrões. `CONFIANCA.MARCA_MODELO_IGUAL = 8_500` é `0.85`.
+
+### 🔀 Mesmo GTIN vence quantidade divergente; sem GTIN, a quantidade manda
+
+Dois registros com o mesmo GTIN e quantidades de embalagem diferentes **são** o
+mesmo produto: o GTIN é atribuído à unidade de venda pelo dono da marca, então ele
+é o árbitro. Mas uma das duas extrações errou, e isso vai anotado em
+`inconsistencias` — sinalizar em vez de escolher em silêncio.
+
+Sem GTIN é o contrário: "refil avulso" e "kit de três refis", mesma marca e mesmo
+código, são produtos de venda diferentes com preço diferente, e não há árbitro. O
+par vai para revisão em vez de virar um SKU errado.
+
+### 🔀 O casamento determinístico existe tanto para juntar quanto para descartar
+
+O uso óbvio é juntar de graça o que o GTIN já resolveu. O que se esquece é o
+inverso: **descartar de graça o que é obviamente diferente**. Sem isso, cada
+produto novo gera uma chamada de julgamento por vizinho que o `pgvector` devolver,
+e vizinho é o que ele devolve em quantidade. `valeJulgamento()` é a guarda, e ela
+também recusa julgar dois registros sem sinal nenhum — a resposta do modelo seria
+um chute com aparência de justificativa, que é pior que não ter resposta.
 
 ## 2026-09-12 — Fase 4: leitor de código de barras (M14)
 
