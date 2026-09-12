@@ -103,6 +103,11 @@ A tela de `/jobs` funciona **sem** poller: tem um botão que processa alguns job
 na hora, e uma tela de detalhe por job com cada linha de planilha recusada e o
 motivo.
 
+O leitor de código de barras fica em `/leitor` e dá para instalar na tela inicial
+do celular. Informe o custo, leia o código, e o veredito sai com preço praticado,
+margem, markup e até quanto dá para pagar. Funciona sem rede: a leitura fica no
+aparelho e sobe quando a conexão volta.
+
 Para rodar como **serviço** (contêiner, systemd), chamar node direto:
 
 ```sh

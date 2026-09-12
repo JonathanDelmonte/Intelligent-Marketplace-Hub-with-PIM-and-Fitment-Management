@@ -169,13 +169,43 @@ auditável.
 
 | #   | Entrega                                                  | Estado |
 | --- | -------------------------------------------------------- | ------ |
-| 4.1 | PWA com `BarcodeDetector`, fallback `zxing-wasm`         | ⬜     |
-| 4.2 | Veredito compra / não compra em dois segundos, usando M8 | ⬜     |
-| 4.3 | Fila de sincronização offline (loja tem sinal ruim)      | ⬜     |
-| 4.4 | Fallback de base pública de GTIN para descrição e NCM    | ⬜     |
+| 4.1 | PWA com `BarcodeDetector`, fallback `zxing-wasm`          | ✅     |
+| 4.2 | Veredito compra / não compra em dois segundos, usando M8  | ✅     |
+| 4.3 | Fila de sincronização offline (loja tem sinal ruim)       | ✅     |
+| 4.4 | Fallback de base pública de GTIN para descrição e NCM     | 🔒     |
+| 4.5 | GTIN como primitiva, com dígito verificador e embalagem   | ✅     |
+| 4.6 | Coluna `ean` indexada em `produto_externo`, com backfill  | ✅     |
+| 4.7 | Tabela `leitura`: decisão humana ao lado do veredito      | ✅     |
 
 **Entrega:** sair de casa e comprar com dado. Arbitragem e avaliação de estoque
 de parceiro no balcão.
+
+**Como usar.** A tela fica em `/leitor`, e dá para instalar na tela inicial do
+celular — o manifesto abre direto nela. Informe o custo, leia o código pela câmera
+ou digite, e o veredito sai com preço praticado, margem, markup e **até quanto dá
+para pagar**. Depois marque "comprei" ou "não comprei": é essa marca que ensina o
+sistema depois.
+
+**Funciona sem rede, e isso foi verificado desligando a rede.** A leitura é
+gravada no aparelho **antes** de qualquer tentativa de servidor, e sobe quando a
+conexão volta. Sem rede o veredito não vem — preço praticado mora no banco —, mas a
+validação do código vem, porque o módulo de GTIN é função pura e roda no navegador.
+
+**O decodificador tem dois caminhos, escolhidos por capacidade.**
+`BarcodeDetector` do sistema quando existe; `zxing-wasm` quando não — que é o caso
+do Safari de iPhone, metade do mercado. O wasm é servido do próprio domínio e
+cacheado pelo service worker, porque CDN é justamente o que não responde na loja.
+Verificado de ponta a ponta com um EAN-13 desenhado à mão alimentando a câmera.
+
+**A 4.4 está 🔒 e não 🚧, e o motivo é externo.** Não existe base pública,
+gratuita e sem credencial que devolva NCM de GTIN brasileiro: a Cosmos tem e exige
+token, a Open Food Facts é livre e não cobre o nicho nem tem NCM, a UPCitemdb tem
+faixa de teste sem NCM. A porta está pronta com estado `sem_credencial`; ligar a
+Cosmos é cadastrar credencial e escrever trinta linhas de adaptador. Ver o diário.
+
+**O que o leitor precisa para valer: base.** Ele lê o código e compara com o preço
+praticado que o sistema conhece — sem planilha importada (fase 3), lê e não tem com
+o que comparar. As duas fases se completam, e é por isso que esta vem depois.
 
 ---
 

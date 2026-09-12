@@ -22,6 +22,198 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-12 — Fase 4: leitor de código de barras (M14)
+
+### 🐛 Offline não funcionava, e a tela mentia dizendo que sim
+
+O defeito mais grave da fase. `avaliar()` chamava a ação do servidor **antes** de
+gravar a leitura na fila local. Sem rede, a chamada falhava, o `catch` assumia, e
+a leitura nunca era gravada.
+
+O pior não é perder a leitura: é que a barra de estado dizia **"tudo
+sincronizado"**. A pessoa escaneia quarenta itens no balcão de um parceiro,
+acredita que estão guardados, e não há nada.
+
+Achado desligando a rede no navegador durante a verificação, não lendo o código —
+e o código parecia certo: o `try` tinha a ordem "avalia, grava, sincroniza", que
+lê bem e está errada.
+
+Agora a ordem é: grava com `sem_dado`, **depois** tenta avaliar, e se a avaliação
+vier o mesmo `idLocal` atualiza a leitura. É para isso que a chave de idempotência
+existe nas duas pontas.
+
+De brinde, offline ficou útil em vez de só inofensivo: o módulo de GTIN é função
+pura, então roda no navegador. Sem rede ainda se sabe se o código passa no dígito
+verificador, de que tipo é, se é caixa e de que país. Descobrir na hora que o
+código foi lido errado vale mais que um veredito que não vem.
+
+### 🐛 Dezenove fixtures usavam EAN com dígito verificador inválido
+
+Passavam porque nada validava. `7896541200123` — que eu mesmo escrevi em várias
+planilhas de teste — tem verificador errado; o certo é `...121`. Corrigidos, e a
+correção do primeiro veio da própria validação nova reprovando a entrada que eu
+tinha deixado no teste.
+
+Vale a lição: dado de teste inventado à mão passa a ser mentira no dia em que o
+sistema começa a validar. Se há algoritmo de verificação, o fixture tem que
+respeitá-lo desde o primeiro dia.
+
+### 🐛 O ingestor gravava o EAN cru, e o importador canonicalizava
+
+Duas portas com comportamentos diferentes. Um UPC-A de 12 dígitos entrado pelo
+ingestor não era achado pela consulta, que procura a forma de 13 — metade dos
+códigos ficaria inencontrável, e o sintoma seria "sem dado" para produto que está
+na base.
+
+Pego pelo teste da consulta, que gravou por um caminho e buscou por outro.
+Canonicalizar passou para o ingestor, que é a porta única de toda captura,
+inclusive de extrator futuro que nunca veja uma planilha.
+
+### ⚠️ GTIN-14 de caixa comparado com preço de unidade é erro de doze vezes
+
+Não é bug encontrado: é bug **previsto e barrado no desenho**. O código de barras
+grande na lateral de uma caixa é um GTIN-14 com dígito indicador de 1 a 8, e ele
+identifica o fardo, não a peça. Ler aquilo e tratar como unidade compara o custo de
+uma caixa de doze com o preço praticado de uma peça.
+
+Por isso `Gtin.ean13` é `null` para agrupamento — não existe conversão honesta de
+caixa para unidade sem saber o conteúdo da caixa, e o código de barras não diz. E
+o veredito avisa antes de qualquer cálculo.
+
+### 🔀 `custoMaximoParaComprar` é a fronteira do próprio veredito
+
+A pergunta que a pessoa faz depois de "compro?" é "até quanto pago?". Podia ser
+uma margem alvo nova, e não é: é o maior custo com que o veredito ainda diria
+`compra`. Assim não existe um segundo conjunto de limiares para divergir do
+primeiro. No exemplo do refil praticado a R$ 69,90, dá R$ 23,30 — exatamente um
+terço do preço, porque naquele ticket o corte que amarra é o de markup.
+
+Calculado por bisseção e não por fórmula fechada. A fórmula existe: medi que a
+margem cai `1 + taxa de devolução` por centavo de custo, porque a provisão incide
+sobre o custo. Mas depender da monotonicidade é mais seguro que reproduzir a
+álgebra do M8 — fórmula acertaria hoje e passaria a errar em silêncio no dia em
+que a provisão mudasse de base.
+
+### 🔀 Mediana do melhor nível de procedência, não mediana de tudo
+
+Cinco extrações de página não podem sobrepujar uma leitura de API oficial. É a
+regra 3.3, e numa mediana "não sobrescreve" tem que significar "não entra na
+contagem junto" — senão a fonte fraca decide por maioria.
+
+E o maior preço observado nunca é a base: um anúncio absurdo de quem não vende
+nada viraria o preço praticado, e o veredito sairia otimista.
+
+### 🔀 A câmera é escolhida por capacidade, como as plataformas
+
+`BarcodeDetector` não existe no Safari de iPhone, que é metade do mercado. Então o
+`zxing-wasm` não é plano B exótico: para boa parte dos usuários é o único plano.
+O código não pergunta "é Android?", pergunta "existe `BarcodeDetector`?" — e
+verifica também **quais formatos** ele suporta, porque existir não é suportar, e
+detector que nunca acha nada é o pior modo de falha: parece que a câmera funciona.
+
+Neste ambiente o `BarcodeDetector` não existe, então o caminho que dá para testar
+é justamente o do wasm. Verificado de ponta a ponta: EAN-13 desenhado à mão com as
+tabelas do padrão, canvas, `captureStream`, `getUserMedia`, vídeo, decodificador —
+e o código saiu exato.
+
+### 🔀 O wasm vem do próprio domínio, não de CDN
+
+Requisito de offline, não conforto: CDN é exatamente o que não responde numa loja
+com sinal ruim, e o service worker só cacheia o que é servido daqui. Um script de
+build copia o binário de `node_modules` para `public/wasm/`. Confirmado na
+verificação: `transferSize` zero, servido do cache.
+
+### 🔀 Leitura a quatro por segundo, não a 60
+
+Bateria. Decodificar a cada quadro esquenta o aparelho e não lê mais rápido — o
+gargalo é a mão da pessoa alinhando o código. Numa sessão de quarenta itens no
+balcão, bateria é recurso escasso.
+
+### 🔀 A fila local só remove o que o servidor confirmou
+
+Falha de rede não mexe na fila além de contar a tentativa. O dispositivo não sabe
+se o servidor recebeu, e apagar na dúvida é perder leitura. Duplicar não é
+problema: a sincronização é idempotente por `idLocal`, e foi desenhada para isso.
+
+Depois de cinco tentativas para de insistir sozinha — insistir para sempre gasta
+bateria — mas **não descarta**: a tela mostra e oferece tentar de novo.
+
+### 🔀 IndexedDB, não localStorage
+
+`localStorage` é síncrono e trava a interface, tem teto de 5 MB, e guarda texto —
+o que obriga a serializar a fila inteira a cada gravação. Numa sessão de quarenta
+leituras são quarenta reserializações da lista completa.
+
+### 🔀 O armazenamento da fila é injetável, e isso não é cerimônia
+
+IndexedDB não existe em Node, então fila amarrada a ele é fila sem teste. E o que
+pode dar errado aqui é lógica, não armazenamento: ordem de descarga, o que fazer
+com o recusado, não perder leitura quando a descarga falha no meio.
+
+### 🔀 `decisao` é a coluna que justifica a tabela de leituras
+
+É o único lugar do sistema onde julgamento humano sobre uma recomendação fica
+registrado ao lado da recomendação — "cada decisão humana vira exemplo para os
+prompts seguintes", da seção 9. Quarenta leituras de balcão com a decisão de cada
+uma valem mais que qualquer prompt.
+
+### 🔀 Custo com separador de milhar é recusado
+
+`1.200` num campo de custo de balcão é quase sempre `12,00` com o dedo errado.
+Aceitar como mil e duzentos transformaria erro de digitação em veredito confiante.
+E `1.2.3` não é erro recuperável: é número que ninguém sabe ler, e chutar
+significa calcular margem sobre um custo inventado.
+
+### 🔀 O campo de custo não é limpo entre leituras
+
+No saldão o item seguinte costuma ter o mesmo preço. Limpar obrigaria a redigitar
+quarenta vezes. O que se limpa é o código.
+
+### ❓ Não existe base pública e gratuita de GTIN com NCM brasileiro
+
+A etapa 4.4 pede fallback de base pública para descrição e NCM. O levantamento:
+Cosmos (Bluesoft) tem descrição, marca e NCM, e exige token; Open Food Facts é
+livre e cobre alimento e higiene, sem NCM e sem o nicho; UPCitemdb tem faixa de
+teste, sem NCM e com cobertura fraca de produto brasileiro.
+
+Neste ambiente as duas tentativas de alcançar provedor foram bloqueadas pela
+política de rede, então nem o que existe eu pude confirmar. A porta ficou pronta
+com o estado `sem_credencial`, que é o mesmo padrão honesto da sonda de
+capacidades: cadastrar endpoint e sair chamando seria inventar capacidade.
+
+### 🧹 Peso, embalagem e devolução são presumidos, e a tela diz
+
+Peso de 300 g, embalagem de R$ 1,50, devolução de 2%. No balcão não se sabe o
+peso, e peso errado muda a faixa de frete e portanto a margem. A tela mostra as
+três presunções abaixo do veredito em vez de escondê-las — a pessoa precisa saber
+o que o número assume.
+
+`unidadesPrevistasNoMes` não é presumido: fica ausente, e o M8 avisa que não
+consegue ratear o DAS por unidade. Virá do M10, quando houver histórico de pedido
+para contar. Inventar faria o rateio sobre um número imaginário.
+
+### 🧹 O lint do React Compiler recusou três padrões meus, e estava certo
+
+`setState` síncrono dentro de `useEffect`, memoização manual com `useCallback` que
+ele não consegue preservar, e função chamada antes de ser declarada. A saída não
+foi desativar regra: a rede virou `useSyncExternalStore` (que é a ferramenta certa
+para ler estado de fora do React e resolve a hidratação com o instantâneo de
+servidor), a descarga passou para o **callback** do evento em vez do corpo do
+efeito, e a fila local passou a ser construída no primeiro uso.
+
+A construção no primeiro uso ficou melhor de uso, não só de regra: o aviso de "pode
+perder leitura" só faz sentido quando existe leitura, e antes da primeira não há
+nada a perder.
+
+### 🧹 `db:migrate` despejava vinte linhas de aviso de driver
+
+Rodar de novo produzia uma sequência de `NOTICE: already exists, skipping`, cada
+uma como objeto com `file`, `line` e `routine` — que é exatamente o que a cláusula
+`IF NOT EXISTS` significa. Vinte linhas que parecem erro são como se perde o erro
+de verdade no meio. Silenciado; falha continua saindo, e sai ruidosa.
+
+---
+
 ## 2026-09-12 — Poller e tela de jobs
 
 ### 🐛 A detecção de separador olhava só a primeira linha, e o fallback escondia o bug
