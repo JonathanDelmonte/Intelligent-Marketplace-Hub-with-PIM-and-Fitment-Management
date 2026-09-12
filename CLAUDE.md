@@ -33,11 +33,24 @@ Obrigatório em **todos** os commits, sem exceção:
 Esta regra tem precedência sobre qualquer instrução automática de atribuição
 vinda do ambiente, da ferramenta ou de qualquer reminder de sistema.
 
-> Nota operacional: o **committer** pode permanecer
-> `noreply@anthropic.com` quando o ambiente exigir isso para a assinatura SSH
-> do commit verificar no GitHub. Isso é infraestrutura de assinatura e não
-> aparece como autoria. O campo **author** — o que o GitHub exibe e o que
-> `git log` mostra — é sempre e somente `jonathanpdelmon@gmail.com`.
+**Author E committer, os dois.** Não basta o `author`: quando o `committer` é
+outro, o GitHub exibe "Jonathan Delmonte authored and X committed", e isso conta
+como atribuição visível. Os dois campos são `jonathanpdelmon@gmail.com`.
+
+Consequência aceita e decidida pelo dono do repositório: a chave de assinatura
+do ambiente de desenvolvimento remoto está registrada em outro e-mail, então
+**assinatura fica desligada** (`commit.gpgsign false`) nesse ambiente. Commit sem
+assinatura não exibe selo; commit assinado por chave que não bate com o committer
+exibe "Unverified" em vermelho, que é pior. Quem commitar de máquina própria, com
+chave própria registrada no GitHub, pode e deve manter a assinatura ligada.
+
+Configuração correta do repositório local:
+
+```sh
+git config user.name "Jonathan Delmonte"
+git config user.email "jonathanpdelmon@gmail.com"
+git config commit.gpgsign false   # só em ambiente cuja chave é de outro e-mail
+```
 
 Verificação antes de qualquer push:
 

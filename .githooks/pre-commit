@@ -8,6 +8,27 @@ ESPERADO_EMAIL="jonathanpdelmon@gmail.com"
 autor_ident=$(git var GIT_AUTHOR_IDENT 2>/dev/null || echo "")
 autor_email=$(printf '%s' "$autor_ident" | sed -n 's/.*<\(.*\)>.*/\1/p')
 
+committer_ident=$(git var GIT_COMMITTER_IDENT 2>/dev/null || echo "")
+committer_email=$(printf '%s' "$committer_ident" | sed -n 's/.*<\(.*\)>.*/\1/p')
+
+if [ "$committer_email" != "$ESPERADO_EMAIL" ]; then
+  cat >&2 <<MSG
+✖ Committer do commit inválido.
+
+  encontrado: ${committer_email:-<vazio>}
+  esperado:   $ESPERADO_EMAIL
+
+O committer importa tanto quanto o autor: quando ele é outro, o GitHub exibe
+"Jonathan Delmonte authored and X committed", e isso é atribuição visível.
+
+Configure o repositório:
+
+  git config user.name "Jonathan Delmonte"
+  git config user.email "$ESPERADO_EMAIL"
+MSG
+  exit 1
+fi
+
 if [ "$autor_email" != "$ESPERADO_EMAIL" ]; then
   cat >&2 <<MSG
 ✖ Autor do commit inválido.
