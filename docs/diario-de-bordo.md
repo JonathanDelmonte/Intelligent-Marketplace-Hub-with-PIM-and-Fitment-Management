@@ -75,6 +75,13 @@ recusa antes de chegar ao `URL`. Assim todo chamador futuro está protegido, e a
 lista de links continua caindo em `texto`, que é onde o classificador a reconhece
 como lista e o executor abre um job por link.
 
+### 🐛 `recortar` estourava o próprio limite
+
+`recortar(texto, 90)` cortava em 89 e acrescentava três pontos: 92 caracteres.
+Função de limite que não respeita o limite. Sem consequência grave — é `title` de
+célula — mas é o tipo de coisa que nunca mais seria olhada. O teste agora varre
+máximos de 1 a 90 e exige que a saída **nunca** passe do pedido.
+
 ### 🐛 O pool de conexão vazava a cada recarga a quente
 
 `banco()` guardava a instância num `let` de módulo. O servidor de
@@ -160,6 +167,36 @@ linha de log ao registro no banco.
 A alternativa seria marcar os campos sensíveis um a um. Não sobrevive: quem
 acrescenta um campo de token dentro de um objeto de erro não vai lembrar de
 registrá-lo. Por nome, `accessToken` novo já entra coberto.
+
+### 🔀 A lógica da tela tem teste; o JSX não
+
+`apresentacao.ts` concentra o que pode estar errado — resumir um payload `jsonb`
+escrito por outra versão do código, formatar duração, decidir se a fila está
+parada — e tem 37 casos. O JSX fica sem teste de renderização, e é escolha
+consciente: montar `@testing-library/react` para verificar que uma tabela produz
+`<tr>` cobre o que o compilador e o olho já cobrem. O que o olho não cobre é
+`resumirEntrada` recebendo o payload de um job de dois meses atrás.
+
+Em vez de teste de renderização, a tela foi exercitada **por navegador** com o
+Chromium do ambiente: colar URL, colar a mesma URL de novo, colar texto, subir
+planilha, enviar vazio, processar, reenfileirar. Achou dois defeitos reais — o
+separador e o botão de reenfileirar.
+
+### 🔀 O aviso da ação viaja como código, não como texto
+
+A ação termina em `redirect`, e o caminho fácil seria `?aviso=Entrada+aceita`.
+Texto livre na URL significa que **qualquer link** consegue fazer a tela dizer
+qualquer coisa, inclusive "3 registros removidos". O React escapa, então não é
+injeção: é mentira, e numa tela de auditoria isso é pior. Só código previsto em
+`CODIGOS_DE_AVISO` produz mensagem; o único número que atravessa a URL é coagido
+para inteiro não negativo.
+
+### 🔀 A tela não afirma se existe poller rodando
+
+Não há batimento gravado, então o sistema **não sabe**. Inventar um estado de
+processo que não se mede seria pior que não dizer nada. O aviso usa só o
+observável: há job pronto **e** nada terminou no último minuto. Diz isso, oferece
+as duas saídas — "Processar agora" ou rodar o poller — e não afirma a causa.
 
 ### 🐛 A linha recusada guardava só as colunas reconhecidas
 
