@@ -28,6 +28,39 @@ Convenção de marcação:
 
 ## 2026-09-12 — Fase 5: resolução de identidade (M3)
 
+### 🐛 `cosineDistance` do Drizzle não casta o parâmetro para `vector`
+
+`cosineDistance(coluna, vetor)` gera `"vetor" <=> $1`, e o parâmetro chega como
+`double precision`. O Postgres recusa: *operator does not exist: vector <=> double
+precision*. O `customType` do schema sabe converter na **escrita**, e não em
+parâmetro de `sql` cru.
+
+A correção é montar o literal e castar: `${coluna} <=> ${'[1,0,…]'}::vector`. E a
+expressão inteira precisa de parênteses antes de `::float8`, senão o cast gruda no
+último token — que é o parâmetro, não a conta.
+
+### 🔀 `vizinhosDe` devolve `null`, não lista vazia, quando não há embedding
+
+Lista vazia significa "procurei e não achei parecido". `null` significa "não pude
+procurar". Tratar os dois como a mesma coisa faria todo produto sem embedding
+parecer um produto sem par — e hoje, sem chave de LLM, **nenhum** produto tem
+embedding. O tipo obriga quem chama a distinguir.
+
+### ❓ `DISTANCIA_MAXIMA_PADRAO = 0.35` não está calibrado
+
+É o corte de distância de cosseno para um vizinho virar candidato a julgamento.
+Calibrar exige uma base com embedding de verdade, que exige chave. Está como
+constante nomeada em um lugar só, justamente para ser ajustada quando houver com o
+que medir. O mesmo vale para `VIZINHOS_PADRAO = 20`.
+
+### 🔀 A busca vetorial é testável sem chave, e por isso a 5.3 fecha hoje
+
+Gerar embedding custa chamada de API; **buscar** é operação do banco. Vetor
+sintético — unitário em um eixo, ou a um ângulo calculado do eixo 0 — exercita
+ordenação por distância, corte, exclusão do próprio produto e separação por modelo.
+É o mesmo raciocínio do GTIN na fase 4: a parte determinística do módulo de IA fecha
+antes da parte que depende de chave.
+
 ### 🐛 A chave única do cache de LLM transforma uma falha em bloqueio permanente
 
 `llm_call` tem chave única em `(proposito, modelo, hash_entrada)`, que é a chave de
