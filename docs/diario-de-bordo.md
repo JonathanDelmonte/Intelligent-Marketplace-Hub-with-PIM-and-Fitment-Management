@@ -26,6 +26,103 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-12 — Fase 5: resolução de identidade (M3)
+
+### 🐛 `W10295370` é peça de Whirlpool, e `W` é watt
+
+O reconhecedor de código de modelo recusava todo token de `letra + dígito` cujas
+letras coincidissem com uma unidade de medida — a regra existe para que `500ml`,
+`12v` e `3x` não sejam confundidos com identificador. Só que a mesma regra,
+aplicada nas duas ordens, recusava `W10295370`, que é o número de peça de uma
+Whirlpool, e `A1234`, e todo prefixo de uma letra — que é o padrão de várias
+marcas de linha branca.
+
+A correção é a ordem: **medida é dígito seguido de unidade**, nunca o contrário.
+`500ml` sim, `W10295370` não. O teste que pegou usava justamente um número de peça
+real, e é por isso que ele estava lá.
+
+### 🐛 Juntar tokens vizinhos inventava código onde não havia
+
+`PA 21 G` e `PA21G` são o mesmo código escrito por duas fontes, então o extrator
+tenta juntar tokens vizinhos. A primeira versão juntava qualquer vizinho, e o
+resultado foi pior que não juntar:
+
+- `Refil PA 21` virava `REFILPA21`
+- `R$ 89,90` virava `R89`
+
+Três regras resolveram, cada uma atrás de um desses: fragmento é só letra ou só
+dígito e tem no máximo 4 caracteres (`Refil` tem 5 e não é fragmento); a classe
+alterna (`por R 89` tem duas palavras seguidas); e o primeiro fragmento tem 2
+caracteres ou mais (é o que recusa `R 89`).
+
+E a janela é tentada **da maior para a menor**, senão `PA 21 G` vira `PA21` e o
+sufixo — que é a variação de cor ou de voltagem — se perde.
+
+### 🔀 Hífen fica dentro do código, barra separa
+
+`EF-ELX-21` e `DA29-00020B` são um código cada; `PA21G/PA26G` são dois. O
+tokenizador trata `-`, `.` e `_` como parte do token e barra, vírgula e parêntese
+como separador. Sem isso, o código do distribuidor — que é justamente o registro
+pobre que o M3 existe para ligar aos ricos — era despedaçado antes de ser
+comparado.
+
+### 🧹 Corrida de letras: o limite é 5, e é escolha consciente
+
+`purificador-PA21G` tem letra, dígito e tamanho de código; o que o desqualifica é
+a palavra dentro. A regra é "nenhuma corrida de 6 letras ou mais", e ela recusa
+`FILTRO21` junto com os falsos positivos. Aceito: o custo de errar para o lado
+permissivo é agrupar produtos diferentes, e agrupamento errado não se desfaz
+sozinho — some dentro de um SKU e reaparece como margem calculada sobre o custo do
+produto errado.
+
+### 🐛 `"N/A"` como marca colapsa o grafo de identidade em um nó
+
+A regra da especificação é "atributo que não aparece vira `null`, nunca invenção",
+e eu li isso como "o modelo não deve inventar um valor plausível". Não é só isso, e
+o caso comum é mais bobo: o modelo escreve `"N/A"`, `"não informado"` ou `"-"` no
+lugar de `null`. A diferença parece cosmética e não é — `"N/A"` vira marca, entra
+na forma canônica, e a partir daí **todo produto de marca desconhecida fica
+semelhante a todo outro produto de marca desconhecida**.
+
+O schema do registro agora mapeia 30 formas de ausência para `null`, comparadas
+depois de normalizar caixa, acento e pontuação. `"sem marca"` ficou **fora** da
+lista de propósito: produto genérico sem marca é uma afirmação verdadeira sobre o
+produto, e apagá-la perderia informação.
+
+### 🔀 `chaveDeAgrupamento` devolve `null`, nunca string vazia
+
+A chave determinística é `marca|modelo`. Se ela devolvesse `''` quando falta um dos
+dois, todo registro sem marca teria a mesma chave de todo outro registro sem marca,
+e o casamento determinístico fundiria a base inteira em um SKU. O tipo é
+`string | null` e o `null` é a defesa.
+
+### 🔀 Confiança em pontos-base, não em fração
+
+A especificação fala de limiar e de confiança em fração (`0.7`, `0.8`). O sistema
+não tem um `float` em lugar nenhum — dinheiro é centavo inteiro, percentual é
+ponto-base — e abrir a primeira exceção para confiança de identidade seria começar
+a ter dois padrões. `CONFIANCA.MARCA_MODELO_IGUAL = 8_500` é `0.85`.
+
+### 🔀 Mesmo GTIN vence quantidade divergente; sem GTIN, a quantidade manda
+
+Dois registros com o mesmo GTIN e quantidades de embalagem diferentes **são** o
+mesmo produto: o GTIN é atribuído à unidade de venda pelo dono da marca, então ele
+é o árbitro. Mas uma das duas extrações errou, e isso vai anotado em
+`inconsistencias` — sinalizar em vez de escolher em silêncio.
+
+Sem GTIN é o contrário: "refil avulso" e "kit de três refis", mesma marca e mesmo
+código, são produtos de venda diferentes com preço diferente, e não há árbitro. O
+par vai para revisão em vez de virar um SKU errado.
+
+### 🔀 O casamento determinístico existe tanto para juntar quanto para descartar
+
+O uso óbvio é juntar de graça o que o GTIN já resolveu. O que se esquece é o
+inverso: **descartar de graça o que é obviamente diferente**. Sem isso, cada
+produto novo gera uma chamada de julgamento por vizinho que o `pgvector` devolver,
+e vizinho é o que ele devolve em quantidade. `valeJulgamento()` é a guarda, e ela
+também recusa julgar dois registros sem sinal nenhum — a resposta do modelo seria
+um chute com aparência de justificativa, que é pior que não ter resposta.
+
 ## 2026-09-12 — Fase 4: leitor de código de barras (M14)
 
 ### 🐛 Offline não funcionava, e a tela mentia dizendo que sim
