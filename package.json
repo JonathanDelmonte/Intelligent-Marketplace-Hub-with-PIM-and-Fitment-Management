@@ -11,7 +11,8 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "copiar:wasm": "node scripts/copiar-wasm.mjs",
+    "build": "npm run copiar:wasm && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
@@ -30,7 +31,7 @@
     "poller:uma-vez": "node --import tsx scripts/poller.ts --uma-vez",
     "sondar:capacidades": "tsx scripts/sondar-capacidades.ts",
     "verify:authors": "node scripts/verify-authors.mjs",
-    "prepare": "git config core.hooksPath .githooks",
+    "prepare": "git config core.hooksPath .githooks && npm run copiar:wasm",
     "verify:fontes": "node scripts/verificar-fontes-texto.mjs"
   },
   "dependencies": {
@@ -40,7 +41,8 @@
     "postgres": "3.4.9",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "zod": "4.6.2"
+    "zod": "4.6.2",
+    "zxing-wasm": "3.1.4"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",

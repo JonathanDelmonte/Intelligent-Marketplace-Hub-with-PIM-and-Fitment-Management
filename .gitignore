@@ -43,3 +43,7 @@ Thumbs.db
 # log
 *.log
 npm-debug.log*
+
+# wasm do decodificador de código de barras: artefato de dependência, copiado
+# por `npm run copiar:wasm` no build. Versionar traria 1,5 MB que o install já dá.
+/public/wasm/

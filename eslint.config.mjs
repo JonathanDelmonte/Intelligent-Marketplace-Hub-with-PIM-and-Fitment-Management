@@ -9,6 +9,10 @@ export default tseslint.config(
       'node_modules/**',
       'coverage/**',
       'src/infra/banco/migrations/**',
+      // Service worker: JavaScript de navegador, com globais que não existem no
+      // programa do tsconfig (`self`, `caches`, `clients`). Verificá-lo com as
+      // regras do projeto exigiria um segundo tsconfig só para ele.
+      'public/sw.js',
       'next-env.d.ts',
     ],
   },
