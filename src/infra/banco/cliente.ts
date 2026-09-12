@@ -43,11 +43,51 @@ export function criarBancoCom(
 
 export type Banco = ReturnType<typeof criarBancoCom>['db'];
 
-let instancia: Banco | null = null;
+/**
+ * Instância única por processo, guardada em `globalThis`.
+ *
+ * Um `let` de módulo seria o natural, e vaza no servidor de desenvolvimento do
+ * Next: cada recarga a quente reavalia o módulo, o `let` volta a `null` e abre
+ * **outro** pool de dez conexões, sem fechar o anterior. Meia hora editando
+ * componente esgota o `max_connections` do Postgres, e o sintoma aparece como
+ * erro de conexão em uma tela que não foi tocada.
+ *
+ * `globalThis` sobrevive à reavaliação de módulo, então o pool é um só.
+ */
+const CHAVE_GLOBAL = Symbol.for('bancada.banco');
+
+type Conexao = ReturnType<typeof criarBancoCom>;
+
+interface GlobalComBanco {
+  [CHAVE_GLOBAL]?: Conexao;
+}
+
+function conexao(): Conexao {
+  const global = globalThis as GlobalComBanco;
+  global[CHAVE_GLOBAL] ??= criarBancoCom(lerAmbiente().DATABASE_URL);
+  return global[CHAVE_GLOBAL];
+}
 
 export function banco(): Banco {
-  instancia ??= criarBancoCom(lerAmbiente().DATABASE_URL).db;
-  return instancia;
+  return conexao().db;
+}
+
+/**
+ * Fecha o pool do processo, se houver.
+ *
+ * Existe para processo de linha de comando terminar em vez de ficar pendurado: o
+ * driver mantém socket aberto, e socket aberto é `handle` ativo que impede o Node
+ * de sair. A alternativa seria `process.exit`, que mata o que estivesse gravando.
+ *
+ * Não é para usar em requisição do Next — lá o pool é do processo e vive enquanto
+ * o servidor viver.
+ */
+export async function encerrarBanco(): Promise<void> {
+  const global = globalThis as GlobalComBanco;
+  const atual = global[CHAVE_GLOBAL];
+  if (atual === undefined) return;
+  delete global[CHAVE_GLOBAL];
+  await atual.encerrar();
 }
 
 export { schema };

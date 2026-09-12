@@ -26,6 +26,11 @@ coverage/
 .cache/
 /tmp-extracao/
 
+# armazenamento de conteúdo: o original de tudo que entra, endereçado por hash.
+# É DADO, não cache — não apagar de leve, e não versionar. Ver ARMAZENAMENTO_DIR
+# em .env.example e src/infra/armazenamento/conteudo.ts.
+.dados/
+
 # sistema operacional e editor
 .DS_Store
 Thumbs.db

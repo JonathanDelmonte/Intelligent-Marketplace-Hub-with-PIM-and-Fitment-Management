@@ -47,6 +47,16 @@ const esquemaAmbiente = z.object({
   LLM_MODELO_EMBEDDING: z.string().optional(),
   LLM_ORCAMENTO_PADRAO_CENTAVOS: z.coerce.number().int().positive().default(500),
 
+  /**
+   * Onde o armazenamento de conteúdo guarda o original de cada entrada.
+   *
+   * Precisa ser configuração e não literal porque **duas** peças apontam para o
+   * mesmo lugar: o orquestrador grava (pela tela) e o executor lê (pelo poller).
+   * Dois literais divergiriam, e o sintoma seria job em revisão dizendo que o
+   * arquivo não chegou ao armazenamento — quando chegou, em outra pasta.
+   */
+  ARMAZENAMENTO_DIR: z.string().min(1).default('.dados/conteudo'),
+
   // Extração — respeitar robots.txt e limite de requisição não é opcional.
   EXTRACAO_USER_AGENT: z.string().min(1).default('BancadaBot/0.1'),
   EXTRACAO_RPS_MAX: z.coerce.number().positive().max(10).default(1),

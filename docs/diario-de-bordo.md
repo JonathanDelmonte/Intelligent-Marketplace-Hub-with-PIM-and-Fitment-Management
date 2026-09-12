@@ -75,6 +75,15 @@ recusa antes de chegar ao `URL`. Assim todo chamador futuro está protegido, e a
 lista de links continua caindo em `texto`, que é onde o classificador a reconhece
 como lista e o executor abre um job por link.
 
+### 🐛 O pool de conexão vazava a cada recarga a quente
+
+`banco()` guardava a instância num `let` de módulo. O servidor de
+desenvolvimento do Next reavalia módulo a cada recarga: o `let` volta a `null` e
+abre **outro** pool de dez conexões, sem fechar o anterior. Meia hora editando
+componente esgotaria o `max_connections` do Postgres, e o sintoma apareceria como
+erro de conexão numa tela que não foi tocada. Agora mora em `globalThis`, que
+sobrevive à reavaliação. O núcleo montado (`montarNucleo`) usa o mesmo mecanismo.
+
 ### 🔀 O poller não conhece ingestão
 
 O laço recebe uma `Tarefa` — nome, mais um método que executa uma unidade e diz se
