@@ -95,20 +95,33 @@ a `bloqueado`, com o status HTTP na mão.
 
 | #    | Entrega                                                               | Estado |
 | ---- | --------------------------------------------------------------------- | ------ |
-| 3.1  | Classificador de entrada (URL, xlsx, csv, pdf, imagem, texto)         | ⬜     |
+| 3.1  | Classificador de entrada (URL, xlsx, csv, pdf, imagem, texto)         | ✅     |
 | 3.2  | Extrator de HTML de anúncio — seletores por plataforma + fallback LLM | ⬜     |
 | 3.3  | Extrator de listagem/categoria com paginação                          | ⬜     |
 | 3.4  | Extrator de catálogo de distribuidor (LLM obrigatório)                | ⬜     |
 | 3.5  | Extrator de PDF de tabela de preços                                   | ⬜     |
 | 3.6  | Extrator de imagem de tabela (print de WhatsApp) — visão              | ⬜     |
 | 3.7  | Importadores de planilha de exportação das três plataformas           | ⬜     |
-| 3.8  | Fila `job` idempotente e retomável + tela dos últimos 100 jobs        | ⬜     |
-| 3.9  | `pendente_revisao` em vez de descarte quando o schema falha           | ⬜     |
-| 3.10 | M2: CRUD de `sku`, custo, peso, dimensão, fiscal, tipo                | ⬜     |
+| 3.8  | Fila `job` idempotente e retomável + contagem por status              | ✅     |
+| 3.9  | `pendente_revisao` em vez de descarte quando o schema falha           | ✅     |
+| 3.10 | M2: repositório de `sku` com `perfil_id` exigido pelo compilador      | ✅     |
 
 **Entrega:** o sistema começa a acumular base.
 
 **Invariante:** tudo que entra vira `produto_externo`, nunca `sku` direto.
+
+**O que está pronto e o que não está.** O caminho determinístico da fase 3 está
+completo e testado contra Postgres real: classificar a entrada, enfileirar com
+idempotência, retomar de progresso parcial, gravar com procedência e deduplicar
+por hash, criar SKU e ligar ocorrências. **Os extratores (3.2 a 3.7) não
+começaram**, e é neles que o LLM entra — não há chave de LLM configurada, e
+escrever extrator sem poder rodá-lo contra página de verdade produziria código
+que parece funcionar.
+
+A fronteira está desenhada: `exigeLlm()` diz quais tipos de entrada gastam token
+e quais não, e o classificador já roteia. O próximo passo é implementar
+`planilha_exportacao` primeiro, porque é o único com mapeamento fixo de colunas
+e portanto o único que roda sem LLM nenhum.
 
 ---
 

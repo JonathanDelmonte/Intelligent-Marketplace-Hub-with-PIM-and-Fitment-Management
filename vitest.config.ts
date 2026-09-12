@@ -8,6 +8,15 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.{test,spec}.ts', 'tests/**/*.{test,spec}.ts'],
+
+    // Arquivos rodam em série, não em paralelo.
+    //
+    // Os testes de infraestrutura compartilham UM banco e limpam tabelas no
+    // `beforeEach`; em paralelo, o `truncate` de um arquivo apaga as linhas que
+    // outro acabou de inserir, e a falha aparece como erro de chave estrangeira
+    // sem relação com o que o teste verifica. Isolar por schema por worker seria
+    // a alternativa, e não se paga: a suíte inteira roda em poucos segundos.
+    fileParallelism: false,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],

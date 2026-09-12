@@ -53,14 +53,20 @@ jobs:
       - name: Formatação
         run: npm run format:check
 
+      # As migrations vêm ANTES dos testes: parte da suíte roda contra o banco de
+      # verdade, e sem as tabelas ela seria pulada em silêncio — o CI passaria
+      # sem ter exercitado idempotência, SKIP LOCKED nem isolamento de perfil.
+      - name: Chave mestra de cifragem (descartável, só para o CI)
+        run: echo "CREDENCIAL_CHAVE_MESTRA=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")" >> "$GITHUB_ENV"
+
+      - name: Migrations contra Postgres real
+        run: npm run db:migrate
+
       - name: Testes
         run: npm run test
 
-      - name: Migrations contra Postgres real
-        run: |
-          echo "CREDENCIAL_CHAVE_MESTRA=$(node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")" >> "$GITHUB_ENV"
-      - run: npm run db:migrate
-      - run: npm run db:seed -- --nome="Perfil de CI" --regime=cpf
+      - name: Seed do primeiro perfil
+        run: npm run db:seed -- --nome="Perfil de CI" --regime=cpf
 
       - name: Build
         run: npm run build
