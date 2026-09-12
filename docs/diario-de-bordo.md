@@ -73,6 +73,42 @@ Asserção de teste em `rejects.toThrow(/nome_da_constraint/)` **passa a impress
 testar e não testa** — a mensagem de fora nunca tem o nome. O teste agora lê
 `cause.constraint_name`.
 
+### 🔀 O par vai ordenado ao modelo, senão (A,B) e (B,A) são duas chamadas pagas
+
+A pergunta de identidade é simétrica, e o hash não sabe disso. `perguntaDeIdentidade`
+ordena os dois lados pela forma canônica antes de montar o objeto, e não leva id de
+banco dentro — o mesmo par de descrições capturado em outra instalação bate no mesmo
+cache.
+
+### 🔀 Três degraus de certeza, não um número de quatro dígitos
+
+A especificação fala de "limiar" e é tentador pedir ao modelo uma confiança de 0 a
+10 000. Não: **modelo de linguagem não é calibrado**, e esse número teria aparência
+de medida com comportamento de chute — decidindo agrupamento automático. O contrato
+pede `alta | media | baixa`, que é o que ele distingue de verdade, e o mapeamento
+para pontos-base (9 000 / 7 000 / 5 000) é nosso, explícito e ajustável em um lugar.
+
+### 🔀 Par descartado fica gravado
+
+Abaixo do piso da zona cinzenta o par não vira nada — nem agrupamento, nem revisão.
+A tentação é não gravar. Errado: sem a linha, a varredura seguinte gera o mesmo
+candidato, paga o mesmo julgamento e chega ao mesmo nada. `status = 'descartado'` é
+o que faz a conta não crescer com o número de execuções.
+
+### 🧹 O teste do julgamento por LLM teve de ir pela via do embedding, e isso ensinou algo
+
+A primeira versão do teste fixava `chave_agrupamento` à mão para gerar um candidato
+indeciso. Não funcionou, e por um motivo correto: `resolver()` chama `preparar()`
+primeiro, que recalcula a chave a partir do registro — valor cravado à mão é
+sobrescrito, como deve ser para um campo derivado.
+
+O que isso revelou é que **um par indeciso só aparece por embedding**, na prática:
+com código de peça dos dois lados o determinístico decide, e sem código não há chave
+de agrupamento. Ou seja, o julgamento por LLM depende de embedding, que depende de
+chave — e o teste sintético é o único jeito de exercitar esse caminho hoje. Refeito
+assim, ele cobre o desenho da especificação de ponta a ponta: forma canônica,
+embedding, vizinho, julgamento, limiar.
+
 ## 2026-09-12 — Fase 4: leitor de código de barras (M14)
 
 ### 🐛 Offline não funcionava, e a tela mentia dizendo que sim
