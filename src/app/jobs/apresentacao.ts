@@ -505,3 +505,126 @@ export function ultimoTermino(jobs: readonly JobDetalhado[]): Date | null {
   }
   return maior;
 }
+
+// ─── Linhas rejeitadas ───────────────────────────────────────────────────────
+
+/**
+ * Schema tolerante de uma linha que a importação recusou.
+ *
+ * O executor guarda essas linhas em `resultado.rejeitadas` **de propósito**: é o
+ * que permite corrigir três linhas à mão em vez de reimportar uma planilha de
+ * quatro mil. Elas estavam no banco e não apareciam em nenhuma tela, o que é o
+ * mesmo que não existirem para quem opera.
+ */
+const esquemaLinhaRejeitada = z.object({
+  numeroDaLinha: z.number().nullish(),
+  motivo: z.string().nullish(),
+  problemas: z.array(z.string()).nullish(),
+  /** A linha já mapeada para campo do domínio. Só as colunas reconhecidas. */
+  bruto: z.record(z.string(), z.string()).nullish(),
+  /** A linha como veio no arquivo, com nome de coluna original e na ordem. */
+  original: z.array(z.object({ coluna: z.string(), valor: z.string() })).nullish(),
+});
+
+export interface LinhaRejeitadaParaTela {
+  readonly numeroDaLinha: number | null;
+  readonly motivo: string;
+  readonly problemas: readonly string[];
+  /** Pares coluna/valor, na ordem em que vieram. */
+  readonly campos: readonly { readonly coluna: string; readonly valor: string }[];
+  /**
+   * Verdadeiro quando os campos vêm da linha original do arquivo, com o nome de
+   * coluna que a pessoa vê na planilha. Falso quando só há a forma mapeada — job
+   * gravado antes de a linha original passar a ser guardada.
+   */
+  readonly temColunasOriginais: boolean;
+}
+
+export function extrairRejeitadas(resultado: unknown): readonly LinhaRejeitadaParaTela[] {
+  const lido = z.object({ rejeitadas: z.array(z.unknown()).nullish() }).safeParse(resultado);
+  if (!lido.success) return [];
+
+  const saida: LinhaRejeitadaParaTela[] = [];
+  for (const bruta of lido.data.rejeitadas ?? []) {
+    const linha = esquemaLinhaRejeitada.safeParse(bruta);
+    if (!linha.success) continue;
+
+    // A linha original tem precedência: é a que traz o nome de coluna da
+    // planilha e as colunas que o mapeamento não reconheceu. `bruto` é o recurso
+    // para job gravado antes de ela existir.
+    const original = linha.data.original ?? [];
+    const temColunasOriginais = original.length > 0;
+
+    const campos = temColunasOriginais
+      ? original
+      : Object.entries(linha.data.bruto ?? {})
+          // Coluna vazia é ruído de planilha: célula de sobra à direita da tabela.
+          .filter(([coluna, valor]) => coluna.trim() !== '' || valor.trim() !== '')
+          .map(([coluna, valor]) => ({ coluna, valor }));
+
+    saida.push({
+      numeroDaLinha: linha.data.numeroDaLinha ?? null,
+      motivo: linha.data.motivo ?? 'sem motivo registrado',
+      problemas: linha.data.problemas ?? [],
+      campos,
+      temColunasOriginais,
+    });
+  }
+  return saida;
+}
+
+// ─── Payload cru ─────────────────────────────────────────────────────────────
+
+/**
+ * JSON legível de um valor do banco, para a tela de detalhe.
+ *
+ * Existe porque a tela de detalhe é a última linha de defesa: quando o resumo não
+ * explica, a pessoa precisa ver o que está gravado. Corta o que for grande demais
+ * em vez de despejar um megabyte no navegador — e diz que cortou, porque texto
+ * truncado sem aviso é pior que texto cortado.
+ */
+export const MAX_JSON_NA_TELA = 20_000;
+
+export function jsonLegivel(valor: unknown): string | null {
+  if (valor === null || valor === undefined) return null;
+  try {
+    const texto = JSON.stringify(valor, null, 2);
+    if (texto === undefined) return null;
+    if (texto.length <= MAX_JSON_NA_TELA) return texto;
+    return `${texto.slice(0, MAX_JSON_NA_TELA)}${String.fromCharCode(10)}[... cortado em ${String(MAX_JSON_NA_TELA)} caracteres de ${String(texto.length)}]`;
+  } catch {
+    // Ciclo não deveria acontecer em dado vindo de `jsonb`, mas a tela de
+    // diagnóstico é justamente a que não pode quebrar por dado estranho.
+    return '[não foi possível serializar o valor gravado]';
+  }
+}
+
+/** Linha de "ficha" do job: rótulo e valor, já formatados. */
+export function fichaDoJob(
+  job: JobDetalhado,
+  agora: Date,
+): readonly { readonly rotulo: string; readonly valor: string }[] {
+  const duracao = duracaoDoJob(job, agora);
+
+  return [
+    { rotulo: 'identificador', valor: job.id },
+    { rotulo: 'tipo de job', valor: job.tipo },
+    { rotulo: 'status', valor: ROTULO_DO_STATUS[job.status] },
+    { rotulo: 'tentativas', valor: `${String(job.tentativas)} de ${String(job.maxTentativas)}` },
+    { rotulo: 'criado', valor: formatarAbsoluto(job.criadoEm) },
+    { rotulo: 'agendado para', valor: formatarAbsoluto(job.agendadoPara) },
+    {
+      rotulo: 'iniciado',
+      valor: job.iniciadoEm === null ? 'nunca' : formatarAbsoluto(job.iniciadoEm),
+    },
+    {
+      rotulo: 'terminado',
+      valor: job.terminadoEm === null ? 'nunca' : formatarAbsoluto(job.terminadoEm),
+    },
+    { rotulo: 'duração', valor: duracao === null ? '—' : formatarDuracao(duracao) },
+    // A chave é o que colapsa dois envios da mesma coisa num job só. Aparece
+    // porque é a primeira coisa a conferir quando alguém pergunta por que uma
+    // planilha "não importou de novo".
+    { rotulo: 'chave de idempotência', valor: job.chaveIdempotencia },
+  ];
+}

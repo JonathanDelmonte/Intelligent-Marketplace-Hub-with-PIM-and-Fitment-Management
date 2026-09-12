@@ -5,8 +5,10 @@
  * A lógica que decide o que dizer está em `apresentacao.ts`, que tem teste; estes
  * arquivos decidem só onde as coisas ficam na página.
  */
+import Link from 'next/link';
 import { STATUS_JOB, type JobDetalhado, type StatusJob } from '@/infra/fila/fila';
 import { MAX_UPLOAD_ROTULO } from '@/config/limites';
+import { CAMINHO } from './constantes';
 import {
   COR_DO_STATUS,
   IDIOMA,
@@ -177,8 +179,15 @@ function LinhaDeJob({ job, agora }: { readonly job: JobDetalhado; readonly agora
     <tr>
       <td className={estilo.celulaTempo} title={formatarAbsoluto(job.criadoEm)}>
         {formatarRelativo(job.criadoEm, agora)}
-        <div className={estilo.mono} title={job.id}>
-          {job.id.slice(0, 8)}
+        {/*
+          O identificador curto é o link para o detalhe. Fica aqui, e não num
+          botão "ver", porque é o mesmo valor que aparece no log estruturado como
+          `jobId` — quem chegou pelo log procura por ele.
+        */}
+        <div>
+          <Link href={`${CAMINHO}/${job.id}`} className={estilo.linkDoJob} title={job.id}>
+            {job.id.slice(0, 8)}
+          </Link>
         </div>
       </td>
 

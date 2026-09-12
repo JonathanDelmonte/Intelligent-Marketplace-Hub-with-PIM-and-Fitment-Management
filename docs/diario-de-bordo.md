@@ -263,6 +263,25 @@ coluna como está no arquivo e valor, na ordem, **inclusive as colunas não
 reconhecidas**. Lista em vez de objeto, porque cabeçalho de painel repete nome mais
 do que devia, e coluna sem nome ganha rótulo por posição.
 
+### 🐛 Um `h1` com nome de arquivo fazia a tela de detalhe rolar na horizontal
+
+Mesmo defeito de forma que o `span` de leitor de tela, causa diferente: o título da
+tela de detalhe é o nome do arquivo ou a URL do anúncio — token único, sem espaço,
+que não quebra sozinho. A 420 px o `h1` media 478 px e, com os 24 px de padding,
+dava exatamente os 502 px de `scrollWidth` medidos. `overflow-wrap: anywhere`
+resolve.
+
+Vale a generalização: **todo texto que vem de dado externo precisa poder quebrar em
+qualquer ponto**, porque nome de arquivo e URL não têm espaço onde quebrar.
+
+### 🔀 A tela de detalhe é a última instância, e mostra o payload como está
+
+Quando o resumo não explica, a pessoa precisa ver o que está gravado. A tela mostra
+`entrada` e `resultado` como JSON indentado, cortado em 20 000 caracteres com aviso
+de que cortou. Identificador que não é UUID responde 404 em vez de 500 — sem essa
+verificação, a consulta lançaria erro de sintaxe do Postgres para o que é só uma URL
+digitada errada.
+
 ---
 
 ## 2026-09-12 — Ligação de ponta a ponta

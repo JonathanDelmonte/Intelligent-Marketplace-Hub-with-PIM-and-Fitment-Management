@@ -18,6 +18,10 @@ import {
   descreverTentativas,
   duracaoDoJob,
   ehStatusConhecido,
+  extrairRejeitadas,
+  fichaDoJob,
+  jsonLegivel,
+  MAX_JSON_NA_TELA,
   formatarDuracao,
   formatarRelativo,
   inteiroDaUrl,
@@ -336,5 +340,140 @@ describe('recortar', () => {
 
   it('corta com marca quando há espaço para ela', () => {
     expect(recortar('abcdefghij', 5)).toBe('ab...');
+  });
+});
+
+describe('linhas recusadas', () => {
+  const REJEITADA = {
+    numeroDaLinha: 12,
+    motivo: 'preço ilegível: "1.2.3"',
+    problemas: ['preco: formato não reconhecido'],
+    bruto: { 'Código MLB': 'MLB123', Título: 'Refil', 'Preço (R$)': '1.2.3', Sobra: '' },
+  };
+
+  it('prefere a linha original, com o nome de coluna do arquivo', () => {
+    const linhas = extrairRejeitadas({
+      rejeitadas: [
+        {
+          ...REJEITADA,
+          original: [
+            { coluna: 'Codigo MLB', valor: 'MLB123' },
+            { coluna: 'Preco (R$)', valor: '1.2.3' },
+            { coluna: 'Campo Que Eu Nao Previ', valor: 'guardado' },
+          ],
+        },
+      ],
+    });
+
+    expect(linhas[0]?.temColunasOriginais).toBe(true);
+    expect(linhas[0]?.campos.map((c) => c.coluna)).toEqual([
+      'Codigo MLB',
+      'Preco (R$)',
+      'Campo Que Eu Nao Previ',
+    ]);
+  });
+
+  it('sem a linha original, cai na forma mapeada e avisa que é ela', () => {
+    const linhas = extrairRejeitadas({ rejeitadas: [REJEITADA] });
+    expect(linhas[0]?.temColunasOriginais).toBe(false);
+  });
+
+  it('extrai a linha mapeada, o motivo e os problemas', () => {
+    const linhas = extrairRejeitadas({ gravados: 3, rejeitadas: [REJEITADA] });
+
+    expect(linhas).toHaveLength(1);
+    expect(linhas[0]?.numeroDaLinha).toBe(12);
+    expect(linhas[0]?.motivo).toBe('preço ilegível: "1.2.3"');
+    expect(linhas[0]?.problemas).toEqual(['preco: formato não reconhecido']);
+    expect(linhas[0]?.campos).toEqual([
+      { coluna: 'Código MLB', valor: 'MLB123' },
+      { coluna: 'Título', valor: 'Refil' },
+      { coluna: 'Preço (R$)', valor: '1.2.3' },
+      // A coluna "Sobra" tinha nome e valor vazios? Não: nome sim, valor não —
+      // então fica, porque coluna nomeada e vazia é informação.
+      { coluna: 'Sobra', valor: '' },
+    ]);
+  });
+
+  it('descarta coluna sem nome e sem valor, que é célula de sobra da planilha', () => {
+    const linhas = extrairRejeitadas({
+      rejeitadas: [{ ...REJEITADA, bruto: { Título: 'Refil', '': '', '  ': '  ' } }],
+    });
+    expect(linhas[0]?.campos).toEqual([{ coluna: 'Título', valor: 'Refil' }]);
+  });
+
+  it('resultado sem rejeitadas devolve lista vazia', () => {
+    expect(extrairRejeitadas({ gravados: 3 })).toEqual([]);
+    expect(extrairRejeitadas(null)).toEqual([]);
+    expect(extrairRejeitadas('nada')).toEqual([]);
+  });
+
+  it('linha rejeitada de forma inesperada é pulada, não derruba a tela', () => {
+    const linhas = extrairRejeitadas({
+      rejeitadas: [42, null, 'texto', REJEITADA, { bruto: { a: 1 } }],
+    });
+    expect(linhas).toHaveLength(1);
+    expect(linhas[0]?.numeroDaLinha).toBe(12);
+  });
+
+  it('campos ausentes têm recurso legível em vez de undefined na tela', () => {
+    const linhas = extrairRejeitadas({ rejeitadas: [{}] });
+    expect(linhas[0]).toEqual({
+      numeroDaLinha: null,
+      motivo: 'sem motivo registrado',
+      problemas: [],
+      campos: [],
+      temColunasOriginais: false,
+    });
+  });
+});
+
+describe('jsonLegivel', () => {
+  it('formata com indentação', () => {
+    expect(jsonLegivel({ a: 1 })).toBe('{\n  "a": 1\n}');
+  });
+
+  it('null e undefined não viram a string "null" na tela', () => {
+    expect(jsonLegivel(null)).toBeNull();
+    expect(jsonLegivel(undefined)).toBeNull();
+  });
+
+  it('corta valor gigante e diz que cortou', () => {
+    const grande = { texto: 'x'.repeat(MAX_JSON_NA_TELA * 2) };
+    const saida = jsonLegivel(grande);
+
+    expect(saida).not.toBeNull();
+    expect(saida?.length).toBeLessThan(MAX_JSON_NA_TELA + 200);
+    expect(saida).toContain('cortado em');
+  });
+
+  it('valor que não serializa devolve recurso em vez de lançar', () => {
+    const ciclo: Record<string, unknown> = {};
+    ciclo['eu'] = ciclo;
+    expect(jsonLegivel(ciclo)).toBe('[não foi possível serializar o valor gravado]');
+  });
+});
+
+describe('fichaDoJob', () => {
+  it('traz identificador, chave de idempotência e os quatro instantes', () => {
+    const ficha = fichaDoJob(
+      job({
+        iniciadoEm: new Date('2026-09-12T11:59:00Z'),
+        terminadoEm: new Date('2026-09-12T11:59:02Z'),
+      }),
+      AGORA,
+    );
+    const rotulos = ficha.map((f) => f.rotulo);
+
+    expect(rotulos).toContain('identificador');
+    expect(rotulos).toContain('chave de idempotência');
+    expect(rotulos).toContain('duração');
+    expect(ficha.find((f) => f.rotulo === 'duração')?.valor).toBe('2 s');
+  });
+
+  it('job que nunca rodou diz "nunca" em vez de deixar vazio', () => {
+    const ficha = fichaDoJob(job({ iniciadoEm: null, terminadoEm: null }), AGORA);
+    expect(ficha.find((f) => f.rotulo === 'iniciado')?.valor).toBe('nunca');
+    expect(ficha.find((f) => f.rotulo === 'duração')?.valor).toBe('—');
   });
 });

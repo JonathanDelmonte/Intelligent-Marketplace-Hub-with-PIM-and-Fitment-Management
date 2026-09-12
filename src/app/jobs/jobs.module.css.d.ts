@@ -20,8 +20,12 @@ declare const estilo: {
   readonly avisoCorpo: string;
   readonly avisoErro: string;
   readonly avisoTitulo: string;
+  readonly bloco: string;
+  readonly blocoTexto: string;
   readonly botao: string;
   readonly botaoSecundario: string;
+  readonly caixaDeErro: string;
+  readonly caixaDeRevisao: string;
   readonly campo: string;
   readonly cartao: string;
   readonly cartaoExplicacao: string;
@@ -35,8 +39,14 @@ declare const estilo: {
   readonly envelopeDaTabela: string;
   readonly erro: string;
   readonly etiqueta: string;
+  readonly ficha: string;
+  readonly fichaItem: string;
+  readonly fichaRotulo: string;
+  readonly fichaValor: string;
   readonly formulario: string;
   readonly linhaDoFormulario: string;
+  readonly linkDoJob: string;
+  readonly listaDeProblemas: string;
   readonly metrica: string;
   readonly metricaAlerta: string;
   readonly mono: string;
@@ -44,6 +54,14 @@ declare const estilo: {
   readonly numero: string;
   readonly pagina: string;
   readonly painel: string;
+  readonly rejeitada: string;
+  readonly rejeitadaCabecalho: string;
+  readonly rejeitadaCampo: string;
+  readonly rejeitadaCampos: string;
+  readonly rejeitadaColuna: string;
+  readonly rejeitadaLinha: string;
+  readonly rejeitadaMotivo: string;
+  readonly rejeitadaValor: string;
   readonly secao: string;
   readonly subtitulo: string;
   readonly tabela: string;
@@ -51,6 +69,7 @@ declare const estilo: {
   readonly tituloDaEntrada: string;
   readonly tituloDaSecao: string;
   readonly vazio: string;
+  readonly voltar: string;
 };
 
 export default estilo;
