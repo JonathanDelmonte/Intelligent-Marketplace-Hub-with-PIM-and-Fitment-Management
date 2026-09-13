@@ -92,6 +92,20 @@ export async function decidirLinha(dados: FormData): Promise<void> {
           forcaBp: null,
         },
       });
+
+      // Confirmação humana é evidência forte nova, então a propagação por família
+      // acontece **agora**: quem confirmou o PA21G acabou de autorizar a hipótese
+      // sobre o PA21X, e mandar a pessoa clicar em "Procurar" de novo para ver isso
+      // seria esconder o efeito da própria decisão dela.
+      //
+      // Captura própria, como na propagação de SKU da fase 5: este é o passo
+      // opcional, e um erro nele não pode fazer a tela dizer que a decisão não foi
+      // gravada quando ela foi.
+      try {
+        await new ColetorDeCompatibilidade(db, repo).propagarPorFamilia(skuId);
+      } catch (erroDaPropagacao) {
+        log.erro('compatibilidade.propagacao_falhou', { skuId, erro: erroDaPropagacao });
+      }
     }
   } catch (erro) {
     log.erro('compatibilidade.decisao_falhou', { skuId, aparelhoId, escolha, erro });
