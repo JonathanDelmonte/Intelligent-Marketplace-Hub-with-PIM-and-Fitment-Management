@@ -44,7 +44,14 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
           }}
         >
           <strong>{marca.nomeSistema}</strong>
-          <nav style={{ display: 'flex', gap: '1rem', fontSize: '0.875rem' }}>
+          {/*
+           * `flexWrap` não é enfeite: a barra é uma linha de `flex` e, com cinco
+           * portas, ela passava de 390px e a página inteira ganhava rolagem
+           * horizontal — em todas as telas, não só na nova. Medido no navegador ao
+           * acrescentar a quinta porta. Uma linha de `flex` que não quebra é uma
+           * largura mínima escondida.
+           */}
+          <nav style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.875rem' }}>
             {PORTAS.map((item) => (
               <Link key={item.href} href={item.href}>
                 {item.rotulo}
