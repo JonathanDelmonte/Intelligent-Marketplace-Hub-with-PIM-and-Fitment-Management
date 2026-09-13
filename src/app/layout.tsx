@@ -3,20 +3,8 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { lerAmbiente } from '@/config/ambiente';
 import { montarMarca, variaveisCssDaMarca } from '@/config/marca';
+import { PORTAS } from './navegacao';
 import './globals.css';
-
-/**
- * Navegação do sistema.
- *
- * Lista de dados, não marcação repetida: acrescentar tela é acrescentar linha.
- * Nenhum rótulo aqui é nome de marca — são nomes de função (ADR 0003).
- */
-const NAVEGACAO: readonly { readonly href: string; readonly rotulo: string }[] = [
-  { href: '/', rotulo: 'Início' },
-  { href: '/leitor', rotulo: 'Leitor' },
-  { href: '/jobs', rotulo: 'Jobs' },
-  { href: '/identidade', rotulo: 'Identidade' },
-];
 
 /**
  * O título e o autor vêm de configuração, nunca de literal — é a regra da seção
@@ -57,7 +45,7 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
         >
           <strong>{marca.nomeSistema}</strong>
           <nav style={{ display: 'flex', gap: '1rem', fontSize: '0.875rem' }}>
-            {NAVEGACAO.map((item) => (
+            {PORTAS.map((item) => (
               <Link key={item.href} href={item.href}>
                 {item.rotulo}
               </Link>
