@@ -265,12 +265,17 @@ mas ele entra à mão, uma linha por vez.
 
 ### 3.5 Uma ficha por vez na tela, e sem exportação de arquivo
 
-A tela mostra a ficha do primeiro produto da fila. Não há seletor de produto nem
-botão para baixar o CSV — `fichaEmCsv` existe, tem teste, e não tem botão.
+A tela mostra a ficha do produto com mais compatibilidade registrada. Não há
+seletor de produto nem botão para baixar o CSV — `fichaEmCsv` existe, tem teste, e
+não tem botão.
 
-Não é dívida escondida, é ordem: com poucos SKUs a ficha de um já responde "o que
-sai daqui". Seletor de produto e download entram junto com a tela de catálogo
-(3.1), que é onde escolher um SKU vai fazer sentido.
+Não é dívida escondida, é ordem: com poucos produtos a ficha de um já responde "o
+que sai daqui". Seletor de produto e download entram junto com a tela de catálogo
+(3.1), que é onde escolher um produto vai fazer sentido.
+
+A caixa de "responder um comprador" usa a mesma ficha, então responde sobre o
+mesmo produto. É útil assim porque quem responde sabe de qual anúncio veio a
+pergunta, mas com catálogo grande vai precisar do seletor junto.
 
 ### 3.6 Vocabulário e navegação, por decisão do dono
 

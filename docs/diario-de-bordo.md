@@ -256,6 +256,28 @@ moeda — mas agora tem uma forma mais forte: **escrever no README o que o siste
 faz é uma obrigação de verificar, não de prometer.** Se o roteiro não foi
 executado, ele é palpite com aparência de documentação.
 
+### 🐛 A ficha desaparecia quando ficava completa
+
+A primeira versão da tela mostrava a ficha do **primeiro item da fila de
+conferência**. Fila vazia significa "tudo conferido", então a ficha sumia
+exatamente quando ficava completa — e a caixa de responder comprador sumia com
+ela. Acoplamento arbitrário: a fila é sobre o que falta, a ficha é sobre o que já
+está pronto.
+
+Passou a ser o produto com mais compatibilidade registrada, com desempate por
+título para a tela não trocar de produto entre dois carregamentos.
+
+### 🐛 A resposta ao comprador citava o anúncio próprio como fonte
+
+A linha "pode enviar" listava as fontes da afirmação, e incluía `anúncio seu, a
+confirmar` — que vale zero e não pesou em nada. Convidava a apontar o próprio
+anúncio como prova ao comprador, que é o raciocínio circular que a força zero
+existe para impedir.
+
+Só entra na citação o que pesou. Apareceu lendo a resposta na tela, não no teste:
+o teste conferia o texto e o tipo da resposta, e a lista de fontes tinha passado
+sem conferência.
+
 ### ❓ A planilha de exemplo não publica nada, e está certo assim
 
 Seguindo o roteiro, a ficha ficou vazia: as três linhas do CSV de exemplo são uma

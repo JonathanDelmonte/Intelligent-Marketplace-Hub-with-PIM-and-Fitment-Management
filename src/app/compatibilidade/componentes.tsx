@@ -7,7 +7,7 @@
  * conferência de compatibilidade acontece na prática, com o aparelho na mão.
  */
 import type { Evidencia } from '@/dominio/compatibilidade/evidencia';
-import type { Ficha } from '@/dominio/compatibilidade/ficha';
+import type { Ficha, Resposta } from '@/dominio/compatibilidade/ficha';
 import type { Decisao } from '@/dominio/compatibilidade/resolucao';
 import { cadastrarAparelho, decidirLinha, procurarNosAnuncios } from './acoes';
 import {
@@ -321,5 +321,56 @@ export function ListaDeAparelhos({
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * Responder pergunta de comprador, a partir da mesma base da ficha.
+ *
+ * "Serve no meu purificador PA26G?" é a pergunta que fecha a venda em peça de
+ * reposição, e responder em minutos pesa no ranqueamento das plataformas. A
+ * resposta sai daqui pronta para copiar — e **só afirma quando a base sustenta**.
+ *
+ * É um formulário `GET`, sem ação de servidor: a pergunta vai na URL, a página
+ * calcula a resposta e desenha. Assim a resposta é compartilhável por link, o botão
+ * "voltar" funciona, e nada é gravado — porque não há o que gravar.
+ */
+export function ResponderComprador({
+  produto,
+  pergunta,
+  resposta,
+}: {
+  readonly produto: string;
+  readonly pergunta: string;
+  readonly resposta: Resposta | null;
+}) {
+  return (
+    <form className={estilo.formulario} method="get">
+      <label className={estilo.campo} htmlFor="pergunta">
+        <span>Pergunta do comprador sobre “{produto}”</span>
+        <input
+          className={estilo.entrada}
+          defaultValue={pergunta}
+          id="pergunta"
+          name="p"
+          placeholder="serve no meu purificador PA26G?"
+          type="text"
+        />
+      </label>
+      <button className={estilo.botaoNeutro} type="submit">
+        Ver o que responder
+      </button>
+
+      {resposta !== null && (
+        <>
+          <blockquote className={estilo.resposta}>{resposta.texto}</blockquote>
+          <p className={estilo.dica}>
+            {resposta.tipo === 'serve'
+              ? `Pode enviar: ${resposta.fontes.join(', ')}.`
+              : 'Confira antes de prometer — a base ainda não sustenta uma confirmação.'}
+          </p>
+        </>
+      )}
+    </form>
   );
 }

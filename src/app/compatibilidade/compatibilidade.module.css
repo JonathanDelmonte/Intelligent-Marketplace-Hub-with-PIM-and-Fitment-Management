@@ -320,6 +320,13 @@
   overflow-wrap: anywhere;
 }
 
+.resposta {
+  background: var(--cor-fundo);
+  border-left: 3px solid var(--cor-primaria);
+  margin: 0.875rem 0 0;
+  padding: 0.75rem 1rem;
+}
+
 .vazio {
   color: var(--cor-texto-fraco);
   margin: 0;

@@ -22,7 +22,7 @@
  * não foi publicado".
  */
 import { codigosDeModelo } from '@/dominio/identidade/canonico';
-import { ehInferida, ETIQUETA_DA_EVIDENCIA, type Evidencia } from './evidencia';
+import { ehInferida, ETIQUETA_DA_EVIDENCIA, forcaDaEvidencia, type Evidencia } from './evidencia';
 import { analisarModelo, type RegistroDeGramaticas } from './gramatica';
 import { GRAMATICAS_SEMENTE } from './gramaticas';
 import { LIMIAR_PUBLICACAO_BP, type Decisao } from './resolucao';
@@ -204,8 +204,18 @@ export interface Resposta {
   readonly fontes: readonly string[];
 }
 
+/**
+ * As fontes que o vendedor pode citar ao responder.
+ *
+ * Só entra o que **pesou** na decisão. Evidência de força zero — o anúncio próprio —
+ * aparecia na lista de fontes citáveis, e isso convidava a apontar o próprio anúncio
+ * como prova ao comprador: exatamente o raciocínio circular que a força zero existe
+ * para impedir. Apareceu conferindo a resposta na tela.
+ */
 function fontesDe(evidencias: readonly Evidencia[]): readonly string[] {
-  const rotulos = evidencias.filter((e) => !e.negativa).map((e) => ETIQUETA_DA_EVIDENCIA[e.tipo]);
+  const rotulos = evidencias
+    .filter((e) => !e.negativa && forcaDaEvidencia(e) > 0)
+    .map((e) => ETIQUETA_DA_EVIDENCIA[e.tipo]);
   return [...new Set(rotulos)];
 }
 

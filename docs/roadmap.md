@@ -316,7 +316,7 @@ acumula ocorrência que não liga a nada. Ver [pendências](./pendencias.md), 3.
 | 6.4  | Resolução de conflito por restrição, com inconsistência sinalizada          | ✅     |
 | 6.5  | Confiança graduada (fabricante 1.0 · 3 concorrentes 0.8 · fórum 0.4)        | ✅     |
 | 6.6  | Corte de publicação em 0.7; resto vai para fila                             | ✅     |
-| 6.7  | Saída dupla: ficha do anúncio e resposta ao comprador (base de M16)         | ✅     |
+| 6.7  | Saída dupla: ficha do anúncio e resposta ao comprador na tela                | ✅     |
 | 6.8  | Coleta como tarefa de fila, ligada à resolução de identidade                | ✅     |
 | 6.9  | Tela de compatibilidade: fila de conferência, ficha e cadastro de aparelho  | ✅     |
 | 6.10 | Manual do fabricante em PDF e página oficial como fontes de coleta          | ⬜     |

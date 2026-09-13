@@ -17,7 +17,7 @@ import type { Metadata } from 'next';
 import { and, eq, sql } from 'drizzle-orm';
 import { descreverAnalise, analisarModelo } from '@/dominio/compatibilidade/gramatica';
 import { GRAMATICAS_SEMENTE } from '@/dominio/compatibilidade/gramaticas';
-import { montarFicha } from '@/dominio/compatibilidade/ficha';
+import { montarFicha, responder } from '@/dominio/compatibilidade/ficha';
 import {
   RepositorioDeCompatibilidade,
   rotuloDoAparelho,
@@ -36,6 +36,7 @@ import {
   FormularioDeAparelho,
   ListaDeAparelhos,
   Painel,
+  ResponderComprador,
   type LinhaDaFila,
 } from './componentes';
 import { LIMITE_DA_FILA, LIMITE_DE_APARELHOS } from './constantes';
@@ -63,7 +64,7 @@ export default async function PaginaDeCompatibilidade({
   const perfil = await carregarPerfil(db, lerAmbiente().BANCADA_PERFIL_PADRAO);
   const repo = new RepositorioDeCompatibilidade(db);
 
-  const [estado, fila, aparelhos, skus] = await Promise.all([
+  const [estado, fila, aparelhos, skus, emFoco] = await Promise.all([
     repo.estado(perfil.id),
     repo.fila(perfil.id, LIMITE_DA_FILA),
     repo.aparelhos(LIMITE_DE_APARELHOS),
@@ -72,14 +73,19 @@ export default async function PaginaDeCompatibilidade({
       .from(sku)
       .where(and(eq(sku.perfilId, perfil.id), eq(sku.ativo, true)))
       .then((linhas) => linhas[0]?.n ?? 0),
+    repo.skuEmFoco(perfil.id),
   ]);
 
-  // A ficha mostrada é a do primeiro SKU da fila, quando há fila, e a do SKU com
-  // mais compatibilidade quando não há. Uma tela por SKU viria depois; hoje o
-  // catálogo tem poucos SKUs e mostrar a ficha de um já responde "o que sai daqui".
-  const skuDaFicha = fila[0]?.skuId ?? null;
-  const linhasDaFicha = skuDaFicha === null ? [] : await repo.doSku(skuDaFicha);
+  // Uma ficha por tela, do produto com mais compatibilidade registrada. Seletor de
+  // produto entra junto com a tela de catálogo, que é onde escolher vai fazer
+  // sentido — está nas pendências.
+  const linhasDaFicha = emFoco === null ? [] : await repo.doSku(emFoco.id);
   const ficha = montarFicha(linhasDaFicha);
+
+  const bruta = Array.isArray(parametros['p']) ? parametros['p'][0] : parametros['p'];
+  const pergunta = (bruta ?? '').trim();
+  const resposta =
+    pergunta === '' ? null : responder({ pergunta, compatibilidades: linhasDaFicha });
 
   const codigo = Array.isArray(parametros['r']) ? parametros['r'][0] : parametros['r'];
   const aviso = descreverAviso(codigo, inteiroDaUrl(parametros['n']));
@@ -140,12 +146,21 @@ export default async function PaginaDeCompatibilidade({
         <Fila linhas={linhas} />
       </section>
 
-      {skuDaFicha !== null && (
-        <section className={estilo.secao} aria-labelledby="ficha-titulo">
+      {emFoco !== null && (
+        <section aria-labelledby="ficha-titulo" className={estilo.secao}>
           <h2 className={estilo.secaoTitulo} id="ficha-titulo">
-            Ficha de {fila[0]?.skuTitulo ?? 'um produto'}
+            Ficha de {emFoco.titulo}
           </h2>
           <FichaPublicavel ficha={ficha} />
+        </section>
+      )}
+
+      {emFoco !== null && (
+        <section aria-labelledby="responder-titulo" className={estilo.secao}>
+          <h2 className={estilo.secaoTitulo} id="responder-titulo">
+            Responder um comprador
+          </h2>
+          <ResponderComprador pergunta={pergunta} produto={emFoco.titulo} resposta={resposta} />
         </section>
       )}
 

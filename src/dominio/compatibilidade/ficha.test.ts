@@ -126,6 +126,19 @@ describe('responder ao comprador', () => {
     expect(r.fontes).toContain('manual do fabricante');
   });
 
+  it('não cita como fonte a evidência que não pesou', () => {
+    // O anúncio próprio vale zero. Citá-lo ao comprador seria apontar o próprio
+    // anúncio como prova — o raciocínio circular que a força zero impede.
+    const r = responder({
+      pergunta: 'serve no PA21G?',
+      compatibilidades: [
+        compat('PA21G', { evidencias: [ev('anuncio_proprio'), ev('manual_fabricante')] }),
+      ],
+    });
+    expect(r.tipo).toBe('serve');
+    expect(r.fontes).toEqual(['manual do fabricante']);
+  });
+
   it('reconhece o código escrito de outra forma', () => {
     const r = responder({ pergunta: 'tenho o pa-21-g, serve?', compatibilidades: base });
     expect(r.tipo).toBe('serve');

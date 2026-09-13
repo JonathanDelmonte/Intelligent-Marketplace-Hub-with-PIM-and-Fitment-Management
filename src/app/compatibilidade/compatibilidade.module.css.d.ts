@@ -44,6 +44,7 @@ declare const estilo: {
   readonly leituraDoCodigo: string;
   readonly pagina: string;
   readonly painel: string;
+  readonly resposta: string;
   readonly retidas: string;
   readonly rolagem: string;
   readonly secao: string;

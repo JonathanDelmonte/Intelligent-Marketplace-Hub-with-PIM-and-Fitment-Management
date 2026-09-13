@@ -390,6 +390,36 @@ export class RepositorioDeCompatibilidade {
     };
   }
 
+  /**
+   * O produto cuja ficha a tela mostra.
+   *
+   * O que tem mais compatibilidade registrada, e, na falta de qualquer uma, o
+   * primeiro produto ativo do perfil. A primeira versão da tela usava o primeiro
+   * item da fila de conferência, e isso tinha um efeito absurdo: **a ficha
+   * desaparecia justamente quando ficava completa**, porque fila vazia significa
+   * tudo conferido. Ordem estável por título para a tela não trocar de produto
+   * entre dois carregamentos.
+   */
+  async skuEmFoco(
+    perfil: PerfilId,
+  ): Promise<{ readonly id: string; readonly titulo: string } | null> {
+    const comCompatibilidade = await this.db
+      .select({
+        id: sku.id,
+        titulo: sku.tituloInterno,
+        linhas: sql<number>`count(${compatibilidade.aparelhoId})::int`,
+      })
+      .from(sku)
+      .leftJoin(compatibilidade, eq(compatibilidade.skuId, sku.id))
+      .where(and(eq(sku.perfilId, perfil), eq(sku.ativo, true)))
+      .groupBy(sku.id, sku.tituloInterno)
+      .orderBy(sql`count(${compatibilidade.aparelhoId}) desc`, sku.tituloInterno)
+      .limit(1);
+
+    const escolhido = comCompatibilidade[0];
+    return escolhido === undefined ? null : { id: escolhido.id, titulo: escolhido.titulo };
+  }
+
   /** Aparelhos de um conjunto de ids, para a inferência montar os grupos. */
   async aparelhosPorId(ids: readonly string[]): Promise<readonly AparelhoGravado[]> {
     if (ids.length === 0) return [];
