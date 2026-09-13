@@ -21,7 +21,7 @@ import { produtoExterno } from '@/infra/banco/schema';
 import { banco } from '@/infra/banco/cliente';
 import { LIMITE_DA_FILA, LIMITE_DE_RESOLUCAO_MANUAL } from './constantes';
 import { descreverAviso, estadoDaBase, inteiroDaUrl } from './apresentacao';
-import { AvisoDaAcao, BotaoResolverAgora, Fila, Painel } from './componentes';
+import { AvisoDaAcao, BotaoResolverAgora, Fila, Painel, ParaCriarProduto } from './componentes';
 import estilo from './identidade.module.css';
 
 export const metadata: Metadata = { title: 'Identidade' };
@@ -49,8 +49,9 @@ export default async function PaginaDeIdentidade({
   const pares = new RepositorioDePares(db);
   const exemplos = new RepositorioDeExemplos(db);
 
-  const [fila, contagem, contagemDeExemplos, totalDeOcorrencias] = await Promise.all([
+  const [fila, semProduto, contagem, contagemDeExemplos, totalDeOcorrencias] = await Promise.all([
     pares.fila(LIMITE_DA_FILA),
+    pares.juntadosSemProduto(LIMITE_DA_FILA),
     pares.contarPorStatus(),
     exemplos.contar(),
     db
@@ -66,6 +67,10 @@ export default async function PaginaDeIdentidade({
   // A proposta de SKU é calculada aqui, no servidor, a partir do que já veio na fila:
   // é função pura sobre os dois registros, e não custa consulta nenhuma.
   const comProposta = fila.map((par) => ({
+    par,
+    proposta: propostaDeSku(paraProposta(par.a), paraProposta(par.b)),
+  }));
+  const semProdutoComProposta = semProduto.map((par) => ({
     par,
     proposta: propostaDeSku(paraProposta(par.a), paraProposta(par.b)),
   }));
@@ -94,6 +99,20 @@ export default async function PaginaDeIdentidade({
       <section className={estilo.secao} aria-label="Executar a resolução">
         <BotaoResolverAgora limite={LIMITE_DE_RESOLUCAO_MANUAL} />
       </section>
+
+      {semProdutoComProposta.length > 0 && (
+        <section className={estilo.secao} aria-labelledby="sem-produto-titulo">
+          <h2 className={estilo.secaoTitulo} id="sem-produto-titulo">
+            Juntados pelo sistema, esperando um nome
+          </h2>
+          <p className={estilo.subtitulo}>
+            O sistema provou que são o mesmo produto e juntou sozinho. Falta o que ele não pode
+            fazer: dar nome. Com o produto criado, os preços das duas fontes aparecem juntos e a
+            ficha de compatibilidade começa a se montar.
+          </p>
+          <ParaCriarProduto pares={semProdutoComProposta} />
+        </section>
+      )}
 
       <section className={estilo.secao} aria-labelledby="fila-titulo">
         <h2 className={estilo.secaoTitulo} id="fila-titulo">

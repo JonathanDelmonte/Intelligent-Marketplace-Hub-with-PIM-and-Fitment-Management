@@ -11,7 +11,7 @@
  * mesmo produto" não pode ser desfeita pela próxima varredura automática que
  * discordar. Isso está no `setWhere` do upsert, e não em uma convenção.
  */
-import { and, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { Banco } from '@/infra/banco/cliente';
 import { parIdentidade, produtoExterno } from '@/infra/banco/schema';
@@ -207,6 +207,40 @@ export class RepositorioDePares {
       .innerJoin(LADO_A, eq(LADO_A.id, parIdentidade.produtoAId))
       .innerJoin(LADO_B, eq(LADO_B.id, parIdentidade.produtoBId))
       .where(eq(parIdentidade.status, 'pendente'))
+      .orderBy(desc(parIdentidade.confiancaBp), desc(parIdentidade.criadoEm))
+      .limit(limite);
+
+    return linhas.map((l) => montarPar(l));
+  }
+
+  /**
+   * Pares que o sistema juntou e que **não têm produto**, nem de um lado nem do outro.
+   *
+   * Existe porque o caso mais comum do M3 não tinha tela: duas ocorrências do mesmo
+   * GTIN são ligadas automaticamente, com 100% de confiança, e por isso **não entram
+   * na fila de revisão** — não há o que revisar. Só que o SKU, que é o que faz o
+   * agrupamento render comparação de preço e ficha de compatibilidade, é criado por
+   * decisão humana. Resultado: o par ficava ligado, correto, e sem caminho na
+   * interface para virar produto. Apareceu seguindo o roteiro do README de ponta a
+   * ponta, que é o único jeito de achar um buraco desses.
+   *
+   * Só `decisao = 'mesmo'` e só quando os **dois** lados estão sem SKU: se um já
+   * tem, a propagação liga o outro nele, que é caminho separado e já existe.
+   */
+  async juntadosSemProduto(limite = 25): Promise<readonly ParDaFila[]> {
+    const linhas = await this.db
+      .select(this.colunas())
+      .from(parIdentidade)
+      .innerJoin(LADO_A, eq(LADO_A.id, parIdentidade.produtoAId))
+      .innerJoin(LADO_B, eq(LADO_B.id, parIdentidade.produtoBId))
+      .where(
+        and(
+          eq(parIdentidade.decisao, 'mesmo'),
+          ne(parIdentidade.status, 'descartado'),
+          isNull(LADO_A.skuId),
+          isNull(LADO_B.skuId),
+        ),
+      )
       .orderBy(desc(parIdentidade.confiancaBp), desc(parIdentidade.criadoEm))
       .limit(limite);
 

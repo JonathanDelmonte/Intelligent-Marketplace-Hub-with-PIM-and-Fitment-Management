@@ -267,3 +267,74 @@ export function Fila({
     </ul>
   );
 }
+
+/**
+ * Pares que o sistema juntou sozinho e que ainda não são um produto.
+ *
+ * Não tem botão de "é diferente": o par já está decidido, com evidência forte, e
+ * reabrir isso aqui só confundiria. A única ação que falta é a que o sistema não
+ * pode tomar sozinho — dar nome ao produto.
+ *
+ * Estava faltando, e o buraco só apareceu seguindo o roteiro do README de ponta a
+ * ponta: duas ocorrências do mesmo código de barras são ligadas automaticamente, e
+ * por isso **não** entram na fila de revisão. O par ficava correto e sem caminho na
+ * interface para virar produto — e sem produto não há comparação de preço nem ficha
+ * de compatibilidade.
+ */
+export function ParaCriarProduto({
+  pares,
+}: {
+  readonly pares: readonly { readonly par: ParDaFila; readonly proposta: PropostaDeSku }[];
+}) {
+  if (pares.length === 0) return null;
+
+  return (
+    <ul className={estilo.fila}>
+      {pares.map(({ par, proposta }) => (
+        <li className={estilo.par} key={par.id}>
+          <div className={estilo.parCabecalho}>
+            <p className={estilo.motivo}>{cabecalhoDoPar(par).titulo}</p>
+            <p className={estilo.evidencia}>
+              evidência: {rotuloDoNivel(par.nivel)}
+              {par.confiancaBp > 0 && ` · confiança ${confiancaLegivel(par.confiancaBp)}`}
+            </p>
+          </div>
+
+          <div className={estilo.lados}>
+            <Lado lado={par.a} titulo="ocorrência A" />
+            <Lado lado={par.b} titulo="ocorrência B" />
+          </div>
+
+          {proposta.avisos.length > 0 && (
+            <ul className={estilo.inconsistencias}>
+              {proposta.avisos.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          )}
+
+          <div className={estilo.acoes}>
+            <form action={criarSkuDoPar} className={estilo.formularioDeSku}>
+              <input name="parId" type="hidden" value={par.id} />
+              <label className={estilo.rotuloDoTitulo} htmlFor={`novo-titulo-${par.id}`}>
+                nome do produto
+              </label>
+              <input
+                className={estilo.campoDeTitulo}
+                defaultValue={proposta.tituloInterno}
+                id={`novo-titulo-${par.id}`}
+                maxLength={200}
+                minLength={3}
+                name="titulo"
+                required
+              />
+              <button className={estilo.botaoSim} type="submit">
+                Criar produto com as duas
+              </button>
+            </form>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}

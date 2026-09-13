@@ -5,9 +5,9 @@
  * convenção, e que o upsert com `setWhere` protege a decisão humana de ser
  * sobrescrita pela varredura seguinte.
  */
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { parIdentidade, produtoExterno } from '@/infra/banco/schema';
+import { parIdentidade, perfilVendedor, produtoExterno, sku } from '@/infra/banco/schema';
 import {
   abrirBancoDeTeste,
   limparTabelas,
@@ -35,7 +35,13 @@ describe.skipIf(!temBancoDeTeste())('RepositorioDePares', () => {
   beforeEach(async () => {
     conexao ??= abrirBancoDeTeste();
     repo = new RepositorioDePares(conexao.db);
-    await limparTabelas(conexao.db, ['par_identidade', 'preco_historico', 'produto_externo']);
+    await limparTabelas(conexao.db, [
+      'par_identidade',
+      'preco_historico',
+      'produto_externo',
+      'sku',
+      'perfil_vendedor',
+    ]);
 
     const criados = await conexao.db
       .insert(produtoExterno)
@@ -296,6 +302,88 @@ describe.skipIf(!temBancoDeTeste())('RepositorioDePares', () => {
     expect(await repo.marcarStatus([parId], 'resolvido')).toBe(1);
     expect(await repo.fila()).toHaveLength(0);
     expect(await repo.porId(parId)).not.toBeNull();
+  });
+
+  describe('juntadosSemProduto', () => {
+    const juntar = (status: 'automatico' | 'pendente' | 'descartado' = 'automatico') =>
+      repo.registrar({
+        produtoA: id(0),
+        produtoB: id(1),
+        decisao: 'mesmo',
+        origem: 'deterministico',
+        nivel: 'gtin',
+        confiancaBp: 10_000,
+        status,
+      });
+
+    /** Liga uma ocorrência a um SKU, que é o que a propagação faz. */
+    const ligarEmSku = async (indice: number) => {
+      const perfis = await conexao.db
+        .insert(perfilVendedor)
+        .values({ slug: `pares-${String(indice)}`, nome: 'Perfil', regime: 'mei' })
+        .returning({ id: perfilVendedor.id });
+      const skus = await conexao.db
+        .insert(sku)
+        .values({ perfilId: perfis[0]?.id ?? '', tituloInterno: 'Refil' })
+        .returning({ id: sku.id });
+      await conexao.db
+        .update(produtoExterno)
+        .set({ skuId: skus[0]?.id ?? null })
+        .where(eq(produtoExterno.id, id(indice)));
+    };
+
+    it('devolve o par que o sistema juntou e que não é produto nenhum', async () => {
+      // É o caso que não tinha tela: mesmo GTIN é ligado automaticamente, então não
+      // entra na fila de revisão — e sem produto o agrupamento não rende nada.
+      await juntar();
+      const achados = await repo.juntadosSemProduto();
+      expect(achados).toHaveLength(1);
+      expect(achados[0]?.decisao).toBe('mesmo');
+    });
+
+    it('inclui o par que uma pessoa decidiu, se ainda não é produto', async () => {
+      await juntar('pendente');
+      expect(await repo.juntadosSemProduto()).toHaveLength(1);
+    });
+
+    it('não devolve par com SKU em um dos lados — aí a propagação resolve', async () => {
+      await juntar();
+      await ligarEmSku(0);
+      expect(await repo.juntadosSemProduto()).toHaveLength(0);
+    });
+
+    it('não devolve par de produtos diferentes', async () => {
+      await repo.registrar({
+        produtoA: id(0),
+        produtoB: id(1),
+        decisao: 'diferente',
+        origem: 'deterministico',
+        nivel: 'marca_modelo',
+        confiancaBp: 9_000,
+        status: 'automatico',
+      });
+      expect(await repo.juntadosSemProduto()).toHaveLength(0);
+    });
+
+    it('não devolve par descartado', async () => {
+      await juntar('descartado');
+      expect(await repo.juntadosSemProduto()).toHaveLength(0);
+    });
+
+    it('respeita o limite', async () => {
+      await juntar();
+      await repo.registrar({
+        produtoA: id(0),
+        produtoB: id(2),
+        decisao: 'mesmo',
+        origem: 'deterministico',
+        nivel: 'gtin',
+        confiancaBp: 10_000,
+        status: 'automatico',
+      });
+      expect(await repo.juntadosSemProduto(1)).toHaveLength(1);
+      expect(await repo.juntadosSemProduto()).toHaveLength(2);
+    });
   });
 
   it('apagar a ocorrência apaga o par, sem deixar linha órfã', async () => {
