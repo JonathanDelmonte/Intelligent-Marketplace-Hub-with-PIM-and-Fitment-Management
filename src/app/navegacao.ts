@@ -43,6 +43,12 @@ export const PORTAS: readonly Porta[] = [
       'Em que aparelhos cada peça serve, com a fonte de cada afirmação. É o que responde “serve no meu modelo?”.',
   },
   {
+    href: '/fornecedores',
+    rotulo: 'Fornecedores',
+    descricao:
+      'As cinco perguntas que eliminam a maioria dos candidatos — e quem vende na mesma vitrine é descartado na hora.',
+  },
+  {
     href: '/leitor',
     rotulo: 'Leitor',
     descricao:
