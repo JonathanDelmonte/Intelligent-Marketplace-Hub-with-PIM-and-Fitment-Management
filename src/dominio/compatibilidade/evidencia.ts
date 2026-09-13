@@ -25,6 +25,7 @@ export const TIPOS_DE_EVIDENCIA = [
   'forum',
   'catalogo_distribuidor',
   'humano',
+  'anuncio_proprio',
   'inferencia_familia',
   'inferencia_linhagem',
 ] as const;
@@ -122,6 +123,11 @@ export const FORCA_DA_EVIDENCIA: Readonly<Record<TipoDeEvidencia, number>> = {
   concorrente: 4_152,
   forum: 4_000,
   humano: 10_000,
+  // Anúncio seu citando o modelo. Vale **zero** de propósito: é você confirmando
+  // a si mesmo, e catálogo que se confirma sozinho é como o erro de cadastro fica
+  // permanente. Entra registrado, aparece na fila com o título citado, e viraria
+  // evidência de verdade só quando uma pessoa confirma — aí já é `humano`.
+  anuncio_proprio: 0,
   // Inferência: a gramática diz que o modelo é irmão de um confirmado. Os valores
   // são o padrão quando a inferência não declara a própria força, e os dois ficam
   // abaixo do corte de publicação de propósito — inferência **propõe**, nunca
@@ -148,6 +154,7 @@ export const TETO_DA_EVIDENCIA: Readonly<Record<TipoDeEvidencia, number>> = {
   concorrente: 9_000,
   forum: 6_900,
   humano: 10_000,
+  anuncio_proprio: 0,
   inferencia_familia: 6_900,
   inferencia_linhagem: 4_000,
 };
@@ -174,6 +181,7 @@ export const ETIQUETA_DA_EVIDENCIA: Readonly<Record<TipoDeEvidencia, string>> = 
   forum: 'fórum ou grupo de assistência',
   catalogo_distribuidor: 'catálogo de distribuidor',
   humano: 'conferido por pessoa',
+  anuncio_proprio: 'anúncio seu, a confirmar',
   inferencia_familia: 'inferido de modelo irmão',
   inferencia_linhagem: 'inferido da mesma linha de modelo',
 };

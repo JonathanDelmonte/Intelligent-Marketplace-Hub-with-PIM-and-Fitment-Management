@@ -44,8 +44,8 @@ export const LIMIAR_PUBLICACAO_BP = 7_000;
 /** Escala inteira de confiança: 0 a 10 000 pontos-base. */
 export const TOTAL_BP = 10_000;
 
-export const DECISOES = ['serve', 'nao_serve', 'indefinido'] as const;
-export type Decisao = (typeof DECISOES)[number];
+export const DECISOES_DE_COMPATIBILIDADE = ['serve', 'nao_serve', 'indefinido'] as const;
+export type Decisao = (typeof DECISOES_DE_COMPATIBILIDADE)[number];
 
 /** Uma evidência e o peso que ela teve na conta. Auditoria linha por linha. */
 export interface Contribuicao {
@@ -252,7 +252,13 @@ export function resolverCompatibilidade(evidencias: readonly Evidencia[]): Resol
       objecaoBp,
       publicavel: false,
       conflito,
-      motivo: 'fontes de mesma força discordam',
+      // Empate em zero não é discordância: é evidência registrada que não sustenta
+      // decisão sozinha — o anúncio próprio, que vale zero de propósito. Dizer
+      // "fontes discordam" aí mandaria a pessoa procurar um conflito que não existe.
+      motivo:
+        apoioBp === 0
+          ? 'há evidência registrada, e nenhuma que decida sozinha'
+          : 'fontes de mesma força discordam',
       verificadoPor,
       contribuicoes: detalhe,
     };
