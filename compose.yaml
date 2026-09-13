@@ -8,13 +8,16 @@
 # `.github/workflows/verificar.yml`), de propósito: banco local diferente do banco
 # do CI é como um teste passa na sua máquina e falha no push.
 #
+# A versão do Postgres acompanha o banco gerenciado de produção e o CI: as três
+# iguais, de propósito.
+#
 #   docker compose up -d      # sobe
 #   docker compose logs -f db # acompanha
 #   docker compose down       # para, mantendo os dados
 #   docker compose down -v    # para e APAGA os dados
 services:
   db:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg18
     container_name: bancada-db
     restart: unless-stopped
     environment:

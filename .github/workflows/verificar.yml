@@ -11,8 +11,13 @@ jobs:
 
     services:
       # O schema usa pgvector, então o serviço precisa da extensão disponível.
+      #
+      # A versão acompanha o banco gerenciado onde o projeto roda (Postgres 18 no
+      # Neon). Manter as três iguais — nuvem, CI e `compose.yaml` — é o que evita
+      # "passa aqui e falha lá", e vale mais que ficar numa versão antiga por
+      # precaução.
       postgres:
-        image: pgvector/pgvector:pg16
+        image: pgvector/pgvector:pg18
         env:
           POSTGRES_USER: bancada
           POSTGRES_PASSWORD: bancada

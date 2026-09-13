@@ -201,6 +201,48 @@ segunda. Planilha do ML traz EAN; catálogo de distribuidor em PDF não traz nad
 **Consequência prática para quem usa hoje:** importar planilha com EAN já agrupa. Importar
 catálogo sem EAN acumula ocorrência que não liga a nada até a chave de LLM entrar.
 
+### 3.3 O que falta para hospedar fora da máquina
+
+Pergunta do dono, e a resposta merece ficar escrita: o que este sistema precisa para
+sair do laptop.
+
+**O banco já está resolvido.** Postgres gerenciado com `pgvector` (Neon), e **trocar
+de provedor é barato de propósito** — verificado, não suposto:
+
+- Nenhum SDK de provedor no projeto. Só `postgres.js` e Drizzle (ADR 0006). Não há
+  `@neondatabase`, `@supabase` nem `@vercel/postgres` em lugar nenhum.
+- `DATABASE_URL` desemboca em um único construtor (`criarBancoCom`), e o driver lê
+  `sslmode` da própria string — banco na nuvem funciona sem mudar código.
+- Schema e migrations estão no repositório. Recriar em outro provedor é
+  `npm run db:migrate`.
+- O único requisito não padrão é a extensão `pgvector`, e o `db:migrate` roda
+  `CREATE EXTENSION` como primeiro passo — provedor que não permitir falha em
+  segundos, não em produção.
+
+Custo real de trocar: uma linha no `.env`, um `db:migrate`, e um `pg_dump`/`pg_restore`
+se houver dado a preservar.
+
+**A aplicação também: `npm run build && npm start` roda em qualquer host Node.**
+
+**O que trava hospedagem serverless, e é concreto:** `ARMAZENAMENTO_DIR`. O conteúdo
+capturado (HTML, planilha, PDF) é guardado por hash **em disco**, e disco de
+serverless é efêmero — o arquivo desaparece entre invocações, e o job de ingestão
+falha dizendo que o conteúdo não chegou ao armazenamento.
+
+Trocar por object storage (S3, R2) é **uma classe de cinco métodos**:
+`ArmazenamentoDeConteudo` tem `guardar`, `ler`, `lerTexto`, `existe` e `tamanho`, em
+138 linhas, e é injetada em um único ponto (`montarNucleoCom`). Não está feito, e é
+o que separa "roda em VPS" de "roda em Vercel".
+
+**O poller tem as duas formas prontas:** `npm run poller` é laço contínuo, para host
+com processo; `npm run poller:uma-vez` drena e sai, para cron ou função agendada. Isso
+foi decidido na fase 3 e continua valendo.
+
+**Recomendação, quando chegar a hora:** host com processo e disco (VPS pequeno, Fly,
+Railway, Render) custa menos trabalho que serverless, porque o poller roda como
+processo e o armazenamento continua sendo disco. Serverless exige o object storage
+acima e o poller por cron. Nenhum dos dois é grande; o primeiro é menor.
+
 ---
 
 ## 4. Dívida consciente, com o custo anotado

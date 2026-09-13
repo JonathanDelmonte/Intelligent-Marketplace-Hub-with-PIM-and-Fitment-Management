@@ -77,7 +77,7 @@ que é a única parte insubstituível do sistema.
 
 ## Começar
 
-Requisitos: Node 22+ e Postgres 16+ **com `pgvector`**.
+Requisitos: Node 22+ e Postgres 16+ **com `pgvector`** (o projeto roda em 18).
 
 A extensão é o único requisito que dá trabalho — no Windows ela não vem no
 instalador oficial do Postgres. Por isso há um `compose.yaml` com a **mesma imagem
@@ -85,7 +85,7 @@ e as mesmas credenciais do CI**, que é a forma de o banco local não divergir d
 banco onde os testes rodam:
 
 ```sh
-docker compose up -d           # Postgres 16 + pgvector, na porta 5432
+docker compose up -d           # Postgres 18 + pgvector, na porta 5432
 ```
 
 Se você já tem um Postgres ocupando a 5432, troque para `5433:5432` no
