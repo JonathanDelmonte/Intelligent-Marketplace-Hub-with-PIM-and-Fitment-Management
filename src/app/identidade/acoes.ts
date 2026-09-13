@@ -15,6 +15,7 @@ import { redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
 import { lerAmbiente } from '@/config/ambiente';
 import { RepositorioDeSku } from '@/dominio/catalogo/sku';
+import { enfileirarColetaDeCompatibilidade } from '@/dominio/compatibilidade/tarefa';
 import { lerRegistro, type RegistroDeProduto } from '@/dominio/identidade/registro';
 import { produtoExterno } from '@/infra/banco/schema';
 import { RepositorioDeExemplos } from '@/dominio/identidade/exemplos';
@@ -23,6 +24,7 @@ import { propagarSku, propostaDeSku } from '@/dominio/identidade/propagacao';
 import { ResolvedorDeIdentidade } from '@/dominio/identidade/resolucao';
 import { carregarPerfil } from '@/dominio/perfil';
 import { banco } from '@/infra/banco/cliente';
+import { Fila } from '@/infra/fila/fila';
 import { criarRegistrador, nivelDoAmbiente } from '@/infra/log';
 import type { CodigoDeAviso } from './apresentacao';
 import { CAMINHO, LIMITE_DE_RESOLUCAO_MANUAL } from './constantes';
@@ -115,6 +117,11 @@ export async function decidirPar(dados: FormData): Promise<void> {
           const perfil = await carregarPerfil(db, lerAmbiente().BANCADA_PERFIL_PADRAO);
           const propagacao = await propagarSku(db, { perfil: perfil.id, skuId });
           ligadas = propagacao.ligadas.length;
+          // SKU que ganhou ocorrência é SKU cuja compatibilidade mudou: cada
+          // ocorrência nova é um título novo, e título de peça de reposição cita
+          // os modelos em que ela serve. Enfileirar aqui é o que faz a ficha
+          // crescer sem ninguém abrir tela.
+          await enfileirarColetaDeCompatibilidade(new Fila(db), skuId, `par:${parId}`, log);
           if (ligadas > 0 && destino === 'decidido') destino = 'decidido_com_ligacao';
           if (propagacao.conflitos.length > 0) {
             log.aviso('identidade.conflito_de_sku', { skuId, conflitos: propagacao.conflitos });
@@ -184,6 +191,8 @@ export async function criarSkuDoPar(dados: FormData): Promise<void> {
       produtosExternosIds: [par.a.id, par.b.id],
     });
     ligadas = 2;
+
+    await enfileirarColetaDeCompatibilidade(new Fila(db), criado.id, `sku-novo:${parId}`, log);
 
     // A decisão humana fica gravada junto: criar um SKU com as duas **é** dizer que
     // são o mesmo produto, e essa afirmação tem de virar exemplo como qualquer outra.

@@ -69,9 +69,7 @@ export const aparelho = pgTable(
     // `(purificador, Electrolux, PA21G, NULL)` entram as duas, o `on conflict`
     // nunca dispara, e o upsert duplica em silêncio. Aqui `variante` nula quer
     // dizer "o modelo sem variante", que é **um** aparelho, não infinitos.
-    unique('unq_aparelho_identidade')
-      .on(t.tipo, t.marca, t.modelo, t.variante)
-      .nullsNotDistinct(),
+    unique('unq_aparelho_identidade').on(t.tipo, t.marca, t.modelo, t.variante).nullsNotDistinct(),
     index('idx_aparelho_marca_modelo').on(t.marca, t.modelo),
     index('idx_aparelho_familia').on(t.familia),
     index('idx_aparelho_linhagem').on(t.linhagem),

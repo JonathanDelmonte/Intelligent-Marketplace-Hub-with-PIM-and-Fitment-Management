@@ -15,6 +15,9 @@
  * leria de outra — e o sintoma seria job em revisão dizendo "o arquivo não chegou
  * ao armazenamento", com o arquivo lá, na pasta errada.
  */
+import { ColetorDeCompatibilidade } from '@/dominio/compatibilidade/coletor';
+import { RepositorioDeCompatibilidade } from '@/dominio/compatibilidade/repositorio';
+import { ExecutorDeCompatibilidade } from '@/dominio/compatibilidade/tarefa';
 import { ExecutorDeIngestao } from '@/dominio/ingestao/executor';
 import { ExecutorDeIdentidade } from '@/dominio/identidade/tarefa';
 import { ResolvedorDeIdentidade } from '@/dominio/identidade/resolucao';
@@ -34,6 +37,9 @@ export interface Nucleo {
   readonly executor: ExecutorDeIngestao;
   /** Consome a fila de resolução de identidade (M3). */
   readonly executorDeIdentidade: ExecutorDeIdentidade;
+  /** Consome a fila de coleta de compatibilidade (M4). */
+  readonly executorDeCompatibilidade: ExecutorDeCompatibilidade;
+  readonly compatibilidade: RepositorioDeCompatibilidade;
 }
 
 /**
@@ -65,6 +71,15 @@ export function montarNucleoCom(db: Banco, diretorioDeConteudo: string): Nucleo 
     (jobId) => new ResolvedorDeIdentidade(db, { jobId }),
   );
 
+  // Sem LLM e sem orçamento: a coleta de compatibilidade é comparação de texto
+  // normalizado contra os aparelhos cadastrados, então uma instância só serve para
+  // todos os jobs — ao contrário do resolvedor de identidade.
+  const compatibilidade = new RepositorioDeCompatibilidade(db);
+  const executorDeCompatibilidade = new ExecutorDeCompatibilidade(
+    fila,
+    new ColetorDeCompatibilidade(db, compatibilidade),
+  );
+
   return {
     db,
     fila,
@@ -73,6 +88,8 @@ export function montarNucleoCom(db: Banco, diretorioDeConteudo: string): Nucleo 
     orquestrador,
     executor,
     executorDeIdentidade,
+    executorDeCompatibilidade,
+    compatibilidade,
   };
 }
 

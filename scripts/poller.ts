@@ -24,6 +24,7 @@ import { carregarEnv } from '@/config/carregar-env';
 import { lerAmbiente } from '@/config/ambiente';
 import { tarefaDeIngestao } from '@/dominio/ingestao/tarefa';
 import { tarefaDeIdentidade } from '@/dominio/identidade/tarefa';
+import { tarefaDeCompatibilidade } from '@/dominio/compatibilidade/tarefa';
 import { encerrarBanco } from '@/infra/banco/cliente';
 import { Poller, ligarSinaisDeEncerramento, tarefasEmOrdem } from '@/infra/fila/poller';
 import { criarRegistrador, nivelDoAmbiente } from '@/infra/log';
@@ -107,9 +108,10 @@ async function principal(): Promise<number> {
   // Ingestão primeiro, identidade depois: identidade só tem o que fazer depois que a
   // ingestão gravou a ocorrência, e uma fila de identidade grande não deve atrasar a
   // entrada de dado novo.
-  const tarefa = tarefasEmOrdem('ingestao+identidade', [
+  const tarefa = tarefasEmOrdem('ingestao+identidade+compatibilidade', [
     tarefaDeIngestao(nucleo.executor, log),
     tarefaDeIdentidade(nucleo.executorDeIdentidade, log),
+    tarefaDeCompatibilidade(nucleo.executorDeCompatibilidade, log),
   ]);
 
   const limite = inteiro('limite');
