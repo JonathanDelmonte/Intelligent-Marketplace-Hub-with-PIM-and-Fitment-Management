@@ -24,7 +24,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import type { Evidencia } from '@/dominio/compatibilidade/evidencia';
 import { LIMIAR_PUBLICACAO_BP } from '@/dominio/compatibilidade/resolucao';
-import { auditoria, id, procedencia, verificadoPorEnum } from './comum';
+import { auditoria, decisaoCompatibilidadeEnum, id, procedencia, verificadoPorEnum } from './comum';
 import { sku } from './catalogo';
 
 /** O "em que serve". Um aparelho, com a faixa de ano que a peça atende. */
@@ -49,14 +49,32 @@ export const aparelho = pgTable(
      * abordagem é parser e regra, não LLM, porque é determinística e auditável.
      */
     familia: text('familia'),
+    /**
+     * Grupo largo: marca + prefixo, todas as linhas juntas (`electrolux:pa`).
+     *
+     * Separada de `familia` porque as duas autorizam coisas diferentes. Família é
+     * "o mesmo aparelho em outra cor" e propaga compatibilidade como hipótese
+     * forte; linhagem é "a linha vizinha", que é outro aparelho e só serve para
+     * sugerir onde olhar.
+     */
+    linhagem: text('linhagem'),
     atributos: jsonb('atributos'),
     ...procedencia,
     ...auditoria,
   },
   (t) => [
-    unique('unq_aparelho_identidade').on(t.tipo, t.marca, t.modelo, t.variante),
+    // `nullsNotDistinct` não é detalhe: sem ele a unicidade **não existe** no caso
+    // mais comum. `variante` é nula em quase todo aparelho, e um índice único
+    // trata NULL como valor distinto por padrão — então duas linhas de
+    // `(purificador, Electrolux, PA21G, NULL)` entram as duas, o `on conflict`
+    // nunca dispara, e o upsert duplica em silêncio. Aqui `variante` nula quer
+    // dizer "o modelo sem variante", que é **um** aparelho, não infinitos.
+    unique('unq_aparelho_identidade')
+      .on(t.tipo, t.marca, t.modelo, t.variante)
+      .nullsNotDistinct(),
     index('idx_aparelho_marca_modelo').on(t.marca, t.modelo),
     index('idx_aparelho_familia').on(t.familia),
+    index('idx_aparelho_linhagem').on(t.linhagem),
   ],
 );
 
@@ -83,6 +101,15 @@ export const compatibilidade = pgTable(
       .notNull()
       .references(() => aparelho.id, { onDelete: 'cascade' }),
     /**
+     * Serve, não serve, ou ninguém sabe ainda.
+     *
+     * Faltava, e a falta só apareceu ao implementar a resolução: sem este campo,
+     * `confianca_bp = 9 000` é ambíguo entre "com certeza serve" e "com certeza
+     * **não** serve", e uma fonte forte dizendo que a peça não serve não tinha
+     * onde ser gravada. Confiança é confiança **na decisão**, não na compatibilidade.
+     */
+    decisao: decisaoCompatibilidadeEnum('decisao').notNull().default('indefinido'),
+    /**
      * Confiança em pontos-base: 0 a 10 000. Inteiro, não float, pelo mesmo motivo
      * de dinheiro ser inteiro — comparar `0.7` com `0.7` em IEEE-754 é convite a
      * bug num corte de publicação.
@@ -106,7 +133,7 @@ export const compatibilidade = pgTable(
     primaryKey({ columns: [t.skuId, t.aparelhoId] }),
     // O índice que responde "que aparelhos esta peça atende, publicáveis" —
     // usado pelo gerador de descrição (M9) e pelo pós-venda (M16).
-    index('idx_compat_sku_confianca').on(t.skuId, t.confiancaBp),
+    index('idx_compat_sku_confianca').on(t.skuId, t.decisao, t.confiancaBp),
     index('idx_compat_aparelho').on(t.aparelhoId),
     // A fila de revisão: o que tem conflito aberto.
     index('idx_compat_conflito').on(t.conflito),

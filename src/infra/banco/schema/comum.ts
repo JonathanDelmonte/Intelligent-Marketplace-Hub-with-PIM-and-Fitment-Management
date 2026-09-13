@@ -12,6 +12,7 @@
 import { sql } from 'drizzle-orm';
 import { bigint, pgEnum, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { VERIFICADORES } from '@/dominio/compatibilidade/evidencia';
+import { DECISOES_DE_COMPATIBILIDADE } from '@/dominio/compatibilidade/resolucao';
 import { FONTES } from '@/dominio/procedencia';
 import { PLATAFORMAS, REGIMES_FISCAIS, TIPOS_ANUNCIO_ML } from '@/dominio/precificacao/tipos';
 
@@ -32,6 +33,10 @@ export const tipoCredencialEnum = pgEnum('tipo_credencial', ['oauth', 'planilha'
 export const canalContatoEnum = pgEnum('canal_contato', ['whatsapp', 'email', 'telefone']);
 export const origemFornecedorEnum = pgEnum('origem_fornecedor', ['nacional', 'importado', 'china']);
 export const verificadoPorEnum = pgEnum('verificado_por', VERIFICADORES);
+export const decisaoCompatibilidadeEnum = pgEnum(
+  'decisao_compatibilidade',
+  DECISOES_DE_COMPATIBILIDADE,
+);
 export const severidadeEnum = pgEnum('severidade', ['vermelho', 'amarelo', 'informativo']);
 export const statusJobEnum = pgEnum('status_job', [
   'pendente',

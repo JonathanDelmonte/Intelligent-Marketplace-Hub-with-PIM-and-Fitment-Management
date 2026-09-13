@@ -1,0 +1,2 @@
+ALTER TABLE "aparelho" DROP CONSTRAINT "unq_aparelho_identidade";--> statement-breakpoint
+ALTER TABLE "aparelho" ADD CONSTRAINT "unq_aparelho_identidade" UNIQUE NULLS NOT DISTINCT("tipo","marca","modelo","variante");

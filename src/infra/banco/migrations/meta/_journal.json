@@ -36,6 +36,20 @@
       "when": 1789247157138,
       "tag": "0004_abnormal_landau",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789284399339,
+      "tag": "0005_gray_karma",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789284746800,
+      "tag": "0006_optimal_supernaut",
+      "breakpoints": true
     }
   ]
 }
