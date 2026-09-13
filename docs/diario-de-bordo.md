@@ -26,6 +26,228 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-13 — Fase 6: compatibilidade, o fosso
+
+### 🐛 `unique` com coluna anulável não restringe nada
+
+`unique(tipo, marca, modelo, variante)` em `aparelho`, com `variante` nula — que é o
+caso de quase todo aparelho. Índice único trata `NULL` como valor **distinto** por
+padrão, então duas linhas de `(purificador, Electrolux, PA21G, NULL)` entram as duas,
+o `on conflict` nunca dispara e o upsert duplica em silêncio.
+
+O sintoma foi o pior possível: dois ids para o mesmo aparelho, cada um com metade da
+evidência. Quem perguntasse "em que aparelhos esta peça serve" receberia a resposta
+partida em duas linhas iguais com confiança pela metade em cada.
+
+Pegou o teste de idempotência, e só ele — typecheck, lint e a tela toda passavam.
+`nulls not distinct` faz a restrição dizer o que sempre quis dizer: variante nula é
+"o modelo sem variante", que é **um** aparelho.
+
+Conferi os outros quatro `unique` com coluna anulável do schema. Em três — `sku` sem
+EAN, anúncio e pedido sem id externo — `NULL` distinto é o comportamento certo: dois
+SKUs sem EAN não são o mesmo SKU. Só o aparelho queria o contrário. **A regra que
+fica: `unique` com coluna anulável exige decidir, em cada caso, se `NULL` é "um valor
+específico" ou "desconhecido".**
+
+### 🐛 Chave de idempotência tem que identificar o evento, não o alvo
+
+O job de coleta de compatibilidade nasceu com a chave igual ao `skuId`, por analogia
+com o job de identidade — cuja chave é o id da ocorrência. A analogia estava errada, e
+de um jeito silencioso.
+
+A fila colapsa por `(tipo, chave)` **para sempre**, não "enquanto o job está
+pendente". Identidade funciona assim porque uma ocorrência é resolvida uma vez e
+pronto. A coleta de compatibilidade não: ela reabre a cada ocorrência nova ligada ao
+SKU. Com a chave sendo o alvo, o primeiro job concluído bloqueava toda coleta futura
+daquele SKU — nada falha, nada aparece no log, a ficha simplesmente para de crescer.
+
+Só o teste da **terceira** ocorrência pegou. O da primeira e o da segunda passavam,
+porque o primeiro job ainda não existia quando o segundo enfileirou.
+
+A chave passou a ser `skuId:gatilho`. O que colapsa é o mesmo evento repetido —
+decidir duas vezes o mesmo par gera um job, não dois.
+
+### ❓ Faltava onde gravar a decisão de compatibilidade, e não se notava sem implementar
+
+A tabela `compatibilidade` da fase 0 tinha `confianca_bp` e nenhuma coluna dizendo
+confiança **em quê**. `9 000` era ambíguo entre "com certeza serve" e "com certeza
+não serve", e uma fonte forte afirmando que a peça **não** serve não tinha onde ser
+gravada — o que é metade do valor da base, porque é o que evita sugerir o modelo
+errado.
+
+Não é descuido do schema original: o furo só fica visível quando se escreve a
+resolução. Vale como lição sobre o limite de projetar tabela antes de escrever o
+código que a usa — e como argumento a favor de fazer as duas coisas na mesma fase
+quando possível.
+
+### 🔀 A regra de combinação de confiança, e por que as âncoras não fecham exatas
+
+A especificação fixa três âncoras: fabricante 1,0, três concorrentes concordando 0,8,
+um fórum 0,4, com corte de publicação em 0,7. Faltava a regra que liga as três.
+
+Escolhi o complemento do produto — `1 − Π(1 − fᵢ)` —, que é monótona, saturante, e
+tem leitura direta: "a chance de todas as fontes estarem erradas ao mesmo tempo".
+Somar não serve: passa de 1 no terceiro item e não significa nada.
+
+Para três concorrentes darem 0,80, cada um vale 4 152 pontos-base. O número não é
+redondo porque **a âncora é sobre o trio, não sobre o indivíduo** — e a conta inteira
+dá 8 001, não 8 000. O teste fixa 8 001, para uma mudança de calibragem aparecer lá.
+
+Aritmética inteira em pontos-base, com divisão truncada: o arredondamento sempre
+para baixo, que é o lado seguro num corte que decide publicar.
+
+### 🔀 Três regras que só apareceram escrevendo o teste da resolução
+
+- **Qualquer objeção derruba o par abaixo do corte.** Não foi imposto: é consequência
+  de descontar (`apoio × (1 − objeção)`), e é o comportamento certo. Discordância em
+  compatibilidade de peça é exatamente o caso que merece olho humano antes de virar
+  anúncio.
+- **Fonte sem URL conta uma vez por tipo.** Não há como distinguir duas fontes
+  anônimas de uma registrada duas vezes. Sem essa regra, colar o mesmo anúncio de
+  concorrente três vezes publicaria a compatibilidade — a forma mais fácil de
+  transformar descuido em devolução.
+- **Teto por tipo**, porque dez posts de fórum não são dez observações independentes:
+  um cita o outro. O teto do fórum fica cem pontos abaixo do corte, de propósito.
+
+### 🔀 Decisão humana vence, mas evidência do fabricante que chega depois reabre
+
+Primeira versão: decisão humana vence, ponto. Isso deixaria uma pessoa que decidiu
+errado travar o erro para sempre, mesmo com o manual do fabricante dizendo o
+contrário.
+
+Segunda versão: qualquer contradição do fabricante reabre. Isso criou um travamento
+ao contrário — quem revisasse **depois** de ler o manual nunca conseguiria fechar o
+caso, porque a revisão reabriria a si mesma para sempre.
+
+A regra que ficou é temporal: evidência do fabricante **posterior** à revisão reabre;
+anterior não, porque a pessoa já viu. Fonte fraca não reabre nunca, que é a regra de
+procedência do ADR 0002.
+
+### 🔀 Anúncio seu não confirma nada, e vale zero de propósito
+
+O coletor transforma título de anúncio já capturado em evidência de compatibilidade.
+Mas anúncio vindo da própria exportação do vendedor (M1) é ele confirmando a si
+mesmo, e catálogo que se confirma sozinho é como erro de cadastro fica permanente: o
+erro passa a ser a evidência de si mesmo.
+
+Entra com força zero: registrado, com o título citado à vista, sem decidir nada, e
+aparece na fila para um clique virar `humano` — que vale tudo. Também não serve de
+semente para inferir família, senão um título seu geraria uma família inteira de
+compatibilidades deduzidas.
+
+Efeito colateral: "empate de forças em zero" precisou de texto próprio. "Fontes de
+mesma força discordam" estava certo para dois fóruns brigando e errado para o caso
+que aparece na prática, e mandava a pessoa procurar um conflito que não existe.
+
+### 🔀 Inferência propõe, evidência publica — e o fator 60% vem daí
+
+A inferência de família herda 60% da confiança da origem. O número foi escolhido por
+uma propriedade, não por gosto: `10 000 × 0,60 = 6 000`, abaixo do corte de 7 000.
+Então inferência a partir da melhor fonte que existe — o manual — ainda precisa de
+confirmação.
+
+Emergiu uma propriedade que não foi projetada e é boa: inferência (6 000) mais **um**
+concorrente (4 152) passa do corte. Nenhuma das duas publicaria sozinha. A gramática
+levanta a hipótese, uma fonte do mundo confirma.
+
+Linha vizinha (`PA21` → `PA26`) herda 25%, com teto que nenhuma soma de sugestões
+atravessa. E uma linha que já provou distinguir a peça desliga a sugestão em toda a
+linhagem: aí a gramática está funcionando, e sugerir seria ruído.
+
+**Inferência nunca serve de origem para outra inferência.** Sem essa regra a
+confiança decairia de irmão em irmão até o catálogo inteiro ficar "compatível com
+tudo" a partir de uma afirmação só.
+
+### 🐛 Três defeitos de texto que só apareceram dirigindo a tela no navegador
+
+Nenhum dos três aparece em teste de unidade, e os três mentiam para quem lê:
+
+1. **Procurar duas vezes seguidas dizia "nenhum anúncio capturado cita um modelo
+   cadastrado"** — com três anúncios citando e a ficha cheia na mesma página. Dois
+   estados diferentes cabiam na mesma mensagem: "não havia anúncio para ler" e "leu e
+   nada mudou".
+2. **O PA31G aparecia como "deduzido de um modelo irmão"**, sendo outra linha de
+   aparelho. Irmão e linha vizinha são coisas diferentes — é a distinção que os dois
+   fatores de confiança existem para fazer, e apagá-la no texto apaga o motivo de a
+   confiança ser diferente.
+3. **`purificador de agua`, sem acento, na gramática** — e a gramática aparece na
+   tela, na linha que explica o código do modelo.
+
+Confirma o que a fase 5 já tinha mostrado com o `bigint` chegando na formatação de
+moeda: **abrir a tela é uma etapa de verificação, não um luxo.**
+
+### 🐛 Três buracos que só o roteiro do README de ponta a ponta achou
+
+Escrevi o roteiro do README dizendo o que o sistema faria, e depois **executei o
+roteiro no navegador** para conferir. Os três defeitos abaixo apareceram nessa
+conferência, e nenhum deles apareceria de outra forma: cada peça tinha teste, cada
+teste passava, e a cadeia parava no meio.
+
+**1. O botão "Processar agora" drenava só a fila de ingestão.** A planilha entrava,
+a tela de jobs dizia "nada para processar", e a de identidade continuava zerada.
+É exatamente o que o dono relatou depois de testar a fase 5 — "Identidade, não sei
+se eu consegui" — e eu tinha atribuído à lentidão da tela. A causa era outra e era
+minha: o botão tinha a **própria composição** de tarefas, diferente da do poller.
+É a divergência que `montagem.ts` existe para evitar, cometida dentro de uma tela.
+A composição das três filas mudou de lugar, e agora as duas pontas chamam a mesma
+função. Nenhum teste pegava porque cada fila tinha o seu teste e as duas passavam:
+faltava teste do **encaixe**, que agora existe.
+
+**2. Par juntado automaticamente não tinha caminho para virar produto.** Duas
+ocorrências do mesmo código de barras são ligadas com 100% de confiança e por isso
+**não** entram na fila de revisão — não há o que revisar. Mas o produto é criado por
+decisão humana, e a única tela que criava produto era a fila de revisão. Então o
+caso **mais comum** do M3 terminava num par correto, ligado, e sem produto — e sem
+produto não há comparação de preço nem ficha de compatibilidade. A fase 5 tinha
+consertado esse buraco para os pares em revisão e deixado o buraco maior aberto.
+
+**3. Confirmar uma linha não propagava na hora.** Quem confirma o PA21G acaba de
+autorizar a hipótese sobre o PA21X, e a tela pedia outro clique em "Procurar" para
+mostrar isso. Esconder o efeito da própria decisão da pessoa é a forma de fazer
+uma ação parecer que não funcionou.
+
+A lição não é nova, é a mesma da fase 5 com o `bigint` chegando na formatação de
+moeda — mas agora tem uma forma mais forte: **escrever no README o que o sistema
+faz é uma obrigação de verificar, não de prometer.** Se o roteiro não foi
+executado, ele é palpite com aparência de documentação.
+
+### ❓ A planilha de exemplo não publica nada, e está certo assim
+
+Seguindo o roteiro, a ficha ficou vazia: as três linhas do CSV de exemplo são uma
+exportação do painel do **próprio** vendedor, então entram como `anuncio_proprio`,
+valem zero, e não decidem nem servem de semente para inferência.
+
+Foi o sistema funcionando como projetado, e eu tinha escrito no README que a ficha
+se montaria sozinha. Reescrevi o roteiro para dizer o que acontece de verdade — e o
+roteiro ficou **melhor**, porque agora ele demonstra a regra de autoconfirmação em
+vez de esconder: a linha aparece em 0%, um clique em "Serve" a leva a 100%, e o
+modelo irmão aparece na hora a 60%, abaixo do corte, esperando conferência.
+
+### 🧹 Gramática por marca é constante versionada, não tabela
+
+Segue o formato das tabelas de taxa: conhecimento sobre o mundo, versionado em código,
+com a data e a fonte do levantamento. Custo anotado: acrescentar marca exige editar
+código e publicar. Quando o dono precisar cadastrar marca sem isso, vira tabela — e o
+parser já recebe as gramáticas por parâmetro justamente para essa troca ser local.
+
+Disciplina do arquivo de sementes: só entra o que a especificação afirma. O prefixo
+`PE` aparece lá (`PE11B`) sem explicação, então não tem regra; nenhum sufixo tem
+significado individual, porque ninguém conferiu qual letra é cor e qual é voltagem.
+`null` é a resposta honesta, e a tela escreve "não identificado".
+
+### ⚠️ `aparelho.tipo` é texto livre e entra na chave de unicidade
+
+"purificador de água" e "purificador de agua" digitados em dias diferentes viram dois
+aparelhos, porque `tipo` faz parte de `unique(tipo, marca, modelo, variante)` sem
+normalização. Marca e modelo têm o mesmo problema em menor escala — o casamento por
+código normaliza, a chave não.
+
+Não corrigi nesta passada: normalizar na chave e guardar a forma digitada para exibir
+exige coluna nova, e o cadastro manual de aparelho hoje tem uma pessoa só usando.
+Anotado nas pendências como dívida com o custo escrito.
+
+---
+
 ## 2026-09-13 — Preparar o ambiente em um comando
 
 ### 🐛 Editar o `.env.example` em vez do `.env` é o erro natural, não descuido

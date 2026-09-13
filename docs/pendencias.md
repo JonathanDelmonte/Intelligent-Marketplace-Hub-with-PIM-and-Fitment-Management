@@ -162,10 +162,10 @@ Ordem do roadmap, que é por utilidade e não por arquitetura. Nada aqui espera 
 
 ### 3.1 Telas que não existem
 
-Há quatro telas: início, `/jobs` (com detalhe por job), `/leitor` e `/identidade`.
-**Não há tela de catálogo, de SKU, de precificação nem de fornecedor.** O motor de
-margem (fase 1) e o repositório de SKU (3.10) seguem chamáveis por código e por teste,
-não por tela.
+Há cinco telas: início, `/jobs` (com detalhe por job), `/leitor`, `/identidade` e
+`/compatibilidade`. **Não há tela de catálogo, de SKU, de precificação nem de
+fornecedor.** O motor de margem (fase 1) e o repositório de SKU (3.10) seguem
+chamáveis por código e por teste, não por tela.
 
 A de identidade fechou o próprio laço: decide pares, **propaga** para um SKU que já
 exista e **cria** SKU a partir de um par quando nenhum dos dois lados tem um — com o
@@ -245,6 +245,48 @@ acima e o poller por cron. Nenhum dos dois é grande; o primeiro é menor.
 
 ---
 
+### 3.4 Três das cinco fontes de evidência de compatibilidade
+
+A especificação lista cinco fontes para M4: manual do fabricante, página oficial,
+descrição de concorrente, fórum e catálogo de distribuidor. **Duas estão
+construídas** — anúncio de concorrente (automática, a partir do que a ingestão já
+capturou) e entrada manual, que cobre o caso de quem tem o manual na mão.
+
+As três que faltam são todas o mesmo trabalho: buscar, baixar e ler página ou PDF.
+É literalmente o prospector da fase 10, e construir meio prospector aqui seria
+construí-lo duas vezes. A base já aceita as cinco fontes, com força graduada e
+teto por tipo, então quando a coleta existir é só chamar `registrarEvidencia` com
+o tipo certo — nada de schema muda.
+
+**Consequência prática hoje:** a confiança sobe por concorrente, e três
+concorrentes concordando publicam (0,80, a âncora da especificação). Um manual de
+fabricante publicaria sozinho, e é o caminho mais rápido para uma ficha completa —
+mas ele entra à mão, uma linha por vez.
+
+### 3.5 Uma ficha por vez na tela, e sem exportação de arquivo
+
+A tela mostra a ficha do primeiro produto da fila. Não há seletor de produto nem
+botão para baixar o CSV — `fichaEmCsv` existe, tem teste, e não tem botão.
+
+Não é dívida escondida, é ordem: com poucos SKUs a ficha de um já responde "o que
+sai daqui". Seletor de produto e download entram junto com a tela de catálogo
+(3.1), que é onde escolher um SKU vai fazer sentido.
+
+### 3.6 Vocabulário e navegação, por decisão do dono
+
+Os rótulos "Jobs" e "Identidade" são nomes internos, e o dono do repositório disse
+com clareza que não entende nenhum dos dois — nem "Resolver 10 agora", nem o texto
+que explica o que é um SKU. Ele pediu para **terminar as fases primeiro** e revisar
+vocabulário, funcionalidades faltantes e aparência depois, de uma vez.
+
+O que foi feito nesta passada, porque era o mínimo para o sistema ser usável: a
+tela nova não usa nenhum termo interno, e a navegação virou uma lista só, com
+descrição por porta na página inicial — antes a tela de compatibilidade existia e
+só se chegava nela digitando a URL.
+
+O que **não** foi feito, de propósito: renomear as telas antigas. Meia renomeação é
+pior que nenhuma, e a decisão de vocabulário é dele.
+
 ## 4. Dívida consciente, com o custo anotado
 
 Coisas que estão assim de propósito. Cada uma tem a condição de saída escrita.
@@ -294,20 +336,39 @@ conta; o JSX é verificado por navegador, não por cobertura.
 
 ### 4.6 Um quinto da suíte não roda sem banco
 
-`describe.skipIf(!temBancoDeTeste())`. Medido sem `DATABASE_URL`: **202 testes de
-949 não rodam** — 6 arquivos pulam por inteiro e outros 9 pulam parte, e a suíte
-passa verde.
+`describe.skipIf(!temBancoDeTeste())`. Medido sem `DATABASE_URL` em 13/09/2026:
+**222 testes de 1 110 não rodam** — 7 arquivos pulam por inteiro e outros pulam
+parte, e a suíte passa verde.
 
-A conta cresceu com a fase 5, e cresceu na direção esperada: resolução de
-identidade é quase toda comportamento de banco — `on conflict`, chave única do
-cache, `check` do par ordenado, distância de cosseno no `pgvector`. Nada disso é
-testável com dublê sem testar o dublê.
+A conta cresceu com as fases 5 e 6, e cresceu na direção esperada: resolução de
+identidade e coleta de compatibilidade são quase todas comportamento de banco —
+`on conflict`, `nulls not distinct`, chave única do cache, `check` do par
+ordenado, distância de cosseno no `pgvector`. Nada disso é testável com dublê sem
+testar o dublê. E foi um teste de banco que pegou os dois piores defeitos desta
+fase: o `unique` que não restringia e a chave de idempotência que travava a
+coleta.
 
 **Mitigação:** a CI tem Postgres com pgvector e aplica migrations **antes** dos
 testes, justamente para que não passe verde por omissão. E agora há
 `compose.yaml`, então rodar com banco local custa um comando.
 **Consequência:** rodar `npm test` sem banco dá uma falsa sensação de cobertura
 completa. O resumo do vitest diz quantos pularam — vale ler o número.
+
+### 4.7 `aparelho.tipo` é texto livre dentro da chave de unicidade
+
+`unique(tipo, marca, modelo, variante)` compara os quatro campos como digitados.
+"purificador de água" e "purificador de agua" em dias diferentes viram dois
+aparelhos, cada um com metade da evidência — o mesmo estrago que o `nulls not
+distinct` consertou, por outra porta.
+
+**Custo do atalho:** corrigir exige guardar duas formas, a normalizada para a chave
+e a digitada para exibir, o que é coluna nova e migração. O cadastro manual de
+aparelho hoje tem uma pessoa só usando, e a tela mostra a lista de aparelhos
+cadastrados logo abaixo do formulário, então a duplicata é visível na hora.
+
+**Quando deixa de servir:** no primeiro cadastro em volume — importação de catálogo
+de distribuidor, por exemplo — ou no dia em que houver uma segunda pessoa
+cadastrando.
 
 ---
 

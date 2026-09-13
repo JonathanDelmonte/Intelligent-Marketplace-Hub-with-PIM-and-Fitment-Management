@@ -308,18 +308,37 @@ acumula ocorrência que não liga a nada. Ver [pendências](./pendencias.md), 3.
 > Especificação: “Uma semana, e continua evoluindo sempre. É a funcionalidade de
 > maior retorno do sistema inteiro.”
 
-| #   | Entrega                                                                    | Estado |
-| --- | -------------------------------------------------------------------------- | ------ |
-| 6.1 | Coleta de evidência (manual, página oficial, concorrente, fórum, catálogo) | ⬜     |
-| 6.2 | Gramáticas de nomenclatura por marca — parser determinístico e auditável   | ⬜     |
-| 6.3 | Inferência de família a partir da gramática                                | ⬜     |
-| 6.4 | Resolução de conflito por restrição, com inconsistência sinalizada         | ⬜     |
-| 6.5 | Confiança graduada (fabricante 1.0 · 3 concorrentes 0.8 · fórum 0.4)       | ⬜     |
-| 6.6 | Corte de publicação em 0.7; resto vai para fila                            | ⬜     |
-| 6.7 | Saída dupla: ficha do ML e base para M16                                   | ⬜     |
+| #    | Entrega                                                                     | Estado |
+| ---- | --------------------------------------------------------------------------- | ------ |
+| 6.1  | Coleta de evidência — anúncio capturado e entrada manual                    | 🚧     |
+| 6.2  | Gramáticas de nomenclatura por marca — parser determinístico e auditável    | ✅     |
+| 6.3  | Inferência de família a partir da gramática                                 | ✅     |
+| 6.4  | Resolução de conflito por restrição, com inconsistência sinalizada          | ✅     |
+| 6.5  | Confiança graduada (fabricante 1.0 · 3 concorrentes 0.8 · fórum 0.4)        | ✅     |
+| 6.6  | Corte de publicação em 0.7; resto vai para fila                             | ✅     |
+| 6.7  | Saída dupla: ficha do anúncio e resposta ao comprador (base de M16)         | ✅     |
+| 6.8  | Coleta como tarefa de fila, ligada à resolução de identidade                | ✅     |
+| 6.9  | Tela de compatibilidade: fila de conferência, ficha e cadastro de aparelho  | ✅     |
+| 6.10 | Manual do fabricante em PDF e página oficial como fontes de coleta          | ⬜     |
+| 6.11 | Fórum e catálogo de distribuidor como fontes de coleta                      | ⬜     |
 
 **Entrega:** vender sem disputar centavo. É o que ninguém no mercado brasileiro
 faz bem, e é a razão de construir em vez de assinar.
+
+**O que está pronto e o que não está.** O caminho de evidência que já funciona é o
+que não custa nada: todo anúncio que a ingestão capturou tem título, título de peça
+de reposição cita os modelos em que a peça serve, e casar isso com os aparelhos
+cadastrados é comparação de texto normalizado — sem LLM e sem API. Mais a entrada
+manual, que é o caminho de quem tem o manual na mão.
+
+As três fontes que faltam (6.10 e 6.11) são todas "buscar e ler página", e são o
+mesmo trabalho do prospector da fase 10 — PDF de manual, página de fabricante,
+fórum, catálogo. Fazer aqui seria construir meio prospector duas vezes; ficam para
+depois, e a base já aceita as cinco fontes com força graduada.
+
+A cadeia fecha sozinha a partir de uma decisão humana: planilha → ocorrência →
+identidade → **você confirma o produto** → compatibilidade coletada e inferida. Só o
+"confirmar o produto" é manual, e é onde deve ser.
 
 ---
 

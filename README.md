@@ -146,12 +146,32 @@ vírgula, como vem de verdade.
 3. Abra **`/identidade`**. Duas das três ocorrências compartilham o mesmo EAN, e o
    sistema **já as ligou sozinho** — aparecem como "decidido pelo sistema", com
    evidência `código de barras` e 100% de confiança. Ninguém clicou em nada.
-4. Abra **`/leitor`**, informe um custo (por exemplo `30`) e digite o código
+4. Na mesma tela, em **"Juntados pelo sistema, esperando um nome"**, clique em
+   **"Criar produto com as duas"** — o nome vem preenchido e é editável. Essa é a
+   única parte manual da cadeia, e é onde deve ser: um produto existe por decisão
+   sua.
+5. Abra **`/compatibilidade`** e cadastre dois aparelhos, tipo
+   `purificador de água`, marca `Electrolux`, modelos `PA21G` e `PA21X`. Clique em
+   **"Procurar nos anúncios já capturados"**.
+
+   O que aparece é a regra do sistema funcionando, e vale ler com atenção: a
+   linha do PA21G fica em **0%, "ninguém confirmou"**, com a evidência
+   `anúncio seu, a confirmar`. A planilha de exemplo é a **sua própria**
+   exportação, e o sistema não deixa o seu anúncio confirmar a sua própria ficha —
+   é assim que erro de cadastro ficaria permanente, virando evidência de si mesmo.
+
+   Clique em **"Serve"** nessa linha. Ela vai a 100% e entra na ficha; e o
+   `PA21X` aparece na hora **deduzido como modelo irmão, a 60%** — abaixo do corte
+   de 70%, esperando a sua confirmação, porque hipótese não publica.
+6. Abra **`/leitor`**, informe um custo (por exemplo `30`) e digite o código
    `7896541200909`. O veredito sai com o preço praticado que a planilha trouxe,
    margem, markup e até quanto dá para pagar.
 
-O passo 3 é a fase 5 inteira em uma tela: a ingestão enfileirou a resolução, o
-poller consumiu, e o grafo de identidade cresceu sem ninguém pedir.
+Os passos 3 e 5 são as fases 5 e 6 em duas telas: a ingestão enfileirou a
+resolução, o poller consumiu, o grafo de identidade cresceu sem ninguém pedir, e a
+ficha de compatibilidade se montou a partir dos títulos que já estavam no banco —
+com o corte de publicação e a regra de autoconfirmação à vista, em vez de
+escondidos.
 
 ### Sem banco nenhum
 
@@ -159,7 +179,7 @@ Dá para rodar a suíte sem subir Postgres. Os testes de banco são **pulados, n
 falsificados** — o resumo diz quantos pularam:
 
 ```sh
-npm run check                  # sem DATABASE_URL: 747 testes passam, 202 pulam
+npm run check                  # sem DATABASE_URL: 888 testes passam, 222 pulam
 ```
 
 O sistema roda sozinho quando há um processo consumindo a fila:
@@ -174,9 +194,11 @@ A tela de `/jobs` funciona **sem** poller: tem um botão que processa alguns job
 na hora, e uma tela de detalhe por job com cada linha de planilha recusada e o
 motivo.
 
-O poller consome **duas** filas: ingestão e resolução de identidade, nessa ordem de
-prioridade. Então importar uma planilha já faz o grafo de identidade crescer sozinho —
-ocorrências do mesmo GTIN entram ligadas, sem ninguém pedir.
+O poller consome **três** filas, nesta ordem de prioridade: ingestão, resolução de
+identidade e coleta de compatibilidade. Então importar uma planilha faz o grafo de
+identidade crescer sozinho — ocorrências do mesmo GTIN entram ligadas — e, depois que
+um SKU existe, cada ocorrência nova ligada a ele também vira linha de ficha de
+compatibilidade, sem ninguém abrir tela.
 
 O leitor de código de barras fica em `/leitor` e dá para instalar na tela inicial
 do celular. Informe o custo, leia o código, e o veredito sai com preço praticado,
@@ -189,6 +211,15 @@ código de peça — e manda para essa fila o que exige julgamento, com os dois 
 mesmo formato e a evidência à vista. Dois cliques por par, e cada decisão vira exemplo
 para os julgamentos seguintes. Quando um dos lados já é um SKU, dizer "é o mesmo" junta
 os preços de todas as fontes ali na hora.
+
+A compatibilidade fica em `/compatibilidade` — "em que aparelhos a peça serve". Cada
+afirmação vem com a fonte, e só entra na ficha do anúncio o que tem 70% ou mais de
+evidência e nenhuma fonte discordando: afirmação do fabricante vale 1,0, três
+concorrentes concordando 0,8, um fórum 0,4. O sistema lê o título dos anúncios que
+você já importou, casa com os aparelhos cadastrados, e deduz os modelos irmãos pela
+gramática de nomenclatura da marca — `PA21G` e `PA21X` são o mesmo aparelho em outra
+cor. Dedução nunca publica sozinha: ela enche a fila de conferência, e um clique seu
+resolve cada linha.
 
 Para rodar como **serviço** (contêiner, systemd), chamar node direto:
 
@@ -217,7 +248,7 @@ em que fica pronta:
 3. **Ingestão universal + catálogo** — o sistema começa a acumular base
 4. **Leitor de código de barras** — a primeira função que gera dinheiro
 5. **Resolução de identidade** — o grafo começa a existir
-6. **Compatibilidade** — o fosso
+6. **Compatibilidade** — o fosso: responder "serve no meu modelo?" com prova
 7. …
 
 A armadilha que essa ordem evita: construir o prospector e o painel bonito
