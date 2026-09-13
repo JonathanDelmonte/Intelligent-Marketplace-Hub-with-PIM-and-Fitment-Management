@@ -336,7 +336,7 @@ conta; o JSX é verificado por navegador, não por cobertura.
 
 ### 4.6 Um quinto da suíte não roda sem banco
 
-`describe.skipIf(!temBancoDeTeste())`. Medido sem `DATABASE_URL` em 13/09/2026:
+`describe.skipIf(!temBancoDeTeste())`. Medido sem `DATABASE_URL_TESTE` em 13/09/2026:
 **222 testes de 1 110 não rodam** — 7 arquivos pulam por inteiro e outros pulam
 parte, e a suíte passa verde.
 
@@ -351,6 +351,11 @@ coleta.
 **Mitigação:** a CI tem Postgres com pgvector e aplica migrations **antes** dos
 testes, justamente para que não passe verde por omissão. E agora há
 `compose.yaml`, então rodar com banco local custa um comando.
+
+**Agora exige um segundo banco, de propósito.** A variável é `DATABASE_URL_TESTE`
+e não há retorno automático para `DATABASE_URL` — a suíte trunca tabelas, e ler a
+variável da aplicação apagava dados de verdade. O custo é que quem configurou só o
+banco da aplicação vê os 222 pularem até criar o segundo. É o lado certo de errar.
 **Consequência:** rodar `npm test` sem banco dá uma falsa sensação de cobertura
 completa. O resumo do vitest diz quantos pularam — vale ler o número.
 

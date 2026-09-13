@@ -173,13 +173,26 @@ ficha de compatibilidade se montou a partir dos títulos que já estavam no banc
 com o corte de publicação e a regra de autoconfirmação à vista, em vez de
 escondidos.
 
-### Sem banco nenhum
+### Testes: o banco da suíte é outro, e isso não é preferência
 
-Dá para rodar a suíte sem subir Postgres. Os testes de banco são **pulados, não
-falsificados** — o resumo diz quantos pularam:
+A suíte faz `truncate` nas tabelas a cada teste. Então ela lê **`DATABASE_URL_TESTE`**,
+nunca `DATABASE_URL` — e recusa rodar se as duas apontarem para o mesmo banco.
+
+Sem a variável, os testes de banco são **pulados, não falsificados**, e o resumo diz
+quantos:
 
 ```sh
-npm run check                  # sem DATABASE_URL: 888 testes passam, 222 pulam
+npm run check                  # sem DATABASE_URL_TESTE: 888 passam, 222 pulam
+```
+
+Para rodá-los, aponte para um banco descartável:
+
+```sh
+createdb bancada_teste                      # Postgres local
+# ou, em banco gerenciado, uma branch do projeto:
+#   neon branches create teste
+npm run preparar:env -- --database-url="..." --database-url-teste="...bancada_teste"
+DATABASE_URL="$DATABASE_URL_TESTE" npm run db:migrate   # o banco novo precisa do schema
 ```
 
 O sistema roda sozinho quando há um processo consumindo a fila:

@@ -26,6 +26,51 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-13 — A suíte apagava o banco da aplicação
+
+### 🐛 `npm run check` truncava as tabelas do banco de verdade
+
+O pior defeito achado neste projeto até agora, e o mais perto de ter causado dano
+irreversível a dado de outra pessoa.
+
+Os testes de banco fazem `truncate table ... cascade` no `beforeEach`. A conexão
+vinha de `DATABASE_URL` — **a variável da aplicação**. E o `CLAUDE.md` manda rodar
+`npm run check` antes de todo commit. Ou seja: o dono do repositório, seguindo as
+instruções do próprio projeto, com o Postgres gerenciado dele configurado no
+`.env`, apagaria os próprios dados. Toda vez.
+
+Como apareceu: eu estava conferindo a tela de compatibilidade no navegador, rodei
+`npm run check` entre duas conferências, e os dados da demonstração sumiram. Levei
+um instante para entender, e por sorte eram dados de demonstração num Postgres
+local. No banco do dono teria sido o catálogo dele.
+
+Não foi introduzido hoje: está assim desde a fase 0, e passou por seis fases sem
+ser notado, porque neste contêiner o banco local **é** descartável — o ambiente de
+desenvolvimento esconde exatamente esta classe de erro. Só ficou perigoso quando o
+projeto ganhou um banco gerenciado com dado real, ontem.
+
+A correção tem três camadas, e as três importam:
+
+1. **Variável própria, `DATABASE_URL_TESTE`, sem retorno automático para
+   `DATABASE_URL`.** Retorno automático é como isto aconteceu. A consequência de
+   faltar a variável é "222 testes pulam"; a de acertar por engano é "os dados
+   foram apagados". Só uma das duas se desfaz.
+2. **Guarda em `abrirBancoDeTeste`:** se as duas variáveis tiverem o mesmo valor, a
+   suíte falha com a mensagem dizendo o que fazer. Protege contra a forma mais
+   provável de reintroduzir o estrago — copiar a URL para "fazer os testes
+   rodarem".
+3. **Guarda no `preparar:env`:** recusa gravar as duas iguais, com o mesmo aviso.
+
+No CI o banco é do contêiner e morre com ele, mas mesmo lá a suíte roda contra um
+banco de nome diferente — para o caminho testado ser o mesmo que o de todo mundo.
+
+A lição que vale além deste bug: **ambiente de desenvolvimento descartável esconde
+erro de destruição de dado.** Um `truncate` no banco errado é invisível quando todo
+banco à mão é sacrificável. Vale procurar, de propósito, o que no projeto só é
+seguro por acidente do ambiente.
+
+---
+
 ## 2026-09-13 — Fase 6: compatibilidade, o fosso
 
 ### 🐛 `unique` com coluna anulável não restringe nada

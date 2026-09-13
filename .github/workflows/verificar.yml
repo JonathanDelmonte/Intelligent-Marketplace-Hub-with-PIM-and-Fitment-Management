@@ -31,6 +31,11 @@ jobs:
 
     env:
       DATABASE_URL: postgres://bancada:bancada@localhost:5432/bancada
+      # A suíte trunca tabelas, então lê uma variável própria — nunca a da
+      # aplicação. No CI o banco é do contêiner e é descartado com ele, então as
+      # duas apontam para o mesmo serviço; fora do CI têm de ser bancos diferentes,
+      # e `abrirBancoDeTeste` recusa se forem iguais. Daí o nome de banco distinto.
+      DATABASE_URL_TESTE: postgres://bancada:bancada@localhost:5432/bancada_teste
       BANCADA_PERFIL_PADRAO: perfil-de-ci
 
     steps:
@@ -69,6 +74,13 @@ jobs:
 
       - name: Migrations contra Postgres real
         run: npm run db:migrate
+
+      # O banco da suíte é outro, e precisa existir e ter schema. Criar aqui, e não
+      # no serviço, porque o serviço só aceita um `POSTGRES_DB`.
+      - name: Banco descartável da suíte
+        run: |
+          PGPASSWORD=bancada createdb -h localhost -U bancada bancada_teste
+          DATABASE_URL="$DATABASE_URL_TESTE" npm run db:migrate
 
       - name: Testes
         run: npm run test

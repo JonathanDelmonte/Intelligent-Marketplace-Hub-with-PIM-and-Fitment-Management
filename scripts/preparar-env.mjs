@@ -14,6 +14,7 @@
  * ```sh
  * npm run preparar:env
  * npm run preparar:env -- --database-url="postgresql://usuario:senha@host/banco?sslmode=require"
+ * npm run preparar:env -- --database-url="..." --database-url-teste="...banco_teste"
  * ```
  */
 import { randomBytes } from 'node:crypto';
@@ -51,27 +52,55 @@ let conteudo = readFileSync(exemplo, 'utf8');
 const chave = randomBytes(32).toString('base64');
 conteudo = conteudo.replace(/^CREDENCIAL_CHAVE_MESTRA=.*$/m, `CREDENCIAL_CHAVE_MESTRA=${chave}`);
 
+/**
+ * Limpa uma URL de banco antes de gravar.
+ *
+ * `channel_binding` sai da URL, sempre. Painel de banco gerenciado entrega a string
+ * com `channel_binding=require`, e o `postgres.js` repassa parâmetro que não conhece
+ * ao servidor como parâmetro de startup — onde o Postgres derruba a conexão com
+ * `unrecognized configuration parameter "channel_binding"`. Medido. Tirar aqui é o
+ * que impede a armadilha de chegar ao `.env`.
+ */
+function limparUrl(bruta) {
+  const url = bruta.trim();
+  if (!url.includes('channel_binding')) return { url, removeu: false };
+  return { url: url.replace(/[?&]channel_binding=[^&]*/g, ''), removeu: true };
+}
+
 const urlInformada = argumento('database-url');
-let aviso = null;
+const urlDeTesteInformada = argumento('database-url-teste');
+const avisos = [];
 
 if (urlInformada !== undefined && urlInformada.trim() !== '') {
-  let url = urlInformada.trim();
+  const { url, removeu } = limparUrl(urlInformada);
+  if (removeu) {
+    avisos.push(
+      'removi `channel_binding` da URL: o driver o repassaria ao servidor e a conexão cairia',
+    );
+  }
+  conteudo = conteudo.replace(/^DATABASE_URL=.*$/m, `DATABASE_URL="${url}"`);
+}
 
-  /**
-   * `channel_binding` sai da URL, sempre.
-   *
-   * Painel de banco gerenciado entrega a string com `channel_binding=require`, e o
-   * `postgres.js` repassa parâmetro que não conhece ao servidor como parâmetro de
-   * startup — onde o Postgres derruba a conexão com
-   * `unrecognized configuration parameter "channel_binding"`. Medido. Tirar aqui é
-   * o que impede a armadilha de chegar ao `.env`.
-   */
-  if (url.includes('channel_binding')) {
-    url = url.replace(/[?&]channel_binding=[^&]*/g, '');
-    aviso = 'removi `channel_binding` da URL: o driver o repassaria ao servidor e a conexão cairia';
+/**
+ * O banco da suíte é **outro**, e o script recusa igualar os dois.
+ *
+ * A suíte faz `truncate` nas tabelas a cada teste. Apontar a variável de teste para
+ * o banco da aplicação apaga os dados de verdade — e o `CLAUDE.md` manda rodar
+ * `npm run check` antes de todo commit, então o estrago aconteceria obedecendo às
+ * instruções do projeto. Recusar aqui é mais barato que explicar depois.
+ */
+if (urlDeTesteInformada !== undefined && urlDeTesteInformada.trim() !== '') {
+  const { url, removeu } = limparUrl(urlDeTesteInformada);
+  if (removeu) avisos.push('removi `channel_binding` também da URL de teste');
+
+  const daAplicacao = urlInformada === undefined ? undefined : limparUrl(urlInformada).url;
+  if (daAplicacao !== undefined && daAplicacao === url) {
+    console.error('A URL de teste é igual à da aplicação, e a suíte apaga tabelas.');
+    console.error('Use um banco separado — em banco gerenciado, uma branch de teste serve.');
+    process.exit(1);
   }
 
-  conteudo = conteudo.replace(/^DATABASE_URL=.*$/m, `DATABASE_URL="${url}"`);
+  conteudo = conteudo.replace(/^DATABASE_URL_TESTE=.*$/m, `DATABASE_URL_TESTE="${url}"`);
 }
 
 writeFileSync(destino, conteudo, 'utf8');
@@ -84,9 +113,15 @@ const mascarada = (conteudo.match(/^DATABASE_URL=.*$/m) ?? [''])[0].replace(
 console.log('.env criado.');
 console.log(`  chave mestra gerada (32 bytes em base64)`);
 console.log(`  ${mascarada}`);
-if (aviso !== null) console.log(`  aviso: ${aviso}`);
+for (const aviso of avisos) console.log(`  aviso: ${aviso}`);
 if (urlInformada === undefined) {
   console.log('');
   console.log('Falta o banco: abra o `.env` e preencha DATABASE_URL, ou rode de novo com');
   console.log('  npm run preparar:env -- --database-url="postgresql://..."');
+}
+if (urlDeTesteInformada === undefined) {
+  console.log('');
+  console.log('DATABASE_URL_TESTE ficou vazio, e vazio é seguro: os testes de banco pulam.');
+  console.log('Para rodá-los, aponte para um banco DESCARTÁVEL — nunca o da aplicação, que');
+  console.log('a suíte trunca tabelas. Em banco gerenciado, uma branch de teste serve.');
 }
