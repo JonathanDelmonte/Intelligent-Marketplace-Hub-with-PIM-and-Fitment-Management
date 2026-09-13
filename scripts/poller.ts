@@ -17,6 +17,10 @@
  * com um minuto de latência. A fila em tabela com `SKIP LOCKED` permite os dois
  * modos ao mesmo tempo, e mais de um processo de cada, sem job em duplicidade.
  */
+// Primeiro de todos: o `.env` tem de estar em `process.env` antes de qualquer
+// módulo ler ambiente. Ver o cabeçalho de `carregar-env.ts`.
+import { carregarEnv } from '@/config/carregar-env';
+
 import { lerAmbiente } from '@/config/ambiente';
 import { tarefaDeIngestao } from '@/dominio/ingestao/tarefa';
 import { tarefaDeIdentidade } from '@/dominio/identidade/tarefa';
@@ -26,6 +30,8 @@ import { criarRegistrador, nivelDoAmbiente } from '@/infra/log';
 import type { Registrador } from '@/infra/log';
 import { montarNucleo } from '@/infra/montagem';
 import type { Nucleo } from '@/infra/montagem';
+
+carregarEnv();
 
 const AJUDA = `
 Consome a fila de jobs.

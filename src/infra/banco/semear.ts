@@ -12,6 +12,10 @@
  * npm run db:seed -- --nome="Essencial Emporium" --regime=cpf
  * ```
  */
+// Primeiro de todos: o `.env` tem de estar em `process.env` antes de qualquer
+// módulo ler ambiente. Ver o cabeçalho de `carregar-env.ts`.
+import { carregarEnv } from '../../config/carregar-env';
+
 import { eq } from 'drizzle-orm';
 import { reaisParaCentavos } from '@/lib/dinheiro';
 import { REGIMES_FISCAIS } from '@/dominio/precificacao/tipos';
@@ -20,6 +24,8 @@ import { lerAmbiente } from '@/config/ambiente';
 import { esquemaMarcaVisual } from '@/config/marca';
 import { banco } from './cliente';
 import { perfilVendedor } from './schema';
+
+carregarEnv();
 
 /** Teto anual do MEI. Vale só para o regime `mei`. */
 const TETO_MEI = reaisParaCentavos(81_000);

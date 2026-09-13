@@ -11,10 +11,16 @@
  * `routine`. Vinte linhas de despejo que parecem erro são como se perde o erro de
  * verdade no meio. Falha continua saindo, e sai ruidosa.
  */
+// Primeiro de todos: o `.env` tem de estar em `process.env` antes de qualquer
+// módulo ler ambiente. Ver o cabeçalho de `carregar-env.ts`.
+import { carregarEnv } from '../../config/carregar-env';
+
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { sql } from 'drizzle-orm';
 import { criarBancoCom } from './cliente';
 import { lerAmbiente } from '@/config/ambiente';
+
+carregarEnv();
 
 async function principal(): Promise<void> {
   const { db, encerrar } = criarBancoCom(lerAmbiente().DATABASE_URL, { silenciarAvisos: true });

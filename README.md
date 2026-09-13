@@ -104,6 +104,27 @@ npm run db:seed                # cria o primeiro perfil de vendedor
 npm run dev                    # http://localhost:3000
 ```
 
+### Banco gerenciado, e uma armadilha da string de conexão
+
+O projeto não tem SDK de provedor — só `postgres.js` e Drizzle —, então qualquer
+Postgres com `pgvector` serve, e trocar de provedor é **uma linha no `.env`**.
+
+Se a string vier de um painel de banco gerenciado, duas coisas:
+
+- **Remova `channel_binding=require`**, se houver. O `postgres.js` repassa
+  parâmetro desconhecido da URL ao servidor como parâmetro de conexão, e o
+  Postgres derruba com `unrecognized configuration parameter "channel_binding"`.
+  Medido, não suposto. Mantenha só `?sslmode=require`.
+- **Use a URL direta, não a de pool.** O `postgres.js` já mantém pool próprio com
+  *prepared statements*, e o endpoint de pool desses provedores é PgBouncer em modo
+  transação, onde *prepared statement* não sobrevive. A URL "pooled" serve para
+  serverless, que não é o caso aqui.
+
+E **substitua** a linha `DATABASE_URL` que já existe no `.env` — não acrescente uma
+segunda no fim. Duas linhas com a mesma chave funcionam (a última vence), mas deixam
+uma configuração morta no arquivo, que é exatamente o tipo de coisa que engana na
+hora de depurar.
+
 ### Ver o sistema funcionando em dois minutos
 
 Há uma exportação de exemplo em

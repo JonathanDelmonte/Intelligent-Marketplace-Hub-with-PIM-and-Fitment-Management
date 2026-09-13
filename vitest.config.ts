@@ -1,5 +1,17 @@
 import { defineConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
+import { carregarEnv } from './src/config/carregar-env';
+
+/**
+ * O `.env` entra antes de a suíte montar, e isto não é conveniência.
+ *
+ * O vitest não lê `.env` por conta própria, e a consequência era a pior possível:
+ * com `DATABASE_URL` no `.env`, correto, os 202 testes de banco **pulavam em
+ * silêncio**. O resumo dizia "202 skipped", que é exatamente o que ele diz para
+ * quem não configurou banco — então o sinal de "não testei" era idêntico ao de
+ * "não tenho banco", e ninguém suspeitaria de estar no primeiro caso.
+ */
+carregarEnv();
 
 export default defineConfig({
   resolve: {

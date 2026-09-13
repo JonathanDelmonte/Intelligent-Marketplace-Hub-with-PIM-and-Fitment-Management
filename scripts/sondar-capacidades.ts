@@ -21,6 +21,10 @@
  * Cadastrar um endpoint e sair chamando antes de haver app seria inventar
  * resultado.
  */
+// Primeiro de todos: o `.env` tem de estar em `process.env` antes de qualquer
+// módulo ler ambiente. Ver o cabeçalho de `carregar-env.ts`.
+import { carregarEnv } from '@/config/carregar-env';
+
 import { PLATAFORMAS } from '../src/dominio/precificacao/tipos';
 import type { Plataforma } from '../src/dominio/precificacao/tipos';
 import {
@@ -31,6 +35,8 @@ import {
 } from '../src/plataformas/capacidades';
 import type { EstadoDaCapacidade } from '../src/plataformas/capacidades';
 import { registroPadrao } from '../src/plataformas/registro';
+
+carregarEnv();
 
 function argumento(nome: string): string | undefined {
   const prefixo = `--${nome}=`;

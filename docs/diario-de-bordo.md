@@ -26,6 +26,70 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-13 — O `.env` só valia para a aplicação
+
+### 🐛 `.env` lido pelo Next, ignorado por todo o resto — e os testes pulavam em silêncio
+
+Descoberto porque alguém foi configurar um banco gerenciado e perguntou onde colar a
+string. O `.env` estava certo, e:
+
+- `npm run db:migrate` falhava com `DATABASE_URL: expected string, received undefined`
+- `npm run db:seed` e `npm run poller` idem
+- `drizzle-kit` (`db:generate`, `db:studio`) rodava sem a variável
+- e o pior: **o vitest pulava os 202 testes de banco em silêncio**
+
+O Next carrega `.env` sozinho (`@next/env`), então `npm run dev` funcionava e escondia
+tudo o resto. O README documentava uma sequência (`cp .env.example .env` e depois
+`npm run db:migrate`) que **não funcionava**.
+
+O caso do vitest é o mais perigoso dos quatro, e não por ser o mais quebrado: os outros
+três **falham**, e falha se vê. O vitest passava verde dizendo "202 skipped" — que é
+exatamente o que ele diz para quem não tem banco configurado. O sinal de "não testei" era
+idêntico ao de "não tenho banco". Passa despercebido para sempre.
+
+A correção usa `process.loadEnvFile`, API nativa do Node 22 — zero dependência nova. A
+precedência foi **medida** antes de escolher: variável do shell vence a do arquivo, igual
+ao dotenv. Então o `DATABASE_URL` do CI continua ganhando de um `.env` esquecido.
+
+`carregarEnv()` entra nos quatro pontos de entrada de linha de comando, no
+`vitest.config.ts` e no `drizzle.config.ts`. Os scripts do `package.json` ganharam
+`--env-file-if-exists=.env` também — cinto e suspensório, para quem rodar o arquivo
+direto sem passar pelo npm. Verificado: `949 passam` com só o `.env`, onde antes eram
+`747 passam, 202 pulam`.
+
+### 🐛 `drizzle.config.ts` caía em `localhost:5432` sem avisar
+
+O padrão era `process.env['DATABASE_URL'] ?? 'postgres://localhost:5432/bancada'`. Isso é
+pior que falhar: `db:studio` sem variável configurada abre um editor de banco apontado
+para **qualquer** Postgres que esteja na 5432 da máquina — que pode ser o banco de outro
+projeto, e o dono desta máquina tem outro projeto com Docker rodando.
+
+Agora o padrão é um host `.invalid`, que não resolve. `db:generate` não conecta (lê schema
+e escreve SQL), então segue funcionando sem banco; o que conecta falha ruidosamente em vez
+de acertar um estranho.
+
+### 🐛 `channel_binding=require` na URL derruba a conexão
+
+A string que o painel do Neon entrega vem com
+`?sslmode=require&channel_binding=require`. Colada como está, **não conecta**.
+
+O motivo está no `postgres.js`: parâmetro de URL que ele não conhece vai para
+`connection`, e `connection` é enviado ao servidor como parâmetro de startup. `sslmode`
+ele trata; `channel_binding` não é parâmetro do Postgres. Resultado medido:
+`unrecognized configuration parameter "channel_binding"`.
+
+Ler o código da biblioteca deu a hipótese; rodar contra um Postgres deu a prova. As duas
+coisas levaram dez minutos e evitaram meia hora de "por que não conecta".
+
+### 🔀 URL direta, não a de pool
+
+Painel de banco gerenciado oferece duas strings: direta e *pooled*. Aqui a direta é a
+certa — `postgres.js` já mantém pool próprio com *prepared statements*, e o endpoint de
+pool é PgBouncer em modo transação, onde *prepared statement* não sobrevive. A *pooled*
+serve para serverless, que este projeto não é (ver pendências §3.3).
+
+---
+
 ## 2026-09-13 — Rodar o projeto em máquina de verdade
 
 ### 🐛 Clone feito na janela em que o repositório estava vazio nunca oferece Pull
