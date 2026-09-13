@@ -349,16 +349,24 @@ identidade → **você confirma o produto** → compatibilidade coletada e infer
 | 7.1 | Triagem pelas cinco perguntas — função pura com teste             | ✅     |
 | 7.2 | `vende_direto_marketplace = true` → descarte automático com aviso | ✅     |
 | 7.3 | Verificação automática desse campo por nome e CNPJ (M0)           | ⬜     |
-| 7.4 | Histórico de preço por SKU e fornecedor (aumento silencioso)      | ⬜     |
+| 7.4 | Histórico de preço por SKU e fornecedor (aumento silencioso)      | ✅     |
 | 7.5 | Score de confiabilidade alimentado por atraso real                | ⬜     |
 | 7.6 | Gerador do primeiro contato com as cinco perguntas preenchidas    | ✅     |
 | 7.7 | M7: cortes numéricos configuráveis, aplicados em subcategoria     | ⬜     |
-| 7.8 | Repositório e tela de fornecedor                                  | ⬜     |
+| 7.8 | Repositório e tela de fornecedor                                  | ✅     |
 
 **Começou pelas duas regras, não pela tela.** A triagem e o gerador de contato são
-função pura com teste, e servem sozinhas: dá para decidir se um fornecedor vale o
-tempo e gerar a mensagem de abordagem chamando-as de qualquer lugar. A tela (7.8) é
-o que falta para isso ser usável sem escrever código.
+função pura com teste; a tela veio depois e usa as duas. O veredito **não é
+gravado**: é recalculado a cada leitura, então mudar o critério de prazo vale para
+o cadastro antigo em vez de deixar a base com dois vereditos conforme a data.
+
+O histórico de preço (7.4) entrou junto porque é a mesma gravação: registrar preço
+de fornecedor devolve a variação em pontos-base e avisa quando o aumento passa do
+corte. Uma linha de histórico por gravação, mesmo com preço igual — saber que o
+preço foi conferido ontem vale tanto quanto saber qual é.
+
+Falta o que depende de rede (7.3, verificar por CNPJ se o fornecedor tem loja
+própria) e o scanner numérico (7.7).
 
 ---
 

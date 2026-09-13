@@ -28,6 +28,37 @@ Convenção de marcação:
 
 ## 2026-09-13 — Fase 7: as duas regras de fornecedor
 
+### 🐛 A quinta porta na barra de navegação deu rolagem horizontal em todas as telas
+
+A barra é uma linha de `flex` sem `flex-wrap`. Com quatro portas cabia em 390px;
+com a quinta, passou — e o efeito não ficou na tela nova: **a página inteira ganhou
+rolagem horizontal em todas as rotas**, porque a barra está no `layout`.
+
+Achado medindo no navegador, e localizado varrendo o DOM por elemento cuja borda
+direita passa da largura da janela — que é mais rápido que adivinhar qual regra de
+CSS é a culpada. Eu tinha apostado em `width: 100%` com `padding` nos campos do
+formulário, e estava errado: o `box-sizing: border-box` global já cuidava disso.
+
+Lição: uma linha de `flex` que não quebra é uma largura mínima escondida, e ela
+cresce a cada item que alguém acrescenta meses depois.
+
+### 🐛 Três erros de texto que só a tela mostrou
+
+Os três passaram por teste, typecheck e lint:
+
+1. **"quatro perguntas rápidas"** escrito à mão na mensagem de contato, com três
+   perguntas listadas embaixo. Nenhum teste pegava porque nenhum lia a frase.
+2. **"Sou essencial-emporium e vendo em marketplace"** — a semeadura usava o slug
+   cru como nome do perfil quando não vinha `--nome`, e isso escapou para uma
+   mensagem que vai para fora, para um fornecedor. O padrão passou a ser o slug
+   legível, ainda derivado do dado.
+3. **"descartar"** como etiqueta de estado no cartão. Imperativo ali lê como botão;
+   o certo é "descartado".
+
+Nenhum é grave e os três são visíveis em dois segundos de leitura de tela. É o
+argumento de sempre, agora com três casos em uma única tela: **abrir a tela é etapa
+de verificação.**
+
 ### 🔀 `null` não é `false`, e é a decisão que estrutura a triagem
 
 "Ainda não perguntei" e "perguntei e a resposta é não" são estados diferentes. O
