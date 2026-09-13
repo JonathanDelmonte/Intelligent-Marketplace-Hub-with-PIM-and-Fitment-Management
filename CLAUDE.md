@@ -181,3 +181,19 @@ npm run db:generate    # gerar migration a partir do schema
 npm run db:migrate     # aplicar migrations
 npm run verify:authors # conferir autoria de todos os commits
 ```
+
+### O banco dos testes é outro, sempre
+
+A suíte faz `truncate` nas tabelas a cada teste, então ela lê
+**`DATABASE_URL_TESTE`** — nunca `DATABASE_URL` — e recusa rodar se as duas
+apontarem para o mesmo banco.
+
+Isto não é preferência de organização: enquanto a suíte lia `DATABASE_URL`, rodar
+`npm run check` antes de commitar, como esta seção manda, apagava os dados do banco
+da aplicação. Sem a variável de teste os testes de banco **pulam**, e o resumo do
+vitest diz quantos — que é o lado certo de errar.
+
+```sh
+createdb bancada_teste       # local; em banco gerenciado, uma branch de teste serve
+DATABASE_URL="$DATABASE_URL_TESTE" npm run db:migrate
+```
