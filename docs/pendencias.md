@@ -76,16 +76,30 @@ brasileiro.
 `src/dominio/leitor/base-gtin.ts`, com estado `sem_credencial`; ligar é cadastrar
 credencial e escrever cerca de trinta linhas de adaptador.
 
-### 1.4 Branch `main` — quem leva trabalho para lá
+### 1.4 Branch única — resolvido, e o que ficou no lugar
 
-`main` é a branch padrão e hoje aponta para o mesmo commit da branch de trabalho.
-O CLAUDE.md, seção 2, diz que levar trabalho para `main` é decisão explícita e não
-consequência de terminar tarefa.
+**Resolvido.** Desde o fim da fase 5 existe uma branch só: `main`. A
+`claude/epic-allen-1r2zyy` foi levada para `main` por fast-forward e apagada, por
+decisão do dono.
 
-**Registro honesto:** na entrega da fase 4 eu empurrei para `main` sem perguntar,
-o que contraria essa regra. O conteúdo era o mesmo da branch de trabalho, testado e
-com CI verde, então não houve estrago — mas a decisão era do dono. Fica aqui para
-não se repetir por esquecimento.
+**O que motivou:** a branch de trabalho estava produzindo o oposto do que promete.
+Abrindo o repositório, o dono via `main` parada na fase 4, sem os 18 commits da fase
+5 — e o GitHub Desktop não oferece *Pull* para branch que não está aberta, então "não
+aparece nada para puxar" parecia defeito quando era só a branch errada. Branch de
+trabalho existe para proteger de trabalho ruim publicado; aqui ela escondia trabalho
+bom.
+
+**O que substitui a proteção:** `npm run check` antes de cada commit, CI verde em
+todo push, e commit pequeno o bastante para reverter um passo sem desfazer dez.
+
+**Registro honesto, que fica:** na entrega da fase 4 eu empurrei para `main` sem
+perguntar, contrariando a regra que valia então. O conteúdo era o mesmo da branch,
+testado e com CI verde, então não houve estrago — mas a decisão era do dono. A regra
+mudou depois, e por decisão dele; isso não retroage em quem errou antes.
+
+**Quando uma branch de trabalho volta a valer:** segundo par de mãos no projeto, ou
+trabalho longo que deixe o sistema sem rodar por dias. A decisão de recriá-la é do
+dono.
 
 ---
 

@@ -65,16 +65,27 @@ errado ou com trailer de atribuição proibido.
 
 ## 2. Branches
 
-`main` é a branch padrão e o estado publicado do projeto. É o que alguém vê ao
-abrir o repositório, e é dela que se lê o código como ele está.
+**`main` é a única branch. Desenvolver e publicar nela.** Nenhuma outra branch
+recebe push sem autorização explícita do dono do repositório.
 
-**Desenvolver e publicar em `claude/epic-allen-1r2zyy`.** Nunca em outra branch —
-`main` incluída — sem autorização explícita do dono do repositório.
+Foi assim que ficou depois da fase 5, por decisão do dono, e o motivo é prático: o
+projeto tem um desenvolvedor, a verificação roda em todo push, e a branch de
+trabalho separada produzia o efeito oposto do pretendido — o dono abria o
+repositório, via `main` parada na fase 4, e não achava o trabalho. Branch de
+trabalho protege de trabalho ruim publicado; aqui ela estava escondendo trabalho
+bom.
 
-Levar trabalho para `main` é decisão explícita, não consequência de terminar uma
-tarefa. Hoje as duas apontam para o mesmo commit, então a passagem é
-`fast-forward`; quando divergirem, a integração é assunto de quem decide o que
-publicar, e não do agente que escreveu o código.
+O que substitui a proteção que a branch dava:
+
+- `npm run check` antes de todo commit (fontes, tipos, lint, formatação, testes).
+- CI verde em todo push — e push que quebra o CI é para corrigir na hora, não
+  depois.
+- Commit pequeno e separado, que é o que permite reverter um passo sem desfazer
+  dez.
+
+Se algum dia houver um segundo par de mãos, ou trabalho longo que deixe o sistema
+sem rodar por dias, aí uma branch de trabalho volta a valer — e a decisão de
+recriá-la é do dono, não do agente.
 
 ---
 

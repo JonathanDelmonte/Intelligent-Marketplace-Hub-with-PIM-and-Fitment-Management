@@ -26,6 +26,43 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-13 — Branch única
+
+### 🐛 A branch de trabalho estava escondendo o trabalho, não protegendo
+
+Sintoma relatado pelo dono: `main` aberta no GitHub Desktop, "No local changes",
+`Fetch origin` clicado, **nenhum Pull oferecido** — e o VS Code sem os arquivos da
+fase 5. Parecia defeito de sincronização.
+
+Não era. `main` estava em `66d971f` (fim da fase 4) e a branch de trabalho em
+`e3d850d`, **18 commits à frente**, com a fase 5 inteira. E o GitHub Desktop só
+oferece *Pull* para a branch que está aberta: para `main` não havia nada a puxar,
+porque `main` não tinha mudado. O trabalho estava publicado, só não onde ele
+olhava.
+
+A causa raiz não é a ferramenta: é que o `CLAUDE.md` §2 mandava desenvolver em
+`claude/epic-allen-1r2zyy` e tratar a ida para `main` como decisão explícita do
+dono — decisão que nunca foi pedida de novo depois da fase 4. Cada fase entregue
+aumentava a distância.
+
+**Decisão do dono:** branch única, `main`. Fast-forward de `66d971f` para
+`e3d850d`, branch de trabalho apagada, `CLAUDE.md` §2 reescrito.
+
+O raciocínio que ficou escrito na convenção: branch de trabalho protege de trabalho
+ruim publicado. Com um desenvolvedor, `npm run check` antes de cada commit e CI
+verde em todo push, o que ela protegia já estava protegido — e o que ela causava era
+um dono que não encontrava o próprio projeto. Volta a valer quando houver segundo par
+de mãos, ou trabalho longo que deixe o sistema sem rodar por dias.
+
+### 🧹 `origin/HEAD` ficou apontando para a branch apagada
+
+Detalhe de clone antigo: `origin/HEAD -> origin/claude/epic-allen-1r2zyy` continua
+no `.git` de quem clonou antes da mudança, mesmo com o padrão do GitHub já em `main`.
+Não quebra nada, mas confunde: `git log origin/HEAD` mostra ref que não existe mais.
+`git remote set-head origin -a` corrige em cada clone.
+
+---
+
 ## 2026-09-12 — Fase 5: resolução de identidade (M3)
 
 ### 🐛 A tela dizia "a decisão não foi gravada" com a decisão gravada
