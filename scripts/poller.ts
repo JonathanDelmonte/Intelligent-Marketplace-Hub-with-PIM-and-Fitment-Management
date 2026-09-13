@@ -19,8 +19,9 @@
  */
 import { lerAmbiente } from '@/config/ambiente';
 import { tarefaDeIngestao } from '@/dominio/ingestao/tarefa';
+import { tarefaDeIdentidade } from '@/dominio/identidade/tarefa';
 import { encerrarBanco } from '@/infra/banco/cliente';
-import { Poller, ligarSinaisDeEncerramento } from '@/infra/fila/poller';
+import { Poller, ligarSinaisDeEncerramento, tarefasEmOrdem } from '@/infra/fila/poller';
 import { criarRegistrador, nivelDoAmbiente } from '@/infra/log';
 import type { Registrador } from '@/infra/log';
 import { montarNucleo } from '@/infra/montagem';
@@ -97,7 +98,13 @@ async function principal(): Promise<number> {
 
   const ambiente = lerAmbiente();
   const nucleo = montarNucleo();
-  const tarefa = tarefaDeIngestao(nucleo.executor, log);
+  // Ingestão primeiro, identidade depois: identidade só tem o que fazer depois que a
+  // ingestão gravou a ocorrência, e uma fila de identidade grande não deve atrasar a
+  // entrada de dado novo.
+  const tarefa = tarefasEmOrdem('ingestao+identidade', [
+    tarefaDeIngestao(nucleo.executor, log),
+    tarefaDeIdentidade(nucleo.executorDeIdentidade, log),
+  ]);
 
   const limite = inteiro('limite');
   const ocioso = inteiro('ocioso');

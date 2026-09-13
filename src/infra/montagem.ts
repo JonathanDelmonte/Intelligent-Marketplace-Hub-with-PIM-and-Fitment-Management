@@ -16,6 +16,8 @@
  * ao armazenamento", com o arquivo lá, na pasta errada.
  */
 import { ExecutorDeIngestao } from '@/dominio/ingestao/executor';
+import { ExecutorDeIdentidade } from '@/dominio/identidade/tarefa';
+import { ResolvedorDeIdentidade } from '@/dominio/identidade/resolucao';
 import { Orquestrador } from '@/dominio/ingestao/orquestrador';
 import { IngestorDeProdutoExterno } from '@/dominio/ingestao/produto-externo';
 import { lerAmbiente } from '@/config/ambiente';
@@ -30,6 +32,8 @@ export interface Nucleo {
   readonly ingestor: IngestorDeProdutoExterno;
   readonly orquestrador: Orquestrador;
   readonly executor: ExecutorDeIngestao;
+  /** Consome a fila de resolução de identidade (M3). */
+  readonly executorDeIdentidade: ExecutorDeIdentidade;
 }
 
 /**
@@ -46,7 +50,30 @@ export function montarNucleoCom(db: Banco, diretorioDeConteudo: string): Nucleo 
   const orquestrador = new Orquestrador(fila, armazenamento);
   const executor = new ExecutorDeIngestao(fila, armazenamento, ingestor, orquestrador);
 
-  return { db, fila, armazenamento, ingestor, orquestrador, executor };
+  /**
+   * Um resolvedor **por job**, e é aí que mora o teto de orçamento.
+   *
+   * Se o resolvedor fosse único e de vida longa, o `Orcamento` dentro dele esgotaria
+   * na primeira hora e nunca mais deixaria nada rodar: "teto por execução" do ADR
+   * 0005 viraria "teto por vida do processo", que não é teto nenhum.
+   *
+   * Hoje nasce sem serviço de LLM, porque não há chave. O resolvedor trata isso como
+   * caminho previsto e decide tudo que é decidível sem julgamento.
+   */
+  const executorDeIdentidade = new ExecutorDeIdentidade(
+    fila,
+    (jobId) => new ResolvedorDeIdentidade(db, { jobId }),
+  );
+
+  return {
+    db,
+    fila,
+    armazenamento,
+    ingestor,
+    orquestrador,
+    executor,
+    executorDeIdentidade,
+  };
 }
 
 /**

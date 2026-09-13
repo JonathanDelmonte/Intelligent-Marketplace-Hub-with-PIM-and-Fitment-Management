@@ -268,8 +268,11 @@ describe.skipIf(!temBancoDeTeste())('ingestão de ponta a ponta', () => {
 
       // As rejeitadas ficam no resultado, não descartadas: dá para corrigir à mão
       // sem reimportar a planilha inteira.
+      // `where tipo = 'ingestao'`: a tabela tem mais de um tipo de job desde que a
+      // ingestão passou a enfileirar resolução de identidade, e `limit 1` sem filtro
+      // pegava um job de identidade — cujo `resultado` é nulo.
       const linhas = await conexao.db.execute(
-        "select resultado->'rejeitadas' as r from job limit 1",
+        "select resultado->'rejeitadas' as r from job where tipo = 'ingestao' limit 1",
       );
       const bruto =
         (linhas as unknown as { rows?: { r: unknown }[] }).rows?.[0]?.r ??

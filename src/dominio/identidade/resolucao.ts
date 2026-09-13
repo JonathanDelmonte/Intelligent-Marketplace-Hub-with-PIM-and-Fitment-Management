@@ -88,6 +88,13 @@ export interface OpcoesDoResolvedor {
   readonly modeloDeJulgamento?: string | undefined;
   readonly modeloDeEmbedding?: string | undefined;
   readonly maxCandidatos?: number | undefined;
+  /**
+   * Job que originou a resolução, quando houver.
+   *
+   * Vai para `llm_call.job_id`, e é o que liga custo a trabalho: sem isso a pergunta
+   * "por que a conta subiu" só responde por finalidade, e não por qual job gastou.
+   */
+  readonly jobId?: string | undefined;
 }
 
 export interface ResultadoDaResolucao {
@@ -357,6 +364,7 @@ export class ResolvedorDeIdentidade {
       entrada: perguntaDeIdentidade(base, outro),
       contexto: { exemplos: params.exemplos },
       esquema: esquemaJulgamentoDeIdentidade,
+      ...(this.opcoes.jobId === undefined ? {} : { jobId: this.opcoes.jobId }),
     });
 
     if (resultado.tipo === 'sem_chave') {

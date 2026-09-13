@@ -75,6 +75,75 @@ lados**". O caso comum é o anúncio ter GTIN e o catálogo do distribuidor não
 frase era falsa exatamente no par mais frequente. Virou "em um dos lados". Tela de
 revisão existe para a pessoa confiar no que lê.
 
+### 🐛 Adiar um job gastava o direito a retentativa dele
+
+A fila ganhou `adiar` para o caso do orçamento estourado: o job fez trabalho, gravou o
+que decidiu, e o que falta é retomável — usar `falhar` consumiria uma tentativa por
+rodada e mandaria para a lista de mortos um job que progride.
+
+Só que `reivindicar` incrementa `tentativas` em **toda** reivindicação, e é o mesmo
+contador que `falhar` usa para decidir se ainda há backoff. Então a primeira versão do
+`adiar`, que deixava o contador "intacto", na prática gastava uma tentativa por
+adiamento: um job adiado três vezes chegaria ao primeiro erro de verdade já sem direito
+a retentativa, e iria para `falhou` por ter sido **pausado**, não por ter errado.
+
+`adiar` agora devolve a tentativa (`greatest(tentativas - 1, 0)`), porque só aceita job
+`rodando` — então há exatamente uma reivindicação a desfazer. A lição maior: contador de
+reivindicação e orçamento de retentativa são o mesmo número, e qualquer operação nova que
+devolva um job à fila tem de decidir explicitamente o que faz com ele.
+
+### 🔀 Orçamento por job, não por vida do processo
+
+O resolvedor de identidade é construído **por job**, com `Orcamento` novo. Um resolvedor
+único de vida longa no poller esgotaria o teto na primeira hora e nunca mais deixaria
+nada rodar — e "teto por execução" do ADR 0005 viraria "teto por vida do processo", que
+não é teto nenhum. A montagem recebe uma fábrica (`(jobId) => ResolvedorDeIdentidade`), e
+o `jobId` vai para `llm_call.job_id`, o que liga custo a trabalho.
+
+### 🔀 A ingestão enfileira identidade também para linha duplicada
+
+Parecia certo enfileirar resolução só para `gravado`. Não é: se o job de ingestão quebrar
+entre gravar a linha e enfileirar, a reexecução vê a linha como `duplicado` — e aquela
+ocorrência ficaria sem resolução **para sempre**. Enfileirar nos dois casos fecha o buraco
+de graça, porque a chave de idempotência é o id da ocorrência: reenfileirar não cria job
+repetido nem reabre job concluído.
+
+### 🐛 Dois tipos de job na tabela quebraram teste que dizia `limit 1`
+
+Três testes de ingestão liam o job com `ultimos()[0]` ou `select … from job limit 1`, sem
+filtrar tipo. Passavam porque havia um tipo só. Com a ingestão enfileirando identidade, o
+mais recente passou a ser um job de identidade — e um deles lia `resultado->'rejeitadas'`
+de um job cujo resultado é nulo.
+
+Corrigidos para filtrar por `tipo`, o que também os deixou dizendo o que querem dizer. E
+dois deles ganharam asserção nova: a de que a ingestão **enfileirou** a resolução, que é
+o comportamento que passou a existir.
+
+### 🔀 Um poller, duas filas, em ordem de prioridade
+
+`tarefasEmOrdem` junta tarefas numa só: o tique para na primeira que trabalhou, e é
+ocioso só quando todas estão ociosas — dizer o contrário faria o poller acelerar a espera
+com a fila vazia. Ingestão vem antes de identidade porque identidade só tem o que fazer
+depois que a ingestão gravou a ocorrência, e fila de identidade grande não deve atrasar a
+entrada de dado novo.
+
+Dois pollers seriam dois processos, duas conexões e dois encerramentos para acertar.
+
+### ❓ O importador de planilha não extrai marca nem modelo, então a forma canônica sai vazia
+
+Rodando a corrente inteira de verdade — planilha, poller, grafo — o agrupamento por GTIN
+funcionou e o por marca com código de peça **não teve o que fazer**: as três ocorrências
+ficaram com forma canônica vazia e chave de agrupamento nula.
+
+O motivo é anterior ao M3: extrair `{tipo, marca, modelo}` de um título é trabalho do
+extrator por LLM (3.2, sem chave), e o importador de planilha só copia colunas. Ou seja, a
+via determinística mais valiosa do M3 — a que liga `PA21G` a `EF-ELX-21` — está construída
+e testada, e **em dado real só vai andar quando houver extração**. O GTIN cobre o resto, e
+é por isso que ele é a primeira via e não a segunda.
+
+Vazia é uma resposta, e é de propósito: a coluna deixa de ser nula, então a ocorrência não
+volta para a fila de preparação a cada rodada.
+
 ### 🔀 `next dev` escrevia no `CLAUDE.md`, e agora não escreve
 
 O Next 16 anexa um bloco de instruções para agentes ao `CLAUDE.md` do projeto a cada

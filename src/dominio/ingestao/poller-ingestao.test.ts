@@ -100,7 +100,16 @@ describe.skipIf(!temBancoDeTeste())('poller consumindo a fila de ingestão', () 
 
     const contagem = await nucleo.fila.contagemPorStatus();
     expect(contagem.concluido).toBe(1);
-    expect(contagem.pendente).toBe(0);
+    // Três jobs de resolução de identidade ficaram pendentes, um por ocorrência
+    // gravada: é a ingestão alimentando o M3 sem ninguém pedir. Este poller de teste
+    // só roda a tarefa de ingestão, então eles ficam onde estão.
+    expect(contagem.pendente).toBe(3);
+    const pendentes = (await nucleo.fila.ultimos()).filter((j) => j.status === 'pendente');
+    expect(pendentes.map((j) => j.tipo)).toEqual([
+      'resolver_identidade',
+      'resolver_identidade',
+      'resolver_identidade',
+    ]);
   });
 
   it('importa planilha separada por vírgula com linha de título', async () => {
@@ -111,8 +120,11 @@ describe.skipIf(!temBancoDeTeste())('poller consumindo a fila de ingestão', () 
 
     await pollerDeTeste().iniciar();
 
+    // O job de ingestão, nomeado: `ultimos()` devolve o mais recente primeiro, e o
+    // mais recente agora é um job de identidade enfileirado pela própria ingestão.
     const jobs = await nucleo.fila.ultimos();
-    expect(jobs[0]?.status, jobs[0]?.erro ?? '').toBe('concluido');
+    const ingestao = jobs.find((j) => j.tipo === 'ingestao');
+    expect(ingestao?.status, ingestao?.erro ?? '').toBe('concluido');
 
     const produtos = await conexao.db.select().from(produtoExterno);
     expect(produtos.map((p) => p.tituloBruto).sort()).toEqual([
@@ -212,7 +224,7 @@ describe.skipIf(!temBancoDeTeste())('poller consumindo a fila de ingestão', () 
     });
 
     await pollerDeTeste().iniciar();
-    const primeiro = (await nucleo.fila.ultimos())[0];
+    const primeiro = (await nucleo.fila.ultimos()).find((j) => j.tipo === 'ingestao');
     expect(primeiro?.status).toBe('concluido');
 
     await nucleo.fila.reenfileirar(primeiro?.id ?? '');
@@ -222,8 +234,15 @@ describe.skipIf(!temBancoDeTeste())('poller consumindo a fila de ingestão', () 
     expect(produtos).toHaveLength(3);
 
     const jobs = await nucleo.fila.ultimos();
-    const resultado = jobs[0]?.resultado as { duplicados?: number } | null;
+    const resultado = jobs.find((j) => j.tipo === 'ingestao')?.resultado as {
+      duplicados?: number;
+    } | null;
     expect(resultado?.duplicados).toBe(3);
+
+    // E a reexecução não criou job de identidade repetido: a chave de idempotência é
+    // o id da ocorrência, e a linha duplicada reenfileira a mesma chave.
+    const deIdentidade = jobs.filter((j) => j.tipo === 'resolver_identidade');
+    expect(deIdentidade).toHaveLength(3);
   });
 
   it('o log do laço nomeia o job e o que foi gravado', async () => {

@@ -19,6 +19,7 @@
  *   um erro genérico que parece defeito.
  */
 import type { Plataforma } from '@/dominio/precificacao/tipos';
+import { TIPO_JOB_IDENTIDADE, chaveDeIdentidade } from '@/dominio/identidade/tarefa';
 import type { ArmazenamentoDeConteudo } from '@/infra/armazenamento/conteudo';
 import type { Fila, JobEnfileirado } from '@/infra/fila/fila';
 import type { IngestorDeProdutoExterno } from './produto-externo';
@@ -198,6 +199,23 @@ export class ExecutorDeIngestao {
       if (resultado.tipo === 'gravado') gravados += 1;
       else if (resultado.tipo === 'duplicado') duplicados += 1;
       else rejeitados += 1;
+
+      // A ocorrência gravada entra na fila de resolução de identidade, e é isso que
+      // faz o grafo crescer **a cada link colado** em vez de a cada vez que alguém
+      // abre a tela e clica.
+      //
+      // Enfileira também o `duplicado`, e o motivo é a retomada: se o job quebrar
+      // entre gravar a linha e enfileirar, a reexecução vê a linha como duplicada —
+      // e se só o `gravado` enfileirasse, essa ocorrência ficaria sem resolução para
+      // sempre. A chave de idempotência é o id da ocorrência, então reenfileirar não
+      // cria job repetido nem reabre job concluído.
+      if (resultado.tipo === 'gravado' || resultado.tipo === 'duplicado') {
+        await this.fila.enfileirar({
+          tipo: TIPO_JOB_IDENTIDADE,
+          chaveIdempotencia: chaveDeIdentidade(resultado.id),
+          entrada: { produtoExternoId: resultado.id },
+        });
+      }
 
       // Progresso a cada 50 linhas: uma planilha que quebra na linha 4000 retoma
       // de perto disso em vez de reprocessar tudo.
