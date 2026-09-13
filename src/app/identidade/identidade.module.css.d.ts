@@ -19,6 +19,7 @@ declare const estilo: {
   readonly botaoSecundario: string;
   readonly botaoSim: string;
   readonly cabecalho: string;
+  readonly campoDeTitulo: string;
   readonly campos: string;
   readonly canonico: string;
   readonly cartao: string;
@@ -30,6 +31,7 @@ declare const estilo: {
   readonly dica: string;
   readonly evidencia: string;
   readonly fila: string;
+  readonly formularioDeSku: string;
   readonly inconsistencias: string;
   readonly lado: string;
   readonly ladoEtiqueta: string;
@@ -41,6 +43,7 @@ declare const estilo: {
   readonly painel: string;
   readonly par: string;
   readonly parCabecalho: string;
+  readonly rotuloDoTitulo: string;
   readonly secao: string;
   readonly secaoTitulo: string;
   readonly subtitulo: string;

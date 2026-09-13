@@ -75,6 +75,41 @@ lados**". O caso comum é o anúncio ter GTIN e o catálogo do distribuidor não
 frase era falsa exatamente no par mais frequente. Virou "em um dos lados". Tela de
 revisão existe para a pessoa confiar no que lê.
 
+### 🔀 A fila de revisão dava em nada quando nenhum dos dois lados era um SKU
+
+O caso mais comum da fila é justamente esse: duas ocorrências que alguém afirma serem o
+mesmo produto, e **nenhuma** delas em um SKU. A decisão ficava gravada, virava exemplo,
+e o valor — comparar preço entre fornecedores — não aparecia, porque não havia SKU para
+receber as duas. A propagação só sabe ligar ao SKU que já existe.
+
+Então o cartão, quando nenhum lado tem SKU, oferece criar. O título vem **preenchido com
+uma proposta e é editável**, porque "um `sku` é criado por decisão sua" inclui o nome —
+gerar sozinho seria decidir em nome de alguém.
+
+`propostaDeSku` é função pura com teste: título do registro extraído (`tipo marca
+modelo`) quando há, senão o **menor** dos dois títulos brutos — menor é quase sempre o
+menos poluído de palavra-chave, e é heurística assumida, não verdade. GTIN divergente
+entre os dois lados **não** entra no SKU e vira aviso: a coluna é única por perfil, e
+gravar um dos dois esconderia que as fontes discordam.
+
+Custo fica de fora de propósito. Preço de anúncio é o que **outro** cobra, `custo_atual`
+é o que você paga, e presumir um pelo outro erraria toda margem calculada em cima — para
+o lado otimista.
+
+### 🐛 A proposta de título saía `pa 21 g`, do jeito que a fonte digitou
+
+Visto na tela, não no código: o campo vinha com "elemento filtrante Electrolux pa 21 g".
+Está certo em relação ao dado e errado em relação ao uso — o campo vem preenchido e
+quase ninguém edita, então o padrão tem de sair do jeito que alguém escreveria à mão.
+Agora o código de modelo é normalizado (`PA21G`) e a inicial é maiúscula.
+
+### 🔀 O módulo de CSS tipado pagou por si de novo
+
+Três classes novas no formulário de SKU, e o `tsc` recusou o componente antes de
+qualquer teste rodar — porque as classes não existiam no `.d.ts` escrito à mão. Sem ele,
+a assinatura de índice do Next aceitaria `estilo.formularioDeSku` inexistente e o
+sintoma seria um formulário sem estilo em produção.
+
 ### 🐛 Adiar um job gastava o direito a retentativa dele
 
 A fila ganhou `adiar` para o caso do orçamento estourado: o job fez trabalho, gravou o

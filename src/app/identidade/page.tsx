@@ -14,7 +14,9 @@
 import type { Metadata } from 'next';
 import { sql } from 'drizzle-orm';
 import { RepositorioDeExemplos } from '@/dominio/identidade/exemplos';
-import { RepositorioDePares } from '@/dominio/identidade/pares';
+import { RepositorioDePares, type LadoDaFila } from '@/dominio/identidade/pares';
+import { propostaDeSku } from '@/dominio/identidade/propagacao';
+import { lerRegistro, REGISTRO_VAZIO } from '@/dominio/identidade/registro';
 import { produtoExterno } from '@/infra/banco/schema';
 import { banco } from '@/infra/banco/cliente';
 import { LIMITE_DA_FILA, LIMITE_DE_RESOLUCAO_MANUAL } from './constantes';
@@ -26,6 +28,16 @@ export const metadata: Metadata = { title: 'Identidade' };
 
 /** Sempre dinâmica: pré-renderizar exigiria banco durante o `build`. */
 export const dynamic = 'force-dynamic';
+
+/** Um lado da fila no formato que a proposta de SKU espera. */
+function paraProposta(lado: LadoDaFila) {
+  const leitura = lerRegistro(lado.atributosExtraidos);
+  return {
+    tituloBruto: lado.tituloBruto,
+    ean: lado.ean,
+    registro: leitura.tipo === 'ok' ? leitura.registro : REGISTRO_VAZIO,
+  };
+}
 
 export default async function PaginaDeIdentidade({
   searchParams,
@@ -51,6 +63,13 @@ export default async function PaginaDeIdentidade({
   const aviso = descreverAviso(codigo, inteiroDaUrl(parametros['n']));
   const avaliadas =
     contagem.automatico + contagem.pendente + contagem.resolvido + contagem.descartado;
+  // A proposta de SKU é calculada aqui, no servidor, a partir do que já veio na fila:
+  // é função pura sobre os dois registros, e não custa consulta nenhuma.
+  const comProposta = fila.map((par) => ({
+    par,
+    proposta: propostaDeSku(paraProposta(par.a), paraProposta(par.b)),
+  }));
+
   const estado = estadoDaBase({
     ocorrencias: totalDeOcorrencias,
     pendentes: contagem.pendente,
@@ -81,7 +100,7 @@ export default async function PaginaDeIdentidade({
           Esperando decisão
         </h2>
         {estado !== null && <AvisoDaAcao aviso={estado} />}
-        <Fila pares={fila} />
+        <Fila pares={comProposta} />
       </section>
     </main>
   );

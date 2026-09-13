@@ -19,6 +19,8 @@ import { and, eq, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 import type { PerfilId } from '@/dominio/catalogo/sku';
 import type { Banco } from '@/infra/banco/cliente';
 import { parIdentidade, produtoExterno, sku } from '@/infra/banco/schema';
+import { normalizarCodigoDeModelo } from './canonico';
+import type { RegistroDeProduto } from './registro';
 
 export interface ResultadoDaPropagacao {
   readonly skuId: string;
@@ -127,6 +129,91 @@ export async function propagarSku(
     .returning({ id: produtoExterno.id });
 
   return { skuId: params.skuId, ligadas: ligadas.map((l) => l.id), conflitos };
+}
+
+export interface PropostaDeSku {
+  readonly tituloInterno: string;
+  readonly marca: string | null;
+  readonly ean: string | null;
+  /** Contradições entre os dois lados que a pessoa precisa ver antes de confirmar. */
+  readonly avisos: readonly string[];
+}
+
+/**
+ * Propõe um SKU a partir de duas ocorrências que alguém afirmou serem o mesmo produto.
+ *
+ * **Proposta, não criação.** A especificação é explícita: "um `sku` é criado por
+ * decisão sua". Então esta função devolve texto para um campo preenchido, que a pessoa
+ * confirma ou corrige — e não um SKU pronto.
+ *
+ * O título vem do registro extraído quando há (`tipo marca modelo`), porque é o que
+ * descreve o produto sem a palavra-chave de SEO. Sem registro, cai para o **menor** dos
+ * dois títulos brutos: menor é quase sempre o menos poluído, e é uma heurística
+ * assumida, não uma verdade.
+ */
+export function propostaDeSku(
+  a: {
+    readonly tituloBruto: string;
+    readonly ean: string | null;
+    readonly registro: RegistroDeProduto;
+  },
+  b: {
+    readonly tituloBruto: string;
+    readonly ean: string | null;
+    readonly registro: RegistroDeProduto;
+  },
+): PropostaDeSku {
+  const avisos: string[] = [];
+
+  const doRegistro = (registro: RegistroDeProduto): string | null => {
+    // O código de modelo entra normalizado: a fonte escreve `pa 21 g` e uma pessoa
+    // escreveria `PA21G`. Este texto vai preenchido num campo que quase ninguém vai
+    // editar, então ele tem de sair já do jeito que se escreveria à mão.
+    const modelo =
+      registro.modeloPeca === null
+        ? null
+        : (normalizarCodigoDeModelo(registro.modeloPeca) ?? registro.modeloPeca);
+
+    const partes = [registro.tipoProduto, registro.marca, modelo].filter(
+      (parte): parte is string => parte !== null && parte.trim() !== '',
+    );
+    return partes.length === 0 ? null : partes.join(' ');
+  };
+
+  const tituloInterno =
+    doRegistro(a.registro) ??
+    doRegistro(b.registro) ??
+    [a.tituloBruto, b.tituloBruto].sort((x, y) => x.length - y.length)[0] ??
+    a.tituloBruto;
+
+  const marca = a.registro.marca ?? b.registro.marca;
+
+  // GTIN divergente não entra no SKU: a coluna é única por perfil, e gravar um dos
+  // dois esconderia que as fontes discordam. O aviso é a saída honesta.
+  let ean: string | null = null;
+  if (a.ean !== null && b.ean !== null && a.ean !== b.ean) {
+    avisos.push(`as duas ocorrências têm GTIN diferente (${a.ean} e ${b.ean}); nenhum foi usado`);
+  } else {
+    ean = a.ean ?? b.ean;
+  }
+
+  const qa = a.registro.quantidadeEmbalagem;
+  const qb = b.registro.quantidadeEmbalagem;
+  if (qa !== null && qb !== null && qa !== qb) {
+    avisos.push(
+      `as duas declaram quantidade de embalagem diferente (${String(qa)} e ${String(qb)})`,
+    );
+  }
+
+  // Custo fica de fora de propósito: preço de anúncio é o que **outro** cobra, e
+  // `custo_atual` é o que você paga. Presumir um pelo outro erraria toda margem
+  // calculada em cima, e erraria para o lado otimista.
+  return { tituloInterno: comInicialMaiuscula(tituloInterno).slice(0, 200), marca, ean, avisos };
+}
+
+/** Primeira letra maiúscula. `tipoProduto` vem minúsculo do extrator. */
+function comInicialMaiuscula(texto: string): string {
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
 /**

@@ -76,6 +76,13 @@ export interface LadoDaFila {
   /** Procedência, que é o que diz qual afirmação é mais forte (ADR 0002). */
   readonly fonte: string;
   readonly coletadoEm: Date;
+  /**
+   * O registro extraído, cru.
+   *
+   * Vem junto porque a tela propõe um SKU a partir dos dois lados, e buscar o
+   * registro depois custaria duas consultas por par da fila.
+   */
+  readonly atributosExtraidos: unknown;
 }
 
 export interface ParDaFila {
@@ -278,6 +285,7 @@ export class RepositorioDePares {
         skuId: LADO_A.skuId,
         fonte: LADO_A.fonte,
         coletadoEm: LADO_A.coletadoEm,
+        atributosExtraidos: LADO_A.atributosExtraidos,
       },
       b: {
         id: LADO_B.id,
@@ -291,6 +299,7 @@ export class RepositorioDePares {
         skuId: LADO_B.skuId,
         fonte: LADO_B.fonte,
         coletadoEm: LADO_B.coletadoEm,
+        atributosExtraidos: LADO_B.atributosExtraidos,
       },
     };
   }

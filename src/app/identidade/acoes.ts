@@ -12,10 +12,14 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { eq } from 'drizzle-orm';
 import { lerAmbiente } from '@/config/ambiente';
+import { RepositorioDeSku } from '@/dominio/catalogo/sku';
+import { lerRegistro, type RegistroDeProduto } from '@/dominio/identidade/registro';
+import { produtoExterno } from '@/infra/banco/schema';
 import { RepositorioDeExemplos } from '@/dominio/identidade/exemplos';
 import { RepositorioDePares } from '@/dominio/identidade/pares';
-import { propagarSku } from '@/dominio/identidade/propagacao';
+import { propagarSku, propostaDeSku } from '@/dominio/identidade/propagacao';
 import { ResolvedorDeIdentidade } from '@/dominio/identidade/resolucao';
 import { carregarPerfil } from '@/dominio/perfil';
 import { banco } from '@/infra/banco/cliente';
@@ -128,6 +132,126 @@ export async function decidirPar(dados: FormData): Promise<void> {
 
   revalidatePath(CAMINHO);
   redirect(paraOnde(destino, destino === 'decidido_com_ligacao' ? ligadas : undefined));
+}
+
+/**
+ * Cria um SKU a partir de um par, e liga as duas ocorrências nele.
+ *
+ * Existe porque sem ela a fila de revisão dava em nada no caso mais comum: duas
+ * ocorrências afirmadas como o mesmo produto, **nenhuma** delas em um SKU ainda.
+ * A decisão ficava gravada e o valor — comparar preço entre fornecedores — não
+ * aparecia, porque não havia SKU para receber as duas.
+ *
+ * O título vem de um campo preenchido com a proposta, e não de geração automática:
+ * "um `sku` é criado por decisão sua" quer dizer que a pessoa confirma o nome.
+ */
+export async function criarSkuDoPar(dados: FormData): Promise<void> {
+  const db = banco();
+  const pares = new RepositorioDePares(db);
+
+  const parId = texto(dados.get('parId'));
+  const titulo = texto(dados.get('titulo'));
+
+  if (parId === '' || titulo.length < 3) {
+    log.aviso('identidade.sku_sem_titulo', { parId, tamanho: titulo.length });
+    redirect(paraOnde('titulo_curto'));
+  }
+
+  let ligadas = 0;
+
+  try {
+    const par = await pares.porId(parId);
+    if (par === null) {
+      redirect(paraOnde('par_sumiu'));
+    }
+
+    const perfil = await carregarPerfil(db, lerAmbiente().BANCADA_PERFIL_PADRAO);
+    const [ladoA, ladoB] = await Promise.all([
+      registroDaOcorrencia(db, par.a.id),
+      registroDaOcorrencia(db, par.b.id),
+    ]);
+    const proposta = propostaDeSku(ladoA, ladoB);
+
+    const repo = new RepositorioDeSku(db);
+    const criado = await repo.criar({
+      perfil: perfil.id,
+      dados: {
+        // O título é o que a pessoa confirmou; o resto vem da proposta.
+        tituloInterno: titulo,
+        marca: proposta.marca,
+        ean: proposta.ean,
+      },
+      produtosExternosIds: [par.a.id, par.b.id],
+    });
+    ligadas = 2;
+
+    // A decisão humana fica gravada junto: criar um SKU com as duas **é** dizer que
+    // são o mesmo produto, e essa afirmação tem de virar exemplo como qualquer outra.
+    await pares.registrar({
+      produtoA: par.a.id,
+      produtoB: par.b.id,
+      decisao: 'mesmo',
+      origem: 'humano',
+      nivel: par.nivel === '' ? 'nenhum' : (par.nivel as 'gtin'),
+      confiancaBp: 10_000,
+      status: 'resolvido',
+      justificativa: `SKU criado na tela de revisão: ${criado.tituloInterno}`,
+      inconsistencias: par.inconsistencias,
+    });
+
+    const canonicoA = par.a.formaCanonica ?? '';
+    const canonicoB = par.b.formaCanonica ?? '';
+    if (canonicoA.trim() !== '' && canonicoB.trim() !== '' && canonicoA !== canonicoB) {
+      await new RepositorioDeExemplos(db).registrar({
+        canonicoA,
+        canonicoB,
+        decisao: 'sim',
+        justificativa: 'SKU criado com as duas ocorrências na fila de revisão',
+      });
+    }
+  } catch (erro) {
+    log.erro('identidade.sku_falhou', { parId, erro });
+    redirect(paraOnde('falha'));
+  }
+
+  revalidatePath(CAMINHO);
+  redirect(paraOnde('sku_criado', ligadas));
+}
+
+/** Lê o registro extraído de uma ocorrência, para a proposta de SKU. */
+async function registroDaOcorrencia(
+  db: ReturnType<typeof banco>,
+  id: string,
+): Promise<{
+  readonly tituloBruto: string;
+  readonly ean: string | null;
+  readonly registro: RegistroDeProduto;
+}> {
+  const linhas = await db
+    .select({
+      tituloBruto: produtoExterno.tituloBruto,
+      ean: produtoExterno.ean,
+      atributos: produtoExterno.atributosExtraidos,
+    })
+    .from(produtoExterno)
+    .where(eq(produtoExterno.id, id))
+    .limit(1);
+
+  const linha = linhas[0];
+  if (linha === undefined) throw new Error(`ocorrência ${id} não existe`);
+
+  const leitura = lerRegistro(linha.atributos);
+  return {
+    tituloBruto: linha.tituloBruto,
+    ean: linha.ean,
+    registro: leitura.tipo === 'ok' ? leitura.registro : lerRegistroVazio(),
+  };
+}
+
+function lerRegistroVazio(): RegistroDeProduto {
+  const leitura = lerRegistro({});
+  if (leitura.tipo !== 'ok') throw new Error('registro vazio não valida');
+  return leitura.registro;
 }
 
 /**

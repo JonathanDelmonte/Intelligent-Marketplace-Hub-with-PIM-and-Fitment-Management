@@ -16,6 +16,8 @@ export const CODIGOS_DE_AVISO = [
   'decidido',
   'decidido_com_ligacao',
   'decidido_sem_propagar',
+  'sku_criado',
+  'titulo_curto',
   'par_sumiu',
   'resolvido_sem_exemplo',
   'resolucao_feita',
@@ -63,6 +65,18 @@ export function descreverAviso(codigo: string | undefined, n: number | undefined
         titulo: 'Decisão registrada, mas não deu para ligar ao SKU.',
         corpo:
           'A equivalência está gravada e vale como exemplo; a ligação ao SKU falhou — em geral porque o perfil padrão aponta para um slug que não existe no banco. O erro está no log, e a ligação pode ser refeita depois sem perder nada.',
+      };
+    case 'sku_criado':
+      return {
+        tom: 'ok',
+        titulo: 'SKU criado.',
+        corpo: `${contar(n, 'ocorrência ligada a ele', 'ocorrências ligadas a ele')}. O preço de cada fonte já aparece junto, e a margem passa a ser calculável.`,
+      };
+    case 'titulo_curto':
+      return {
+        tom: 'atencao',
+        titulo: 'O título do SKU está curto demais.',
+        corpo: 'Três caracteres é o mínimo. Nada foi criado.',
       };
     case 'resolvido_sem_exemplo':
       return {

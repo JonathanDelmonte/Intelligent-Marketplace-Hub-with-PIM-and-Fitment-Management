@@ -153,11 +153,14 @@ Há quatro telas: início, `/jobs` (com detalhe por job), `/leitor` e `/identida
 margem (fase 1) e o repositório de SKU (3.10) seguem chamáveis por código e por teste,
 não por tela.
 
-A de identidade decide pares e **propaga** para um SKU que já exista, mas não **cria**
-SKU: criar é decisão humana, e a decisão humana não tem onde ser tomada ainda. Hoje
-isso se faz por código — `RepositorioDeSku.criar`. É a lacuna mais próxima de doer:
-a fila de revisão pode dizer "estes dois são o mesmo produto" sem que haja um SKU para
-receber os dois.
+A de identidade fechou o próprio laço: decide pares, **propaga** para um SKU que já
+exista e **cria** SKU a partir de um par quando nenhum dos dois lados tem um — com o
+título preenchido por proposta e editável, porque criar SKU é decisão humana.
+
+O que continua só por código: criar SKU **fora** de um par de identidade, editar SKU,
+listar catálogo, e informar custo — que é o dado que falta para a margem sair. A
+proposta de SKU deliberadamente não presume custo: preço de anúncio é o que outro
+cobra, e presumir um pelo outro erraria a margem para o lado otimista.
 
 A ordem é deliberada: a tela de jobs veio primeiro porque sem ela nada do que a
 ingestão faz é auditável, e o leitor veio depois porque é a primeira função que

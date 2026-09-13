@@ -230,6 +230,7 @@ o que comparar. As duas fases se completam, e é por isso que esta vem depois.
 | 5.8 | Propagação de equivalência para SKU, com `perfil_id` exigido pelo tipo   | ✅     |
 | 5.9 | Tela de revisão em `/identidade`, de dois cliques                        | ✅     |
 | 5.10 | Job de resolução na fila, consumido pelo poller junto com a ingestão    | ✅     |
+| 5.11 | Criar SKU a partir de um par, com título proposto e editável            | ✅     |
 
 **Entrega:** o grafo de identidade começa a existir. Qual fornecedor é mais
 barato, a que preço o mercado vende, e qual é a margem real.

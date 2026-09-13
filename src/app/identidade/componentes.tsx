@@ -11,7 +11,8 @@
  * pares.
  */
 import type { LadoDaFila, ParDaFila, StatusDoPar } from '@/dominio/identidade/pares';
-import { decidirPar, resolverAgora } from './acoes';
+import type { PropostaDeSku } from '@/dominio/identidade/propagacao';
+import { criarSkuDoPar, decidirPar, resolverAgora } from './acoes';
 import {
   cabecalhoDoPar,
   confiancaLegivel,
@@ -150,8 +151,19 @@ function Lado({ lado, titulo }: { readonly lado: LadoDaFila; readonly titulo: st
  * autoridade. Também é o que impede um par indecidível de travar o topo da fila para
  * sempre.
  */
-export function CartaoDoPar({ par }: { readonly par: ParDaFila }) {
+export function CartaoDoPar({
+  par,
+  proposta,
+}: {
+  readonly par: ParDaFila;
+  readonly proposta: PropostaDeSku;
+}) {
   const cabecalho = cabecalhoDoPar(par);
+  const podeCriarSku = par.a.skuId === null && par.b.skuId === null;
+  // Os dois conjuntos de aviso dizem coisas diferentes e às vezes a mesma: a
+  // inconsistência é sobre as fontes discordarem, e o aviso da proposta é sobre o que
+  // isso custa no SKU. Repetir a frase idêntica seria ruído.
+  const avisos = [...new Set([...par.inconsistencias, ...(podeCriarSku ? proposta.avisos : [])])];
 
   return (
     <li className={estilo.par}>
@@ -172,9 +184,9 @@ export function CartaoDoPar({ par }: { readonly par: ParDaFila }) {
         </p>
       )}
 
-      {par.inconsistencias.length > 0 && (
+      {avisos.length > 0 && (
         <ul className={estilo.inconsistencias}>
-          {par.inconsistencias.map((item) => (
+          {avisos.map((item) => (
             <li key={item}>{item}</li>
           ))}
         </ul>
@@ -186,13 +198,42 @@ export function CartaoDoPar({ par }: { readonly par: ParDaFila }) {
       </div>
 
       <div className={estilo.acoes}>
-        <form action={decidirPar}>
-          <input type="hidden" name="parId" value={par.id} />
-          <input type="hidden" name="escolha" value="mesmo" />
-          <button type="submit" className={estilo.botaoSim}>
-            É o mesmo produto
-          </button>
-        </form>
+        {podeCriarSku ? (
+          /*
+           * Sem SKU dos dois lados, "é o mesmo produto" daria em nada visível: a
+           * decisão ficaria gravada e o valor — comparar preço entre fornecedores —
+           * não apareceria, porque não há SKU para receber as duas ocorrências.
+           *
+           * Então aqui o botão cria o SKU. O título vem preenchido com a proposta e é
+           * editável, porque "um SKU é criado por decisão sua" inclui o nome.
+           */
+          <form action={criarSkuDoPar} className={estilo.formularioDeSku}>
+            <input type="hidden" name="parId" value={par.id} />
+            <label className={estilo.rotuloDoTitulo} htmlFor={`titulo-${par.id}`}>
+              título do SKU
+            </label>
+            <input
+              className={estilo.campoDeTitulo}
+              id={`titulo-${par.id}`}
+              name="titulo"
+              defaultValue={proposta.tituloInterno}
+              minLength={3}
+              maxLength={200}
+              required
+            />
+            <button type="submit" className={estilo.botaoSim}>
+              É o mesmo — criar SKU
+            </button>
+          </form>
+        ) : (
+          <form action={decidirPar}>
+            <input type="hidden" name="parId" value={par.id} />
+            <input type="hidden" name="escolha" value="mesmo" />
+            <button type="submit" className={estilo.botaoSim}>
+              É o mesmo produto
+            </button>
+          </form>
+        )}
         <form action={decidirPar}>
           <input type="hidden" name="parId" value={par.id} />
           <input type="hidden" name="escolha" value="diferente" />
@@ -212,12 +253,16 @@ export function CartaoDoPar({ par }: { readonly par: ParDaFila }) {
   );
 }
 
-export function Fila({ pares }: { readonly pares: readonly ParDaFila[] }) {
+export function Fila({
+  pares,
+}: {
+  readonly pares: readonly { readonly par: ParDaFila; readonly proposta: PropostaDeSku }[];
+}) {
   if (pares.length === 0) return null;
   return (
     <ul className={estilo.fila}>
-      {pares.map((par) => (
-        <CartaoDoPar key={par.id} par={par} />
+      {pares.map(({ par, proposta }) => (
+        <CartaoDoPar key={par.id} par={par} proposta={proposta} />
       ))}
     </ul>
   );

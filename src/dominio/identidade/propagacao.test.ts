@@ -20,7 +20,8 @@ import {
   temBancoDeTeste,
   type ConexaoDeTeste,
 } from '@/infra/banco/teste';
-import { ocorrenciasDoSku, propagarSku } from './propagacao';
+import { ocorrenciasDoSku, propagarSku, propostaDeSku } from './propagacao';
+import { esquemaRegistroDeProduto } from './registro';
 import { ResolvedorDeIdentidade } from './resolucao';
 
 const TABELAS = [
@@ -40,6 +41,93 @@ const REFIL_DISTRIBUIDOR = {
   marca: 'electrolux do brasil s/a',
   modeloPeca: 'pa 21 g',
 };
+
+describe('propostaDeSku', () => {
+  const registro = (campos: Record<string, unknown> = {}) => esquemaRegistroDeProduto.parse(campos);
+
+  it('usa o registro extraído, que é o que descreve o produto sem SEO', () => {
+    const proposta = propostaDeSku(
+      {
+        tituloBruto: 'Refil Filtro Purificador Electrolux PA21G Original Frete Grátis Promoção',
+        ean: null,
+        registro: registro(REFIL_ANUNCIO),
+      },
+      { tituloBruto: 'EF-ELX-21', ean: null, registro: registro() },
+    );
+    expect(proposta.tituloInterno).toBe('Refil de filtro Electrolux PA21G');
+    expect(proposta.marca).toBe('Electrolux');
+    expect(proposta.avisos).toEqual([]);
+  });
+
+  it('normaliza o código de modelo e começa com maiúscula, como alguém escreveria', () => {
+    // O campo vem preenchido e quase ninguém edita, então o padrão tem de sair do
+    // jeito que se escreveria à mão — e não `pa 21 g` como a fonte digitou.
+    const proposta = propostaDeSku(
+      { tituloBruto: 'a', ean: null, registro: registro(REFIL_DISTRIBUIDOR) },
+      { tituloBruto: 'b', ean: null, registro: registro() },
+    );
+    expect(proposta.tituloInterno).toBe('Elemento filtrante electrolux do brasil s/a PA21G');
+  });
+
+  it('sem registro nenhum, cai para o menor título bruto', () => {
+    const proposta = propostaDeSku(
+      {
+        tituloBruto: 'Refil Filtro Purificador Electrolux Original Pronta Entrega',
+        ean: null,
+        registro: registro(),
+      },
+      { tituloBruto: 'Refil Purificador Electrolux', ean: null, registro: registro() },
+    );
+    expect(proposta.tituloInterno).toBe('Refil Purificador Electrolux');
+  });
+
+  it('aproveita o GTIN de quem tem', () => {
+    const proposta = propostaDeSku(
+      { tituloBruto: 'a', ean: '7896541200121', registro: registro() },
+      { tituloBruto: 'b', ean: null, registro: registro() },
+    );
+    expect(proposta.ean).toBe('7896541200121');
+  });
+
+  it('GTIN divergente não entra no SKU, e vira aviso', () => {
+    // A coluna é única por perfil, e gravar um dos dois esconderia que as fontes
+    // discordam — que é justamente o que alguém precisa ver antes de confirmar.
+    const proposta = propostaDeSku(
+      { tituloBruto: 'a', ean: '7896541200121', registro: registro() },
+      { tituloBruto: 'b', ean: '7896541200138', registro: registro() },
+    );
+    expect(proposta.ean).toBeNull();
+    expect(proposta.avisos[0]).toContain('GTIN diferente');
+  });
+
+  it('avisa quando as duas declaram quantidade de embalagem diferente', () => {
+    const proposta = propostaDeSku(
+      { tituloBruto: 'a', ean: null, registro: registro({ quantidadeEmbalagem: 1 }) },
+      { tituloBruto: 'b', ean: null, registro: registro({ quantidadeEmbalagem: 3 }) },
+    );
+    expect(proposta.avisos[0]).toContain('quantidade de embalagem');
+  });
+
+  it('não propõe custo, porque preço de anúncio é o que outro cobra', () => {
+    // Presumir custo pelo preço erraria toda margem calculada em cima, e erraria
+    // para o lado otimista.
+    const proposta = propostaDeSku(
+      { tituloBruto: 'a', ean: null, registro: registro() },
+      { tituloBruto: 'b', ean: null, registro: registro() },
+    );
+    expect(Object.keys(proposta)).toEqual(['tituloInterno', 'marca', 'ean', 'avisos']);
+  });
+
+  it('não devolve título vazio nem título de duzentos e um caracteres', () => {
+    const longo = 'Refil '.repeat(60);
+    const proposta = propostaDeSku(
+      { tituloBruto: longo, ean: null, registro: registro() },
+      { tituloBruto: longo, ean: null, registro: registro() },
+    );
+    expect(proposta.tituloInterno.length).toBeLessThanOrEqual(200);
+    expect(proposta.tituloInterno.trim()).not.toBe('');
+  });
+});
 
 describe.skipIf(!temBancoDeTeste())('propagação de SKU', () => {
   let conexao: ConexaoDeTeste;
