@@ -13,7 +13,12 @@ import {
   temBancoDeTeste,
   type ConexaoDeTeste,
 } from '@/infra/banco/teste';
-import { PerfilNaoEncontrado, carregarPerfil, contextoDoVendedorDe } from './index';
+import {
+  PerfilNaoEncontrado,
+  carregarPerfil,
+  contextoDoVendedorDe,
+  nomeLegivelDoSlug,
+} from './index';
 
 describe('tradução para o contexto do M8', () => {
   it('CPF não tem CNPJ, e isso muda a tabela de comissão', () => {
@@ -127,5 +132,30 @@ describe.skipIf(!temBancoDeTeste())('carregamento do perfil', () => {
     const perfil = await carregarPerfil(conexao.db, 'tema-torto');
     expect(perfil.visual).toBeNull();
     expect(perfil.nome).toBe('Tema torto');
+  });
+});
+
+describe('nomeLegivelDoSlug', () => {
+  it('transforma o slug em nome apresentável', () => {
+    // Apareceu na tela: sem `--nome`, a mensagem a fornecedor saía como "Sou
+    // essencial-emporium e vendo em marketplace".
+    expect(nomeLegivelDoSlug('essencial-emporium')).toBe('Essencial Emporium');
+  });
+
+  it('aceita underscore e espaço como separador', () => {
+    expect(nomeLegivelDoSlug('minha_loja')).toBe('Minha Loja');
+    expect(nomeLegivelDoSlug('minha loja')).toBe('Minha Loja');
+  });
+
+  it('ignora separador repetido e nas pontas', () => {
+    expect(nomeLegivelDoSlug('--minha--loja--')).toBe('Minha Loja');
+  });
+
+  it('não mexe no resto da palavra, porque não sabe de marca', () => {
+    expect(nomeLegivelDoSlug('acme-ltda')).toBe('Acme Ltda');
+  });
+
+  it('slug vazio devolve vazio, em vez de inventar nome', () => {
+    expect(nomeLegivelDoSlug('')).toBe('');
   });
 });

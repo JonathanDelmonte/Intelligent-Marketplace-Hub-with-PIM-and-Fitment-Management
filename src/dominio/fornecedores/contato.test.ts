@@ -75,6 +75,20 @@ describe('mensagemDePrimeiroContato', () => {
     expect(texto).toContain(`2. ${TEXTO_DA_PERGUNTA.emite_nf}`);
   });
 
+  it('conta as perguntas em vez de escrever o número à mão', () => {
+    // A primeira versão dizia "quatro perguntas rápidas" sempre, e apareceu na
+    // tela com três embaixo. Nenhum teste pegava porque nenhum lia a frase.
+    const uma = mensagemDePrimeiroContato({ ...base, pendentes: ['emite_nf'] });
+    expect(uma).toContain('uma pergunta rápida');
+
+    const tres = mensagemDePrimeiroContato({
+      ...base,
+      pendentes: ['emite_nf', 'posta_com_etiqueta', 'pedido_minimo'],
+    });
+    expect(tres).toContain('3 perguntas rápidas');
+    expect(tres).not.toContain('quatro');
+  });
+
   it('sem pendências não pergunta nada, só cota', () => {
     const texto = mensagemDePrimeiroContato({ ...base, pendentes: [] });
     expect(texto).not.toContain('perguntas rápidas');

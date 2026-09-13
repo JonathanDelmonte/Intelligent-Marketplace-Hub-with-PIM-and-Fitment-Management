@@ -26,6 +26,25 @@ import type { ContextoDoVendedor, RegimeFiscal } from '@/dominio/precificacao/ti
 import { centavos } from '@/lib/dinheiro';
 import { pontosBase } from '@/lib/dinheiro';
 
+/**
+ * `essencial-emporium` → `Essencial Emporium`.
+ *
+ * Só troca separador por espaço e sobe a inicial de cada palavra. Não corrige
+ * acento nem sabe de marca nenhuma: é transformação de texto, e o nome de verdade
+ * entra por argumento da semeadura ou pela tela.
+ *
+ * Mora no domínio, e não no script de semeadura, por um motivo bobo e real: o
+ * script chama `principal()` no topo do módulo, então importá-lo num teste rodaria
+ * a semeadura e chamaria `process.exit`.
+ */
+export function nomeLegivelDoSlug(slug: string): string {
+  return slug
+    .split(/[-_\s]+/)
+    .filter((parte) => parte !== '')
+    .map((parte) => parte.charAt(0).toUpperCase() + parte.slice(1))
+    .join(' ');
+}
+
 export interface PerfilAtivo {
   readonly id: PerfilId;
   readonly slug: string;

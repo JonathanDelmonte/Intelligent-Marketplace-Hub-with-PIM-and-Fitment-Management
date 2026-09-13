@@ -81,7 +81,14 @@ export function mensagemDePrimeiroContato(params: ParametrosDoContato): string {
 
   const pendentes = params.pendentes ?? [];
   if (pendentes.length > 0) {
-    linhas.push('', 'E, para eu não te fazer perder tempo depois, quatro perguntas rápidas:', '');
+    // A contagem vem da lista, não escrita à mão. A primeira versão dizia "quatro
+    // perguntas rápidas" sempre, e apareceu na tela com três embaixo — erro de
+    // texto que nenhum teste pegava porque nenhum teste lia a frase.
+    const quantas =
+      pendentes.length === 1
+        ? 'uma pergunta rápida'
+        : `${String(pendentes.length)} perguntas rápidas`;
+    linhas.push('', `E, para eu não te fazer perder tempo depois, ${quantas}:`, '');
     for (const [i, pergunta] of pendentes.entries()) {
       linhas.push(`${String(i + 1)}. ${TEXTO_DA_PERGUNTA[pergunta]}`);
     }

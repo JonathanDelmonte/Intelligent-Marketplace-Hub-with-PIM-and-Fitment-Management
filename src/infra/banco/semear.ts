@@ -23,6 +23,7 @@ import type { RegimeFiscal } from '@/dominio/precificacao/tipos';
 import { lerAmbiente } from '@/config/ambiente';
 import { esquemaMarcaVisual } from '@/config/marca';
 import { banco } from './cliente';
+import { nomeLegivelDoSlug } from '@/dominio/perfil';
 import { perfilVendedor } from './schema';
 
 carregarEnv();
@@ -56,8 +57,14 @@ async function principal(): Promise<void> {
 
   // O nome vem de argumento ou do slug configurado. Nenhum nome de vendedor é
   // literal no código.
+  //
+  // Sem `--nome`, o padrão era o slug cru, e isso escapou para fora do banco: a
+  // mensagem de primeiro contato a fornecedor saiu como "Sou essencial-emporium e
+  // vendo em marketplace". Nome de perfil é o que o vendedor usa para se
+  // apresentar, então o padrão passa a ser o slug legível — ainda derivado do
+  // dado, sem literal nenhum no código.
   const slug = argumento('slug') ?? ambiente.BANCADA_PERFIL_PADRAO;
-  const nome = argumento('nome') ?? slug;
+  const nome = argumento('nome') ?? nomeLegivelDoSlug(slug);
 
   const existente = await db
     .select({ id: perfilVendedor.id })

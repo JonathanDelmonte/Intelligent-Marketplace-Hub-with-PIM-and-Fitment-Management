@@ -178,7 +178,9 @@ export function triarFornecedor(
 
 /** Etiqueta curta do veredito, para a tela não ter texto de estado espalhado. */
 export const ETIQUETA_DO_VEREDITO: Readonly<Record<VereditoDeTriagem, string>> = {
-  descartar: 'descartar',
+  // "descartado", não "descartar": na tela isto é uma etiqueta de estado, e
+  // imperativo ali lê como botão. Visto na captura da tela.
+  descartar: 'descartado',
   perguntar: 'falta perguntar',
   ressalva: 'serve com ressalva',
   aprovado: 'aprovado',
