@@ -77,19 +77,60 @@ que é a única parte insubstituível do sistema.
 
 ## Começar
 
-Requisitos: Node 22+, Postgres 16+ com `pgvector`.
+Requisitos: Node 22+ e Postgres 16+ **com `pgvector`**.
+
+A extensão é o único requisito que dá trabalho — no Windows ela não vem no
+instalador oficial do Postgres. Por isso há um `compose.yaml` com a **mesma imagem
+e as mesmas credenciais do CI**, que é a forma de o banco local não divergir do
+banco onde os testes rodam:
+
+```sh
+docker compose up -d           # Postgres 16 + pgvector, na porta 5432
+```
+
+Se você já tem um Postgres ocupando a 5432, troque para `5433:5432` no
+`compose.yaml` e ajuste a porta no `.env`.
 
 ```sh
 npm install
-cp .env.example .env
+cp .env.example .env           # no PowerShell: copy .env.example .env
 
 # Gerar a chave mestra de cifragem de credencial (ADR 0007)
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 # → colar em CREDENCIAL_CHAVE_MESTRA no .env
 
-npm run db:migrate
-npm run db:seed        # cria o primeiro perfil de vendedor
-npm run dev            # a tela de jobs fica em /jobs
+npm run db:migrate             # cria as extensões e aplica as migrations
+npm run db:seed                # cria o primeiro perfil de vendedor
+npm run dev                    # http://localhost:3000
+```
+
+### Ver o sistema funcionando em dois minutos
+
+Há uma exportação de exemplo em
+[`docs/exemplos/`](./docs/exemplos/anuncios-mercadolivre-exemplo.csv), no formato
+de um relatório do Mercado Livre — com linha de título, separador `;` e preço em
+vírgula, como vem de verdade.
+
+1. Abra **`/jobs`** e suba esse arquivo no campo único.
+2. Clique em **"Processar agora"** (ou deixe `npm run poller` rodando em outro
+   terminal). São **3 anúncios**, nenhuma linha recusada.
+3. Abra **`/identidade`**. Duas das três ocorrências compartilham o mesmo EAN, e o
+   sistema **já as ligou sozinho** — aparecem como "decidido pelo sistema", com
+   evidência `código de barras` e 100% de confiança. Ninguém clicou em nada.
+4. Abra **`/leitor`**, informe um custo (por exemplo `30`) e digite o código
+   `7896541200909`. O veredito sai com o preço praticado que a planilha trouxe,
+   margem, markup e até quanto dá para pagar.
+
+O passo 3 é a fase 5 inteira em uma tela: a ingestão enfileirou a resolução, o
+poller consumiu, e o grafo de identidade cresceu sem ninguém pedir.
+
+### Sem banco nenhum
+
+Dá para rodar a suíte sem subir Postgres. Os testes de banco são **pulados, não
+falsificados** — o resumo diz quantos pularam:
+
+```sh
+npm run check                  # sem DATABASE_URL: 747 testes passam, 202 pulam
 ```
 
 O sistema roda sozinho quando há um processo consumindo a fila:

@@ -26,6 +26,70 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-13 — Rodar o projeto em máquina de verdade
+
+### 🐛 Clone feito na janela em que o repositório estava vazio nunca oferece Pull
+
+Três sintomas na máquina do dono, que juntos pareciam defeito de sincronização:
+pasta vazia no VS Code, "0 changed files" no GitHub Desktop, e `Fetch origin`
+clicado várias vezes **sem nunca aparecer Pull** — com 53 commits no servidor.
+
+A causa é uma janela de 22 minutos: o repositório foi criado no GitHub às
+`02:19:37` e o primeiro commit foi empurrado às `02:41:49`. Clonar nesse intervalo
+produz um clone com **zero commits** e uma branch `main` que não existe como
+referência local (*unborn branch*).
+
+E aí o mecanismo: o GitHub Desktop calcula "atrás por N" comparando `main` com
+`origin/main`. Sem a referência local, não há o que comparar — ele não oferece
+Pull, e fica em "Fetch origin" para sempre. **Empurrar mais commits nunca resolve**,
+porque o problema não está no remoto.
+
+Como confirmar em um clique: a aba **History** do GitHub Desktop mostra
+"No history". Como resolver: `git pull origin main` na pasta (funciona em branch
+unborn), ou apagar a pasta `.git` e clonar de novo.
+
+Armadilha dentro da armadilha: "Remove" no GitHub Desktop **sem marcar** a opção de
+mover para a Lixeira só tira o repositório da lista e deixa a pasta no disco — e o
+clone seguinte falha com *"This folder contains files"*, porque o `.git` oculto
+conta como conteúdo. Mover para a Lixeira também falha se o VS Code estiver com a
+pasta aberta. O caminho que funcionou: apagar o `.git` no Explorer e clonar.
+
+### 🧹 "Postgres com pgvector" era uma frase, não uma instrução
+
+O README pedia "Postgres 16+ com `pgvector`" e parava aí. No Windows a extensão não
+vem no instalador oficial, então a única saída era compilar `pgvector` à mão para
+testar o projeto — desproporcional.
+
+Agora há `compose.yaml` com a **mesma imagem e as mesmas credenciais do CI**
+(`pgvector/pgvector:pg16`, `bancada:bancada@localhost:5432/bancada`). Banco local
+diferente do banco do CI é como um teste passa na máquina e falha no push, e a
+igualdade é de propósito. Tem `healthcheck` porque o contêiner existe alguns
+segundos antes de o Postgres aceitar conexão, e `db:migrate` rodado logo depois do
+`up` falhava com "connection refused".
+
+### 🐛 Escrevi no README um número de testes que eu não tinha medido
+
+Documentei "sem `DATABASE_URL`: 828 passam, 121 pulam". Medi depois: **747 passam,
+202 pulam**. O 121 era o número da fase 4, e a fase 5 — que é quase toda
+comportamento de banco — mudou a conta sem eu refazer a medição.
+
+Número em documentação tem a mesma regra de número em código: ou é medido, ou não
+entra. As pendências (§4.6) tinham o mesmo 121 velho, corrigido junto.
+
+### 🔀 Exemplo de planilha no repositório, e ele é exercitado
+
+`docs/exemplos/anuncios-mercadolivre-exemplo.csv`, no formato real de um relatório
+do Mercado Livre: linha de título, separador `;`, preço com vírgula. Duas das três
+linhas compartilham o mesmo EAN **de propósito** — é o que faz a resolução de
+identidade agrupar sozinha na primeira passada do poller, e transforma "o sistema
+funciona" em algo que se vê em dois minutos.
+
+Importado de verdade antes de entrar no repositório: 3 gravados, 0 recusados, um par
+ligado por `gtin` com 10 000 pontos-base. Exemplo que não roda é pior que exemplo
+nenhum.
+
+---
+
 ## 2026-09-13 — Branch única
 
 ### 🐛 A branch de trabalho estava escondendo o trabalho, não protegendo

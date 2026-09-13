@@ -250,15 +250,22 @@ semeadura são script, e medi-los mediria execução de script, não regra de ne
 **Mitigação:** a lógica testável das telas mora em `apresentacao.ts`, que entra na
 conta; o JSX é verificado por navegador, não por cobertura.
 
-### 4.6 Quatro arquivos de teste pulam sem banco
+### 4.6 Um quinto da suíte não roda sem banco
 
-`describe.skipIf(!temBancoDeTeste())`. Medido sem `DATABASE_URL`: **121 testes de
-750 não rodam**, em 4 arquivos, e a suíte passa verde.
+`describe.skipIf(!temBancoDeTeste())`. Medido sem `DATABASE_URL`: **202 testes de
+949 não rodam** — 6 arquivos pulam por inteiro e outros 9 pulam parte, e a suíte
+passa verde.
+
+A conta cresceu com a fase 5, e cresceu na direção esperada: resolução de
+identidade é quase toda comportamento de banco — `on conflict`, chave única do
+cache, `check` do par ordenado, distância de cosseno no `pgvector`. Nada disso é
+testável com dublê sem testar o dublê.
 
 **Mitigação:** a CI tem Postgres com pgvector e aplica migrations **antes** dos
-testes, justamente para que não passe verde por omissão.
-**Consequência:** rodar `npm test` sem banco local dá uma falsa sensação de
-cobertura completa.
+testes, justamente para que não passe verde por omissão. E agora há
+`compose.yaml`, então rodar com banco local custa um comando.
+**Consequência:** rodar `npm test` sem banco dá uma falsa sensação de cobertura
+completa. O resumo do vitest diz quantos pularam — vale ler o número.
 
 ---
 

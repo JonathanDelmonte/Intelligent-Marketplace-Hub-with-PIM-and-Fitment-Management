@@ -1,0 +1,40 @@
+# Postgres com pgvector para desenvolvimento local.
+#
+# Existe porque "Postgres 16+ com pgvector" é uma frase fácil de escrever e chata
+# de cumprir: no Windows a extensão não vem no instalador oficial, e compilar
+# `pgvector` à mão para testar um projeto é desproporcional.
+#
+# A imagem e as credenciais são **as mesmas do CI** (ver
+# `.github/workflows/verificar.yml`), de propósito: banco local diferente do banco
+# do CI é como um teste passa na sua máquina e falha no push.
+#
+#   docker compose up -d      # sobe
+#   docker compose logs -f db # acompanha
+#   docker compose down       # para, mantendo os dados
+#   docker compose down -v    # para e APAGA os dados
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: bancada-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bancada
+      POSTGRES_PASSWORD: bancada
+      POSTGRES_DB: bancada
+    ports:
+      # A porta 5432 é a do `DATABASE_URL` do `.env.example`. Se você já tem um
+      # Postgres local nessa porta, troque para "5433:5432" aqui e no `.env`.
+      - '5432:5432'
+    volumes:
+      - bancada-dados:/var/lib/postgresql/data
+    healthcheck:
+      # Sem isto, `npm run db:migrate` rodado logo depois do `up` falha com
+      # "connection refused": o contêiner existe alguns segundos antes de o
+      # Postgres aceitar conexão.
+      test: ['CMD-SHELL', 'pg_isready -U bancada -d bancada']
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  bancada-dados:
