@@ -26,6 +26,43 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-13 — Fase 7: as duas regras de fornecedor
+
+### 🔀 `null` não é `false`, e é a decisão que estrutura a triagem
+
+"Ainda não perguntei" e "perguntei e a resposta é não" são estados diferentes. O
+schema da fase 0 já dizia isso em comentário; a triagem faz valer: `null` vira
+**pergunta pendente**, que é tarefa, e `false` vira ressalva ou descarte, que é
+decisão.
+
+Confundir os dois produz os dois erros caros em sequência — descartar fornecedor bom
+por falta de dado, e aprovar fornecedor ruim por otimismo. E há precedência entre
+eles: pendência ganha de ressalva, porque aprovar sem saber é o erro que aparece
+três semanas depois, no primeiro pedido.
+
+Uma exceção que só apareceu escrevendo o teste: **pedido mínimo**. "Não tem pedido
+mínimo" é resposta, e se parece com "não perguntei" porque os dois campos ficam
+vazios. A pendência só existe quando nenhum dos dois foi preenchido — quantidade
+zero é resposta.
+
+### ❓ O prazo de postagem de 3 dias é escolha, não número de plataforma
+
+Nenhuma das três plataformas publica um limite único e verificável de prazo de
+postagem; o que existe são penalidades de reputação por atraso. Então o corte é
+configurável e o padrão é conservador, com a ressalva escrita no código: atraso em
+conta nova é o que mais custa, e é melhor errar para o lado de avisar.
+
+### 🔀 Só a pergunta da vitrine descarta sozinha
+
+`vende_direto_marketplace = true` é o único descarte automático, e as outras quatro
+pesam. Não é falta de rigor: "não emite nota" e "não posta com etiqueta" são caros e
+**às vezes aceitáveis** — a decisão é do dono, e o sistema explica o custo em vez de
+decidir por ele. Já quem vende na mesma vitrine com preço de fábrica não tem margem
+a negociar, e é contra isso que a primeira tentativa do dono no Mercado Livre
+falhou.
+
+---
+
 ## 2026-09-13 — A suíte apagava o banco da aplicação
 
 ### 🐛 `npm run check` truncava as tabelas do banco de verdade

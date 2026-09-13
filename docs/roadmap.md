@@ -346,13 +346,19 @@ identidade → **você confirma o produto** → compatibilidade coletada e infer
 
 | #   | Entrega                                                           | Estado |
 | --- | ----------------------------------------------------------------- | ------ |
-| 7.1 | CRM das cinco perguntas que eliminam 90% dos candidatos           | ⬜     |
-| 7.2 | `vende_direto_marketplace = true` → descarte automático com aviso | ⬜     |
+| 7.1 | Triagem pelas cinco perguntas — função pura com teste             | ✅     |
+| 7.2 | `vende_direto_marketplace = true` → descarte automático com aviso | ✅     |
 | 7.3 | Verificação automática desse campo por nome e CNPJ (M0)           | ⬜     |
 | 7.4 | Histórico de preço por SKU e fornecedor (aumento silencioso)      | ⬜     |
 | 7.5 | Score de confiabilidade alimentado por atraso real                | ⬜     |
-| 7.6 | Gerador do primeiro contato com as cinco perguntas preenchidas    | ⬜     |
+| 7.6 | Gerador do primeiro contato com as cinco perguntas preenchidas    | ✅     |
 | 7.7 | M7: cortes numéricos configuráveis, aplicados em subcategoria     | ⬜     |
+| 7.8 | Repositório e tela de fornecedor                                  | ⬜     |
+
+**Começou pelas duas regras, não pela tela.** A triagem e o gerador de contato são
+função pura com teste, e servem sozinhas: dá para decidir se um fornecedor vale o
+tempo e gerar a mensagem de abordagem chamando-as de qualquer lugar. A tela (7.8) é
+o que falta para isso ser usável sem escrever código.
 
 ---
 
