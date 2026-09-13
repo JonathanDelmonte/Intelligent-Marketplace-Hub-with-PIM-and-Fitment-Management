@@ -163,21 +163,26 @@ A ordem é deliberada: a tela de jobs veio primeiro porque sem ela nada do que a
 ingestão faz é auditável, e o leitor veio depois porque é a primeira função que
 gera dinheiro. Mas a consequência é que **usar o M8 hoje exige escrever código**.
 
-### 3.2 A resolução de identidade não roda sozinha
+### 3.2 O grafo cresce sozinho, mas a via mais valiosa dele espera extração
 
-O poller consome a fila de `job` e sabe executar **ingestão**. A resolução de
-identidade não tem tipo de job: hoje ela roda pelo botão "Resolver 10 agora" da tela, ou
-por código (`ResolvedorDeIdentidade.resolverLote`).
+A resolução tem tipo de job, a ingestão enfileira uma por ocorrência gravada, e o poller
+consome as duas filas — ingestão primeiro, identidade depois. Verificado rodando:
+planilha do Mercado Livre, `npm run poller --uma-vez`, três ocorrências, três jobs
+consumidos, duas do mesmo GTIN ligadas.
 
-**O custo disso:** ocorrência nova não é comparada até alguém abrir a tela e clicar.
-Não há dado perdido — `semResolucao()` sabe quem falta, e a resolução é idempotente —,
-mas o grafo só cresce quando alguém pede.
+**O que esse teste de verdade mostrou, e nenhum teste unitário mostraria:** as três
+ocorrências ficaram com forma canônica **vazia** e chave de agrupamento **nula**. O
+importador de planilha copia colunas; extrair `{tipo, marca, modelo}` de um título é
+trabalho do extrator por LLM (3.2 da fase 3, sem chave).
 
-**O que falta:** um tipo de job `resolver_identidade`, com `chave_idempotencia` igual ao
-id da ocorrência, enfileirado pelo executor de ingestão ao gravar `produto_externo`. É
-trabalho de meia noite, e foi deixado de fora de propósito: enfileirar chamada de LLM
-antes de haver chave e antes de haver limiar calibrado é enfileirar trabalho que não se
-sabe quanto custa.
+Ou seja: a via determinística mais valiosa do M3 — a que liga `PA21G` do anúncio a
+`EF-ELX-21` do distribuidor — está construída, testada e **sem dado para morder** até
+existir extração. O GTIN cobre o resto, e é por isso que ele é a primeira via e não a
+segunda. Planilha do ML traz EAN; catálogo de distribuidor em PDF não traz nada disso, e
+é justamente ele que precisa da extração.
+
+**Consequência prática para quem usa hoje:** importar planilha com EAN já agrupa. Importar
+catálogo sem EAN acumula ocorrência que não liga a nada até a chave de LLM entrar.
 
 ---
 

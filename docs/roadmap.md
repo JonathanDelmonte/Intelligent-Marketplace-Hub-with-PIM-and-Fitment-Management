@@ -229,6 +229,7 @@ o que comparar. As duas fases se completam, e é por isso que esta vem depois.
 | 5.7 | Cache por conteúdo — resolver o mesmo produto uma única vez              | ✅     |
 | 5.8 | Propagação de equivalência para SKU, com `perfil_id` exigido pelo tipo   | ✅     |
 | 5.9 | Tela de revisão em `/identidade`, de dois cliques                        | ✅     |
+| 5.10 | Job de resolução na fila, consumido pelo poller junto com a ingestão    | ✅     |
 
 **Entrega:** o grafo de identidade começa a existir. Qual fornecedor é mais
 barato, a que preço o mercado vende, e qual é a margem real.
@@ -284,10 +285,20 @@ Quando você diz "é o mesmo" e um dos lados já pertence a um SKU, a outra ocor
 entra no SKU na hora, e os preços de cada fonte passam a aparecer juntos. É a resposta
 que o grafo existe para dar.
 
-**O que ainda não roda sozinho.** A resolução não tem tipo de job, então ocorrência
-nova só é comparada quando alguém abre a tela e clica. Nada se perde — a resolução é
-idempotente e sabe quem falta —, mas o grafo só cresce quando alguém pede. Ver
-[pendências](./pendencias.md), 3.2.
+**E roda sozinho.** A ingestão enfileira uma resolução por ocorrência gravada, e o
+poller consome as duas filas em ordem — ingestão primeiro, identidade depois. É o que
+faz a frase da especificação ser verdade: o sistema fica mais inteligente a cada link
+colado, não a cada clique. A tela continua tendo o botão, para quem quiser forçar.
+
+Orçamento é por job, com resolvedor novo a cada um: um resolvedor de vida longa
+esgotaria o teto na primeira hora e nunca mais deixaria nada rodar. Teto estourado
+**adia** o job em vez de falhar, e devolve a tentativa — o job progrediu, e par avaliado
+não volta para avaliação.
+
+**O limite honesto disso**, que só apareceu rodando de verdade: o importador de planilha
+não extrai marca nem modelo, então a via de marca com código de peça não tem dado para
+morder até existir o extrator por LLM (3.2). Planilha com EAN já agrupa; catálogo sem EAN
+acumula ocorrência que não liga a nada. Ver [pendências](./pendencias.md), 3.2.
 
 ---
 

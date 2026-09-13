@@ -104,6 +104,10 @@ A tela de `/jobs` funciona **sem** poller: tem um botão que processa alguns job
 na hora, e uma tela de detalhe por job com cada linha de planilha recusada e o
 motivo.
 
+O poller consome **duas** filas: ingestão e resolução de identidade, nessa ordem de
+prioridade. Então importar uma planilha já faz o grafo de identidade crescer sozinho —
+ocorrências do mesmo GTIN entram ligadas, sem ninguém pedir.
+
 O leitor de código de barras fica em `/leitor` e dá para instalar na tela inicial
 do celular. Informe o custo, leia o código, e o veredito sai com preço praticado,
 margem, markup e até quanto dá para pagar. Funciona sem rede: a leitura fica no
