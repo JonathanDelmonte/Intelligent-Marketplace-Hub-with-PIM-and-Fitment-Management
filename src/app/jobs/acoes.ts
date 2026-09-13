@@ -23,7 +23,7 @@ import type { Entrada } from '@/dominio/ingestao/classificador';
 import { MAX_UPLOAD_BYTES } from '@/config/limites';
 import { FilaError } from '@/infra/fila/fila';
 import { criarRegistrador, nivelDoAmbiente } from '@/infra/log';
-import { montarNucleo } from '@/infra/montagem';
+import { drenar, montarNucleo, tarefaCompleta } from '@/infra/montagem';
 import type { CodigoDeAviso } from './apresentacao';
 // Arquivo com `'use server'` só pode exportar função assíncrona, então constante
 // compartilhada mora em `constantes.ts`. Ver o cabeçalho daquele arquivo.
@@ -135,15 +135,16 @@ export async function reenfileirar(dados: FormData): Promise<void> {
  * jobs por clique está em `constantes.ts`, com o motivo.
  */
 export async function processarAgora(): Promise<void> {
-  const { executor } = montarNucleo();
+  const nucleo = montarNucleo();
 
-  const resultados = await executor.processarTodos(LIMITE_DE_PROCESSAMENTO_MANUAL);
-  log.info('fila.processada_manualmente', { quantidade: resultados.length });
+  // As **três** filas, na mesma ordem que o poller usa — a composição é a mesma
+  // função. Antes daqui o botão drenava só a ingestão, e o efeito foi relatado pelo
+  // dono: a planilha entrava, a tela dizia "nada para processar", e a de identidade
+  // continuava zerada. Esta tela lista jobs de todos os tipos; drenar um só é
+  // surpresa.
+  const feitas = await drenar(tarefaCompleta(nucleo, log), LIMITE_DE_PROCESSAMENTO_MANUAL);
+  log.info('fila.processada_manualmente', { quantidade: feitas });
 
   revalidatePath(CAMINHO);
-  redirect(
-    resultados.length === 0
-      ? paraOnde('nada_para_processar')
-      : paraOnde('processado', resultados.length),
-  );
+  redirect(feitas === 0 ? paraOnde('nada_para_processar') : paraOnde('processado', feitas));
 }

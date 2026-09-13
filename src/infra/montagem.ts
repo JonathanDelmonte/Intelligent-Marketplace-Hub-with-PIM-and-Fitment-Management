@@ -17,7 +17,12 @@
  */
 import { ColetorDeCompatibilidade } from '@/dominio/compatibilidade/coletor';
 import { RepositorioDeCompatibilidade } from '@/dominio/compatibilidade/repositorio';
-import { ExecutorDeCompatibilidade } from '@/dominio/compatibilidade/tarefa';
+import {
+  ExecutorDeCompatibilidade,
+  tarefaDeCompatibilidade,
+} from '@/dominio/compatibilidade/tarefa';
+import { tarefaDeIdentidade } from '@/dominio/identidade/tarefa';
+import { tarefaDeIngestao } from '@/dominio/ingestao/tarefa';
 import { ExecutorDeIngestao } from '@/dominio/ingestao/executor';
 import { ExecutorDeIdentidade } from '@/dominio/identidade/tarefa';
 import { ResolvedorDeIdentidade } from '@/dominio/identidade/resolucao';
@@ -27,6 +32,8 @@ import { lerAmbiente } from '@/config/ambiente';
 import { ArmazenamentoDeConteudo } from './armazenamento/conteudo';
 import { banco, type Banco } from './banco/cliente';
 import { Fila } from './fila/fila';
+import { tarefasEmOrdem, type Tarefa } from './fila/poller';
+import { registradorSilencioso, type Registrador } from './log';
 
 export interface Nucleo {
   readonly db: Banco;
@@ -40,6 +47,45 @@ export interface Nucleo {
   /** Consome a fila de coleta de compatibilidade (M4). */
   readonly executorDeCompatibilidade: ExecutorDeCompatibilidade;
   readonly compatibilidade: RepositorioDeCompatibilidade;
+}
+
+/** Nome da tarefa composta, no log. */
+export const NOME_DA_TAREFA_COMPLETA = 'ingestao+identidade+compatibilidade';
+
+/**
+ * A tarefa que o sistema roda, com as três filas na ordem de prioridade.
+ *
+ * Existe aqui, e não no script do poller, porque **duas pontas a executam**: o
+ * processo do poller e o botão "Processar agora" da tela de jobs. Enquanto o botão
+ * tinha a sua própria composição, ele drenava só a fila de ingestão — e o efeito
+ * era o relatado pelo dono do repositório: a planilha entrava, a tela de jobs dizia
+ * "nada para processar", e a de identidade continuava zerada. O botão está numa tela
+ * que lista jobs de **todos** os tipos; drenar só um tipo é surpresa, não economia.
+ */
+export function tarefaCompleta(
+  nucleo: Nucleo,
+  registrador: Registrador = registradorSilencioso,
+): Tarefa {
+  return tarefasEmOrdem(NOME_DA_TAREFA_COMPLETA, [
+    tarefaDeIngestao(nucleo.executor, registrador),
+    tarefaDeIdentidade(nucleo.executorDeIdentidade, registrador),
+    tarefaDeCompatibilidade(nucleo.executorDeCompatibilidade, registrador),
+  ]);
+}
+
+/**
+ * Roda a tarefa completa até a fila esvaziar ou o teto bater.
+ *
+ * Devolve quantas unidades fizeram trabalho — é o número que a tela mostra.
+ */
+export async function drenar(tarefa: Tarefa, limite: number): Promise<number> {
+  let feitas = 0;
+  for (let i = 0; i < limite; i += 1) {
+    const resultado = await tarefa.executar();
+    if (resultado.ocioso) break;
+    feitas += 1;
+  }
+  return feitas;
 }
 
 /**
