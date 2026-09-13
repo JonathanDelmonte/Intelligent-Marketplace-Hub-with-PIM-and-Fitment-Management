@@ -191,7 +191,10 @@ Para rodá-los, aponte para um banco descartável:
 createdb bancada_teste                      # Postgres local
 # ou, em banco gerenciado, uma branch do projeto:
 #   neon branches create teste
-npm run preparar:env -- --database-url="..." --database-url-teste="...bancada_teste"
+
+# Se você já tem `.env`, isto acrescenta SÓ essa linha e não toca em mais nada:
+npm run preparar:env -- --database-url-teste="postgres://.../bancada_teste"
+
 DATABASE_URL="$DATABASE_URL_TESTE" npm run db:migrate   # o banco novo precisa do schema
 ```
 

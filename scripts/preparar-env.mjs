@@ -31,8 +31,62 @@ function argumento(nome) {
   return bruto === undefined ? undefined : bruto.slice(prefixo.length).replace(/^["']|["']$/g, '');
 }
 
+/**
+ * Limpa uma URL de banco antes de gravar.
+ *
+ * `channel_binding` sai da URL, sempre. Painel de banco gerenciado entrega a string
+ * com `channel_binding=require`, e o `postgres.js` repassa parâmetro que não conhece
+ * ao servidor como parâmetro de startup — onde o Postgres derruba a conexão com
+ * `unrecognized configuration parameter "channel_binding"`. Medido. Tirar aqui é o
+ * que impede a armadilha de chegar ao `.env`.
+ */
+function limparUrl(bruta) {
+  const url = bruta.trim();
+  if (!url.includes('channel_binding')) return { url, removeu: false };
+  return { url: url.replace(/[?&]channel_binding=[^&]*/g, ''), removeu: true };
+}
+
+/**
+ * `.env` que já existe só é tocado numa situação, e só numa linha.
+ *
+ * A garantia de nunca sobrescrever configuração de ninguém continua valendo. Mas
+ * quem já tinha `.env` antes de `DATABASE_URL_TESTE` existir fica sem a variável, e
+ * a única saída seria editar o arquivo à mão — que é exatamente o passo manual que
+ * este script existe para eliminar. Então, **quando a variável é informada e está
+ * faltando**, o script acrescenta essa linha e diz que acrescentou. Nada mais é
+ * lido, alterado ou reordenado.
+ */
 if (existsSync(destino)) {
-  console.log('.env já existe. Nada foi alterado — apague o arquivo se quiser recomeçar.');
+  const urlDeTeste = argumento('database-url-teste');
+  if (urlDeTeste === undefined || urlDeTeste.trim() === '') {
+    console.log('.env já existe. Nada foi alterado — apague o arquivo se quiser recomeçar.');
+    console.log('Para só acrescentar o banco de teste, rode com --database-url-teste="..."');
+    process.exit(0);
+  }
+
+  const atual = readFileSync(destino, 'utf8');
+  const jaTem = /^DATABASE_URL_TESTE=.+$/m.test(atual);
+  if (jaTem) {
+    console.log('.env já tem DATABASE_URL_TESTE preenchido. Nada foi alterado.');
+    process.exit(0);
+  }
+
+  const daAplicacao = /^DATABASE_URL="?([^"\n]*)"?$/m.exec(atual)?.[1]?.trim();
+  const { url } = limparUrl(urlDeTeste);
+  if (daAplicacao !== undefined && daAplicacao !== '' && daAplicacao === url) {
+    console.error('A URL de teste é igual à da aplicação, e a suíte apaga tabelas.');
+    console.error('Use um banco separado — em banco gerenciado, uma branch de teste serve.');
+    process.exit(1);
+  }
+
+  const linha = `DATABASE_URL_TESTE="${url}"`;
+  const atualizado = /^DATABASE_URL_TESTE=.*$/m.test(atual)
+    ? atual.replace(/^DATABASE_URL_TESTE=.*$/m, linha)
+    : `${atual.replace(/\n*$/, '')}\n\n${linha}\n`;
+  writeFileSync(destino, atualizado, 'utf8');
+  console.log('.env já existia: acrescentei só DATABASE_URL_TESTE, e nada mais foi tocado.');
+  console.log('Falta dar schema ao banco novo:');
+  console.log('  DATABASE_URL="$DATABASE_URL_TESTE" npm run db:migrate');
   process.exit(0);
 }
 
@@ -51,21 +105,6 @@ let conteudo = readFileSync(exemplo, 'utf8');
  */
 const chave = randomBytes(32).toString('base64');
 conteudo = conteudo.replace(/^CREDENCIAL_CHAVE_MESTRA=.*$/m, `CREDENCIAL_CHAVE_MESTRA=${chave}`);
-
-/**
- * Limpa uma URL de banco antes de gravar.
- *
- * `channel_binding` sai da URL, sempre. Painel de banco gerenciado entrega a string
- * com `channel_binding=require`, e o `postgres.js` repassa parâmetro que não conhece
- * ao servidor como parâmetro de startup — onde o Postgres derruba a conexão com
- * `unrecognized configuration parameter "channel_binding"`. Medido. Tirar aqui é o
- * que impede a armadilha de chegar ao `.env`.
- */
-function limparUrl(bruta) {
-  const url = bruta.trim();
-  if (!url.includes('channel_binding')) return { url, removeu: false };
-  return { url: url.replace(/[?&]channel_binding=[^&]*/g, ''), removeu: true };
-}
 
 const urlInformada = argumento('database-url');
 const urlDeTesteInformada = argumento('database-url-teste');
