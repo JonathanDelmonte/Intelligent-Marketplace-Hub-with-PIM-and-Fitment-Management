@@ -400,6 +400,38 @@ Erro de doze vezes, barrado no desenho: a forma canônica é `null` para agrupam
 e o veredito avisa antes de qualquer cálculo. Fica em observação porque é o tipo de
 coisa que um refactor distraído reintroduz.
 
+### 5.4 A tela demorando, e por que a medição local não reproduz
+
+O dono relatou a tela de identidade "muito lenta, muito travada, fica
+renderizando". Medido aqui em 13/09/2026, contra Postgres **local**, servidor de
+desenvolvimento já aquecido:
+
+| rota               | primeira visita | segunda |
+| ------------------ | --------------- | ------- |
+| `/`                | 0,79 s          | 0,04 s  |
+| `/jobs`            | 0,43 s          | 0,08 s  |
+| `/identidade`      | 0,13 s          | 0,05 s  |
+| `/compatibilidade` | 0,18 s          | 0,09 s  |
+
+Ou seja: **não é a consulta nem a renderização.** A primeira visita carrega o custo
+de compilação do Turbopack, que é de desenvolvimento e não existe em produção.
+
+A hipótese que sobra, e que não dá para confirmar deste ambiente — a política de
+rede daqui não alcança `*.neon.tech` — é a soma de duas coisas do banco
+gerenciado:
+
+1. **Suspensão por inatividade.** O Neon desliga a computação depois de alguns
+   minutos sem uso, e a primeira consulta seguinte espera a máquina acordar. É a
+   descrição exata de "fica renderizando e aí demora muito".
+2. **Toda tela é `force-dynamic`,** então toda navegação bate no banco. Com latência
+   de ida e volta alta, duas ondas de consulta já passam de um segundo.
+
+O que não fazer agora: otimizar consulta. As consultas estão rápidas, e trocar
+código por causa de uma hipótese não medida é como se perde uma tarde. O que dá
+para fazer quando doer: confirmar no painel do Neon se houve suspensão no horário
+do teste, e aí escolher entre manter a computação ligada (é configuração, e em
+alguns planos custa) ou aceitar a primeira visita lenta.
+
 ### 5.3 Assinatura de commit desligada neste ambiente
 
 Decisão do dono, registrada no CLAUDE.md seção 1: a chave do ambiente remoto está
