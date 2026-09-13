@@ -337,6 +337,52 @@ export class Fila {
     return base;
   }
 
+  /**
+   * Devolve um job em execução à fila, para continuar depois.
+   *
+   * **Não é falha, e por isso não é `falhar`.** O caso que trouxe este método:
+   * resolução de identidade que gastou o teto de orçamento da execução. O job fez
+   * trabalho, gravou o que decidiu, e o que falta é retomável — usar `falhar`
+   * consumiria uma tentativa a cada rodada e mandaria para a lista de mortos um job
+   * que está progredindo.
+   *
+   * A tentativa é **devolvida**, e essa linha é a que importa: `reivindicar`
+   * incrementa `tentativas` em toda reivindicação, e é o **mesmo contador** que
+   * `falhar` usa para decidir se ainda há backoff. Sem devolver, um job adiado três
+   * vezes chegaria ao primeiro erro de verdade já sem direito a retentativa — e
+   * iria para `falhou` de uma vez, por ter sido pausado, não por ter errado.
+   *
+   * `greatest(… - 1, 0)` porque o contador nunca deve ficar negativo, e porque
+   * `adiar` só aceita job `rodando` — então houve exatamente uma reivindicação a
+   * desfazer.
+   */
+  async adiar(
+    id: string,
+    params: { readonly quando?: Date; readonly motivo?: string; readonly progresso?: unknown } = {},
+  ): Promise<void> {
+    const atual = await this.buscarPorId(id);
+    if (atual === null) throw new FilaError(`job ${id} não existe`);
+    if (atual.status !== 'rodando') {
+      throw new FilaError(`job ${id} não está rodando; só job em execução é adiável`);
+    }
+
+    const agora = new Date();
+    await this.db
+      .update(job)
+      .set({
+        status: 'pendente',
+        agendadoPara: params.quando ?? agora,
+        iniciadoEm: null,
+        tentativas: sql`greatest(${job.tentativas} - 1, 0)`,
+        // O motivo fica em `erro` por falta de coluna melhor, e é visível na tela —
+        // que é onde ele serve: "adiado por orçamento" explica um job que reaparece.
+        erro: params.motivo ?? null,
+        ...(params.progresso === undefined ? {} : { progresso: params.progresso }),
+        atualizadoEm: agora,
+      })
+      .where(eq(job.id, id));
+  }
+
   /** Reenfileira um job que falhou ou foi revisado, zerando as tentativas. */
   async reenfileirar(id: string): Promise<void> {
     const atual = await this.buscarPorId(id);

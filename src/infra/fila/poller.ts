@@ -53,6 +53,43 @@ export interface Tarefa {
 }
 
 /**
+ * Junta tarefas numa só, na ordem informada.
+ *
+ * O poller roda **uma** tarefa, e o sistema tem duas filas: ingestão e resolução de
+ * identidade. Rodar dois pollers seria dois processos, duas conexões e dois
+ * encerramentos para acertar; rodar as duas por tique é o suficiente.
+ *
+ * O tique para na **primeira tarefa que trabalhou**, e a ordem é a da prioridade:
+ * ingestão antes de identidade. A razão é de fila, não de gosto — identidade só tem
+ * o que fazer depois que a ingestão gravou a ocorrência, e uma fila de identidade
+ * grande não deve atrasar a entrada de dado novo.
+ *
+ * O tique é ocioso só quando **todas** as tarefas estão ociosas. Dizer o contrário
+ * faria o poller acelerar a espera com a fila vazia.
+ */
+export function tarefasEmOrdem(nome: string, tarefas: readonly Tarefa[]): Tarefa {
+  if (tarefas.length === 0) {
+    throw new Error('tarefasEmOrdem precisa de ao menos uma tarefa');
+  }
+
+  return {
+    nome,
+    async executar(): Promise<ResultadoDoTique> {
+      for (const tarefa of tarefas) {
+        const resultado = await tarefa.executar();
+        if (!resultado.ocioso) {
+          return {
+            ocioso: false,
+            campos: { ...resultado.campos, tarefa: tarefa.nome },
+          };
+        }
+      }
+      return { ocioso: true };
+    },
+  };
+}
+
+/**
  * Agendamento de espera. Devolve a função que cancela.
  *
  * Injetável para o teste poder observar **quanto** o poller pediu para esperar

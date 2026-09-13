@@ -416,4 +416,59 @@ describe.skipIf(!temBancoDeTeste())('Fila (contra Postgres real)', () => {
       expect(await fila.buscarPorId(job.id)).not.toBeNull();
     });
   });
+
+  describe('adiar', () => {
+    it('devolve o job à fila com o horário pedido', async () => {
+      const { job } = await fila.enfileirar({ tipo: 't', chaveIdempotencia: 'c', entrada: {} });
+      await fila.reivindicar({ tipos: ['t'] });
+
+      const daquiUmMinuto = new Date(Date.now() + 60_000);
+      await fila.adiar(job.id, { quando: daquiUmMinuto, motivo: 'orçamento estourado' });
+
+      const depois = await fila.buscarDetalhado(job.id);
+      expect(depois?.status).toBe('pendente');
+      expect(depois?.erro).toBe('orçamento estourado');
+      expect(depois?.agendadoPara.getTime()).toBe(daquiUmMinuto.getTime());
+      expect(depois?.iniciadoEm).toBeNull();
+    });
+
+    it('devolve a tentativa, senão pausar gastaria o direito a retentativa', async () => {
+      // `reivindicar` incrementa `tentativas`, e é o mesmo contador que `falhar` usa
+      // para decidir backoff. Sem devolver, um job adiado três vezes chegaria ao
+      // primeiro erro de verdade já sem retentativa — e iria para `falhou` por ter
+      // sido pausado, não por ter errado.
+      const { job } = await fila.enfileirar({ tipo: 't', chaveIdempotencia: 'c', entrada: {} });
+
+      const reivindicado = await fila.reivindicar({ tipos: ['t'] });
+      expect(reivindicado?.tentativas).toBe(1);
+
+      await fila.adiar(job.id);
+      expect((await fila.buscarPorId(job.id))?.tentativas).toBe(0);
+
+      // E adiar muitas vezes não leva o contador para baixo de zero.
+      for (let i = 0; i < 3; i += 1) {
+        await fila.reivindicar({ tipos: ['t'] });
+        await fila.adiar(job.id);
+      }
+      expect((await fila.buscarPorId(job.id))?.tentativas).toBe(0);
+    });
+
+    it('guarda progresso parcial quando informado', async () => {
+      const { job } = await fila.enfileirar({ tipo: 't', chaveIdempotencia: 'c', entrada: {} });
+      await fila.reivindicar({ tipos: ['t'] });
+      await fila.adiar(job.id, { progresso: { paresAvaliados: 7 } });
+      expect((await fila.buscarPorId(job.id))?.progresso).toEqual({ paresAvaliados: 7 });
+    });
+
+    it('recusa adiar job que não está rodando', async () => {
+      const { job } = await fila.enfileirar({ tipo: 't', chaveIdempotencia: 'c', entrada: {} });
+      await expect(fila.adiar(job.id)).rejects.toThrow(/só job em execução/);
+    });
+
+    it('recusa adiar job que não existe', async () => {
+      await expect(fila.adiar('00000000-0000-4000-8000-000000000000')).rejects.toThrow(
+        /não existe/,
+      );
+    });
+  });
 });

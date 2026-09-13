@@ -11,6 +11,7 @@ import { criarRegistrador } from '../log';
 import {
   Poller,
   ligarSinaisDeEncerramento,
+  tarefasEmOrdem,
   type ResultadoDoTique,
   type Tarefa,
   type Temporizador,
@@ -339,5 +340,73 @@ describe('campos da tarefa chegam ao log', () => {
     await poller.iniciar();
 
     expect(linhas.find((l) => l.includes('poller.trabalhou'))).toContain('"gravados":42');
+  });
+});
+
+describe('tarefasEmOrdem', () => {
+  /** Tarefa que conta execuções e devolve sempre o mesmo resultado. */
+  function tarefaContada(nome: string, ocioso: boolean, campos?: Record<string, unknown>) {
+    const estado = { chamadas: 0 };
+    const tarefa: Tarefa = {
+      nome,
+      executar: () => {
+        estado.chamadas += 1;
+        return Promise.resolve<ResultadoDoTique>(
+          campos === undefined ? { ocioso } : { ocioso, campos },
+        );
+      },
+    };
+    return { tarefa, estado };
+  }
+
+  it('recusa nascer sem tarefa', () => {
+    expect(() => tarefasEmOrdem('vazia', [])).toThrow(/ao menos uma/);
+  });
+
+  it('para na primeira que trabalhou, e não chama as seguintes', async () => {
+    // A ordem é prioridade: ingestão antes de identidade, porque identidade só tem o
+    // que fazer depois que a ingestão gravou — e fila de identidade grande não deve
+    // atrasar a entrada de dado novo.
+    const primeira = tarefaContada('primeira', false);
+    const segunda = tarefaContada('segunda', false);
+
+    const resultado = await tarefasEmOrdem('composta', [
+      primeira.tarefa,
+      segunda.tarefa,
+    ]).executar();
+
+    expect(resultado.ocioso).toBe(false);
+    expect(primeira.estado.chamadas).toBe(1);
+    expect(segunda.estado.chamadas).toBe(0);
+  });
+
+  it('passa para a seguinte quando a primeira está ociosa', async () => {
+    const primeira = tarefaContada('primeira', true);
+    const segunda = tarefaContada('segunda', false, { pares: 3 });
+
+    const resultado = await tarefasEmOrdem('composta', [
+      primeira.tarefa,
+      segunda.tarefa,
+    ]).executar();
+
+    expect(resultado.ocioso).toBe(false);
+    expect(segunda.estado.chamadas).toBe(1);
+    // O nome da tarefa vai no log: sem isso, um tique de trabalho não diz quem
+    // trabalhou, e duas filas num processo ficam indistinguíveis no diagnóstico.
+    expect(resultado.campos).toEqual({ pares: 3, tarefa: 'segunda' });
+  });
+
+  it('é ociosa só quando todas são, senão o poller aceleraria com a fila vazia', async () => {
+    const primeira = tarefaContada('primeira', true);
+    const segunda = tarefaContada('segunda', true);
+
+    const resultado = await tarefasEmOrdem('composta', [
+      primeira.tarefa,
+      segunda.tarefa,
+    ]).executar();
+
+    expect(resultado.ocioso).toBe(true);
+    expect(primeira.estado.chamadas).toBe(1);
+    expect(segunda.estado.chamadas).toBe(1);
   });
 });
