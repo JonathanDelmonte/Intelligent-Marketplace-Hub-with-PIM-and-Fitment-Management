@@ -33,7 +33,7 @@ export const GRAMATICA_ELECTROLUX: GramaticaDeMarca = {
   prefixos: [
     {
       prefixo: 'PA',
-      tipo: 'purificador de agua',
+      tipo: 'purificador de água',
       significado: 'purificador de água',
     },
   ],

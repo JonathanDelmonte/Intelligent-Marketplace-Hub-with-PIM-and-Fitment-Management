@@ -177,7 +177,7 @@ describe('gramática semente', () => {
     const r = analisarModelo('Electrolux', 'PA26G', GRAMATICAS_SEMENTE);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.analise.tipo).toBe('purificador de agua');
+    expect(r.analise.tipo).toBe('purificador de água');
     expect(r.analise.familia).toBe('electrolux:pa26');
   });
 
