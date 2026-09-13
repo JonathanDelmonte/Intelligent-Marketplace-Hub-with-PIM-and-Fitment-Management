@@ -26,6 +26,64 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-13 — Preparar o ambiente em um comando
+
+### 🐛 Editar o `.env.example` em vez do `.env` é o erro natural, não descuido
+
+O dono configurou o banco, salvou, rodou, e recebeu
+`DATABASE_URL: received undefined` — com a URL correta salva. A linha anterior da saída
+explicava: `.env not found. Continuing without it.`
+
+Ele editou o `.env.example`. E isso não é falta de atenção: **o `.env` não existe até
+alguém criá-lo.** É ignorado pelo git, então não vem no clone; o editor lista só o
+exemplo; e o README dizia "copie para `.env`" numa linha que se lê e não se executa.
+
+Havia mais um agravante do meu lado: eu vinha dando instruções em prosa ("substitua a
+linha", "remova este parâmetro", "gere a chave e cole"), e ele disse, com razão, que
+estava confuso. Quatro passos manuais com três formas de errar não se resolvem
+escrevendo melhor a explicação — se resolvem virando um comando.
+
+`npm run preparar:env` copia o exemplo, gera a chave mestra, aceita
+`--database-url=`, remove `channel_binding` sozinho (a armadilha medida ontem) e
+**nunca sobrescreve `.env` existente**. Testado nos três caminhos antes de entrar.
+
+### ⚠️ O `.env.example` é versionado, e o repositório é público
+
+Consequência do erro acima que não é só cosmética: a credencial foi colada num arquivo
+**rastreado pelo git**, em repositório público. Commitado, seria raspado em minutos —
+diferente de compartilhar em conversa, que tem outro alcance. `git checkout
+.env.example` desfaz.
+
+### 🐛 Eu matei o Postgres seis vezes e culpei o contêiner
+
+Sintoma: o Postgres local caía a cada poucos minutos, sempre no meio de uma operação.
+Culpei o ambiente por meia sessão e escrevi isso em duas mensagens.
+
+Causa: **eu**. Antes de cada `pg_ctl start` eu rodava `rm -f postmaster.pid` para
+"limpar pid velho" — e quando o servidor já estava no ar, aquilo apagava o pid **dele**.
+O Postgres relê esse arquivo, não acha, e conclui que perdeu o lock do diretório de
+dados: `performing immediate shutdown because data directory lock file is invalid`. O
+log dizia isso desde a primeira vez.
+
+A lição não é sobre Postgres: eu tinha uma hipótese ("o contêiner reaper mata processos
+ociosos") que explicava o sintoma, e por isso não fui ler o log até o sexto incidente.
+Hipótese plausível é exatamente o que atrasa a leitura da evidência.
+
+`rm postmaster.pid` só é seguro com o servidor desligado — `pg_isready` antes.
+
+### ❓ Este ambiente não alcança o Neon
+
+TCP 5432 para `*.neon.tech` responde `403 to CONNECT` no proxy, e HTTPS para
+`console.neon.tech` também falha. A política de rede do contêiner bloqueia o domínio,
+então **não consigo rodar nada contra o banco gerenciado do dono daqui** — nem
+migration, nem verificação de tela.
+
+O que dá para fazer, e foi feito: rodar contra o Postgres local do contêiner e entregar
+as telas em imagem, com o `.env` pronto para a máquina dele. Vale registrar porque muda
+o que eu posso prometer: verificação contra o banco de produção é dele, não minha.
+
+---
+
 ## 2026-09-13 — O `.env` só valia para a aplicação
 
 ### 🐛 `.env` lido pelo Next, ignorado por todo o resto — e os testes pulavam em silêncio

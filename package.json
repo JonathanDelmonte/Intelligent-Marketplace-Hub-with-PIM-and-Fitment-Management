@@ -11,6 +11,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "preparar:env": "node scripts/preparar-env.mjs",
     "copiar:wasm": "node scripts/copiar-wasm.mjs",
     "build": "npm run copiar:wasm && next build",
     "start": "next start",

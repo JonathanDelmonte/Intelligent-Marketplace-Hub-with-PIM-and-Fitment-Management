@@ -93,16 +93,24 @@ Se você já tem um Postgres ocupando a 5432, troque para `5433:5432` no
 
 ```sh
 npm install
-cp .env.example .env           # no PowerShell: copy .env.example .env
 
-# Gerar a chave mestra de cifragem de credencial (ADR 0007)
-node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
-# → colar em CREDENCIAL_CHAVE_MESTRA no .env
+# Cria o `.env` com a chave mestra já gerada. Passe a URL do banco se já tiver.
+npm run preparar:env -- --database-url="postgresql://usuario:senha@host/banco?sslmode=require"
 
 npm run db:migrate             # cria as extensões e aplica as migrations
 npm run db:seed                # cria o primeiro perfil de vendedor
 npm run dev                    # http://localhost:3000
 ```
+
+O `preparar:env` existe porque a sequência manual tinha quatro passos e três formas de
+errar — e a que mais acontece é **editar o `.env.example` em vez do `.env`**. É fácil:
+o `.env` não existe até alguém criá-lo (é ignorado pelo git, então não vem no clone),
+e o editor mostra o exemplo primeiro. O sintoma é `.env not found. Continuing without
+it.` seguido de `DATABASE_URL: received undefined`, com a URL certa salva no arquivo
+errado.
+
+O script gera a chave mestra (32 bytes em base64), remove `channel_binding` da URL se
+vier, e **nunca sobrescreve um `.env` existente**.
 
 ### Banco gerenciado, e uma armadilha da string de conexão
 

@@ -1,0 +1,92 @@
+#!/usr/bin/env node
+/**
+ * Cria o `.env` a partir do `.env.example`, com a chave mestra já gerada.
+ *
+ * Existe porque a sequência manual — copiar o exemplo, rodar um `node -e` para
+ * gerar 32 bytes em base64, colar no lugar certo, colar a URL do banco — tem quatro
+ * passos e três formas de errar. A que mais aconteceu: **editar o `.env.example` em
+ * vez do `.env`**, que é fácil porque o `.env` não existe até alguém criá-lo (é
+ * ignorado pelo git, então não vem no clone) e o editor mostra o exemplo primeiro.
+ *
+ * Nunca sobrescreve um `.env` existente. Rodar de novo por engano não pode apagar a
+ * configuração de ninguém.
+ *
+ * ```sh
+ * npm run preparar:env
+ * npm run preparar:env -- --database-url="postgresql://usuario:senha@host/banco?sslmode=require"
+ * ```
+ */
+import { randomBytes } from 'node:crypto';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+const raiz = process.cwd();
+const exemplo = resolve(raiz, '.env.example');
+const destino = resolve(raiz, '.env');
+
+function argumento(nome) {
+  const prefixo = `--${nome}=`;
+  const bruto = process.argv.find((a) => a.startsWith(prefixo));
+  return bruto === undefined ? undefined : bruto.slice(prefixo.length).replace(/^["']|["']$/g, '');
+}
+
+if (existsSync(destino)) {
+  console.log('.env já existe. Nada foi alterado — apague o arquivo se quiser recomeçar.');
+  process.exit(0);
+}
+
+if (!existsSync(exemplo)) {
+  console.error('.env.example não encontrado. Você está na raiz do projeto?');
+  process.exit(1);
+}
+
+let conteudo = readFileSync(exemplo, 'utf8');
+
+/**
+ * A chave mestra cifra credencial de plataforma em repouso (ADR 0007).
+ *
+ * Gerada aqui e não pedida ao usuário: são 32 bytes aleatórios em base64, e não há
+ * decisão humana nenhuma nisso — só oportunidade de errar o tamanho.
+ */
+const chave = randomBytes(32).toString('base64');
+conteudo = conteudo.replace(/^CREDENCIAL_CHAVE_MESTRA=.*$/m, `CREDENCIAL_CHAVE_MESTRA=${chave}`);
+
+const urlInformada = argumento('database-url');
+let aviso = null;
+
+if (urlInformada !== undefined && urlInformada.trim() !== '') {
+  let url = urlInformada.trim();
+
+  /**
+   * `channel_binding` sai da URL, sempre.
+   *
+   * Painel de banco gerenciado entrega a string com `channel_binding=require`, e o
+   * `postgres.js` repassa parâmetro que não conhece ao servidor como parâmetro de
+   * startup — onde o Postgres derruba a conexão com
+   * `unrecognized configuration parameter "channel_binding"`. Medido. Tirar aqui é
+   * o que impede a armadilha de chegar ao `.env`.
+   */
+  if (url.includes('channel_binding')) {
+    url = url.replace(/[?&]channel_binding=[^&]*/g, '');
+    aviso = 'removi `channel_binding` da URL: o driver o repassaria ao servidor e a conexão cairia';
+  }
+
+  conteudo = conteudo.replace(/^DATABASE_URL=.*$/m, `DATABASE_URL="${url}"`);
+}
+
+writeFileSync(destino, conteudo, 'utf8');
+
+const mascarada = (conteudo.match(/^DATABASE_URL=.*$/m) ?? [''])[0].replace(
+  /:\/\/([^:]+):[^@]+@/,
+  '://$1:***@',
+);
+
+console.log('.env criado.');
+console.log(`  chave mestra gerada (32 bytes em base64)`);
+console.log(`  ${mascarada}`);
+if (aviso !== null) console.log(`  aviso: ${aviso}`);
+if (urlInformada === undefined) {
+  console.log('');
+  console.log('Falta o banco: abra o `.env` e preencha DATABASE_URL, ou rode de novo com');
+  console.log('  npm run preparar:env -- --database-url="postgresql://..."');
+}
