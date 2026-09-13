@@ -11,6 +11,7 @@
  */
 import { sql } from 'drizzle-orm';
 import { bigint, pgEnum, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { VERIFICADORES } from '@/dominio/compatibilidade/evidencia';
 import { FONTES } from '@/dominio/procedencia';
 import { PLATAFORMAS, REGIMES_FISCAIS, TIPOS_ANUNCIO_ML } from '@/dominio/precificacao/tipos';
 
@@ -30,7 +31,7 @@ export const tipoSkuEnum = pgEnum('tipo_sku', ['proprio', 'revenda', 'consignado
 export const tipoCredencialEnum = pgEnum('tipo_credencial', ['oauth', 'planilha', 'nenhuma']);
 export const canalContatoEnum = pgEnum('canal_contato', ['whatsapp', 'email', 'telefone']);
 export const origemFornecedorEnum = pgEnum('origem_fornecedor', ['nacional', 'importado', 'china']);
-export const verificadoPorEnum = pgEnum('verificado_por', ['ia', 'humano', 'fabricante']);
+export const verificadoPorEnum = pgEnum('verificado_por', VERIFICADORES);
 export const severidadeEnum = pgEnum('severidade', ['vermelho', 'amarelo', 'informativo']);
 export const statusJobEnum = pgEnum('status_job', [
   'pendente',

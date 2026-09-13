@@ -22,6 +22,8 @@ import {
   unique,
   uuid,
 } from 'drizzle-orm/pg-core';
+import type { Evidencia } from '@/dominio/compatibilidade/evidencia';
+import { LIMIAR_PUBLICACAO_BP } from '@/dominio/compatibilidade/resolucao';
 import { auditoria, id, procedencia, verificadoPorEnum } from './comum';
 import { sku } from './catalogo';
 
@@ -59,31 +61,17 @@ export const aparelho = pgTable(
 );
 
 /**
- * Uma evidência de compatibilidade, com a força da fonte.
+ * Evidência e limiar moram no domínio, não aqui.
  *
- * A confiança é **graduada por quem afirmou**, e a escala vem da especificação:
- * afirmação do fabricante = 1,0; três concorrentes concordando = 0,8; um fórum =
- * 0,4. O anúncio só publica compatibilidade acima de 0,7, e o resto vai para fila
- * de revisão.
+ * `Evidencia` e `LIMIAR_PUBLICACAO_BP` vêm de `@/dominio/compatibilidade` pelo
+ * mesmo motivo que os enums vêm de constantes do domínio: dois lugares com a
+ * mesma definição divergem na primeira mudança, e aqui a divergência seria entre
+ * o que o banco aceita e o que o código acha que gravou.
  */
-export interface Evidencia {
-  readonly tipo:
-    | 'manual_fabricante'
-    | 'pagina_oficial'
-    | 'concorrente'
-    | 'forum'
-    | 'catalogo_distribuidor'
-    | 'humano';
-  readonly url: string | null;
-  /** Trecho citado, para conferir sem reabrir a fonte. */
-  readonly trecho: string | null;
-  readonly em: string;
-  /** `true` quando a evidência afirma que a peça **não** serve. */
-  readonly negativa: boolean;
-}
+export type { Evidencia } from '@/dominio/compatibilidade/evidencia';
 
 /** Confiança mínima para publicar compatibilidade num anúncio. */
-export const LIMIAR_PUBLICACAO_COMPATIBILIDADE_BP = 7000;
+export const LIMIAR_PUBLICACAO_COMPATIBILIDADE_BP = LIMIAR_PUBLICACAO_BP;
 
 export const compatibilidade = pgTable(
   'compatibilidade',
