@@ -387,16 +387,31 @@ aparência de medição, que é o oposto do que o resto do sistema faz.
 
 | #    | Entrega                                                                 | Estado |
 | ---- | ----------------------------------------------------------------------- | ------ |
-| 8.1  | Gerador de título com códigos de modelo e termos de busca reais         | ⬜     |
-| 8.2  | Descrição com tabela de compatibilidade gerada de M4                    | ⬜     |
+| 8.1  | Gerador de título com códigos de modelo e termos de busca reais         | ✅     |
+| 8.2  | Descrição com tabela de compatibilidade gerada de M4                    | ✅     |
 | 8.3  | Checklist de atributos obrigatórios por categoria                       | ⬜     |
-| 8.4  | Gerador de arquivo de importação em massa (caminho padrão)              | ⬜     |
+| 8.4  | Gerador de arquivo de importação em massa (caminho padrão)              | ✅     |
 | 8.5  | Alerta de catálogo do ML para conta sem reputação verde                 | ⬜     |
 | 8.6  | Importação de pedidos, casamento com SKU, margem realizada              | ⬜     |
 | 8.7  | Fila de postagem do dia — a tela mais usada do sistema                  | ⬜     |
 | 8.8  | Etiqueta e envio ao fornecedor no dropship, com cobrança de confirmação | 🔒     |
 | 8.9  | Conferência de repasse: previsto contra o que caiu                      | ⬜     |
 | 8.10 | M11: consignação, alerta de conferência, fechamento por período         | ⬜     |
+| 8.11 | Tela de anúncio: montar, revisar avisos e baixar o arquivo              | ⬜     |
+
+**8.4 já existia e não estava marcado.** O arquivo de importação é gerado pelo
+adaptador de cada plataforma desde a fase 2 — `exportarParaImportacao` é a única
+capacidade sempre suportada, com teste de que nunca lança `NaoSuportado`. O que
+faltava era quem produz o objeto a ser exportado, e é o 8.1/8.2.
+
+**A ordem dos termos no título é a decisão que mais importa nesta fase.** O código
+do aparelho vem antes do código da peça: o comprador sabe o modelo do purificador
+dele — está na etiqueta — e quase nunca sabe o código do refil. Ele busca "refil
+PA21G", não "refil EF-ELX-21".
+
+E só entra no título o que é **publicável** na ficha de M4. Título é afirmação de
+compatibilidade na vitrine; afirmar ali o que está abaixo do corte é o caminho
+curto para a devolução que a fase 6 existe para evitar.
 
 ---
 

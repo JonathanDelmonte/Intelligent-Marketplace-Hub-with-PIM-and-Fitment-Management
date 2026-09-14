@@ -26,6 +26,54 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-14 — Fase 8: gerador de anúncio
+
+### 🐛 O título estourava o limite quando o tipo do produto era longo
+
+A primeira versão montava a base — tipo mais marca — e só depois conferia o limite
+ao acrescentar modelos. Com tipo longo, a base sozinha já passava, e o título saía
+maior que o permitido: arquivo que a plataforma recusa na importação.
+
+Pegou no teste que percorre vários limites, e a correção obrigou a decidir **em que
+ordem se abre mão**, que é uma decisão de negócio e não de código:
+
+1. O **fim do tipo** primeiro ("de água"), que é o que menos identifica.
+2. Depois a **marca**, que já é termo de busca forte — "Refil Electrolux" encontra
+   mais gente que "Refil purificador".
+3. E, se nem a primeira palavra couber, cortar essa palavra e avisar que o título
+   precisa de revisão à mão.
+
+De passagem apareceu um detalhe de redação: encurtar palavra por palavra passa por
+"refil de purificador de", com conector solto no fim. Tem uma passada que remove.
+
+### 🐛 O título limpava "promoção" e a descrição mantinha
+
+Os dois saem do mesmo `tipoProduto`, e só um limpava. O efeito seria a palavra
+desaparecer da vitrine e reaparecer três linhas abaixo, na descrição.
+
+A correção veio com uma distinção que vale guardar: o sistema limpa o que **gera**,
+e não toca no que a pessoa escreveu. `observacoes` é texto do vendedor e passa
+intacto — se ele quer escrever "promoção de lançamento" ali, é decisão dele.
+
+### 🔀 `original` fica fora da lista de palavras proibidas
+
+A lista tira promoção ("frete grátis", "imperdível") e enfeite ("lindo", "super"),
+porque as duas ocupam caracteres que um código de modelo usaria melhor. Mas
+`original` **não** entra na lista: em peça de reposição, "original" distingue
+produto de genérico e é termo de busca real. Tirar seria confundir enfeite com
+informação.
+
+### ❓ Os limites de caracteres por plataforma são levantamento
+
+60 no Mercado Livre, 120 na Shopee, 200 na Amazon. Sem conta conectada e sem
+documentação acessível de forma automatizada daqui, são o melhor palpite informado
+— a mesma situação do mapeamento de colunas da fase 3, e a mesma disciplina: dito
+em voz alta, e o gerador recebe o limite por parâmetro para o ajuste ser em um
+lugar. O do ML é o mais restritivo, e é o que manda no desenho: título que cabe lá
+cabe nas outras duas.
+
+---
+
 ## 2026-09-13 — Fase 7: as duas regras de fornecedor
 
 ### 🔀 O scanner importa os cortes do módulo de margem em vez de repeti-los
