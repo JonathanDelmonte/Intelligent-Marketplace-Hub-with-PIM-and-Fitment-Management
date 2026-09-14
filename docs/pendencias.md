@@ -162,10 +162,11 @@ Ordem do roadmap, que é por utilidade e não por arquitetura. Nada aqui espera 
 
 ### 3.1 Telas que não existem
 
-Há cinco telas: início, `/jobs` (com detalhe por job), `/leitor`, `/identidade` e
-`/compatibilidade`. **Não há tela de catálogo, de SKU, de precificação nem de
-fornecedor.** O motor de margem (fase 1) e o repositório de SKU (3.10) seguem
-chamáveis por código e por teste, não por tela.
+Há oito telas: início, `/jobs` (com detalhe por job), `/leitor`, `/identidade`,
+`/compatibilidade`, `/fornecedores`, `/postagem` e `/consignacao`. **Não há tela de
+catálogo, de SKU, de precificação nem de anúncio.** O motor de margem (fase 1), o
+repositório de SKU (3.10) e o gerador de anúncio (8.1/8.2/8.3/8.5) seguem chamáveis
+por código e por teste, não por tela — a de anúncio é a 8.11.
 
 A de identidade fechou o próprio laço: decide pares, **propaga** para um SKU que já
 exista e **cria** SKU a partir de um par quando nenhum dos dois lados tem um — com o
@@ -364,7 +365,36 @@ banco da aplicação vê os 222 pularem até criar o segundo. É o lado certo de
 **Consequência:** rodar `npm test` sem banco dá uma falsa sensação de cobertura
 completa. O resumo do vitest diz quantos pularam — vale ler o número.
 
-### 4.7 `aparelho.tipo` é texto livre dentro da chave de unicidade
+### 4.7 Consignação sem histórico de preço acordado
+
+O fechamento por período usa o `preco_acordado_repasse` **atual** da linha. Mudar o
+acordo hoje muda o número de um mês já fechado, e nada avisa.
+
+**Custo do atalho:** consertar é uma tabela de histórico de preço acordado — como já
+existe para preço de fornecedor — e ler o valor vigente na data da venda. Enquanto há
+um vendedor e poucos parceiros, a conta é conferida na hora do pagamento, e a tela
+mostra o fechamento **aberto** parceiro por parceiro justamente para ser conferível
+em vez de ser um total para acreditar.
+
+**Quando deixa de servir:** no primeiro reajuste de acordo no meio de um mês, ou no
+primeiro parceiro que questionar um fechamento antigo.
+
+### 4.8 A venda não diz de qual parceiro saiu a peça consignada
+
+Quando o mesmo SKU está em consignação em duas lojas, o pedido não guarda de qual
+delas a peça saiu — não há coluna para isso. O fechamento atribui a venda ao primeiro
+parceiro em ordem de nome.
+
+**Custo do atalho:** um parceiro pode receber repasse por uma peça do outro. Consertar
+é uma coluna `consignacao_id` em `pedido`, preenchida na hora de separar a peça — que é
+informação que só existe no momento da retirada, então também é um passo a mais na
+tela de postagem.
+
+**Quando deixa de servir:** no primeiro SKU consignado em dois parceiros ao mesmo
+tempo. Hoje isso não acontece, e a atribuição é determinística e visível no
+fechamento — não é um número que aparece do nada.
+
+### 4.9 `aparelho.tipo` é texto livre dentro da chave de unicidade
 
 `unique(tipo, marca, modelo, variante)` compara os quatro campos como digitados.
 "purificador de água" e "purificador de agua" em dias diferentes viram dois

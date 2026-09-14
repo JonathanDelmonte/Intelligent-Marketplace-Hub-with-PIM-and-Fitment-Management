@@ -28,6 +28,107 @@ Convenção de marcação:
 
 ## 2026-09-14 — Fase 8: gerador de anúncio
 
+### 🔀 Exigência de atributo nomeada pela consequência, não pela força
+
+`obrigatorio` / `opcional` foi a primeira ideia e não sobreviveu a uma pergunta: o
+que a pessoa faz diferente ao ler cada um? Nada — os dois viram "depois eu vejo".
+
+Os níveis passaram a dizer o que acontece se faltar: `bloqueia` (a linha do arquivo
+de importação não existe), `devolucao` (publica, vende e volta), `ranqueia` (a frase
+da especificação) e `ajuda` (reduz pergunta). Com isso a ordem da tela sai de graça,
+e o texto de cada item pode explicar o custo em vez de repetir o nome do campo.
+
+`bloqueia` e `devolucao` pesam **igual** no preenchimento, de propósito. Um é anúncio
+que não existe; o outro é anúncio que existe e perde dinheiro com a reputação junto.
+Não achei forma honesta de ordenar os dois num número só, então o número não finge
+ordenar — a tela lista os dois grupos separados.
+
+### 🔀 O número do checklist chama-se preenchimento, não completude
+
+Escrevi `completudeBp` primeiro, e o nome estava mentindo. Um anúncio com 90% dos
+atributos preenchidos e um `bloqueia` aberto não publica de jeito nenhum, e
+"completude 90%" convida exatamente à conclusão errada ("está quase pronto").
+
+Ficou `preenchimentoBp` — que é o que mede, a fração do checklist que está cheia — e
+`podeExportar` como a resposta separada para "dá para gerar o arquivo". Nome de campo
+é interface: o número não muda, a conclusão de quem lê muda.
+
+### ❓ Os traços de produto vêm de tabela de palavra, e isso é palpite declarado
+
+O checklist de 8.3 decide o que exigir a partir de traços do produto (elétrico,
+medida crítica, consumível), detectados por palavra no tipo do produto. Não há
+validação nenhuma dessa tabela contra catálogo real — é o mesmo tipo de palpite dos
+nomes de coluna de exportação, e falha do mesmo jeito correto: traço não detectado é
+exigência **não cobrada**, nunca exigência errada.
+
+A exceção é `reposicao`, que vem da ficha de compatibilidade em vez de palavra: se
+há qualquer linha de compatibilidade, o produto serve em outro produto, e é isso que
+peça de reposição quer dizer. Estrutura onde a estrutura existe, palpite só onde não
+existe.
+
+### 🔀 Alerta de catálogo do ML: dois sinais, e o fraco nunca decide
+
+8.5 não tinha como ser confirmado sem API. O que havia eram dois sinais nos dados que
+a ingestão já traz: a URL `/p/MLB…`, que é estrutural e forte, e vários vendedores no
+mesmo GTIN, que é indício — pode ser só concorrência sem ficha nenhuma.
+
+Sinal fraco sozinho para em `provavel` e a mensagem manda confirmar abrindo um
+anúncio. É a mesma disciplina da confiança graduada da fase 6, aplicada a outro
+assunto, e a primeira vez que reusei a regra em vez de reinventá-la.
+
+O que não esperava ao escrever: **o mesmo fato muda de sinal conforme quem lê**. Com
+reputação verde, ficha de catálogo é oportunidade — dá para disputar o destaque e
+ficar com a vitrine inteira em vez de dividir. Sem, é a quase invisibilidade de
+"outras opções de compra". Um alerta que não sabe quem está lendo diria a coisa
+errada para metade dos casos, então a reputação é parâmetro — e `nao_informada` não é
+o mesmo que ruim: chutar ruim para todo mundo é como se desliga um alerta.
+
+### 🔀 Conferência de consignação: o risco é unidade exposta, não data vencida
+
+A primeira versão do alerta comparava `conferido_em` com sete dias atrás. Ela erra
+nos dois sentidos, e só vi isso escrevendo o teste: linha com zero unidade sem
+conferir há um mês não tem risco nenhum — não há o que a loja venda no balcão nem o
+que eu venda errado —, e linha com trinta unidades anunciadas conferida há oito dias
+é a que cancela uma venda hoje.
+
+A urgência passou a combinar tempo com exposição, e a ordem dentro do mesmo estado é
+por unidade exposta. A frase da especificação já dizia isso desde o começo — "o risco
+é a loja vender no balcão o que você tem anunciado" — e eu tinha lido "alerta
+semanal" como se o prazo fosse o assunto.
+
+### 🔀 Conferir exige a contagem do parceiro, sem botão "conferi"
+
+Um botão que só marca a data é o pior resultado possível nesta tela: apaga o alerta e
+deixa o número errado. Então o formulário tem campo numérico obrigatório, já
+preenchido com o que o sistema acha — para a pessoa só mexer quando difere, que é o
+caso raro e o único que importa.
+
+Pelo mesmo motivo, o pedido de conferência ao parceiro manda a contagem do sistema:
+"quantos você tem?" recebe "acho que uns cinco"; "tenho cinco anotados, confere?"
+recebe sim ou o número certo.
+
+### 🐛 `networkidle` do Playwright volta antes de o roteador aplicar o payload
+
+Dirigindo a tela de consignação no navegador, o cadastro gravou no banco — a tela de
+postagem mostrou "6 unidades sem conferência" — e a própria tela de consignação, lida
+logo depois do envio, mostrou "nenhum item em consignação".
+
+Quase abri caça a bug de cache no Next. O que era: `waitForLoadState('networkidle')`
+depois do clique volta antes de o roteador do App Router aplicar o payload novo, e eu
+lia o DOM antigo. `curl` na URL de destino mostrou a tela correta, com o item, o aviso
+e o fechamento. O conserto é esperar a navegação (`waitForURL`), não a rede.
+
+Fica anotado porque o sintoma imita um bug de produto de forma convincente: dado
+gravado, uma tela vê, a outra não.
+
+### 🧹 Duas dívidas conscientes entraram com a consignação
+
+O fechamento usa o preço de repasse **atual**, então mudar o acordo mexe em mês já
+fechado; e quando o mesmo SKU está em duas lojas, a venda não diz de qual delas a
+peça saiu. As duas estão em pendências (4.7 e 4.8) com o custo e o gatilho de
+consertar, e as duas ficam **visíveis** no fechamento — que é a razão de ele aparecer
+aberto, parceiro por parceiro, em vez de só o total.
+
 ### 🐛 O núcleo guardado em `globalThis` servia a forma antiga do código
 
 Sintoma: depois de acrescentar o executor de pedido ao núcleo, a tela de jobs

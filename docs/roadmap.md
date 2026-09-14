@@ -389,15 +389,43 @@ aparência de medição, que é o oposto do que o resto do sistema faz.
 | ---- | ----------------------------------------------------------------------- | ------ |
 | 8.1  | Gerador de título com códigos de modelo e termos de busca reais         | ✅     |
 | 8.2  | Descrição com tabela de compatibilidade gerada de M4                    | ✅     |
-| 8.3  | Checklist de atributos obrigatórios por categoria                       | ⬜     |
+| 8.3  | Checklist de atributos obrigatórios por categoria                       | ✅     |
 | 8.4  | Gerador de arquivo de importação em massa (caminho padrão)              | ✅     |
-| 8.5  | Alerta de catálogo do ML para conta sem reputação verde                 | ⬜     |
+| 8.5  | Alerta de catálogo do ML para conta sem reputação verde                 | ✅     |
 | 8.6  | Importação de pedidos, casamento com SKU, margem realizada              | ✅     |
 | 8.7  | Fila de postagem do dia — a tela mais usada do sistema                  | ✅     |
 | 8.8  | Etiqueta e envio ao fornecedor no dropship, com cobrança de confirmação | 🔒     |
 | 8.9  | Conferência de repasse: previsto contra o que caiu                      | ✅     |
-| 8.10 | M11: consignação, alerta de conferência, fechamento por período         | ⬜     |
+| 8.10 | M11: consignação, alerta de conferência, fechamento por período         | ✅     |
 | 8.11 | Tela de anúncio: montar, revisar avisos e baixar o arquivo              | ⬜     |
+
+**8.3 é por traço do produto, não por categoria da plataforma.** A tabela de
+atributo obrigatório por categoria é da plataforma e daqui não há como obtê-la — o
+mesmo limite de `mapeamento.ts`. E não é o que o vendedor pergunta: ele pergunta o
+que falta neste anúncio e o que cada falta custa. Então a conferência detecta traços
+(reposição, elétrico, medida crítica, consumível), acumula a exigência de cada um, e
+nomeia cada nível pela **consequência** — bloqueia a exportação, gera devolução,
+ranqueia pior, ou só ajuda. O traço de reposição vem da ficha de compatibilidade,
+que é estrutura; os outros vêm de tabela de palavra, e falham do jeito certo.
+
+**8.5 é o alerta que M8 não dava.** A precificação avisa quando *você escolhe*
+anunciar em catálogo — consequência da sua escolha, que você já sabia. O que faltava
+é o produto **já ter ficha** e você não ter escolhido nada: anúncio comum de produto
+com ficha é absorvido por ela, e sem reputação verde você fica em "outras opções de
+compra". Detectado sem API, por dois sinais: a URL `/p/MLB…` (estrutural, forte) e
+vários vendedores no mesmo GTIN (indício, que nunca confirma sozinho).
+
+**8.10 inverteu o alerta de conferência.** Um controle que compara a data com sete
+dias atrás erra nos dois sentidos: linha com zero unidade sem conferir há um mês não
+tem risco, e linha com trinta unidades anunciadas conferida há oito dias é a que
+cancela venda hoje. Então a urgência é tempo **e** exposição, e a tela lidera por
+unidades em risco. A conferência exige a contagem do parceiro: marcar a data sem
+corrigir o estoque apaga o alerta e deixa o erro.
+
+O que 8.10 ainda não tem, anotado em pendências: histórico de preço acordado (mudar
+o acordo hoje mexe em mês já fechado) e de qual parceiro saiu a peça quando o mesmo
+SKU está em duas lojas. Os dois ficam **visíveis** no fechamento em vez de
+silenciosos.
 
 **8.4 já existia e não estava marcado.** O arquivo de importação é gerado pelo
 adaptador de cada plataforma desde a fase 2 — `exportarParaImportacao` é a única
