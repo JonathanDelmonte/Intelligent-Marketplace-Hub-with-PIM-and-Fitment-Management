@@ -22,8 +22,12 @@ import {
   tarefaDeCompatibilidade,
 } from '@/dominio/compatibilidade/tarefa';
 import { tarefaDeIdentidade } from '@/dominio/identidade/tarefa';
+import { RepositorioDePedidos } from '@/dominio/pedidos/repositorio';
+import { ExecutorDePedidos, tarefaDePedidos, type ResolverPerfil } from '@/dominio/pedidos/tarefa';
+import { carregarPerfil } from '@/dominio/perfil';
 import { tarefaDeIngestao } from '@/dominio/ingestao/tarefa';
 import { ExecutorDeIngestao } from '@/dominio/ingestao/executor';
+import { ImportadorDePlanilha } from '@/dominio/ingestao/planilha/importador';
 import { ExecutorDeIdentidade } from '@/dominio/identidade/tarefa';
 import { ResolvedorDeIdentidade } from '@/dominio/identidade/resolucao';
 import { Orquestrador } from '@/dominio/ingestao/orquestrador';
@@ -47,10 +51,13 @@ export interface Nucleo {
   /** Consome a fila de coleta de compatibilidade (M4). */
   readonly executorDeCompatibilidade: ExecutorDeCompatibilidade;
   readonly compatibilidade: RepositorioDeCompatibilidade;
+  /** Consome a fila de importação de pedido (M10). */
+  readonly executorDePedidos: ExecutorDePedidos;
+  readonly pedidos: RepositorioDePedidos;
 }
 
 /** Nome da tarefa composta, no log. */
-export const NOME_DA_TAREFA_COMPLETA = 'ingestao+identidade+compatibilidade';
+export const NOME_DA_TAREFA_COMPLETA = 'ingestao+identidade+compatibilidade+pedidos';
 
 /**
  * A tarefa que o sistema roda, com as três filas na ordem de prioridade.
@@ -70,6 +77,7 @@ export function tarefaCompleta(
     tarefaDeIngestao(nucleo.executor, registrador),
     tarefaDeIdentidade(nucleo.executorDeIdentidade, registrador),
     tarefaDeCompatibilidade(nucleo.executorDeCompatibilidade, registrador),
+    tarefaDePedidos(nucleo.executorDePedidos, registrador),
   ]);
 }
 
@@ -95,12 +103,19 @@ export async function drenar(tarefa: Tarefa, limite: number): Promise<number> {
  * permite ao teste montar o mesmo grafo apontando para um banco de teste e uma
  * pasta temporária, sem depender de `process.env`.
  */
-export function montarNucleoCom(db: Banco, diretorioDeConteudo: string): Nucleo {
+export function montarNucleoCom(
+  db: Banco,
+  diretorioDeConteudo: string,
+  resolverPerfil: ResolverPerfil,
+): Nucleo {
   const fila = new Fila(db);
   const armazenamento = new ArmazenamentoDeConteudo(diretorioDeConteudo);
   const ingestor = new IngestorDeProdutoExterno(db);
   const orquestrador = new Orquestrador(fila, armazenamento);
   const executor = new ExecutorDeIngestao(fila, armazenamento, ingestor, orquestrador);
+  // Uma instância de importador para as duas pontas: a de anúncio, dentro do
+  // executor de ingestão, e a de venda, aqui. É sem estado.
+  const importadorDePlanilha = new ImportadorDePlanilha();
 
   /**
    * Um resolvedor **por job**, e é aí que mora o teto de orçamento.
@@ -126,6 +141,18 @@ export function montarNucleoCom(db: Banco, diretorioDeConteudo: string): Nucleo 
     new ColetorDeCompatibilidade(db, compatibilidade),
   );
 
+  // Pedido é dado **operacional** e exige `perfil_id`, então o executor recebe um
+  // resolvedor de perfil em vez de ler ambiente: é o que permite ao teste montar o
+  // mesmo grafo apontando para um perfil que ele mesmo criou.
+  const pedidos = new RepositorioDePedidos(db);
+  const executorDePedidos = new ExecutorDePedidos(
+    fila,
+    armazenamento,
+    importadorDePlanilha,
+    pedidos,
+    resolverPerfil,
+  );
+
   return {
     db,
     fila,
@@ -136,6 +163,8 @@ export function montarNucleoCom(db: Banco, diretorioDeConteudo: string): Nucleo 
     executorDeIdentidade,
     executorDeCompatibilidade,
     compatibilidade,
+    executorDePedidos,
+    pedidos,
   };
 }
 
@@ -153,6 +182,11 @@ interface GlobalComNucleo {
 
 export function montarNucleo(): Nucleo {
   const global = globalThis as GlobalComNucleo;
-  global[CHAVE_GLOBAL] ??= montarNucleoCom(banco(), lerAmbiente().ARMAZENAMENTO_DIR);
+  const ambiente = lerAmbiente();
+  const db = banco();
+  global[CHAVE_GLOBAL] ??= montarNucleoCom(db, ambiente.ARMAZENAMENTO_DIR, async () => {
+    const perfil = await carregarPerfil(db, ambiente.BANCADA_PERFIL_PADRAO);
+    return perfil.id;
+  });
   return global[CHAVE_GLOBAL];
 }

@@ -20,6 +20,7 @@ import { Orcamento, ServicoDeLlm, type Chamador, type RespostaDoModelo } from '@
 import {
   abrirBancoDeTeste,
   limparTabelas,
+  resolvedorDePerfilDeTeste,
   temBancoDeTeste,
   type ConexaoDeTeste,
 } from '@/infra/banco/teste';
@@ -58,7 +59,11 @@ describe.skipIf(!temBancoDeTeste())('resolução de identidade como tarefa de po
   beforeEach(async () => {
     conexao ??= abrirBancoDeTeste();
     diretorio = await mkdtemp(join(tmpdir(), 'bancada-identidade-'));
-    nucleo = montarNucleoCom(conexao.db, diretorio);
+    nucleo = montarNucleoCom(
+      conexao.db,
+      diretorio,
+      resolvedorDePerfilDeTeste(conexao.db, 'perfil-identidade'),
+    );
     pares = new RepositorioDePares(conexao.db);
 
     await limparTabelas(conexao.db, [

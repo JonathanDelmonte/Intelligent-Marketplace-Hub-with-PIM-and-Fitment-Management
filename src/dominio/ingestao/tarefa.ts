@@ -39,6 +39,9 @@ export function camposDoResultado(resultado: ResultadoDoProcessamento): Record<s
     case 'enfileirou_filhos':
       return { jobId: resultado.jobId, filhos: resultado.quantidade };
 
+    case 'encaminhado':
+      return { jobId: resultado.jobId, para: resultado.para, motivo: resultado.motivo };
+
     case 'pendente_revisao':
       return { jobId: resultado.jobId, motivo: resultado.motivo };
 
@@ -82,6 +85,10 @@ export function tarefaDeIngestao(
 
         case 'enfileirou_filhos':
           log.info('ingestao.filhos_enfileirados', campos);
+          return { ocioso: false, campos };
+
+        case 'encaminhado':
+          log.info('ingestao.encaminhado', campos);
           return { ocioso: false, campos };
 
         case 'concluido':

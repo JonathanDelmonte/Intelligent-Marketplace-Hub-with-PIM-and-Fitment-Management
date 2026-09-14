@@ -21,6 +21,7 @@ import { criarRegistrador } from '@/infra/log';
 import {
   abrirBancoDeTeste,
   limparTabelas,
+  resolvedorDePerfilDeTeste,
   temBancoDeTeste,
   type ConexaoDeTeste,
 } from '@/infra/banco/teste';
@@ -54,7 +55,11 @@ describe.skipIf(!temBancoDeTeste())('poller consumindo a fila de ingestão', () 
   beforeEach(async () => {
     conexao ??= abrirBancoDeTeste();
     diretorio = await mkdtemp(join(tmpdir(), 'bancada-poller-'));
-    nucleo = montarNucleoCom(conexao.db, diretorio);
+    nucleo = montarNucleoCom(
+      conexao.db,
+      diretorio,
+      resolvedorDePerfilDeTeste(conexao.db, 'perfil-ingestao'),
+    );
 
     await limparTabelas(conexao.db, ['job', 'produto_externo', 'preco_historico']);
   });

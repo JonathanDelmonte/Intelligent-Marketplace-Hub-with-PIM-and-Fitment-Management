@@ -27,6 +27,8 @@ import { TIPO_JOB_INGESTAO, type EntradaDoJobDeIngestao } from './orquestrador';
 import type { Orquestrador } from './orquestrador';
 import type { TipoDeEntrada } from './classificador';
 import { formatoPorNome } from './planilha/leitor';
+import { classificarPlanilha } from '@/dominio/pedidos/planilha';
+import { enfileirarImportacaoDePedidos } from '@/dominio/pedidos/tarefa';
 import { ImportadorDePlanilha } from './planilha/importador';
 
 export interface ContagemDaIngestao {
@@ -49,6 +51,17 @@ export type ResultadoDoProcessamento =
       readonly tipo: 'enfileirou_filhos';
       readonly jobId: string;
       readonly quantidade: number;
+    }
+  | {
+      /**
+       * A entrada era de outro tipo do que a classificação inicial supôs, e foi
+       * passada para o executor certo. Hoje o único caso é planilha de venda, que
+       * só se distingue de planilha de anúncio depois de mapear as colunas.
+       */
+      readonly tipo: 'encaminhado';
+      readonly jobId: string;
+      readonly para: 'pedidos';
+      readonly motivo: string;
     }
   | {
       readonly tipo: 'pendente_revisao';
@@ -187,6 +200,39 @@ export class ExecutorDeIngestao {
     if (importado.tipo === 'pendente_revisao') {
       await this.fila.mandarParaRevisao(job.id, importado.motivo);
       return { tipo: 'pendente_revisao', jobId: job.id, motivo: importado.motivo };
+    }
+
+    /*
+     * Planilha de **venda** não grava aqui.
+     *
+     * A distinção entre anúncio e venda só é possível depois de ler o cabeçalho e
+     * mapear as colunas — nome de arquivo não serve, porque cada painel nomeia como
+     * quer e o dono renomeia. Então este executor descobre e **encaminha**, em vez
+     * de crescer para gravar pedido: pedido é dado operacional e exige `perfil_id`,
+     * e este executor grava base compartilhada, que não tem perfil nenhum.
+     */
+    const classificacaoDaPlanilha = classificarPlanilha(
+      importado.mapeamento.mapeadas.map((c) => c.campo),
+    );
+    if (classificacaoDaPlanilha.tipo === 'pedidos') {
+      await enfileirarImportacaoDePedidos(this.fila, {
+        hashConteudo: payload.hashConteudo,
+        plataforma,
+        nomeArquivo: payload.nomeArquivo ?? null,
+      });
+      const encaminhado = {
+        encaminhadoPara: 'pedidos',
+        motivo: classificacaoDaPlanilha.motivo,
+        linhaDoCabecalho: importado.linhaDoCabecalho,
+        linhas: importado.linhas.length,
+      };
+      await this.fila.concluir(job.id, encaminhado);
+      return {
+        tipo: 'encaminhado',
+        jobId: job.id,
+        para: 'pedidos',
+        motivo: classificacaoDaPlanilha.motivo,
+      };
     }
 
     let gravados = 0;

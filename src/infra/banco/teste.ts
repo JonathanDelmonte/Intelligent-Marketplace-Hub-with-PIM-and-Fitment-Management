@@ -25,8 +25,10 @@
  * enquanto a de acertar por engano é "os dados foram apagados". Só uma das duas
  * se desfaz.
  */
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
+import { perfilId, type PerfilId } from '@/dominio/catalogo/sku';
 import { criarBancoCom, type Banco } from './cliente';
+import { perfilVendedor } from './schema';
 
 export type BancoDeTeste = Banco;
 
@@ -87,4 +89,40 @@ export async function limparTabelas(db: BancoDeTeste, tabelas: readonly string[]
   if (tabelas.length === 0) return;
   const lista = tabelas.map((t) => `"${t}"`).join(', ');
   await db.execute(sql.raw(`truncate table ${lista} restart identity cascade`));
+}
+
+/**
+ * Resolvedor de perfil para teste, que cria o perfil na primeira chamada.
+ *
+ * Existe porque a montagem do núcleo passou a exigir um resolvedor de perfil — o
+ * executor de pedido precisa de `perfil_id`, e ler ambiente dentro dele tornaria o
+ * grafo dependente de `process.env` justamente onde o teste quer controlar tudo.
+ *
+ * Cria sob demanda em vez de no `beforeEach` porque a maioria dos testes de
+ * montagem não chega a tocar em pedido, e criar perfil que ninguém usa polui a
+ * limpeza de tabela do próximo teste.
+ */
+export function resolvedorDePerfilDeTeste(
+  db: BancoDeTeste,
+  slug = 'perfil-de-teste',
+): () => Promise<PerfilId> {
+  return async () => {
+    const existentes = await db
+      .select({ id: perfilVendedor.id })
+      .from(perfilVendedor)
+      .where(eq(perfilVendedor.slug, slug))
+      .limit(1);
+
+    const existente = existentes[0];
+    if (existente !== undefined) return perfilId(existente.id);
+
+    const criados = await db
+      .insert(perfilVendedor)
+      .values({ slug, nome: 'Perfil de teste', regime: 'mei' })
+      .returning({ id: perfilVendedor.id });
+
+    const criado = criados[0];
+    if (criado === undefined) throw new Error('não criou o perfil de teste');
+    return perfilId(criado.id);
+  };
 }
