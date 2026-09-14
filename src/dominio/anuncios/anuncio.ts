@@ -15,6 +15,7 @@ import type { Ficha } from '@/dominio/compatibilidade/ficha';
 import type { Plataforma } from '@/dominio/precificacao/tipos';
 import type { AnuncioParaExportar } from '@/plataformas/adaptador';
 import type { Centavos } from '@/lib/dinheiro';
+import { avisosDaConferencia, conferirAtributos, type Conferencia } from './atributos';
 import { gerarDescricao } from './descricao';
 import { gerarTituloPara, type TituloGerado } from './titulo';
 
@@ -29,12 +30,30 @@ export interface DadosDoProduto {
   /** A ficha de M4. Alimenta o título e a descrição. */
   readonly ficha: Ficha;
   readonly observacoes?: string | null;
+
+  // Campos que só a conferência de atributos lê. Nulos por padrão: o cadastro de
+  // hoje não os tem, e é justamente por isso que a conferência existe.
+  readonly dimensoesMm?: {
+    readonly comprimento: number;
+    readonly largura: number;
+    readonly altura: number;
+  } | null;
+  readonly voltagem?: string | null;
+  readonly medida?: string | null;
 }
 
 export interface AnuncioMontado {
   readonly anuncio: AnuncioParaExportar;
   readonly titulo: TituloGerado;
   readonly avisos: readonly string[];
+  /**
+   * O checklist de 8.3, inteiro.
+   *
+   * `avisos` continua existindo porque tela que só mostra texto já o usa, mas ele
+   * é **derivado** daqui — a lista de o que falta. Quem quer mostrar o que falta
+   * *e* o que já está certo lê a conferência.
+   */
+  readonly conferencia: Conferencia;
 }
 
 export interface ParametrosDaMontagem {
@@ -77,18 +96,28 @@ export function montarAnuncio(
     ...(produto.observacoes === undefined ? {} : { observacoes: produto.observacoes }),
   });
 
-  const avisos = [...titulo.avisos, ...descricao.avisos];
-  if (produto.ean === null) {
-    avisos.push(
-      'Sem código de barras: as plataformas pedem GTIN em boa parte das categorias, e sem ele o anúncio pode ser recusado na importação.',
-    );
-  }
-  if (produto.categoria === null) {
-    avisos.push('Sem categoria escolhida. A importação em massa exige categoria.');
-  }
-  if (produto.pesoGramas === null) {
-    avisos.push('Sem peso: o frete sai errado, e frete errado come a margem inteira.');
-  }
+  // A conferência de atributo substituiu quatro `if` avulsos que viviam aqui. Os
+  // quatro conferiam a mesma coisa de forma mais pobre: sem nível de exigência, sem
+  // depender do que o produto é, e sem jeito de a tela mostrar o que **está** certo.
+  const conferencia = conferirAtributos({
+    tipoProduto: produto.tipoProduto,
+    marca: produto.marca,
+    modeloPeca: produto.modeloPeca,
+    ean: produto.ean,
+    categoria: produto.categoria,
+    pesoGramas: produto.pesoGramas,
+    dimensoesMm: produto.dimensoesMm ?? null,
+    descricao: descricao.texto === '' ? null : descricao.texto,
+    voltagem: produto.voltagem ?? null,
+    medida: produto.medida ?? null,
+    quantidadeEmbalagem: produto.quantidadeEmbalagem,
+    ficha: produto.ficha,
+  });
+
+  const avisos = [...titulo.avisos, ...descricao.avisos, ...avisosDaConferencia(conferencia)];
+
+  // Quantidade é do parâmetro, não do produto, então fica fora da conferência: ela
+  // confere o cadastro, e isto é a decisão do momento de anunciar.
   if (params.quantidade <= 0) {
     avisos.push('Quantidade zero: o anúncio entra pausado.');
   }
@@ -105,5 +134,6 @@ export function montarAnuncio(
     },
     titulo,
     avisos,
+    conferencia,
   };
 }
