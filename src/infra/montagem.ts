@@ -169,24 +169,28 @@ export function montarNucleoCom(
 }
 
 /**
- * Núcleo do processo, montado uma vez.
+ * Monta o núcleo do processo.
  *
- * Guardado em `globalThis` pelo mesmo motivo do pool de conexão: recarga a quente
- * do Next reavalia o módulo e um `let` voltaria a `null`. Ver `banco/cliente.ts`.
+ * **Não guarda instância, e isso é uma correção.** A versão anterior guardava o
+ * núcleo em `globalThis`, "pelo mesmo motivo do pool de conexão". O motivo não se
+ * aplicava: o pool já é guardado por `banco/cliente.ts`, e todo componente daqui é
+ * casca sem estado em volta dele — `Fila`, orquestrador, executores, repositórios.
+ *
+ * O que o cache produzia era uma armadilha. `globalThis` sobrevive à reavaliação
+ * de módulo da recarga a quente, então **o núcleo guardado tinha a forma do código
+ * antigo**: ao acrescentar o executor de pedido, a tela continuou usando o núcleo
+ * sem ele, e o erro chegou como `Cannot read properties of undefined (reading
+ * 'processarProximo')` — mensagem que não aponta para nada. Apareceu no navegador,
+ * não em teste, porque teste monta o grafo do zero toda vez.
+ *
+ * O custo de montar por chamada é um punhado de `new` em objetos vazios. O custo
+ * de guardar era um bug por mudança de forma.
  */
-const CHAVE_GLOBAL = Symbol.for('bancada.nucleo');
-
-interface GlobalComNucleo {
-  [CHAVE_GLOBAL]?: Nucleo;
-}
-
 export function montarNucleo(): Nucleo {
-  const global = globalThis as GlobalComNucleo;
   const ambiente = lerAmbiente();
   const db = banco();
-  global[CHAVE_GLOBAL] ??= montarNucleoCom(db, ambiente.ARMAZENAMENTO_DIR, async () => {
+  return montarNucleoCom(db, ambiente.ARMAZENAMENTO_DIR, async () => {
     const perfil = await carregarPerfil(db, ambiente.BANCADA_PERFIL_PADRAO);
     return perfil.id;
   });
-  return global[CHAVE_GLOBAL];
 }
