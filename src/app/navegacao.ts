@@ -37,6 +37,12 @@ export const PORTAS: readonly Porta[] = [
       'O mesmo produto, anunciado em lugares diferentes, junta num só — e aí dá para comparar preço de fornecedor.',
   },
   {
+    href: '/postagem',
+    rotulo: 'Postar hoje',
+    descricao:
+      'O que postar hoje, em ordem de prazo. É a tela do dia a dia, e no fim dela a conferência do que a plataforma repassou.',
+  },
+  {
     href: '/compatibilidade',
     rotulo: 'Onde serve',
     descricao:
