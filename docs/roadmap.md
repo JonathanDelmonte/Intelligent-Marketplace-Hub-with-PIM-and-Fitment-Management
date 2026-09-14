@@ -393,7 +393,7 @@ aparência de medição, que é o oposto do que o resto do sistema faz.
 | 8.4  | Gerador de arquivo de importação em massa (caminho padrão)              | ✅     |
 | 8.5  | Alerta de catálogo do ML para conta sem reputação verde                 | ⬜     |
 | 8.6  | Importação de pedidos, casamento com SKU, margem realizada              | ✅     |
-| 8.7  | Fila de postagem do dia — a tela mais usada do sistema                  | 🚧     |
+| 8.7  | Fila de postagem do dia — a tela mais usada do sistema                  | ✅     |
 | 8.8  | Etiqueta e envio ao fornecedor no dropship, com cobrança de confirmação | 🔒     |
 | 8.9  | Conferência de repasse: previsto contra o que caiu                      | ✅     |
 | 8.10 | M11: consignação, alerta de conferência, fechamento por período         | ⬜     |
@@ -404,16 +404,22 @@ adaptador de cada plataforma desde a fase 2 — `exportarParaImportacao` é a ú
 capacidade sempre suportada, com teste de que nunca lança `NaoSuportado`. O que
 faltava era quem produz o objeto a ser exportado, e é o 8.1/8.2.
 
-**8.6 e 8.9 fechadas; 8.7 espera a tela.** A cadeia de venda funciona de ponta a
-ponta e tem teste: planilha de venda entra pela mesma porta da de anúncio, a
-ingestão descobre pelo **cabeçalho** que é venda — nome de arquivo não serve —,
-encaminha para a fila de pedido, e o pedido é gravado com casamento por EAN, custo
-congelado na venda e margem realizada. A conferência de repasse acha o pedido em
-que a plataforma repassa menos do que as taxas informadas explicam.
+**8.6, 8.7 e 8.9 fechadas.** A cadeia de venda funciona de ponta a ponta e tem
+teste: planilha de venda entra pela mesma porta da de anúncio, a ingestão descobre
+pelo **cabeçalho** que é venda — nome de arquivo não serve —, encaminha para a fila
+de pedido, e o pedido é gravado com casamento por EAN, custo congelado na venda e
+margem realizada. A conferência de repasse acha o pedido em que a plataforma
+repassa menos do que as taxas informadas explicam.
 
-O que falta em 8.7 é só a **tela**: a ordenação por prazo restante, a contagem de
-atrasados e o "confirmar postagem" estão prontos e testados, e ninguém consegue
-usar sem abrir o código.
+**A tela de 8.7 põe a conferência de repasse no fim dela, não em uma sua.** Quem
+confere repasse é a mesma pessoa que está imprimindo etiqueta, e a conferência só
+tem conteúdo quando há divergência — tela separada seria tela que ninguém abre.
+
+Duas escolhas da tela que vale registrar. `sem_prazo` aparece **primeiro**, não
+último: sem prazo não é "sem pressa", é "ninguém sabe quando vence", e é o pedido
+que mais some. E pedido sem SKU casado aparece na fila com a explicação do que
+falta, em vez de aparecer sem margem e deixar o vendedor adivinhar por quê — a
+fila do dia é para postar, então não esconde pedido por falta de margem.
 
 Foi de propósito começar pelas regras: margem realizada é a razão de o catálogo
 existir, e ela é função pura sobre números que a planilha traz. A importação é

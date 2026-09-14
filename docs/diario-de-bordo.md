@@ -28,6 +28,58 @@ Convenção de marcação:
 
 ## 2026-09-14 — Fase 8: gerador de anúncio
 
+### 🐛 O núcleo guardado em `globalThis` servia a forma antiga do código
+
+Sintoma: depois de acrescentar o executor de pedido ao núcleo, a tela de jobs
+quebrou com `Cannot read properties of undefined (reading 'processarProximo')`.
+Mensagem que não aponta para nada — o código que falhou estava certo, e o objeto que
+chegou nele é que era velho.
+
+Causa: `montarNucleo()` guardava a instância num `Symbol.for` em `globalThis`,
+"pelo mesmo motivo do pool de conexão". O motivo não se aplicava. `globalThis`
+sobrevive à reavaliação de módulo da recarga a quente — que é exatamente o ponto de
+usá-lo para o pool — e o que sobrevive aqui é **um objeto com a forma do código
+anterior**. Campo novo no núcleo, e a tela continua com o núcleo sem ele.
+
+Conserto: tirar o cache. O pool já é guardado em `banco/cliente.ts`, e todo
+componente do núcleo é casca sem estado em volta dele — montar por chamada é um
+punhado de `new` em objeto vazio.
+
+A parte que interessa: **isso não apareceu em teste nenhum, e não apareceria.**
+Teste monta o grafo do zero toda vez, então nunca vê um núcleo velho. É bug que só
+existe em desenvolvimento, e o custo dele é o tempo de quem procura no lugar errado
+— eu procurei no executor de pedido, que estava correto. Cache de grafo de objeto é
+armadilha por mudança de forma; cache de recurso caro (conexão) não é.
+
+### 🐛 Planilha sem plataforma no nome mandava configurar LLM, que não era o problema
+
+Visto no navegador, não em teste. Subi uma planilha de venda chamada
+`vendas-demo.csv` e ela foi para revisão com:
+
+> não há extrator para "planilha_generica" ainda. Esse tipo depende de extração por
+> LLM (roadmap, etapas 3.2 a 3.6), que precisa de chave de LLM configurada.
+
+A mesma planilha, renomeada para `vendas_mercadolivre.csv`, atravessou o sistema
+inteiro: ingestão, encaminhamento, pedido gravado, margem calculada. Ou seja: não
+faltava extrator, não faltava LLM, e não faltava chave nenhuma. Faltava **o nome do
+arquivo dizer de qual plataforma são as colunas**, porque é isso que escolhe a
+tabela de sinônimos.
+
+A mensagem era verdadeira para seis dos sete tipos que caíam naquele `case`, e falsa
+justo para o que tem conserto trivial. Pior: mandava a pessoa gastar tempo
+configurando LLM para resolver um problema de renomear arquivo.
+
+Conserto: `planilha_generica` ganhou `case` e mensagem próprios, que dizem o que
+falta, **negam o LLM explicitamente** e dão exemplos de nome que funcionam. Os
+exemplos moram ao lado das pistas de reconhecimento, com teste conferindo que cada
+um é de fato aceito — mensagem que ensina a renomear e padrão que aceita o nome
+mudando juntos.
+
+A lição que passa do caso: mensagem de erro genérica agrupada por implementação
+("todos estes não têm extrator") mente sobre o caso particular. O agrupamento certo
+é por **o que a pessoa tem de fazer**, e aqui eram duas coisas diferentes —
+esperar o extrator, ou renomear o arquivo e reenviar.
+
 ### 🔀 Planilha de venda virou job próprio, e não um ramo do executor de ingestão
 
 A distinção entre planilha de anúncio e de venda só existe depois de ler o
