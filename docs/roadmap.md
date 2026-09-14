@@ -392,10 +392,10 @@ aparência de medição, que é o oposto do que o resto do sistema faz.
 | 8.3  | Checklist de atributos obrigatórios por categoria                       | ⬜     |
 | 8.4  | Gerador de arquivo de importação em massa (caminho padrão)              | ✅     |
 | 8.5  | Alerta de catálogo do ML para conta sem reputação verde                 | ⬜     |
-| 8.6  | Importação de pedidos, casamento com SKU, margem realizada              | ⬜     |
-| 8.7  | Fila de postagem do dia — a tela mais usada do sistema                  | ⬜     |
+| 8.6  | Importação de pedidos, casamento com SKU, margem realizada              | 🚧     |
+| 8.7  | Fila de postagem do dia — a tela mais usada do sistema                  | 🚧     |
 | 8.8  | Etiqueta e envio ao fornecedor no dropship, com cobrança de confirmação | 🔒     |
-| 8.9  | Conferência de repasse: previsto contra o que caiu                      | ⬜     |
+| 8.9  | Conferência de repasse: previsto contra o que caiu                      | 🚧     |
 | 8.10 | M11: consignação, alerta de conferência, fechamento por período         | ⬜     |
 | 8.11 | Tela de anúncio: montar, revisar avisos e baixar o arquivo              | ⬜     |
 
@@ -403,6 +403,16 @@ aparência de medição, que é o oposto do que o resto do sistema faz.
 adaptador de cada plataforma desde a fase 2 — `exportarParaImportacao` é a única
 capacidade sempre suportada, com teste de que nunca lança `NaoSuportado`. O que
 faltava era quem produz o objeto a ser exportado, e é o 8.1/8.2.
+
+**O que está pronto em 8.6, 8.7 e 8.9, e o que falta.** As **regras** estão
+escritas e testadas: margem realizada com conferência de repasse (8.6 e 8.9) e a
+ordenação da fila do dia (8.7). O que falta nas três é o mesmo: **importar pedido**
+— por planilha, que é o caminho sem credencial — e as telas. Sem pedido no banco,
+as três regras não têm o que morder.
+
+Foi de propósito começar pelas regras: margem realizada é a razão de o catálogo
+existir, e ela é função pura sobre números que a planilha traz. A importação é
+encanamento, e encanamento sem a regra pronta tende a gravar o campo errado.
 
 **A ordem dos termos no título é a decisão que mais importa nesta fase.** O código
 do aparelho vem antes do código da peça: o comprador sabe o modelo do purificador

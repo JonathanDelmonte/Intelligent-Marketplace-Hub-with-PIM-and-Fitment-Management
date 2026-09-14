@@ -28,6 +28,47 @@ Convenção de marcação:
 
 ## 2026-09-14 — Fase 8: gerador de anúncio
 
+### 🐛 `npm run check | tail` engoliu a falha e o commit passou com lint quebrado
+
+Rodei `npm run check 2>&1 | tail -4 && git add . && commit` numa linha só. O
+`npm run check` **falhou** com dois erros de lint, e o commit aconteceu do mesmo
+jeito: o `&&` olha o código de saída do `tail`, não o do `npm`. Pipe zera o status
+do comando à esquerda, e a convenção de "rodar `check` antes de commitar" foi
+cumprida na letra e violada no efeito.
+
+O hook de pre-commit não pega: ele confere autoria e trailer proibido, que é o que
+foi desenhado para fazer. Consertei com `--amend` antes de publicar, então o
+histórico ficou limpo, mas o erro de processo é meu e vale anotado: **ler a saída
+de um comando não é o mesmo que verificar se ele passou.** Quando o resultado
+decide o passo seguinte, o comando vai sozinho na sua própria chamada.
+
+O erro em si era pequeno e a regra do lint é boa: negação unária sobre o tipo
+marcado `Centavos`. `0 - x` em vez de `-x`, que é a forma que `margem.ts` já usava
+— e o motivo da regra é que negar valor marcado costuma ser sinal de aritmética de
+dinheiro fora das funções que validam.
+
+### 🔀 A fila do dia calcula "hoje" no fuso do vendedor, e há teste dos dois fusos
+
+Prazo às 23h de quinta em São Paulo é 02h de sexta em UTC. Um cálculo em UTC
+mostraria "amanhã" na quinta à noite — justamente quando ainda dava para postar
+hoje, e a fila do dia existe para não perder esse prazo.
+
+O fuso entra por parâmetro com padrão brasileiro, e o dia civil sai do `Intl` em
+vez de aritmética de data à mão. O teste compara os dois fusos **no mesmo
+instante**, que é o único jeito de essa classe de bug não voltar.
+
+### ❓ Margem realizada devolve nulo sem custo, e isso é decisão repetida
+
+É a terceira vez que a mesma disciplina aparece no projeto: a proposta de SKU da
+fase 5 se recusa a presumir custo a partir de preço de anúncio, o scanner devolve
+`null` para markup sobre custo zero, e agora a margem realizada devolve `null` sem
+custo na venda.
+
+O padrão vale escrito: **chutar o número desconhecido produz o resultado mais
+bonito exatamente quando se sabe menos.** Custo zero dá margem máxima; markup
+sobre custo zero é infinito e passa em qualquer corte. Nos três casos, `null` é a
+resposta honesta e a tela pede o dado.
+
 ### 🐛 O título estourava o limite quando o tipo do produto era longo
 
 A primeira versão montava a base — tipo mais marca — e só depois conferia o limite
