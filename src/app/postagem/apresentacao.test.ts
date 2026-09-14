@@ -3,6 +3,7 @@ import { URGENCIAS } from '@/dominio/pedidos/fila-do-dia';
 import { centavos, reaisParaCentavos } from '@/lib/dinheiro';
 import {
   CODIGOS_DE_AVISO,
+  avisoDeConsignacao,
   descreverAviso,
   divergenciaEmTexto,
   rotuloDaUrgencia,
@@ -60,6 +61,20 @@ describe('divergenciaEmTexto', () => {
 
   it('mostra o valor absoluto formatado', () => {
     expect(divergenciaEmTexto(centavos(0 - reaisParaCentavos(4)))).toContain('4,00');
+  });
+});
+
+describe('avisoDeConsignacao', () => {
+  it('sem unidade em risco não devolve texto, para a tela não ter caixa vazia', () => {
+    expect(avisoDeConsignacao(0)).toBeNull();
+    // Negativo não deveria acontecer, e mesmo assim não vira frase absurda.
+    expect(avisoDeConsignacao(-1)).toBeNull();
+  });
+
+  it('com risco diz o número e o que fazer antes de vender', () => {
+    const texto = avisoDeConsignacao(7);
+    expect(texto).toContain('7 unidade(s)');
+    expect(texto).toContain('antes de vender');
   });
 });
 

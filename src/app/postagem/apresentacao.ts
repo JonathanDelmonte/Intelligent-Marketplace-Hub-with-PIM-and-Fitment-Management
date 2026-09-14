@@ -55,6 +55,21 @@ export function divergenciaEmTexto(divergencia: Centavos): string {
   return `${formatarBRL(divergencia)} a mais do que as taxas explicam`;
 }
 
+/**
+ * O aviso de consignação, quando há unidade anunciada sem conferência.
+ *
+ * Mora nesta tela e não só na de consignação porque o risco se realiza **aqui**: é
+ * postando que se descobre que a peça não está na loja. E é uma linha só, que
+ * aparece apenas quando há risco — seção permanente seria ruído diário para um
+ * trabalho semanal.
+ *
+ * `null` quando não há nada a dizer, para a tela não renderizar caixa vazia.
+ */
+export function avisoDeConsignacao(unidadesEmRisco: number): string | null {
+  if (unidadesEmRisco <= 0) return null;
+  return `${String(unidadesEmRisco)} unidade(s) em consignação estão anunciadas sem conferência. Confira antes de vender o que talvez já tenha saído no balcão do parceiro.`;
+}
+
 export const CODIGOS_DE_AVISO = ['postado', 'nao_encontrado', 'falha'] as const;
 export type CodigoDeAviso = (typeof CODIGOS_DE_AVISO)[number];
 

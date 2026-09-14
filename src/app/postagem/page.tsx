@@ -16,8 +16,9 @@ import { resumoDaFila } from '@/dominio/pedidos/fila-do-dia';
 import { RepositorioDePedidos } from '@/dominio/pedidos/repositorio';
 import { carregarPerfil } from '@/dominio/perfil';
 import { banco } from '@/infra/banco/cliente';
-import { descreverAviso } from './apresentacao';
-import { AvisoDaAcao, Divergencias, Fila, Painel } from './componentes';
+import { RepositorioDeConsignacao } from '@/dominio/consignacao/repositorio';
+import { avisoDeConsignacao, descreverAviso } from './apresentacao';
+import { AvisoDaAcao, AvisoDeConsignacao, Divergencias, Fila, Painel } from './componentes';
 import { LIMITE_DA_FILA, LIMITE_DE_DIVERGENCIAS } from './constantes';
 import estilo from './postagem.module.css';
 
@@ -41,13 +42,15 @@ export default async function PaginaDePostagem({
   // do painel não fecha com a lista.
   const agora = new Date();
 
-  const [fila, divergencias] = await Promise.all([
+  const [fila, divergencias, consignacao] = await Promise.all([
     repo.filaDoDia(perfil.id, agora, LIMITE_DA_FILA),
     repo.divergenciasDeRepasse(perfil.id, LIMITE_DE_DIVERGENCIAS),
+    new RepositorioDeConsignacao(db).quadroDeConferencia(perfil.id, { agora }),
   ]);
 
   const codigo = Array.isArray(parametros['r']) ? parametros['r'][0] : parametros['r'];
   const aviso = descreverAviso(codigo);
+  const avisoDeEstoqueDeTerceiro = avisoDeConsignacao(consignacao.unidadesEmRisco);
 
   return (
     <main className={estilo.pagina}>
@@ -61,6 +64,7 @@ export default async function PaginaDePostagem({
       </header>
 
       {aviso !== null && <AvisoDaAcao aviso={aviso} />}
+      {avisoDeEstoqueDeTerceiro !== null && <AvisoDeConsignacao texto={avisoDeEstoqueDeTerceiro} />}
 
       <Painel fila={fila} />
 

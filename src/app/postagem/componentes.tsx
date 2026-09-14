@@ -8,6 +8,7 @@
 import type { FilaDoDia, ItemDaFila } from '@/dominio/pedidos/fila-do-dia';
 import type { Centavos } from '@/lib/dinheiro';
 import { formatarBRL } from '@/lib/dinheiro';
+import { CAMINHO as CAMINHO_DE_CONSIGNACAO } from '@/app/consignacao/constantes';
 import { confirmarPostagem } from './acoes';
 import {
   divergenciaEmTexto,
@@ -29,6 +30,23 @@ export function AvisoDaAcao({ aviso }: { readonly aviso: Aviso }) {
     <div className={classe} role="status">
       <strong className={estilo.avisoTitulo}>{aviso.titulo}</strong>
       <span className={estilo.avisoCorpo}>{aviso.corpo}</span>
+    </div>
+  );
+}
+
+/**
+ * Aviso de consignação, com link para a tela que resolve.
+ *
+ * Aviso que diz o problema e não diz onde resolver é aviso que a pessoa lê duas
+ * vezes e ignora na terceira.
+ */
+export function AvisoDeConsignacao({ texto }: { readonly texto: string }) {
+  return (
+    <div className={`${estilo.aviso} ${estilo.avisoAtencao}`} role="status">
+      <strong className={estilo.avisoTitulo}>Consignação sem conferir</strong>
+      <span className={estilo.avisoCorpo}>
+        {texto} <a href={CAMINHO_DE_CONSIGNACAO}>Abrir consignação</a>
+      </span>
     </div>
   );
 }
