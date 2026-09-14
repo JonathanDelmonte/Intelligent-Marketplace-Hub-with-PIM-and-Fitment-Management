@@ -28,6 +28,39 @@ Convenção de marcação:
 
 ## 2026-09-14 — Fase 8: gerador de anúncio
 
+### 🔀 Planilha de venda virou job próprio, e não um ramo do executor de ingestão
+
+A distinção entre planilha de anúncio e de venda só existe depois de ler o
+cabeçalho e mapear as colunas. Então alguém tem de descobrir no meio do caminho, e
+havia duas formas:
+
+1. **Injetar** repositório de pedido e resolvedor de perfil no executor de
+   ingestão, e gravar ali. Mais curto.
+2. **Encaminhar** para uma fila própria, com executor próprio.
+
+Escolhi a segunda por um motivo de acoplamento: pedido é dado operacional e exige
+`perfil_id`, e o executor de ingestão grava base compartilhada, que não tem perfil
+nenhum. A primeira forma colocaria perfil num lugar que não precisa dele — o tipo
+de acoplamento que não dói hoje e dói quando alguém for mexer.
+
+O custo é reler o arquivo. É armazenamento endereçado por hash em disco local, e
+reler é exatamente o que a retomada de job já faz.
+
+De passagem, o resultado do executor de ingestão ganhou um caso `encaminhado`, em
+vez de fingir que concluiu uma ingestão que não aconteceu. Resultado honesto custa
+um membro na união e evita a pergunta "por que este job diz que gravou zero
+ocorrências".
+
+### 🧹 `LinhaImportada` passou a expor o mapeamento, como `LinhaRejeitada` já fazia
+
+O conversor de pedido precisa da linha mapeada, e só a linha **rejeitada** expunha
+isso. A alternativa era uma segunda cópia do leitor inteiro — detecção de
+separador, busca de cabeçalho, mapeamento de coluna — para planilha de venda. Cópia
+de código testado é como o conserto de um lado não chega no outro.
+
+Custo do atalho: `LinhaImportada` carrega um campo que só um consumidor usa. É
+pequeno e simétrico com a linha rejeitada, que já carregava.
+
 ### 🔀 Margem realizada é gravada; veredito de fornecedor e ficha, não
 
 Três módulos desta semana tomaram a decisão oposta sobre a mesma pergunta — gravar
