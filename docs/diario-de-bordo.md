@@ -28,6 +28,34 @@ Convenção de marcação:
 
 ## 2026-09-14 — Fase 8: gerador de anúncio
 
+### 🔀 Margem realizada é gravada; veredito de fornecedor e ficha, não
+
+Três módulos desta semana tomaram a decisão oposta sobre a mesma pergunta — gravar
+o resultado ou recalcular na leitura — e vale registrar por quê, porque o critério
+é o mesmo nos três:
+
+- **Veredito de fornecedor** e **ficha de compatibilidade**: recalculados. O
+  resultado depende de critério configurável, e mudar o critério tem de valer para
+  o cadastro antigo. Gravar deixaria a base com dois vereditos conforme a data.
+- **Margem realizada**: gravada. O número é **histórico** — a margem daquela venda
+  foi aquela, com o custo que o item tinha naquele dia. Recalcular com o custo de
+  hoje reescreveria o passado, e é o passado que se quer medir.
+
+O critério, então: **recalcula o que é julgamento sobre o presente; grava o que é
+fato de uma data.** Há teste que muda o custo do catálogo depois da venda e
+confere que a margem não se move.
+
+### ❓ Casar pedido com SKU por EAN é o que dá hoje, e é limite conhecido
+
+A chave boa seria o id de anúncio: toda planilha de venda traz, e ele aponta para
+um anúncio, que aponta para um SKU. Só que a tabela `anuncio` está vazia — povoar
+depende de importar anúncio, que é outra entrega.
+
+Então o casamento é por EAN, que a planilha de venda às vezes traz. Quando não
+casa, o pedido é gravado com `sku_id` nulo e **contado**: venda sem SKU é venda sem
+margem, e recusar a linha ou esconder a contagem seria esconder o número que o
+catálogo existe para produzir.
+
 ### 🐛 `npm run check | tail` engoliu a falha e o commit passou com lint quebrado
 
 Rodei `npm run check 2>&1 | tail -4 && git add . && commit` numa linha só. O

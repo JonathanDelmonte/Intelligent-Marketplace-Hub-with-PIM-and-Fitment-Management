@@ -395,7 +395,7 @@ aparência de medição, que é o oposto do que o resto do sistema faz.
 | 8.6  | Importação de pedidos, casamento com SKU, margem realizada              | 🚧     |
 | 8.7  | Fila de postagem do dia — a tela mais usada do sistema                  | 🚧     |
 | 8.8  | Etiqueta e envio ao fornecedor no dropship, com cobrança de confirmação | 🔒     |
-| 8.9  | Conferência de repasse: previsto contra o que caiu                      | 🚧     |
+| 8.9  | Conferência de repasse: previsto contra o que caiu                      | ✅     |
 | 8.10 | M11: consignação, alerta de conferência, fechamento por período         | ⬜     |
 | 8.11 | Tela de anúncio: montar, revisar avisos e baixar o arquivo              | ⬜     |
 
@@ -404,15 +404,22 @@ adaptador de cada plataforma desde a fase 2 — `exportarParaImportacao` é a ú
 capacidade sempre suportada, com teste de que nunca lança `NaoSuportado`. O que
 faltava era quem produz o objeto a ser exportado, e é o 8.1/8.2.
 
-**O que está pronto em 8.6, 8.7 e 8.9, e o que falta.** As **regras** estão
-escritas e testadas: margem realizada com conferência de repasse (8.6 e 8.9) e a
-ordenação da fila do dia (8.7). O que falta nas três é o mesmo: **importar pedido**
-— por planilha, que é o caminho sem credencial — e as telas. Sem pedido no banco,
-as três regras não têm o que morder.
+**O que está pronto em 8.6 e 8.7, e o que falta.** A regra, a persistência e a
+consulta estão prontas: pedido gravado com casamento por EAN, custo congelado na
+venda, margem realizada, fila do dia ordenada por prazo e conferência de repasse
+(8.9, fechada). O que falta é a **ponta da planilha** — ligar o classificador de
+planilha de venda ao importador da fase 3, que hoje só grava `produto_externo` — e
+as telas.
 
 Foi de propósito começar pelas regras: margem realizada é a razão de o catálogo
 existir, e ela é função pura sobre números que a planilha traz. A importação é
 encanamento, e encanamento sem a regra pronta tende a gravar o campo errado.
+
+**O casamento de pedido com SKU é por EAN, e isso é limite conhecido.** Casar por
+id de anúncio seria melhor — é a chave que toda planilha de venda traz — e exige a
+tabela `anuncio` povoada, que depende de importar anúncio. Enquanto não houver,
+pedido sem EAN casado fica com `sku_id` nulo, **contado e visível**, porque venda
+sem SKU é venda sem margem.
 
 **A ordem dos termos no título é a decisão que mais importa nesta fase.** O código
 do aparelho vem antes do código da peça: o comprador sabe o modelo do purificador
