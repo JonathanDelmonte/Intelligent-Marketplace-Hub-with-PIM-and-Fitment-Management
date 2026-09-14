@@ -43,6 +43,12 @@ export const PORTAS: readonly Porta[] = [
       'O que postar hoje, em ordem de prazo. É a tela do dia a dia, e no fim dela a conferência do que a plataforma repassou.',
   },
   {
+    href: '/consignacao',
+    rotulo: 'Consignação',
+    descricao:
+      'Peça de parceiro que você anuncia como sua, e a conferência que impede vender o que já saiu no balcão dele.',
+  },
+  {
     href: '/compatibilidade',
     rotulo: 'Onde serve',
     descricao:
