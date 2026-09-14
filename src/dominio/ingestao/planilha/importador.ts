@@ -41,6 +41,17 @@ export interface LinhaImportada {
   /** Número da linha no arquivo, 1-based, como o usuário vê na planilha. */
   readonly numeroDaLinha: number;
   readonly captura: ProdutoExternoCapturado;
+  /**
+   * A linha já mapeada para campos do domínio, como `LinhaRejeitada` sempre teve.
+   *
+   * Acrescentado quando a planilha de **venda** entrou em cena: uma linha de venda
+   * usa outros campos (data, comissão, repasse) e não caberia em
+   * `ProdutoExternoCapturado`. Expor o mapeamento aqui deixa o importador de
+   * pedido reusar leitor, detecção de separador, busca de cabeçalho e mapeamento de
+   * coluna — que é a parte difícil e testada — em vez de ganhar uma segunda cópia
+   * de tudo isso.
+   */
+  readonly bruto: Readonly<Record<string, string>>;
 }
 
 export interface LinhaRejeitada {
@@ -148,7 +159,7 @@ export class ImportadorDePlanilha {
       });
 
       if (convertida.ok) {
-        linhas.push({ numeroDaLinha, captura: convertida.captura });
+        linhas.push({ numeroDaLinha, captura: convertida.captura, bruto });
       } else {
         rejeitadas.push({
           numeroDaLinha,
