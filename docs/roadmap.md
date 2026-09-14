@@ -350,7 +350,7 @@ identidade → **você confirma o produto** → compatibilidade coletada e infer
 | 7.2 | `vende_direto_marketplace = true` → descarte automático com aviso | ✅     |
 | 7.3 | Verificação automática desse campo por nome e CNPJ (M0)           | ⬜     |
 | 7.4 | Histórico de preço por SKU e fornecedor (aumento silencioso)      | ✅     |
-| 7.5 | Score de confiabilidade alimentado por atraso real                | ⬜     |
+| 7.5 | Score de confiabilidade alimentado por atraso real                | 🔒     |
 | 7.6 | Gerador do primeiro contato com as cinco perguntas preenchidas    | ✅     |
 | 7.7 | M7: cortes numéricos configuráveis, aplicados em subcategoria     | ✅     |
 | 7.8 | Repositório e tela de fornecedor                                  | ✅     |
@@ -371,10 +371,15 @@ todos configuráveis, e o corte de markup e de ticket importados do módulo de
 margem em vez de repetidos: a especificação diz que "a tela de preço também usa",
 e dois números iguais em dois arquivos divergem na primeira mudança.
 
-**Falta só o que depende de rede:** 7.3, verificar por nome e CNPJ se o fornecedor
-tem loja própria nas plataformas. É busca em página, o mesmo trabalho das fontes de
-evidência que ficaram para a fase 10, e por isso fica com elas. O campo continua
-respondível à mão, e é ele que descarta.
+**O que falta, e por quê.** 7.3 — verificar por nome e CNPJ se o fornecedor tem
+loja própria — é busca em página, o mesmo trabalho das fontes de evidência que
+ficaram para a fase 10, e fica com elas. O campo continua respondível à mão, e é
+ele que descarta.
+
+7.5 está **bloqueado por dependência**, não adiado: confiabilidade "alimentada por
+atraso real" exige pedido com data prometida e data real, e isso é a fase 8 (M10).
+Um score calculado sobre impressão seria pior que nenhum — daria ao palpite a
+aparência de medição, que é o oposto do que o resto do sistema faz.
 
 ---
 
