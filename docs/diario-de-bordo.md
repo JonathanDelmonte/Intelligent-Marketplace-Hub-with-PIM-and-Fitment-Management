@@ -28,6 +28,28 @@ Convenção de marcação:
 
 ## 2026-09-13 — Fase 7: as duas regras de fornecedor
 
+### 🔀 O scanner importa os cortes do módulo de margem em vez de repeti-los
+
+A especificação diz, sobre o corte de markup e o de ticket mínimo, que "a tela de
+preço também usa" — então eles já existiam em `precificacao/margem.ts`, desde a
+fase 1. Repetir `3x` e `R$ 80` no scanner seria dois números iguais em dois
+arquivos, que divergem na primeira mudança.
+
+O teste fixa a ligação: se alguém mudar o corte num lugar e não no outro, ele
+falha. É mais barato que descobrir pela diferença entre o aviso da tela de preço e
+o veredito do garimpo.
+
+### ❓ Dois dos sete cortes do M7 são escolha, não número da especificação
+
+A especificação numera cinco cortes e descreve dois em palavras:
+"substituibilidade: baixa" e "recorrência: alta". Não há número, e inventar um com
+cara de fato seria pior que assumir a escolha — então `4 000` e `6 000` pontos-base
+estão no código como decisão deste projeto, com o motivo ao lado, e são
+configuráveis como todos os outros.
+
+O share dos três maiores ela dá em faixa, "40–50%". O padrão é o **meio**, 45%, e
+também está registrado como escolha.
+
 ### 🐛 A quinta porta na barra de navegação deu rolagem horizontal em todas as telas
 
 A barra é uma linha de `flex` sem `flex-wrap`. Com quatro portas cabia em 390px;

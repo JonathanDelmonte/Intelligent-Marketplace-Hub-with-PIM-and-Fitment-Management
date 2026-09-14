@@ -352,7 +352,7 @@ identidade → **você confirma o produto** → compatibilidade coletada e infer
 | 7.4 | Histórico de preço por SKU e fornecedor (aumento silencioso)      | ✅     |
 | 7.5 | Score de confiabilidade alimentado por atraso real                | ⬜     |
 | 7.6 | Gerador do primeiro contato com as cinco perguntas preenchidas    | ✅     |
-| 7.7 | M7: cortes numéricos configuráveis, aplicados em subcategoria     | ⬜     |
+| 7.7 | M7: cortes numéricos configuráveis, aplicados em subcategoria     | ✅     |
 | 7.8 | Repositório e tela de fornecedor                                  | ✅     |
 
 **Começou pelas duas regras, não pela tela.** A triagem e o gerador de contato são
@@ -365,8 +365,16 @@ de fornecedor devolve a variação em pontos-base e avisa quando o aumento passa
 corte. Uma linha de histórico por gravação, mesmo com preço igual — saber que o
 preço foi conferido ontem vale tanto quanto saber qual é.
 
-Falta o que depende de rede (7.3, verificar por CNPJ se o fornecedor tem loja
-própria) e o scanner numérico (7.7).
+O scanner (7.7) é o filtro numérico, não o descobridor — a própria especificação
+desce ele de posto. Sete cortes sobre números medidos, com o motivo de cada um,
+todos configuráveis, e o corte de markup e de ticket importados do módulo de
+margem em vez de repetidos: a especificação diz que "a tela de preço também usa",
+e dois números iguais em dois arquivos divergem na primeira mudança.
+
+**Falta só o que depende de rede:** 7.3, verificar por nome e CNPJ se o fornecedor
+tem loja própria nas plataformas. É busca em página, o mesmo trabalho das fontes de
+evidência que ficaram para a fase 10, e por isso fica com elas. O campo continua
+respondível à mão, e é ele que descarta.
 
 ---
 
