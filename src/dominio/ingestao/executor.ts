@@ -7,8 +7,10 @@
  * ## A honestidade que este arquivo precisa ter
  *
  * Dos nove tipos de entrada, **só dois têm extrator**: planilha de exportação e
- * lista de links. Os outros dependem de LLM e não existem ainda (roadmap, etapas
- * 3.2 a 3.6).
+ * lista de links. Dos que faltam, seis dependem de LLM e não existem ainda
+ * (roadmap, etapas 3.2 a 3.6); `planilha_generica` é o caso fora dessa conta —
+ * mapear as colunas dela não gastaria LLM nenhum, falta só saber a plataforma, e
+ * por isso ela tem mensagem própria.
  *
  * O executor **não finge**. Tipo sem extrator vai para `pendente_revisao` com o
  * motivo dizendo exatamente o que falta. Duas razões:
@@ -25,6 +27,7 @@ import type { Fila, JobEnfileirado } from '@/infra/fila/fila';
 import type { IngestorDeProdutoExterno } from './produto-externo';
 import { TIPO_JOB_INGESTAO, type EntradaDoJobDeIngestao } from './orquestrador';
 import type { Orquestrador } from './orquestrador';
+import { EXEMPLOS_DE_NOME_DE_EXPORTACAO } from './classificador';
 import type { TipoDeEntrada } from './classificador';
 import { formatoPorNome } from './planilha/leitor';
 import { classificarPlanilha } from '@/dominio/pedidos/planilha';
@@ -81,6 +84,29 @@ function motivoDeExtratorAusente(tipo: TipoDeEntrada): string {
     `não há extrator para "${tipo}" ainda. Esse tipo depende de extração por LLM ` +
     '(roadmap, etapas 3.2 a 3.6), que precisa de chave de LLM configurada. ' +
     'A entrada está guardada e será processada quando o extrator existir.'
+  );
+}
+
+/**
+ * Planilha que é planilha, só não se sabe de qual plataforma.
+ *
+ * Separado de `motivoDeExtratorAusente` porque a mensagem de lá era **falsa aqui**,
+ * e mandava a pessoa para o lugar errado. Dizia "depende de extração por LLM", e não
+ * depende: as colunas seriam mapeadas por tabela de sinônimo, sem LLM nenhum. O que
+ * falta é uma informação só — de qual plataforma são as colunas, para escolher a
+ * tabela.
+ *
+ * O sintoma, visto no navegador e não em teste: a mesma planilha de venda foi para
+ * revisão falando de chave de LLM quando chamada `vendas-demo.csv`, e atravessou o
+ * sistema inteiro quando chamada `vendas_mercadolivre.csv`. Quem lesse a primeira
+ * mensagem iria configurar LLM, que não era o problema.
+ */
+function motivoDePlataformaDesconhecida(): string {
+  return (
+    'é planilha, mas o nome do arquivo não diz de qual plataforma — e o mapeamento ' +
+    'de colunas depende disso. Não falta LLM: falta o nome. Renomeie incluindo a ' +
+    `plataforma (por exemplo ${EXEMPLOS_DE_NOME_DE_EXPORTACAO.join(', ')}) e envie ` +
+    'de novo. O conteúdo já está guardado, então reenviar não perde nada.'
   );
 }
 
@@ -151,13 +177,20 @@ export class ExecutorDeIngestao {
         return { tipo: 'pendente_revisao', jobId: job.id, motivo };
       }
 
+      // Planilha genérica é o único destes que **não** espera LLM: espera um nome
+      // de arquivo que diga a plataforma. Mensagem própria, por isso.
+      case 'planilha_generica': {
+        const motivo = motivoDePlataformaDesconhecida();
+        await this.fila.mandarParaRevisao(job.id, motivo);
+        return { tipo: 'pendente_revisao', jobId: job.id, motivo };
+      }
+
       // Todos dependem de extração por LLM, que não existe ainda.
       case 'anuncio_marketplace':
       case 'listagem_categoria':
       case 'catalogo_distribuidor':
       case 'tabela_precos_pdf':
       case 'imagem_tabela':
-      case 'planilha_generica':
       case 'texto_colado': {
         const motivo = motivoDeExtratorAusente(tipo);
         await this.fila.mandarParaRevisao(job.id, motivo);

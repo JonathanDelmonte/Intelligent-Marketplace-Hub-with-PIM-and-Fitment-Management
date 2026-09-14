@@ -184,6 +184,20 @@ const PISTAS_DE_EXPORTACAO: readonly { readonly padrao: RegExp; readonly site: S
     { padrao: /amazon|seller[\s_-]?central|\bsku\b.*report|flat[\s_-]?file/i, site: 'amazon' },
   ];
 
+/**
+ * Um nome de arquivo que casa com cada pista acima.
+ *
+ * Existe para a mensagem de revisão poder **ensinar a renomear** em vez de só dizer
+ * que não reconheceu. Mora ao lado das pistas de propósito: mensagem que promete um
+ * nome e padrão que aceita o nome têm de mudar juntos, e há teste conferindo que
+ * cada exemplo daqui é de fato classificado como exportação.
+ */
+export const EXEMPLOS_DE_NOME_DE_EXPORTACAO: readonly string[] = [
+  'mercado-livre.csv',
+  'shopee.csv',
+  'amazon.csv',
+];
+
 // ─── Classificação ───────────────────────────────────────────────────────────
 
 /**

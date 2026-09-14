@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  EXEMPLOS_DE_NOME_DE_EXPORTACAO,
   LIMIAR_CLASSIFICACAO_CONFIAVEL,
   TIPOS_DE_ENTRADA,
   classificar,
@@ -187,6 +188,18 @@ describe('arquivos', () => {
   it('é indiferente à caixa da extensão', () => {
     expect(arquivo('TABELA.XLSX').tipoDeEntrada).toBe('planilha_generica');
     expect(arquivo('FOTO.JPG').tipoDeEntrada).toBe('imagem_tabela');
+  });
+
+  it('cada exemplo de nome que a mensagem sugere é de fato reconhecido', () => {
+    // A mensagem de revisão de planilha genérica manda renomear e dá exemplos. Se um
+    // exemplo não casar com nenhuma pista, o sistema manda a pessoa fazer uma coisa
+    // que não funciona — e ninguém descobre até acontecer.
+    expect(EXEMPLOS_DE_NOME_DE_EXPORTACAO.length).toBeGreaterThan(0);
+    for (const nome of EXEMPLOS_DE_NOME_DE_EXPORTACAO) {
+      const c = arquivo(nome);
+      expect(c.tipoDeEntrada, nome).toBe('planilha_exportacao');
+      expect(c.site, nome).not.toBeNull();
+    }
   });
 });
 

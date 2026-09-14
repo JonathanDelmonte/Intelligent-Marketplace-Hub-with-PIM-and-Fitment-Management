@@ -27,6 +27,7 @@ import {
 } from '@/infra/banco/teste';
 import { RepositorioDeSku, perfilId, type PerfilId } from '@/dominio/catalogo/sku';
 import { ExecutorDeIngestao } from './executor';
+import { EXEMPLOS_DE_NOME_DE_EXPORTACAO } from './classificador';
 import { Orquestrador, TIPO_JOB_INGESTAO } from './orquestrador';
 import { IngestorDeProdutoExterno } from './produto-externo';
 
@@ -297,6 +298,30 @@ describe.skipIf(!temBancoDeTeste())('ingestão de ponta a ponta', () => {
       expect(processado.motivo).toContain('anuncio_marketplace');
       expect(processado.motivo).toContain('LLM');
       expect(processado.motivo).toContain('3.2');
+    });
+
+    it('planilha sem plataforma no nome não fala de LLM, fala do nome', async () => {
+      // O defeito que este teste fixa foi visto no navegador: `vendas-demo.csv` foi
+      // para revisão dizendo "depende de extração por LLM", e a mesma planilha como
+      // `vendas_mercadolivre.csv` atravessou o sistema inteiro. Quem lesse a primeira
+      // mensagem iria configurar chave de LLM para resolver um problema de nome.
+      const recebido = await orquestrador.receber({
+        entrada: { tipo: 'arquivo', nome: 'vendas-demo.csv' },
+        conteudo: new TextEncoder().encode('Título;Preço\nRefil;10,00'),
+      });
+      if (recebido.tipo !== 'enfileirado') throw new Error('esperava enfileirado');
+      expect(recebido.classificacao.tipoDeEntrada).toBe('planilha_generica');
+
+      const processado = await executor.processarProximo();
+
+      expect(processado.tipo).toBe('pendente_revisao');
+      if (processado.tipo !== 'pendente_revisao') return;
+      // A mensagem cita LLM **para negar**, que é o contrário de culpar LLM.
+      expect(processado.motivo).toContain('Não falta LLM');
+      expect(processado.motivo).not.toContain('depende de extração por LLM');
+      expect(processado.motivo).toContain('Renomeie');
+      // E diz um nome que funciona, em vez de deixar a pessoa adivinhar.
+      expect(processado.motivo).toContain(EXEMPLOS_DE_NOME_DE_EXPORTACAO[0]);
     });
 
     it('não consome tentativa nem entra em backoff', async () => {

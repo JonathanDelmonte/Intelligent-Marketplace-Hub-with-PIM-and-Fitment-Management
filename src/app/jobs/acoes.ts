@@ -137,11 +137,12 @@ export async function reenfileirar(dados: FormData): Promise<void> {
 export async function processarAgora(): Promise<void> {
   const nucleo = montarNucleo();
 
-  // As **três** filas, na mesma ordem que o poller usa — a composição é a mesma
-  // função. Antes daqui o botão drenava só a ingestão, e o efeito foi relatado pelo
-  // dono: a planilha entrava, a tela dizia "nada para processar", e a de identidade
-  // continuava zerada. Esta tela lista jobs de todos os tipos; drenar um só é
-  // surpresa.
+  // Todas as filas, na mesma ordem que o poller usa — e é a mesma função, de
+  // propósito: `tarefaCompleta` é o ponto único, então acrescentar fila não deixa
+  // esta tela atrás. Antes daqui o botão drenava só a ingestão, e o efeito foi
+  // relatado pelo dono: a planilha entrava, a tela dizia "nada para processar", e a
+  // de identidade continuava zerada. Esta tela lista jobs de todos os tipos; drenar
+  // um só é surpresa.
   const feitas = await drenar(tarefaCompleta(nucleo, log), LIMITE_DE_PROCESSAMENTO_MANUAL);
   log.info('fila.processada_manualmente', { quantidade: feitas });
 
