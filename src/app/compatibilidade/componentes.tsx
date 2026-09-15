@@ -287,7 +287,7 @@ export function FormularioDeAparelho() {
           <input className={estilo.entrada} name="variante" placeholder="220v" type="text" />
         </label>
       </div>
-      <button className={estilo.botaoNeutro} type="submit">
+      <button className={estilo.botao} type="submit">
         Cadastrar aparelho
       </button>
       <p className={estilo.dica}>
@@ -357,7 +357,7 @@ export function ResponderComprador({
           type="text"
         />
       </label>
-      <button className={estilo.botaoNeutro} type="submit">
+      <button className={estilo.botao} type="submit">
         Ver o que responder
       </button>
 

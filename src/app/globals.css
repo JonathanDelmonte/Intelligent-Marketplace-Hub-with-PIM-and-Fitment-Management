@@ -14,7 +14,22 @@
   --cor-aviso: #b45309;
   --cor-erro: #b91c1c;
   --cor-ok: #15803d;
+
+  /*
+   * Medidas do sistema. Estavam repetidas como literal em dez módulos, com valores
+   * próximos e diferentes — raio 0.375rem aqui, 0.5rem ali, 66ch de medida numa tela
+   * e 72ch na vizinha. Cada uma dessas diferenças era involuntária.
+   */
   --raio: 8px;
+  --raio-pequeno: 6px;
+  /* Sombra de um pixel: levanta o cartão do fundo sem virar caixa flutuante. */
+  --sombra-cartao: 0 1px 2px rgb(0 0 0 / 5%);
+  /* Medida de leitura confortável para texto corrido. */
+  --medida-texto: 68ch;
+  /* Contorno de foco, igual em toda a interface, para teclado ter caminho visível. */
+  --foco: 2px solid var(--cor-primaria);
+  --foco-deslocamento: 2px;
+
   color-scheme: light;
 }
 
@@ -47,6 +62,18 @@ body {
 
 a {
   color: var(--cor-primaria);
+}
+
+/*
+ * Foco visível em tudo que recebe foco, por padrão.
+ *
+ * O navegador já desenha um, e o padrão dele muda de navegador para navegador; um
+ * contorno declarado, na cor do tema, é o que faz a navegação por teclado parecer
+ * parte do sistema em vez de acidente.
+ */
+:focus-visible {
+  outline: var(--foco);
+  outline-offset: var(--foco-deslocamento);
 }
 
 /*

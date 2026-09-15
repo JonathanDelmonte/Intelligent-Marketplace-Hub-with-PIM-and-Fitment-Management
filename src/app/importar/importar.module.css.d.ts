@@ -26,7 +26,7 @@ declare const estilo: {
   readonly botaoSecundario: string;
   readonly caixaDeErro: string;
   readonly caixaDeRevisao: string;
-  readonly campo: string;
+  readonly entrada: string;
   readonly cartao: string;
   readonly cartaoExplicacao: string;
   readonly cartaoNumero: string;

@@ -10,6 +10,7 @@ declare const estilo: {
   readonly avisoErro: string;
   readonly avisoTitulo: string;
   readonly botao: string;
+  readonly botaoSecundario: string;
   readonly cabecalho: string;
   readonly campo: string;
   readonly entrada: string;

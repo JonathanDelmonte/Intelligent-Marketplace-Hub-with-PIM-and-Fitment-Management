@@ -204,7 +204,7 @@ export function CartaoDoFornecedor({
               />
             </label>
           </div>
-          <button className={estilo.botaoNeutro} type="submit">
+          <button className={estilo.botao} type="submit">
             Gravar respostas
           </button>
           <p className={estilo.dica}>
@@ -297,7 +297,7 @@ export function FormularioDeCadastro() {
           <input className={estilo.entrada} name="site" placeholder="acme.com.br" />
         </label>
       </div>
-      <button className={estilo.botaoNeutro} type="submit">
+      <button className={estilo.botao} type="submit">
         Cadastrar fornecedor
       </button>
       <p className={estilo.dica}>

@@ -15,8 +15,8 @@ declare const estilo: {
   readonly avisoCorpo: string;
   readonly avisoErro: string;
   readonly avisoTitulo: string;
+  readonly botao: string;
   readonly botaoNao: string;
-  readonly botaoNeutro: string;
   readonly botaoSecundario: string;
   readonly botaoSim: string;
   readonly cabecalho: string;
@@ -33,7 +33,6 @@ declare const estilo: {
   readonly etiquetaNao: string;
   readonly etiquetaNeutra: string;
   readonly evidencias: string;
-  readonly ficha: string;
   readonly fila: string;
   readonly formulario: string;
   readonly item: string;
@@ -55,5 +54,4 @@ declare const estilo: {
   readonly titulo: string;
   readonly vazio: string;
 };
-
 export default estilo;

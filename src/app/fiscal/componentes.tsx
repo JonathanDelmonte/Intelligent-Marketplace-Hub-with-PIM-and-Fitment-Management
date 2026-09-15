@@ -194,7 +194,7 @@ function CartaoDoSku({
       */}
       <form action={sugerirCodigos}>
         <input name="skuId" type="hidden" value={item.id} />
-        <button className={estilo.botao} type="submit">
+        <button className={estilo.botaoSecundario} type="submit">
           Sugerir NCM
         </button>
       </form>

@@ -6,7 +6,7 @@
  * o domínio, mais a resolução do perfil ativo.
  *
  * As duas devolvem valor em vez de redirecionar, ao contrário das ações da tela
- * de jobs. É consequência do uso: a pessoa está com o celular na mão, apontando
+ * de importação. É consequência do uso: a pessoa está com o celular na mão, apontando
  * para um código de barras, e navegação a cada leitura perderia o estado da câmera
  * e da fila local.
  */

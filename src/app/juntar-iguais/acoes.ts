@@ -266,7 +266,7 @@ function lerRegistroVazio(): RegistroDeProduto {
 /**
  * Roda a resolução em algumas ocorrências, na hora.
  *
- * Existe pelo mesmo motivo do botão da tela de jobs: a tela precisa funcionar sem
+ * Existe pelo mesmo motivo do botão da tela de importação: a tela precisa funcionar sem
  * processo de fundo. Sem chave de LLM ela ainda faz trabalho de verdade — GTIN igual
  * e marca com código de peça igual são decididos aqui, de graça.
  */

@@ -24,7 +24,7 @@ import { Leitor } from './leitor';
 import { RegistrarServiceWorker } from './registrar-sw';
 import estilo from './leitor.module.css';
 
-export const metadata: Metadata = { title: 'Leitor' };
+export const metadata: Metadata = { title: 'Bipar na loja' };
 
 /** Sempre dinâmica: lê banco, e `build` não deve precisar de banco. */
 export const dynamic = 'force-dynamic';
@@ -43,7 +43,7 @@ export default async function PaginaDoLeitor() {
     <main className={estilo.pagina}>
       <RegistrarServiceWorker />
 
-      <h1 className={estilo.titulo}>Leitor</h1>
+      <h1 className={estilo.titulo}>Bipar na loja</h1>
       <p className={estilo.subtitulo}>
         Informe o custo, leia o código, decida. Funciona sem rede: a leitura fica no aparelho e sobe
         quando dá.

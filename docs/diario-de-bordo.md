@@ -26,6 +26,87 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-15 — Trinta classes definidas dez vezes, e o que elas diziam de diferente
+
+### 🐛 `.botao` era preenchido em duas telas e de contorno em três
+
+Cada tela nasceu numa fase, com o seu módulo CSS, e as mesmas trinta classes ficaram
+definidas de seis a onze vezes. O problema não era a repetição — era o que a repetição
+esconde:
+
+- **`.botao`**: preenchido em azul em importar e leitor, de contorno em anúncios,
+  consignação e fiscal. O mesmo nome para os dois lados da hierarquia, então a ação
+  principal de três telas parecia secundária.
+- **`.campo`**: o invólucro de rótulo mais entrada em seis telas, e a **própria
+  entrada** em duas.
+- **`.botaoNeutro`**: azul preenchido em compatibilidade e fornecedores (onde era a ação
+  principal), cinza de contorno em juntar-iguais (onde é "não sei dizer").
+- **`.etiqueta`**: verde em duas telas, neutra em quatro.
+- **`.cartao`**: raio `0.5rem` em quatro telas, `var(--raio)` (8px) em duas.
+
+Nenhuma dessas diferenças foi decidida. Elas apareceram porque a segunda tela copiou a
+primeira e mudou uma linha, e a sexta copiou a quarta.
+
+### 🔀 `composes` em vez de componente compartilhado
+
+A correção podia ser um conjunto de componentes React (`<Botao variante="principal">`).
+Ficou em CSS: `ui/comum.module.css` define cada peça uma vez, e o módulo de cada tela
+**compõe** dela.
+
+```css
+.botao {
+  composes: botao from '../ui/comum.module.css';
+  align-self: flex-end; /* só o que é desta tela */
+}
+```
+
+O que decidiu: **o JSX das dez telas não muda**. Continua `estilo.botao`, a definição
+passa a viver num lugar, e o que é particular de uma tela continua possível sem
+`!important` e sem copiar o bloco para mudar uma linha. Um conjunto de componentes
+obrigaria a reescrever cada tela — muito mais risco para o mesmo ganho.
+
+Confirmado no navegador antes de migrar as outras nove: `composes` funciona no
+Turbopack desta versão, o elemento sai com as duas classes, e o estilo composto vale.
+
+Saldo: −903 linhas nos módulos das telas, +322 (quase todas linhas de `composes`), e
+514 no módulo comum — que agora é onde se muda a aparência do sistema.
+
+### 🔀 Três variantes de botão, e a razão de cada uma existir
+
+- **`.botao`** preenchido, 44px: a ação principal, uma por formulário.
+- **`.botaoSecundario`** de contorno, 44px: ação de apoio ao lado da principal.
+- **`.botaoMiudo`** de contorno, compacto: dentro de linha de tabela. Não herda o alvo
+  de toque de propósito — cem linhas com botão de 44px viram uma tabela de rolagem
+  infinita, e esse botão nunca é a ação principal de nada.
+- **`.botaoSim` / `.botaoNao` / `.botaoNeutro`**: as três respostas de uma fila de
+  revisão, do mesmo tamanho e da mesma forma. Dar destaque a uma delas é empurrar a
+  decisão de quem revisa.
+
+### 🐛 O campo de 15px dava zoom no iPhone, e só a tela do leitor sabia disso
+
+A tela do leitor tinha `font-size: 1rem` no campo com um comentário: abaixo de 16px o
+Safari do iPhone dá zoom automático ao focar. As outras nove telas usavam `font: inherit`
+— 15px do corpo — e tinham o problema sem saber.
+
+O conserto foi mover os 16px para a entrada compartilhada. É o caso que justifica a
+unificação inteira: um achado que uma tela tinha, agora todas têm.
+
+### 🧹 Um literal de cor escapou, e a unificação achou
+
+`#fff` no `.botaoSim` da tela de juntar iguais, onde a regra do ADR 0003 pede variável de
+tema. Estava lá desde a fase 5 e ninguém viu porque a classe era uma entre dez cópias.
+Trocado por `var(--cor-superficie)` ao consolidar.
+
+### 🐛 `pgrep -f` mata o próprio shell — de novo, quatro horas depois de eu registrar isso
+
+Escrevi a entrada sobre `pkill -f` casar a linha de comando do shell que o executa, e
+duas horas depois usei `kill $(pgrep -f "next-server")` — mesmo erro, mesma causa, mesmo
+código de saída 144.
+
+Registrar não basta quando a forma errada é mais curta que a certa. O jeito que funciona
+sem pensar: achar o PID pela porta, `ss -ltnp | grep -o 'pid=[0-9]*'`, que não tem como
+casar o próprio comando porque não olha linha de comando nenhuma.
+
 ## 2026-09-15 — A tela inicial passou a responder a pergunta de quem abre o sistema
 
 ### 🔀 Nove cartões iguais não são um painel

@@ -104,7 +104,7 @@ export function FormularioDeEntrada() {
         id="texto"
         name="texto"
         rows={3}
-        className={estilo.campo}
+        className={estilo.entrada}
         style={{ marginTop: '0.375rem' }}
         placeholder="https://produto.mercadolivre.com.br/MLB-..."
       />

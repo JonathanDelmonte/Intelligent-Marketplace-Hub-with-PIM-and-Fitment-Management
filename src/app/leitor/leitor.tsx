@@ -365,8 +365,8 @@ export function Leitor({ quantidadeNaBase }: { readonly quantidadeNaBase: number
             id="custo"
             className={
               custoTexto !== '' && !custoValido
-                ? `${estilo.campo} ${estilo.campoInvalido}`
-                : estilo.campo
+                ? `${estilo.entrada} ${estilo.entradaInvalida}`
+                : estilo.entrada
             }
             inputMode="decimal"
             autoComplete="off"
@@ -393,7 +393,7 @@ export function Leitor({ quantidadeNaBase }: { readonly quantidadeNaBase: number
               </label>
               <input
                 id="unidades"
-                className={estilo.campo}
+                className={estilo.entrada}
                 inputMode="numeric"
                 value={unidadesTexto}
                 onChange={(e) => {
@@ -407,7 +407,7 @@ export function Leitor({ quantidadeNaBase }: { readonly quantidadeNaBase: number
               </label>
               <input
                 id="codigo"
-                className={estilo.campo}
+                className={estilo.entrada}
                 inputMode="numeric"
                 autoComplete="off"
                 placeholder="7896541200121"
@@ -453,7 +453,7 @@ export function Leitor({ quantidadeNaBase }: { readonly quantidadeNaBase: number
             )}
           </div>
 
-          {erro === null ? null : <div className={estilo.aviso}>{erro}</div>}
+          {erro === null ? null : <div className={estilo.nota}>{erro}</div>}
         </div>
       </section>
 
@@ -467,7 +467,7 @@ export function Leitor({ quantidadeNaBase }: { readonly quantidadeNaBase: number
       ) : null}
 
       {camera === 'negada' || camera === 'sem_camera' ? (
-        <div className={estilo.aviso}>
+        <div className={estilo.nota}>
           sem acesso à câmera. Digite o código no campo acima — a avaliação é a mesma.
         </div>
       ) : null}
@@ -533,7 +533,7 @@ export function Leitor({ quantidadeNaBase }: { readonly quantidadeNaBase: number
         </button>
       ) : null}
 
-      {persistente ? null : <div className={estilo.aviso}>{AVISO_SEM_PERSISTENCIA}</div>}
+      {persistente ? null : <div className={estilo.nota}>{AVISO_SEM_PERSISTENCIA}</div>}
     </div>
   );
 }
@@ -637,9 +637,9 @@ function PainelDoVeredito({ avaliacao }: { readonly avaliacao: AvaliacaoDeGtin }
 
 function Item({ rotulo, valor }: { readonly rotulo: string; readonly valor: string }) {
   return (
-    <div className={estilo.item}>
-      <div className={estilo.itemRotulo}>{rotulo}</div>
-      <div className={estilo.itemValor}>{valor}</div>
+    <div className={estilo.celula}>
+      <div className={estilo.celulaRotulo}>{rotulo}</div>
+      <div className={estilo.celulaValor}>{valor}</div>
     </div>
   );
 }

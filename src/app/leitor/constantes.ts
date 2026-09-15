@@ -1,7 +1,7 @@
 /**
  * Constantes da tela do leitor.
  *
- * Módulo próprio pela mesma razão da tela de jobs: arquivo com `'use server'` só
+ * Módulo próprio pela mesma razão da tela de importação: arquivo com `'use server'` só
  * pode exportar função assíncrona.
  */
 

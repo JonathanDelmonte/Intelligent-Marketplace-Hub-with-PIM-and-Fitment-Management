@@ -128,7 +128,7 @@ export function Fila({ fila }: { readonly fila: FilaDoDia }) {
   if (fila.itens.length === 0) {
     return (
       <p className={estilo.vazio}>
-        Nada na fila. Se você acabou de vender, importe a planilha de vendas na tela de jobs.
+        Nada na fila. Se você acabou de vender, importe a planilha de vendas em Importar.
       </p>
     );
   }

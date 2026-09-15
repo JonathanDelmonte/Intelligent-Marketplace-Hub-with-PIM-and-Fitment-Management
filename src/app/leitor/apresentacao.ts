@@ -1,7 +1,7 @@
 /**
  * Lógica da tela do leitor, separada do JSX.
  *
- * Mesma razão da tela de jobs: o que pode estar errado aqui é regra, não layout.
+ * Mesma razão da tela de importação: o que pode estar errado aqui é regra, não layout.
  * E uma regra em especial move dinheiro — interpretar o custo que a pessoa digita.
  * Errar por um fator de cem transforma "não compra" em "compra" e vice-versa.
  */
