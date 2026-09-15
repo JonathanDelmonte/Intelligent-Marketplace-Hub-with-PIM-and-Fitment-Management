@@ -229,9 +229,10 @@ Ordem do roadmap, que é por utilidade e não por arquitetura. Nada aqui espera 
 
 ### 3.1 Telas que não existem
 
-Há dez telas: início, `/importar` (com detalhe por job), `/leitor`, `/juntar-iguais`,
-`/compatibilidade`, `/fornecedores`, `/postagem`, `/consignacao`, `/anuncios` e
-`/fiscal`. **Não há tela de catálogo, de SKU nem de precificação.** O motor de margem (fase 1)
+Há treze telas: início, `/importar` (com detalhe por job), `/leitor`, `/juntar-iguais`,
+`/compatibilidade`, `/fornecedores`, `/postagem`, `/consignacao`, `/anuncios`,
+`/fiscal`, `/monitor`, `/perguntas` e `/afiliados`. **Não há tela de catálogo, de SKU
+nem de precificação** — e nem do prospector (ver 3.8). O motor de margem (fase 1)
 e o repositório de SKU (3.10) seguem chamáveis por código e por teste, não por tela.
 
 A de anúncio fechou o próprio laço na parte que importa: monta, mostra o checklist,
@@ -366,8 +367,8 @@ dono pediu. O que foi entregue:
   tradução é o `apresentacao.ts` de cada tela, e o código continua falando domínio.
 - **"Resolver 10 agora" virou "Tentar juntar 10 automaticamente"**, que diz o que o
   botão faz.
-- **A barra agrupa as dez portas** em três momentos de trabalho e marca a tela
-  aberta, com `aria-current`.
+- **A barra agrupa as treze portas** em quatro momentos de trabalho — hoje, catálogo,
+  oportunidade, fornecedor e obrigação — e marca a tela aberta, com `aria-current`.
 - **A tela inicial mostra estado**, e não nove cartões iguais: seis números
   ordenados por urgência, com degradação honesta quando uma leitura falha.
 
@@ -395,20 +396,29 @@ comido, ou na primeira devolução por voltagem.
 
 ---
 
-### 3.8 A fase 11 não tem tela nenhuma
+### 3.8 A fase 11 tem tela; a fase 10 não
 
-Monitor, queda real de preço, pergunta recorrente e fila de afiliados são funções puras
-com teste, e **nenhuma delas aparece na interface**. O mesmo estado em que M8 ficou da
-fase 1 até a 8.
+**Fechado para a fase 11.** As três telas existem: `/monitor` (o que mudou, agrupado por
+vendedor e semana, e o que vale publicar hoje), `/perguntas` (dúvida repetida e o que
+acrescentar na descrição) e `/afiliados` (fila espaçada, teto do dia e o que o grupo
+deu). O envio ao grupo continua manual, e é de propósito: canal é decisão do dono, e a
+tela registra a hora da publicação porque é dela que sai o intervalo até a próxima.
 
-**Por que foi assim:** as regras são o que não se pode errar — o teto do grupo, o corte
-de desconto, o agrupamento de eventos — e elas se testam sem tela. A tela é onde a ordem
-das informações importa, e ordenar informação que ninguém viu ainda é palpite.
+**Ligar a tela achou o que o teste não achava.** O monitor não tinha quem escrevesse
+nele — `monitor_evento` existia desde a fase 0 e a ingestão detectava mudança de preço
+sem registrar, então as regras liam tabela vazia para sempre. A de perguntas exigiu
+tabela nova, porque a conta de repetição precisa de histórico. A de afiliados achou três
+frases de domínio com `(s)` de plural, uma delas errada. Está tudo no diário de 15/09.
 
-**O que falta, em ordem de valor:** a caixa de eventos agrupados (é o que se olha toda
-manhã), a lista de dúvidas recorrentes por anúncio (é conserto de descrição, feito em
-lote), e a fila de ofertas com o botão de publicar. O envio ao grupo em si depende de
-canal — e canal é decisão do dono, não do código.
+**O que continua sem tela é a fase 10, o prospector.** Dossiê, hipótese, fronteira,
+orçamento e o motivo de parar são funções puras com teste, e nada disso aparece na
+interface — mesmo estado em que a fase 11 estava ontem.
+
+**Por que ainda não:** a investigação em si depende de rede de saída, que a política
+daqui recusa (ver 3.3), então a tela mostraria dossiê que ninguém consegue abrir. Mas
+mostrar **o que já existe** — o dossiê retomável, a fronteira e o teto de orçamento — não
+depende de rede, e é o que falta: sem tela, um agente que gasta orçamento é um agente que
+gasta sem ninguém ver.
 
 ---
 

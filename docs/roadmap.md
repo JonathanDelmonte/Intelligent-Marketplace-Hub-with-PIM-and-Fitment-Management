@@ -12,10 +12,11 @@ a 4 existem para que cada noite de código tenha contrapartida em venda possíve
 Legenda de estado: ✅ pronto · 🚧 em andamento · ⬜ não começou · 🔒 bloqueado por
 dependência externa.
 
-**Não há mais nada em ⬜, e isso é informação e não conquista.** As nove entregas que
-estavam marcadas como "não começou" passaram a 🔒 porque nenhuma delas **pode** começar
-neste ambiente — e "não começou" sugeria que era questão de tempo. São três causas, todas
-já descritas em [pendências](./pendencias.md):
+**Nas fases da especificação não há mais nada em ⬜, e isso é informação e não
+conquista.** As nove entregas que estavam marcadas como "não começou" passaram a 🔒
+porque nenhuma delas **pode** começar neste ambiente — e "não começou" sugeria que era
+questão de tempo. São três causas, todas já descritas em
+[pendências](./pendencias.md):
 
 - **Chave de LLM** (1.1): 3.4 e 3.6 dependem dela por definição — catálogo de
   distribuidor e visão sobre print de tabela.
@@ -24,6 +25,10 @@ já descritas em [pendências](./pendencias.md):
   recusa o resto.
 - **App no Mercado Livre** (1.2): a 2.6b é o fluxo de OAuth, e não há app para o qual
   fazer OAuth.
+
+O único ⬜ do documento é a C.10, a tela do prospector, e ali "não começou" é literal:
+depende de tempo e de mais nada. A máquina dela está pronta e testada; o que a rede
+bloqueia é a investigação de fora, não a tela que mostra o dossiê.
 
 A 3.5 (PDF de tabela de preços) é a única com nuance: um leitor de PDF **daria** para
 escrever e testar contra um PDF sintético. Ficou 🔒 de propósito — o problema real dela
@@ -651,6 +656,9 @@ não dá erro e continua recebendo publicação para ninguém, então o teto di�
 entrega. E o rastreio devolve conversão **nula** sem clique, porque zero afirmaria que o
 grupo não converte quando o que houve foi ninguém clicar.
 
+**As três têm tela desde 15/09** (`/monitor`, `/perguntas`, `/afiliados`), e o que cada
+uma responde está em [A casa](#a-casa--vocabulário-navegação-e-aparência), C.7 a C.9.
+
 **Um defeito antigo caiu junto:** `codigosDeModelo` juntava `110 ou 220` no código
 `110OU220`, e `responder()` tratava pergunta de voltagem como pergunta sobre um modelo
 inexistente. Apareceu ao escrever o detector de pergunta recorrente, que agrupa pelo
@@ -667,14 +675,18 @@ Não é fase da especificação: é o que o dono pediu para depois das fases, e 
 | --- | --------------------------------------------------------------------- | ------ |
 | C.1 | Rótulo e rota com nome de trabalho (`/importar`, `/juntar-iguais`)    | ✅     |
 | C.2 | Jargão fora do texto das telas, com a fronteira da tradução declarada | ✅     |
-| C.3 | Barra com os três momentos de trabalho e marca de tela aberta         | ✅     |
+| C.3 | Barra agrupada pelos momentos de trabalho e marca de tela aberta      | ✅     |
 | C.4 | Tela inicial mostrando estado, com degradação honesta                 | ✅     |
 | C.5 | Uma definição por peça de estilo (`ui/comum.module.css`)              | ✅     |
 | C.6 | Tokens que faltavam e foco visível em tudo que recebe foco            | ✅     |
+| C.7 | Tela do monitor: o que mudou, agrupado, e o que vale publicar hoje    | ✅     |
+| C.8 | Tela de perguntas: dúvida recorrente e o que acrescentar ao anúncio   | ✅     |
+| C.9 | Tela de afiliados: fila espaçada, teto do dia e o que o grupo deu     | ✅     |
+| C.10 | Tela do prospector: dossiê, fronteira, orçamento e por que parou     | ⬜     |
 
 **Entrega:** o sistema para de falar o nome das próprias tabelas, a navegação diz
 onde você está, e a tela inicial responde "o que eu faço agora" em vez de listar
-nove portas iguais.
+todas as portas com o mesmo peso.
 
 A decisão que vale guardar é a da C.5. As trinta classes de estilo estavam definidas
 de seis a onze vezes, uma por tela, e tinham **divergido no que importa**: `.botao`
@@ -682,6 +694,16 @@ era preenchido em duas telas e de contorno em três, `.campo` era o invólucro d
 em seis e a própria entrada em duas. Isso não é dívida de repetição, é a interface
 ensinando coisas contraditórias. Agora cada peça tem uma definição e as telas
 compõem dela com `composes`, sem tocar no JSX.
+
+**As três telas da fase 11 (C.7 a C.9) acharam trabalho que o teste não acharia.** O
+monitor não tinha **quem escrevesse** nele: `monitor_evento` existia desde a fase 0 e a
+ingestão detectava mudança de preço sem registrar — as regras de agrupamento e severidade
+liam uma tabela que ninguém alimentava. A de perguntas exigiu tabela nova
+(`pergunta_recebida`): a conta de repetição precisa de cinco perguntas parecidas, e cinco
+chegam ao longo de semanas, não de uma vez. A de afiliados achou três frases de domínio
+com `(s)` de plural e uma delas errada ("saiu há 0 minuto(s)", quando zero minuto é
+"agora"). É o padrão: **texto e caminho de escrita sem tela não são revisados**, porque o
+teste unitário verifica um pedaço da frase e chama a função direto.
 
 O que continua aberto e é decisão do dono: se os rótulos novos são os que ele usa
 falando. Trocar é uma linha em `src/app/navegacao.ts`.

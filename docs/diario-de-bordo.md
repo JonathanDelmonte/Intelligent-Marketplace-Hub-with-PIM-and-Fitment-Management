@@ -26,6 +26,76 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-15 — A tela de afiliados, e o que ela achou no texto
+
+### 🔀 A tag de afiliado ficou em ambiente, e não na tabela `credencial`
+
+O ADR 0007 manda credencial de plataforma para a tabela cifrada, e a primeira leitura
+foi pôr a tag lá. Mas a tag **não é segredo**: ela aparece na própria URL publicada, em
+todo post do grupo, para todo mundo que clicar. Cifrar o que é público custa uma consulta
+por página e não protege nada.
+
+Então `AFILIADO_TAG_ML`, `AFILIADO_TAG_SHOPEE` e `AFILIADO_TAG_AMAZON` são variáveis de
+ambiente opcionais. O que continua cifrado no banco é token de API, que é segredo de
+verdade. A regra que sai daí: **o critério não é "credencial", é "segredo"**.
+
+Ausência é estado normal, não erro (ADR 0002): sem tag, a plataforma simplesmente não
+aparece no seletor do formulário, e a tela nomeia a variável que falta. Formulário que
+aceita e só depois recusa é pior que formulário que não oferece.
+
+### 🐛 A tela mostrou "A última saiu há 0 minuto(s)"
+
+O texto vinha do domínio, escrito na fase 11, quando nenhuma tela lia essas frases. Duas
+coisas erradas numa só: o `(s)` é texto de sistema, e "0 minuto" é **errado** — zero
+minuto é "agora mesmo".
+
+Tinha três frases assim (`clique(s)`, `conversão(ões)`, `oferta(s)`), todas no caminho de
+`medirDesempenho` e `proximaPublicacao`. Viraram uma função `contagem(n, singular,
+plural)` local, com teste que recusa `(s)`.
+
+O que vale registrar: **texto de domínio sem tela não é revisado**. As três frases
+passaram por revisão de teste unitário, que verifica `toContain('spam')` e não olha a
+frase inteira. A tela é o primeiro leitor que lê tudo.
+
+No mesmo caminho, "conversão" virou "venda" no texto visível — o vocabulário do negócio
+é o de quem vende (CLAUDE.md, seção 4), e o painel já dizia "vendas".
+
+### ⚠️ O Playwright inventa um erro de hidratação ao tirar print
+
+A tela nova aparecia com "1 Issue" no indicador do Next, e o log do servidor trazia um
+`A tree hydrated but some attributes... didn't match`, apontando `style={{caret-color:
+"transparent"}}` em todos os `<input>`.
+
+Não é da aplicação: `page.screenshot()` do Playwright usa `caret: 'hide'` por padrão, e
+isso **injeta estilo inline nos campos** antes do print. O React compara e reclama.
+
+Confirmado do jeito certo: com `caret: 'initial'`, nenhuma mensagem nova no log; e a
+mesma página visitada sem print não produz nenhum aviso de console. Vale saber porque o
+sintoma acusa a aplicação, e o custo de perseguir hidratação falsa é uma hora.
+
+### 🔀 O formulário perdeu o `align-items: flex-end` copiado de outra tela
+
+Dois campos de preço lado a lado, um deles com linha de ajuda embaixo: com alinhamento
+no fim, o campo mais baixo puxa o rótulo do vizinho para cima, e o formulário fica
+visivelmente torto. A camada compartilhada já alinha no começo — o `flex-end` tinha sido
+copiado da tela de perguntas, onde a caixa de colar ocupa a linha inteira e o efeito não
+aparece.
+
+Três consertos, todos de olhar a tela e não de teste: a explicação da mediana saiu do
+campo e virou linha da seção, o botão ganhou linha própria (campo de altura diferente na
+mesma linha do botão desalinha justamente o que se clica), e o campo de preço ganhou teto
+de largura — caixa larga promete texto longo, e ali cabem seis caracteres.
+
+### 🧹 Uma fonte monoespaçada, em oito lugares, com duas versões
+
+`font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace` estava literal em
+oito regras de cinco módulos — e **duas cópias já divergiam**: metade tinha `Consolas` e
+metade não, o que significa fonte diferente no mesmo sistema no Windows. Ninguém decidiu
+isso; é o que acontece com literal repetido, e é o mesmo caso das trinta classes de
+estilo de ontem. Virou `--fonte-mono` em `globals.css`.
+
+---
+
 ## 2026-09-15 — Duas telas a mais, e o que elas acharam no domínio
 
 ### 🔀 A pergunta de comprador passou a ser gravada, e isso mudou o desenho

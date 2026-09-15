@@ -41,6 +41,17 @@ export const OFERTAS_POR_DIA = 8;
  */
 export const ESPACAMENTO_MINIMO_MINUTOS = 45;
 
+/**
+ * "1 clique" e "3 cliques", e nunca "1 clique(s)".
+ *
+ * O parêntese é texto de sistema, e ele aparecia em três frases que a tela mostra
+ * inteiras — inclusive em "a última saiu há 0 minuto(s)", que além de torto estava
+ * errado: zero minuto é "agora".
+ */
+function contagem(quantidade: number, singular: string, plural: string): string {
+  return `${String(quantidade)} ${quantidade === 1 ? singular : plural}`;
+}
+
 /** Onde a tag de afiliado entra na URL, por plataforma. Levantamento, não fato. */
 const PARAMETRO_DA_TAG: Readonly<Record<Plataforma, string>> = {
   ml: 'matt_word',
@@ -134,7 +145,7 @@ export function proximaPublicacao(
   if (publicadasHoje.length >= porDia) {
     return {
       tipo: 'esperar',
-      motivo: `${String(publicadasHoje.length)} ofertas já saíram hoje, que é o teto. Grupo que posta demais é silenciado pelos membros, e grupo silenciado não avisa ninguém.`,
+      motivo: `${contagem(publicadasHoje.length, 'oferta já saiu', 'ofertas já saíram')} hoje, que é o teto. Grupo que posta demais é silenciado pelos membros, e grupo silenciado não avisa ninguém.`,
       minutosRestantes: minutosAteAmanha(agora, fuso),
     };
   }
@@ -149,7 +160,7 @@ export function proximaPublicacao(
     if (decorridos < espacamento) {
       return {
         tipo: 'esperar',
-        motivo: `A última saiu há ${String(decorridos)} minuto(s). Duas ofertas seguidas são lidas como spam mesmo quando as duas são boas.`,
+        motivo: `${decorridos === 0 ? 'A última saiu agora mesmo' : `A última saiu há ${contagem(decorridos, 'minuto', 'minutos')}`}. Duas ofertas seguidas são lidas como spam mesmo quando as duas são boas.`,
         minutosRestantes: espacamento - decorridos,
       };
     }
@@ -231,7 +242,7 @@ export function medirDesempenho(ofertas: readonly OfertaMedida[]): Desempenho {
       cliques: 0,
       conversoes,
       conversaoBp: null,
-      mensagem: `${String(publicadas.length)} oferta(s) publicada(s) e nenhum clique. Isso é sobre o texto do post e o horário, não sobre o preço da oferta.`,
+      mensagem: `${contagem(publicadas.length, 'oferta publicada', 'ofertas publicadas')} e nenhum clique. Isso é sobre o texto do post e o horário, não sobre o preço da oferta.`,
     };
   }
 
@@ -242,6 +253,6 @@ export function medirDesempenho(ofertas: readonly OfertaMedida[]): Desempenho {
     cliques,
     conversoes,
     conversaoBp,
-    mensagem: `${String(cliques)} clique(s) e ${String(conversoes)} conversão(ões) em ${String(publicadas.length)} oferta(s). Clique sem conversão é oferta que parece boa e não é — provavelmente o preço na página não é o do post.`,
+    mensagem: `${contagem(cliques, 'clique', 'cliques')} e ${contagem(conversoes, 'venda', 'vendas')} em ${contagem(publicadas.length, 'oferta', 'ofertas')}. Clique sem venda é oferta que parece boa e não é — provavelmente o preço na página não é o do post.`,
   };
 }

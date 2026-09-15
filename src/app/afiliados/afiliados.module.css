@@ -1,0 +1,276 @@
+/*
+ * Estilo da tela de afiliados.
+ *
+ * Quase tudo vem de `ui/comum.module.css` por `composes`. O que é desta tela: o painel
+ * da decisão, o link inteiro do afiliado (texto para copiar, e por isso monoespaçado e
+ * quebrável em qualquer ponto), e o formulário miúdo de clique e venda dentro do
+ * cartão.
+ */
+
+.pagina {
+  composes: pagina from '../ui/comum.module.css';
+  --largura-pagina: 64rem;
+}
+
+.cabecalho {
+  composes: cabecalho from '../ui/comum.module.css';
+}
+
+.titulo {
+  composes: titulo from '../ui/comum.module.css';
+}
+
+.subtitulo {
+  composes: subtitulo from '../ui/comum.module.css';
+}
+
+.resumo {
+  composes: resumo from '../ui/comum.module.css';
+  font-size: 1.0625rem;
+  margin-top: 0.75rem;
+}
+
+.secao {
+  composes: secao from '../ui/comum.module.css';
+}
+
+.secaoTitulo {
+  composes: secaoTitulo from '../ui/comum.module.css';
+}
+
+.aviso {
+  composes: aviso from '../ui/comum.module.css';
+}
+
+.avisoAtencao {
+  composes: aviso avisoAtencao from '../ui/comum.module.css';
+}
+
+.avisoErro {
+  composes: aviso avisoErro from '../ui/comum.module.css';
+}
+
+.avisoTitulo {
+  composes: avisoTitulo from '../ui/comum.module.css';
+}
+
+.avisoCorpo {
+  composes: avisoCorpo from '../ui/comum.module.css';
+}
+
+.painel {
+  composes: painel from '../ui/comum.module.css';
+}
+
+.cartao {
+  composes: cartao from '../ui/comum.module.css';
+}
+
+.cartaoNumero {
+  composes: cartaoNumero from '../ui/comum.module.css';
+}
+
+.cartaoRotulo {
+  composes: cartaoRotulo from '../ui/comum.module.css';
+}
+
+.cartaoNota {
+  composes: cartaoNota from '../ui/comum.module.css';
+}
+
+.lista {
+  composes: lista from '../ui/comum.module.css';
+}
+
+.item {
+  composes: item from '../ui/comum.module.css';
+}
+
+/*
+ * A próxima da fila.
+ *
+ * Borda no lado esquerdo, e não fundo colorido: a etiqueta "próxima" já diz qual é, e
+ * a borda serve para achá-la de relance numa fila de vinte. Fundo aqui competiria com
+ * o painel da decisão, que é onde a informação está escrita.
+ */
+.itemProximo {
+  composes: item from '../ui/comum.module.css';
+  border-left: 3px solid var(--cor-ok);
+}
+
+.itemCabecalho {
+  composes: itemCabecalho from '../ui/comum.module.css';
+}
+
+.itemTitulo {
+  composes: itemTitulo from '../ui/comum.module.css';
+}
+
+.itemSub {
+  composes: itemSub from '../ui/comum.module.css';
+}
+
+.etiqueta {
+  composes: etiqueta from '../ui/comum.module.css';
+}
+
+.etiquetaOk {
+  composes: etiqueta etiquetaOk from '../ui/comum.module.css';
+}
+
+.etiquetaAtencao {
+  composes: etiqueta etiquetaAtencao from '../ui/comum.module.css';
+}
+
+.etiquetaViva {
+  composes: etiqueta etiquetaViva from '../ui/comum.module.css';
+}
+
+/* Duas etiquetas na mesma linha: "próxima" e o desconto. */
+.etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.formulario {
+  composes: formulario from '../ui/comum.module.css';
+}
+
+/*
+ * Campo de preço com teto de largura.
+ *
+ * Sem o teto, o campo compartilhado cresce e "49,90" ganha meia tela de caixa vazia —
+ * caixa larga promete texto longo, e aqui o que cabe são seis caracteres.
+ */
+.campo {
+  composes: campo from '../ui/comum.module.css';
+  --largura-campo: 12rem;
+  max-width: 20rem;
+}
+
+/* O link ocupa a linha: é o campo mais longo, e o mais colado de outro lugar. */
+.campoLargo {
+  composes: campo from '../ui/comum.module.css';
+  flex-basis: 100%;
+}
+
+.entrada {
+  composes: entrada from '../ui/comum.module.css';
+}
+
+.ajuda {
+  color: var(--cor-texto-fraco);
+  font-size: 0.75rem;
+  max-width: var(--medida-texto);
+}
+
+.botao {
+  composes: botao from '../ui/comum.module.css';
+}
+
+/* O botão ocupa a linha inteira do formulário, e não o resto de uma linha de campos. */
+.acao {
+  display: flex;
+  flex-basis: 100%;
+}
+
+.botaoMiudo {
+  composes: botaoMiudo from '../ui/comum.module.css';
+}
+
+.dica {
+  composes: dica from '../ui/comum.module.css';
+}
+
+.vazio {
+  composes: vazio from '../ui/comum.module.css';
+}
+
+/*
+ * O painel da decisão.
+ *
+ * Fundo, e não borda: é a única coisa da tela que responde "e agora?", e é para ser
+ * lida sem escolha. A cor fica no lado esquerdo — tom de fundo inteiro em verde ou
+ * amarelo disputa com o resto da página.
+ */
+.decisao {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-left: 3px solid var(--cor-borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra-cartao);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+  padding: 0.875rem 1rem;
+}
+
+.decisaoOk {
+  composes: decisao;
+  border-left-color: var(--cor-ok);
+}
+
+.decisaoAtencao {
+  composes: decisao;
+  border-left-color: var(--cor-aviso);
+}
+
+.decisaoTitulo {
+  font-size: 1.0625rem;
+}
+
+.decisaoCorpo {
+  color: var(--cor-texto-fraco);
+  max-width: var(--medida-texto);
+}
+
+/*
+ * O link de afiliado.
+ *
+ * Monoespaçado e quebrável em qualquer ponto porque é endereço: o que se faz com ele é
+ * conferir a tag e copiar, e endereço quebrado em palavra inteira estoura a largura no
+ * celular.
+ */
+.link {
+  color: var(--cor-primaria);
+  display: block;
+  font-family: var(--fonte-mono);
+  font-size: 0.8125rem;
+  margin-top: 0.625rem;
+  overflow-wrap: anywhere;
+}
+
+/* Clique e venda, dentro do cartão da oferta publicada. */
+.numeros {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.campoMiudo {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.75rem;
+  font-weight: 600;
+  gap: 0.25rem;
+}
+
+.entradaMiuda {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pequeno);
+  color: inherit;
+  /* 16px: abaixo disso o Safari do iPhone dá zoom ao focar o campo. */
+  font-size: 1rem;
+  padding: 0.375rem 0.5rem;
+  width: 6rem;
+}
+
+.entradaMiuda:focus-visible {
+  outline: var(--foco);
+  outline-offset: var(--foco-deslocamento);
+}

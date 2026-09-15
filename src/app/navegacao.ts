@@ -109,6 +109,13 @@ export const PORTAS: readonly Porta[] = [
     grupo: 'oportunidade',
   },
   {
+    href: '/afiliados',
+    rotulo: 'Afiliados',
+    descricao:
+      'Oferta de terceiro publicada com a sua tag, com teto por dia e intervalo entre uma e a próxima — grupo que posta demais é silenciado pelos membros.',
+    grupo: 'oportunidade',
+  },
+  {
     href: '/fornecedores',
     rotulo: 'Fornecedores',
     descricao:

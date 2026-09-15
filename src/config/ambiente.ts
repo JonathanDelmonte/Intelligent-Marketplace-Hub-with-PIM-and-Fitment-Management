@@ -47,6 +47,21 @@ const esquemaAmbiente = z.object({
   LLM_MODELO_EMBEDDING: z.string().optional(),
   /** Modelo da classificação fiscal (M12 — 9.1). Sem ele, a tela não sugere. */
   LLM_MODELO_FISCAL: z.string().optional(),
+
+  /**
+   * Tag de afiliado por plataforma.
+   *
+   * Opcional, e ausente é estado normal: sem tag, a tela de afiliados diz qual
+   * variável falta e não gera link — link de afiliado sem tag é link comum, e
+   * publicar um deles é trabalho que não paga comissão.
+   *
+   * Vive em ambiente, e não na tabela `credencial`, porque não é segredo: a tag
+   * aparece na própria URL publicada. O que é segredo (token de API) continua
+   * cifrado no banco (ADR 0007).
+   */
+  AFILIADO_TAG_ML: z.string().optional(),
+  AFILIADO_TAG_SHOPEE: z.string().optional(),
+  AFILIADO_TAG_AMAZON: z.string().optional(),
   LLM_ORCAMENTO_PADRAO_CENTAVOS: z.coerce.number().int().positive().default(500),
 
   /**

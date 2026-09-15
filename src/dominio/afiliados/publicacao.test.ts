@@ -108,6 +108,25 @@ describe('proximaPublicacao', () => {
     expect(decisao.minutosRestantes).toBe(ESPACAMENTO_MINIMO_MINUTOS - 10);
   });
 
+  it('a mensagem do espaçamento não sai com parêntese de plural', () => {
+    // "A última saiu há 0 minuto(s)" é o que a tela mostrava: torto, e errado — zero
+    // minuto é "agora". Apareceu ao ligar a tela, e é texto que o usuário lê inteiro.
+    const agoraMesmo = proximaPublicacao(
+      [oferta(), oferta({ id: 'pub', publicadoEmGrupo: AGORA })],
+      { agora: AGORA },
+    );
+    if (agoraMesmo.tipo !== 'esperar') throw new Error('esperava esperar');
+    expect(agoraMesmo.motivo).toContain('agora mesmo');
+    expect(agoraMesmo.motivo).not.toContain('(s)');
+
+    const umMinuto = proximaPublicacao(
+      [oferta(), oferta({ id: 'pub', publicadoEmGrupo: new Date(AGORA.getTime() - 60_000) })],
+      { agora: AGORA },
+    );
+    if (umMinuto.tipo !== 'esperar') throw new Error('esperava esperar');
+    expect(umMinuto.motivo).toContain('há 1 minuto.');
+  });
+
   it('passado o espaçamento, publica', () => {
     const decisao = proximaPublicacao(
       [
@@ -194,6 +213,17 @@ describe('medirDesempenho', () => {
     const d = medirDesempenho([medida(), medida({ publicadoEmGrupo: null, cliques: 999 })]);
     expect(d.cliques).toBe(10);
     expect(d.publicadas).toBe(1);
+  });
+
+  it('a mensagem conjuga singular e plural, sem parêntese', () => {
+    const uma = medirDesempenho([{ cliques: 1, conversoes: 1, publicadoEmGrupo: AGORA }]);
+    expect(uma.mensagem).toContain('1 clique e 1 venda em 1 oferta.');
+
+    const varias = medirDesempenho([
+      { cliques: 4, conversoes: 2, publicadoEmGrupo: AGORA },
+      { cliques: 3, conversoes: 0, publicadoEmGrupo: AGORA },
+    ]);
+    expect(varias.mensagem).toContain('7 cliques e 2 vendas em 2 ofertas.');
   });
 
   it('a mensagem nomeia a leitura de clique sem conversão', () => {
