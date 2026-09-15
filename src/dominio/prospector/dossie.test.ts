@@ -149,7 +149,18 @@ describe('resumirDossie', () => {
       }),
     );
     expect(r.achados).toBe(2);
-    expect(r.mensagem.startsWith('2 achado(s)')).toBe(true);
+    expect(r.mensagem.startsWith('2 achados confirmados em 7 passos.')).toBe(true);
+  });
+
+  it('zero passo gasto é plano, e não "nenhum achado"', () => {
+    // A frase de "nenhum achado" afirma que o alvo pode ser estreito demais. Dizer
+    // isso de um dossiê que ninguém investigou é afirmar sem ter olhado — e era o que
+    // a mensagem fazia antes de haver tela para ler ela inteira.
+    const r = resumirDossie(
+      paraGravar({ alvo: 'x', estado: estado({ passosGastos: 0 }), orcamento: orcamento() }),
+    );
+    expect(r.mensagem).toContain('Plano escrito');
+    expect(r.mensagem).not.toContain('estreito demais');
   });
 
   it('zero achado é informação, e a mensagem diz o que isso significa', () => {
@@ -193,7 +204,21 @@ describe('resumirDossie', () => {
     );
     expect(r.hipotesesAbertas).toBe(1);
     expect(r.hipotesesConfirmadas).toBe(1);
-    expect(r.mensagem).toContain('1 hipótese(s) em aberto');
+    expect(r.mensagem).toContain('1 hipótese em aberto');
+  });
+
+  it('saturação não convida a continuar, porque a frase seguinte diz o contrário', () => {
+    const r = resumirDossie(
+      paraGravar({
+        alvo: 'x',
+        estado: estado({ hipoteses: [hipotese('h1', 'aberta')], passosGastos: 4 }),
+        orcamento: orcamento(),
+        motivoParada: 'saturacao',
+      }),
+    );
+    expect(r.mensagem).toContain('1 hipótese continua em aberto.');
+    expect(r.mensagem).not.toContain('dá para continuar');
+    expect(r.mensagem).toContain('não traria mais nada');
   });
 
   it('parada por teto diz que continuar não recomeça', () => {

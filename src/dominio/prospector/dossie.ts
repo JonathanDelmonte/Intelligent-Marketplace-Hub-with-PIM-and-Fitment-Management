@@ -25,6 +25,7 @@
  * depois com teto maior.
  */
 import { centavos, type Centavos } from '@/lib/dinheiro';
+import { contagem } from '@/lib/texto';
 import type { Achado, EstadoDaBusca, Hipotese, MotivoDeParada } from './fronteira';
 import type { FamiliaDeHipotese } from './hipoteses';
 
@@ -196,19 +197,33 @@ export function resumirDossie(dossie: DossieParaGravar): ResumoDoDossie {
 
 function mensagemDoDossie(dossie: DossieParaGravar, abertas: number, semOrigem: number): string {
   const partes: string[] = [];
+  const passos = contagem(dossie.passosGastos, 'passo', 'passos');
 
-  if (dossie.achados.length === 0) {
+  if (dossie.passosGastos === 0) {
+    // Zero passo com zero achado não é informação sobre o alvo: é plano escrito e
+    // nada rodado. A frase de "nenhum achado" afirmaria que o alvo é estreito demais
+    // sem ninguém ter olhado, e ela aparecia assim antes de haver tela.
+    partes.push('Plano escrito, e nenhum passo gasto ainda.');
+  } else if (dossie.achados.length === 0) {
     partes.push(
-      `Nenhum achado em ${String(dossie.passosGastos)} passo(s). Isso é informação: o alvo pode ser estreito demais, ou as ferramentas desta execução não alcançam o que ele exige.`,
+      `Nenhum achado em ${passos}. Isso é informação: o alvo pode ser estreito demais, ou as ferramentas desta execução não alcançam o que ele exige.`,
     );
   } else {
     partes.push(
-      `${String(dossie.achados.length)} achado(s) confirmado(s) em ${String(dossie.passosGastos)} passo(s).`,
+      `${contagem(dossie.achados.length, 'achado confirmado', 'achados confirmados')} em ${passos}.`,
     );
   }
 
   if (abertas > 0) {
-    partes.push(`${String(abertas)} hipótese(s) em aberto — dá para continuar de onde parou.`);
+    // "Dá para continuar" não vale quando saturou, e a frase saía junto: o dossiê
+    // dizia "dá para continuar de onde parou" e, na frase seguinte, "aumentar o teto
+    // não traria mais nada". Duas afirmações opostas no mesmo parágrafo, e apareceram
+    // lado a lado na primeira vez que a tela mostrou a mensagem inteira.
+    partes.push(
+      dossie.motivoParada === 'saturacao'
+        ? `${contagem(abertas, 'hipótese continua em aberto', 'hipóteses continuam em aberto')}.`
+        : `${contagem(abertas, 'hipótese em aberto', 'hipóteses em aberto')} — dá para continuar de onde parou.`,
+    );
   }
 
   if (dossie.motivoParada === 'orcamento_passos' || dossie.motivoParada === 'orcamento_reais') {
@@ -221,7 +236,7 @@ function mensagemDoDossie(dossie: DossieParaGravar, abertas: number, semOrigem: 
 
   if (semOrigem > 0) {
     partes.push(
-      `Atenção: ${String(semOrigem)} achado(s) sem URL de origem. Achado sem fonte não é auditável e não deveria contar.`,
+      `Atenção: ${contagem(semOrigem, 'achado', 'achados')} sem URL de origem. Achado sem fonte não é auditável e não deveria contar.`,
     );
   }
 

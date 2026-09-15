@@ -22,6 +22,7 @@
 import type { Plataforma } from '@/dominio/precificacao/tipos';
 import { diaNoFuso, FUSO_PADRAO } from '@/dominio/pedidos/fila-do-dia';
 import { pontosBase, type PontosBase } from '@/lib/dinheiro';
+import { contagem } from '@/lib/texto';
 
 /**
  * Quantas ofertas por dia, no máximo.
@@ -40,17 +41,6 @@ export const OFERTAS_POR_DIA = 8;
  * duas sejam boas — o intervalo é o que separa curadoria de despejo.
  */
 export const ESPACAMENTO_MINIMO_MINUTOS = 45;
-
-/**
- * "1 clique" e "3 cliques", e nunca "1 clique(s)".
- *
- * O parêntese é texto de sistema, e ele aparecia em três frases que a tela mostra
- * inteiras — inclusive em "a última saiu há 0 minuto(s)", que além de torto estava
- * errado: zero minuto é "agora".
- */
-function contagem(quantidade: number, singular: string, plural: string): string {
-  return `${String(quantidade)} ${quantidade === 1 ? singular : plural}`;
-}
 
 /** Onde a tag de afiliado entra na URL, por plataforma. Levantamento, não fato. */
 const PARAMETRO_DA_TAG: Readonly<Record<Plataforma, string>> = {
