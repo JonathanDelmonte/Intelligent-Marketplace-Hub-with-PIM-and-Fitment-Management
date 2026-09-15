@@ -19,8 +19,16 @@ import { and, eq, sql } from 'drizzle-orm';
 import type { PerfilId } from '@/dominio/catalogo/sku';
 import type { RegimeFiscal } from '@/dominio/precificacao/tipos';
 import type { Banco } from '@/infra/banco/cliente';
-import { acumuladoAnual, pedido, perfilVendedor, sku } from '@/infra/banco/schema';
+import {
+  acumuladoAnual,
+  aparelho,
+  compatibilidade,
+  pedido,
+  perfilVendedor,
+  sku,
+} from '@/infra/banco/schema';
 import { centavos, type Centavos } from '@/lib/dinheiro';
+import type { ProdutoParaClassificar } from './classificador';
 import { estadoFiscal, type CampoFiscal, type EstadoFiscal } from './codigos';
 import { avaliarRegulacao, type AvaliacaoDeRegulacao } from './regulada';
 import { avaliarTeto, type AvaliacaoDoTeto } from './teto';
@@ -107,6 +115,35 @@ export class RepositorioFiscal {
       pendentes: skus.filter((s) => !s.estado.prontoPara2027).length,
       regulados: skus.filter((s) => s.regulacao.mensagem !== null).length,
       regime: perfis[0]?.regime ?? 'cpf',
+    };
+  }
+
+  /**
+   * O que o classificador de NCM lê de um SKU.
+   *
+   * Título, marca e os modelos de aparelho em que a peça serve — o último importa
+   * porque é o que distingue "purificador de água" de "peça de purificador de água",
+   * e são NCMs diferentes.
+   */
+  async paraClassificar(perfil: PerfilId, skuId: string): Promise<ProdutoParaClassificar | null> {
+    const [linha] = await this.db
+      .select({ tituloInterno: sku.tituloInterno, marca: sku.marca })
+      .from(sku)
+      .where(and(eq(sku.perfilId, perfil), eq(sku.id, skuId)))
+      .limit(1);
+
+    if (linha === undefined) return null;
+
+    const modelos = await this.db
+      .select({ marca: aparelho.marca, modelo: aparelho.modelo })
+      .from(compatibilidade)
+      .innerJoin(aparelho, eq(aparelho.id, compatibilidade.aparelhoId))
+      .where(eq(compatibilidade.skuId, skuId));
+
+    return {
+      tituloInterno: linha.tituloInterno,
+      marca: linha.marca,
+      modelosCompativeis: modelos.map((m) => `${m.marca} ${m.modelo}`),
     };
   }
 
