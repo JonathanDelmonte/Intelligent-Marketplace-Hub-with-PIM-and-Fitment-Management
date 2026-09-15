@@ -32,6 +32,7 @@ import { ExecutorDeIdentidade } from '@/dominio/identidade/tarefa';
 import { ResolvedorDeIdentidade } from '@/dominio/identidade/resolucao';
 import { Orquestrador } from '@/dominio/ingestao/orquestrador';
 import { IngestorDeProdutoExterno } from '@/dominio/ingestao/produto-externo';
+import { RepositorioDoMonitor } from '@/dominio/monitor/repositorio';
 import { lerAmbiente } from '@/config/ambiente';
 import { ArmazenamentoDeConteudo } from './armazenamento/conteudo';
 import { banco, type Banco } from './banco/cliente';
@@ -110,7 +111,10 @@ export function montarNucleoCom(
 ): Nucleo {
   const fila = new Fila(db);
   const armazenamento = new ArmazenamentoDeConteudo(diretorioDeConteudo);
-  const ingestor = new IngestorDeProdutoExterno(db);
+  // O ingestor avisa o monitor quando o preço de uma recaptura muda. É a única
+  // ligação entre a fase 3 e a fase 11, e ela mora aqui porque é montagem — nem a
+  // ingestão nem o monitor precisam conhecer o outro.
+  const ingestor = new IngestorDeProdutoExterno(db, new RepositorioDoMonitor(db));
   const orquestrador = new Orquestrador(fila, armazenamento);
   const executor = new ExecutorDeIngestao(fila, armazenamento, ingestor, orquestrador);
   // Uma instância de importador para as duas pontas: a de anúncio, dentro do

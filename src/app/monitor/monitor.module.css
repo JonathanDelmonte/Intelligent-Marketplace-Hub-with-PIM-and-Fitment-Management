@@ -1,0 +1,201 @@
+/*
+ * Estilo da tela do monitor.
+ *
+ * Quase tudo vem de `ui/comum.module.css` por `composes`. O que é desta tela: a lista
+ * de mudanças dentro de um grupo, a leitura da combinação em destaque, e a borda
+ * colorida do cartão por severidade — que aqui vale a pena porque a tela é uma fila
+ * de triagem e a cor é o que faz a pessoa começar pelo item certo.
+ */
+
+.pagina {
+  composes: pagina from '../ui/comum.module.css';
+  --largura-pagina: 64rem;
+}
+
+.cabecalho {
+  composes: cabecalho from '../ui/comum.module.css';
+}
+
+.titulo {
+  composes: titulo from '../ui/comum.module.css';
+}
+
+.subtitulo {
+  composes: subtitulo from '../ui/comum.module.css';
+}
+
+.resumo {
+  composes: resumo from '../ui/comum.module.css';
+  font-size: 1.0625rem;
+  margin-top: 0.75rem;
+}
+
+.secao {
+  composes: secao from '../ui/comum.module.css';
+}
+
+.secaoTitulo {
+  composes: secaoTitulo from '../ui/comum.module.css';
+}
+
+.aviso {
+  composes: aviso from '../ui/comum.module.css';
+}
+
+.avisoAtencao {
+  composes: aviso avisoAtencao from '../ui/comum.module.css';
+}
+
+.avisoErro {
+  composes: aviso avisoErro from '../ui/comum.module.css';
+}
+
+.avisoTitulo {
+  composes: avisoTitulo from '../ui/comum.module.css';
+}
+
+.avisoCorpo {
+  composes: avisoCorpo from '../ui/comum.module.css';
+}
+
+.dica {
+  composes: dica from '../ui/comum.module.css';
+}
+
+.lista {
+  composes: lista from '../ui/comum.module.css';
+}
+
+.item {
+  composes: item from '../ui/comum.module.css';
+}
+
+/* A cor na borda esquerda é o que ordena a leitura numa fila de triagem. */
+.itemAlerta {
+  border-left: 3px solid var(--cor-erro);
+}
+
+.itemAtencao {
+  border-left: 3px solid var(--cor-aviso);
+}
+
+.itemOk {
+  border-left: 3px solid var(--cor-ok);
+}
+
+.itemCabecalho {
+  composes: itemCabecalho from '../ui/comum.module.css';
+}
+
+.itemTitulo {
+  composes: itemTitulo from '../ui/comum.module.css';
+}
+
+.itemSub {
+  composes: itemSub from '../ui/comum.module.css';
+}
+
+.itemCorpo {
+  composes: itemCorpo from '../ui/comum.module.css';
+}
+
+.etiqueta {
+  composes: etiqueta from '../ui/comum.module.css';
+}
+
+.etiquetaOk {
+  composes: etiquetaOk from '../ui/comum.module.css';
+}
+
+.etiquetaAtencao {
+  composes: etiquetaAtencao from '../ui/comum.module.css';
+}
+
+.etiquetaAlerta {
+  composes: etiquetaAlerta from '../ui/comum.module.css';
+}
+
+.botaoSecundario {
+  composes: botaoMiudo from '../ui/comum.module.css';
+  margin-top: 0.875rem;
+}
+
+.vazio {
+  composes: vazio from '../ui/comum.module.css';
+}
+
+/*
+ * A leitura da combinação, em destaque.
+ *
+ * É a conclusão do grupo — "preço caiu e estoque subiu, isso é fornecedor novo" —, e
+ * vem antes dos eventos que a sustentam. Fundo em vez de borda porque é a única coisa
+ * do cartão que precisa ser lida sem escolha.
+ */
+.leitura {
+  background: var(--cor-fundo);
+  border-radius: var(--raio-pequeno);
+  margin: 0.75rem 0 0;
+  max-width: var(--medida-texto);
+  padding: 0.625rem 0.875rem;
+}
+
+.mudancas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0.875rem 0 0;
+  padding: 0;
+}
+
+.mudanca {
+  border-top: 1px solid var(--cor-borda);
+  display: grid;
+  gap: 0 0.5rem;
+  grid-template-columns: auto auto 1fr;
+  padding-top: 0.5rem;
+}
+
+.mudancaTitulo {
+  font-weight: 600;
+}
+
+.mudancaDetalhe {
+  color: var(--cor-texto-fraco);
+  font-variant-numeric: tabular-nums;
+}
+
+.mudancaQuando {
+  color: var(--cor-texto-fraco);
+  font-size: 0.8125rem;
+  text-align: right;
+}
+
+/* A explicação do tipo ocupa a linha inteira embaixo dos três campos. */
+.mudancaSignifica {
+  color: var(--cor-texto-fraco);
+  font-size: 0.875rem;
+  grid-column: 1 / -1;
+  margin-top: 0.125rem;
+  max-width: var(--medida-texto);
+}
+
+/* Os quatro números do veredito, em grade de rótulo e valor. */
+.numeros {
+  display: grid;
+  gap: 0.25rem 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  margin: 0.875rem 0 0;
+}
+
+.numeros dt {
+  color: var(--cor-texto-fraco);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.numeros dd {
+  font-variant-numeric: tabular-nums;
+  margin: 0 0 0.5rem;
+}

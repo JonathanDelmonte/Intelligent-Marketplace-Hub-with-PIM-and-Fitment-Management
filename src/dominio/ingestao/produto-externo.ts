@@ -16,7 +16,9 @@
 import { createHash } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { reaisParaCentavos } from '@/lib/dinheiro';
+import { randomUUID } from 'node:crypto';
+import { centavos, reaisParaCentavos } from '@/lib/dinheiro';
+import { eventoDePreco, type Evento } from '@/dominio/monitor/eventos';
 import type { Fonte } from '@/dominio/procedencia';
 import { FONTES } from '@/dominio/procedencia';
 import type { Banco } from '@/infra/banco/cliente';
@@ -136,8 +138,23 @@ export function normalizarTitulo(titulo: string): string {
     .trim();
 }
 
+/**
+ * Para onde vai o evento de mudança de preço.
+ *
+ * Porta, e não o repositório do monitor direto: a ingestão não precisa saber que o
+ * monitor existe, e o teste da ingestão não precisa de tabela de evento para rodar.
+ * Sem monitor ligado, a recaptura continua gravando a série histórica — o que muda é
+ * só a tela do monitor ficar vazia, que é estado normal e não erro (ADR 0002).
+ */
+export interface OuvinteDeMudanca {
+  registrar(evento: Evento): Promise<void>;
+}
+
 export class IngestorDeProdutoExterno {
-  constructor(private readonly db: Banco) {}
+  constructor(
+    private readonly db: Banco,
+    private readonly monitor: OuvinteDeMudanca | null = null,
+  ) {}
 
   /**
    * Valida e grava uma captura.
@@ -228,6 +245,24 @@ export class IngestorDeProdutoExterno {
         .where(eq(produtoExterno.id, existente.id));
       await this.registrarPreco(existente.id, precoCentavos, capturado.fonte, capturado.coletadoEm);
       precoAtualizado = true;
+
+      // O evento do monitor sai daqui, e não de uma varredura noturna: este é o
+      // único ponto do sistema que **sabe** o preço anterior. `eventoDePreco`
+      // devolve `null` para oscilação abaixo do piso, e aí nada é gravado — é o
+      // que impede o monitor de virar ruído na segunda semana.
+      if (existente.preco !== null && this.monitor !== null) {
+        const evento = eventoDePreco(
+          { antes: centavos(existente.preco), depois: centavos(precoCentavos) },
+          {
+            id: randomUUID(),
+            sobre: capturado.vendedor ?? capturado.plataformaOuSite ?? capturado.tituloBruto,
+            entidadeTipo: 'produto_externo',
+            entidadeId: existente.id,
+            detectadoEm: capturado.coletadoEm,
+          },
+        );
+        if (evento !== null) await this.monitor.registrar(evento);
+      }
     }
 
     return { tipo: 'duplicado', id: existente.id, hashConteudo, precoAtualizado };

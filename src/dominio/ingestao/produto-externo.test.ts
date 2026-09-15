@@ -5,6 +5,7 @@ import {
   temBancoDeTeste,
   type ConexaoDeTeste,
 } from '@/infra/banco/teste';
+import type { Evento } from '@/dominio/monitor/eventos';
 import {
   IngestorDeProdutoExterno,
   calcularHashConteudo,
@@ -172,6 +173,46 @@ describe.skipIf(!temBancoDeTeste())('IngestorDeProdutoExterno (contra Postgres r
 
     const historico = await ingestor.historicoDePreco(primeira.id);
     expect(historico.map((h) => h.preco)).toEqual([6990, 5990]);
+  });
+
+  it('recaptura com preço novo avisa o monitor, e o evento diz de quem é', async () => {
+    // É a única ligação entre a fase 3 e a fase 11: este é o único ponto do sistema
+    // que sabe o preço anterior. Sem isto, a tela do monitor mostra sempre zero.
+    const avisados: Evento[] = [];
+    const comMonitor = new IngestorDeProdutoExterno(conexao.db, {
+      // eslint-disable-next-line @typescript-eslint/require-await
+      async registrar(evento) {
+        avisados.push(evento);
+      },
+    });
+
+    await comMonitor.gravar(captura({ precoReais: 69.9 }));
+    await comMonitor.gravar(captura({ precoReais: 59.9 }));
+
+    expect(avisados).toHaveLength(1);
+    expect(avisados[0]?.tipo).toBe('preco_concorrente_caiu');
+    expect(avisados[0]?.sobre).toBe('Loja Exemplo');
+    expect(avisados[0]?.entidadeTipo).toBe('produto_externo');
+  });
+
+  it('oscilação abaixo do piso atualiza o preço e não avisa ninguém', async () => {
+    // Um centavo de diferença é arredondamento, e monitor que avisa de tudo é
+    // monitor desligado na segunda semana.
+    const avisados: Evento[] = [];
+    const comMonitor = new IngestorDeProdutoExterno(conexao.db, {
+      // eslint-disable-next-line @typescript-eslint/require-await
+      async registrar(evento) {
+        avisados.push(evento);
+      },
+    });
+
+    const primeira = await comMonitor.gravar(captura({ precoReais: 69.9 }));
+    if (primeira.tipo !== 'gravado') throw new Error('esperava gravado');
+    const segunda = await comMonitor.gravar(captura({ precoReais: 69.8 }));
+
+    if (segunda.tipo === 'duplicado') expect(segunda.precoAtualizado).toBe(true);
+    expect(await ingestor.historicoDePreco(primeira.id)).toHaveLength(2);
+    expect(avisados).toEqual([]);
   });
 
   it('recaptura com o mesmo preço não infla o histórico', async () => {

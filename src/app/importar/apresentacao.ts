@@ -19,15 +19,7 @@
 import { z } from 'zod';
 import { TIPOS_DE_ENTRADA, type TipoDeEntrada } from '@/dominio/ingestao/classificador';
 import { STATUS_JOB, type JobDetalhado, type StatusJob } from '@/infra/fila/fila';
-
-/**
- * Idioma da interface.
- *
- * Ponto único: o vocabulário do negócio é português (CLAUDE.md, seção 4) e a
- * formatação de data e número segue o mesmo. Uma constante em vez de literal
- * espalhado porque o dia de ter outro idioma começa aqui.
- */
-export const IDIOMA = 'pt-BR';
+import { IDIOMA, formatarAbsoluto, formatarRelativo } from '../ui/tempo';
 
 // ─── Status ──────────────────────────────────────────────────────────────────
 
@@ -246,34 +238,12 @@ export function resumirProgresso(progresso: unknown): string | null {
 
 // ─── Tempo ───────────────────────────────────────────────────────────────────
 
-/**
- * Instante em tempo relativo.
- *
- * Numa lista de jobs o que se lê é "há 2 minutos", não "12/09/2026 09:14:46". O
- * absoluto continua disponível no `title` de cada célula, para quando a pergunta
- * é comparar com o horário de outra coisa.
- *
- * `numeric: 'auto'` de propósito: devolve "ontem" e "anteontem" em vez de "há 1
- * dia" e "há 2 dias", que é como se fala. Vale saber que isso muda o texto, e por
- * isso os dois casos estão fixados em teste.
+/*
+ * Formatação de tempo mora em `ui/tempo.ts` desde que a tela do monitor passou a
+ * precisar da mesma coisa. Reexportado aqui porque os componentes desta tela importam
+ * daqui, e mudar dez pontos de importação para mover uma função seria ruído no diff.
  */
-export function formatarRelativo(quando: Date, agora: Date): string {
-  const segundos = Math.round((quando.getTime() - agora.getTime()) / 1000);
-  const absoluto = Math.abs(segundos);
-
-  if (absoluto < 45) return 'agora';
-
-  const formatador = new Intl.RelativeTimeFormat(IDIOMA, { numeric: 'auto' });
-  if (absoluto < 3600) return formatador.format(Math.round(segundos / 60), 'minute');
-  if (absoluto < 86_400) return formatador.format(Math.round(segundos / 3600), 'hour');
-  return formatador.format(Math.round(segundos / 86_400), 'day');
-}
-
-export function formatarAbsoluto(quando: Date): string {
-  return new Intl.DateTimeFormat(IDIOMA, { dateStyle: 'short', timeStyle: 'medium' }).format(
-    quando,
-  );
-}
+export { IDIOMA, formatarAbsoluto, formatarRelativo };
 
 /** Duração legível. Job de 80 ms e job de 4 minutos aparecem na mesma coluna. */
 export function formatarDuracao(ms: number): string {

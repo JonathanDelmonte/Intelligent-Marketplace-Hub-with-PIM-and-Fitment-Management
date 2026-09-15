@@ -11,10 +11,10 @@
  * ## O grupo existe porque dez portas em fila não são uma navegação
  *
  * Com dez itens numa linha só, a barra era uma lista de palavras: não dizia o que vem
- * antes de quê, nem qual delas é a do dia a dia. Os três grupos são os três momentos em
- * que alguém abre este sistema — despachar o que vendeu, alimentar o catálogo, e cuidar
- * de fornecedor e obrigação. Dentro de `catalogo` a ordem é a do fluxo: importar, juntar,
- * dizer onde serve, montar anúncio.
+ * antes de quê, nem qual delas é a do dia a dia. Os grupos são os momentos em que alguém
+ * abre este sistema — despachar o que vendeu, alimentar o catálogo, procurar dinheiro
+ * novo, e cuidar de fornecedor e obrigação. Dentro de `catalogo` a ordem é a do fluxo:
+ * importar, juntar, dizer onde serve, montar anúncio.
  *
  * ## Os nomes internos saíram daqui
  *
@@ -28,7 +28,7 @@
  * aplicativo, e trocar a rota de uma PWA já instalada quebra o atalho que está no
  * celular. Rótulo e rota não precisam coincidir; o que não pode é o rótulo mentir.
  */
-export const GRUPOS = ['hoje', 'catalogo', 'protecao'] as const;
+export const GRUPOS = ['hoje', 'catalogo', 'oportunidade', 'protecao'] as const;
 
 export type Grupo = (typeof GRUPOS)[number];
 
@@ -36,6 +36,7 @@ export type Grupo = (typeof GRUPOS)[number];
 export const TITULO_DO_GRUPO: Readonly<Record<Grupo, string>> = {
   hoje: 'Hoje',
   catalogo: 'Catálogo',
+  oportunidade: 'Oportunidade',
   protecao: 'Fornecedor e obrigação',
 };
 
@@ -92,6 +93,13 @@ export const PORTAS: readonly Porta[] = [
     descricao:
       'Título com os códigos que o comprador busca, descrição com a tabela de onde serve, e o arquivo de importação da plataforma.',
     grupo: 'catalogo',
+  },
+  {
+    href: '/monitor',
+    rotulo: 'Monitor de preço',
+    descricao:
+      'O que mudou no mercado desde a última vez que você olhou, agrupado por vendedor e semana — e o que vale publicar hoje.',
+    grupo: 'oportunidade',
   },
   {
     href: '/fornecedores',

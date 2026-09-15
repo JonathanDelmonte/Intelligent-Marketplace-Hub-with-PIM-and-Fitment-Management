@@ -66,6 +66,17 @@ export const TIPOS_DE_MUDANCA = [
 export type TipoDeMudanca = (typeof TIPOS_DE_MUDANCA)[number];
 
 /**
+ * Tipo de mudança que o código de hoje conhece.
+ *
+ * Existe para a leitura do banco: um evento gravado por uma versão anterior pode ter
+ * tipo que não está mais na lista, e a tela não sabe o que dizer sobre ele. Descartar
+ * na leitura é melhor que inventar texto — e o evento continua no banco.
+ */
+export function ehTipoDeMudanca(valor: string): valor is TipoDeMudanca {
+  return (TIPOS_DE_MUDANCA as readonly string[]).includes(valor);
+}
+
+/**
  * O que cada tipo significa para a operação.
  *
  * Existe porque severidade sozinha não diz o que fazer, e a leitura por LLM pode não
