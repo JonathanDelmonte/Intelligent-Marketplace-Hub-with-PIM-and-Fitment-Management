@@ -116,7 +116,15 @@ export function rotuloDoCampo(campo: CampoFiscal): string {
   return ROTULO_DO_CAMPO[campo];
 }
 
-export const CODIGOS_DE_AVISO = ['gravado', 'formato', 'nao_encontrado', 'falha'] as const;
+export const CODIGOS_DE_AVISO = [
+  'gravado',
+  'formato',
+  'sugerido',
+  'sem_chave',
+  'sem_texto',
+  'nao_encontrado',
+  'falha',
+] as const;
 export type CodigoDeAviso = (typeof CODIGOS_DE_AVISO)[number];
 
 export interface Aviso {
@@ -143,6 +151,27 @@ export function descreverAviso(codigo: string | undefined): Aviso | null {
         titulo: 'Código fora do formato',
         corpo:
           'NCM tem oito dígitos, CST dois ou três, cClassTrib seis. Ponto e espaço são ignorados, então dá para colar como está na tabela. Nada foi gravado.',
+      };
+    case 'sugerido':
+      return {
+        tom: 'ok',
+        titulo: 'Sugestão preenchida, ainda não gravada',
+        corpo:
+          'Os campos vieram preenchidos com a sugestão e a justificativa está abaixo deles. Confira e clique em Gravar — nada foi escrito no produto até você confirmar.',
+      };
+    case 'sem_chave':
+      return {
+        tom: 'atencao',
+        titulo: 'Ninguém sugeriu',
+        corpo:
+          'Não há chave de LLM configurada, então a sugestão de NCM não roda. Isso não trava nada: o campo continua preenchível à mão, e o cadastro fica pronto do mesmo jeito.',
+      };
+    case 'sem_texto':
+      return {
+        tom: 'atencao',
+        titulo: 'Falta texto para classificar',
+        corpo:
+          'A sugestão sai do título e dos atributos do produto, e aqui não há texto suficiente. Dê um nome ao produto antes de pedir a sugestão.',
       };
     case 'nao_encontrado':
       return {

@@ -45,6 +45,8 @@ const esquemaAmbiente = z.object({
   LLM_MODELO_EXTRACAO: z.string().optional(),
   LLM_MODELO_JULGAMENTO: z.string().optional(),
   LLM_MODELO_EMBEDDING: z.string().optional(),
+  /** Modelo da classificação fiscal (M12 — 9.1). Sem ele, a tela não sugere. */
+  LLM_MODELO_FISCAL: z.string().optional(),
   LLM_ORCAMENTO_PADRAO_CENTAVOS: z.coerce.number().int().positive().default(500),
 
   /**

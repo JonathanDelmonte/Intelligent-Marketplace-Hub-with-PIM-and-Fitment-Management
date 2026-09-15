@@ -25,7 +25,7 @@ import { RepositorioFiscal } from '@/dominio/fiscal/repositorio';
 import { carregarPerfil } from '@/dominio/perfil';
 import { banco } from '@/infra/banco/cliente';
 import { descreverAviso, resumoDoCadastro } from './apresentacao';
-import { AvisoDaAcao, Cadastro, Prazos, Teto } from './componentes';
+import { AvisoDaAcao, Cadastro, Prazos, Teto, type SugestaoNaTela } from './componentes';
 import estilo from './fiscal.module.css';
 
 export const metadata: Metadata = { title: 'Fiscal' };
@@ -54,8 +54,26 @@ export default async function PaginaFiscal({
   ]);
   const prazos = avaliarPrazos({ agora, regime: resumo.regime });
 
-  const codigo = Array.isArray(parametros['r']) ? parametros['r'][0] : parametros['r'];
-  const aviso = descreverAviso(codigo);
+  const um = (chave: string): string | undefined => {
+    const valor = parametros[chave];
+    return Array.isArray(valor) ? valor[0] : valor;
+  };
+
+  const aviso = descreverAviso(um('r'));
+
+  // A sugestão vem da URL e vale só para o item classificado. Pré-preencher o campo
+  // de outro produto com o NCM de um produto diferente seria a pior coisa que esta
+  // tela poderia fazer.
+  const skuSugerido = um('sugerido');
+  const sugestao: SugestaoNaTela | null =
+    skuSugerido === undefined
+      ? null
+      : {
+          skuId: skuSugerido,
+          ncm: um('ncm') ?? null,
+          cest: um('cest') ?? null,
+          porque: um('porque') ?? null,
+        };
 
   return (
     <main className={estilo.pagina}>
@@ -88,7 +106,7 @@ export default async function PaginaFiscal({
           Cadastro fiscal por produto
         </h2>
         <p className={estilo.resumo}>{resumoDoCadastro(resumo)}</p>
-        <Cadastro resumo={resumo} />
+        <Cadastro resumo={resumo} sugestao={sugestao} />
       </section>
     </main>
   );

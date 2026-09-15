@@ -12,7 +12,7 @@ import type { PrazoAvaliado } from '@/dominio/fiscal/prazos';
 import type { ResumoFiscal, SkuFiscal } from '@/dominio/fiscal/repositorio';
 import type { AvaliacaoDoTeto } from '@/dominio/fiscal/teto';
 import type { RegimeFiscal } from '@/dominio/precificacao/tipos';
-import { gravarCodigos, informarReceitaExterna } from './acoes';
+import { gravarCodigos, informarReceitaExterna, sugerirCodigos } from './acoes';
 import {
   ROTULO_DA_SITUACAO,
   diaEmTexto,
@@ -133,18 +133,39 @@ export function Teto({
   );
 }
 
-function valorAtual(item: SkuFiscal, campo: CampoFiscal): string {
+/**
+ * A sugestão que voltou da classificação, para **este** item.
+ *
+ * Vem da URL, e só se aplica ao item que foi classificado: pré-preencher o campo de
+ * outro produto com o NCM de um produto diferente seria a pior coisa que esta tela
+ * poderia fazer.
+ */
+export interface SugestaoNaTela {
+  readonly skuId: string;
+  readonly ncm: string | null;
+  readonly cest: string | null;
+  readonly porque: string | null;
+}
+
+function valorAtual(item: SkuFiscal, campo: CampoFiscal, sugestao: SugestaoNaTela | null): string {
+  if (sugestao !== null && sugestao.skuId === item.id) {
+    if (campo === 'ncm' && sugestao.ncm !== null) return sugestao.ncm;
+    if (campo === 'cest' && sugestao.cest !== null) return sugestao.cest;
+  }
   return item[campo] ?? '';
 }
 
 function CartaoDoSku({
   item,
   regime,
+  sugestao,
 }: {
   readonly item: SkuFiscal;
   readonly regime: RegimeFiscal;
+  readonly sugestao: SugestaoNaTela | null;
 }) {
   const comuns = VALORES_COMUNS[regime];
+  const daSugestao = sugestao !== null && sugestao.skuId === item.id;
 
   return (
     <li className={item.estado.prontoPara2027 ? estilo.itemFeito : estilo.item}>
@@ -166,6 +187,24 @@ function CartaoDoSku({
         <p className={estilo.itemAcao}>{item.regulacao.mensagem}</p>
       )}
 
+      {/*
+        Pedir sugestão é um formulário próprio, separado do de gravar: são ações
+        diferentes, e um botão que às vezes sugere e às vezes grava seria a forma mais
+        rápida de alguém gravar um NCM que não conferiu.
+      */}
+      <form action={sugerirCodigos}>
+        <input name="skuId" type="hidden" value={item.id} />
+        <button className={estilo.botao} type="submit">
+          Sugerir NCM
+        </button>
+      </form>
+
+      {daSugestao && sugestao?.porque !== null && sugestao?.porque !== undefined && (
+        <p className={estilo.itemAcao}>
+          Por que esse NCM: {sugestao.porque} — confira e grave, ou apague e preencha à mão.
+        </p>
+      )}
+
       <form action={gravarCodigos} className={estilo.formulario}>
         <input name="skuId" type="hidden" value={item.id} />
         {CAMPOS_FISCAIS.map((campo) => (
@@ -173,7 +212,7 @@ function CartaoDoSku({
             {rotuloDoCampo(campo)}
             <input
               className={estilo.entrada}
-              defaultValue={valorAtual(item, campo)}
+              defaultValue={valorAtual(item, campo, sugestao)}
               inputMode="numeric"
               name={campo}
               placeholder={(comuns[campo] ?? [])[0] ?? ''}
@@ -210,7 +249,13 @@ function CartaoDoSku({
   );
 }
 
-export function Cadastro({ resumo }: { readonly resumo: ResumoFiscal }) {
+export function Cadastro({
+  resumo,
+  sugestao,
+}: {
+  readonly resumo: ResumoFiscal;
+  readonly sugestao: SugestaoNaTela | null;
+}) {
   if (resumo.skus.length === 0) {
     return (
       <p className={estilo.vazio}>
@@ -222,7 +267,7 @@ export function Cadastro({ resumo }: { readonly resumo: ResumoFiscal }) {
   return (
     <ul className={estilo.lista}>
       {resumo.skus.map((s) => (
-        <CartaoDoSku item={s} key={s.id} regime={resumo.regime} />
+        <CartaoDoSku item={s} key={s.id} regime={resumo.regime} sugestao={sugestao} />
       ))}
     </ul>
   );

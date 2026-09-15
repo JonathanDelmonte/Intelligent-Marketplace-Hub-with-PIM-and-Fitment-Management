@@ -15,10 +15,12 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { lerAmbiente } from '@/config/ambiente';
+import { sugerirClassificacao } from '@/dominio/fiscal/classificador';
 import { CAMPOS_FISCAIS, lerCodigoFiscal, type CampoFiscal } from '@/dominio/fiscal/codigos';
 import { RepositorioFiscal, type CodigosParaGravar } from '@/dominio/fiscal/repositorio';
 import { carregarPerfil } from '@/dominio/perfil';
 import { banco } from '@/infra/banco/cliente';
+import { llmDoAmbiente } from '@/infra/llm/ambiente';
 import { criarRegistrador, nivelDoAmbiente } from '@/infra/log';
 import { ZERO, lerReaisDigitados } from '@/lib/dinheiro';
 import type { CodigoDeAviso } from './apresentacao';
@@ -84,6 +86,56 @@ export async function gravarCodigos(dados: FormData): Promise<void> {
 
   revalidatePath(CAMINHO);
   redirect(paraOnde(gravou ? 'gravado' : 'nao_encontrado'));
+}
+
+/**
+ * Pede a sugestão de NCM e CEST para um item.
+ *
+ * **Não grava nada.** A sugestão volta pela URL e a tela a mostra nos campos, para a
+ * pessoa confirmar ou descartar — é o "exige confirmação sua" da especificação, e é
+ * por isso que esta ação não toca o SKU. NCM errado não dá erro na hora: dá nota
+ * emitida com tributo errado, descoberta na fiscalização.
+ */
+export async function sugerirCodigos(dados: FormData): Promise<void> {
+  const skuId = esquemaDeId.safeParse(dados.get('skuId'));
+  if (!skuId.success) redirect(paraOnde('nao_encontrado'));
+
+  let resultado: Awaited<ReturnType<typeof sugerirClassificacao>>;
+  try {
+    const db = banco();
+    const perfil = await carregarPerfil(db, lerAmbiente().BANCADA_PERFIL_PADRAO);
+    const repo = new RepositorioFiscal(db);
+    const produto = await repo.paraClassificar(perfil.id, skuId.data);
+    if (produto === null) redirect(paraOnde('nao_encontrado'));
+
+    const { servico, modeloFiscal } = llmDoAmbiente(db);
+    resultado = await sugerirClassificacao(produto, {
+      llm: servico,
+      modelo: modeloFiscal,
+    });
+  } catch (erro) {
+    // `OrcamentoEstourado` também cai aqui: para a tela, "não deu" é a mesma coisa, e
+    // o log guarda qual foi.
+    log.erro('fiscal.sugestao_falhou', { skuId: skuId.data, erro });
+    redirect(paraOnde('falha'));
+  }
+
+  if (resultado.tipo === 'sem_chave') redirect(paraOnde('sem_chave'));
+  if (resultado.tipo === 'nada_a_classificar') redirect(paraOnde('sem_texto'));
+  if (resultado.tipo === 'falhou') redirect(paraOnde('falha'));
+
+  // A sugestão viaja na URL, e não em estado de servidor, pelo mesmo motivo da tela
+  // de anúncio: o que a tela mostra fica reproduzível e o botão de voltar funciona.
+  const busca = new URLSearchParams({ r: 'sugerido', sugerido: skuId.data });
+  const primeiro = resultado.candidatos[0];
+  if (primeiro !== undefined) {
+    busca.set('ncm', primeiro.ncm);
+    if (primeiro.cest !== null) busca.set('cest', primeiro.cest);
+    busca.set('porque', primeiro.justificativa);
+  }
+
+  revalidatePath(CAMINHO);
+  redirect(`${CAMINHO}?${busca.toString()}`);
 }
 
 /**
