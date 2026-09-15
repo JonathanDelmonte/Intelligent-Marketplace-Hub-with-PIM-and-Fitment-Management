@@ -1,5 +1,5 @@
 /**
- * A lógica da tela de jobs, separada do JSX.
+ * A lógica da tela de importação, separada do JSX.
  *
  * Existe como módulo próprio porque **é a parte que pode estar errada**. Layout
  * errado se vê; resumo de payload errado não — e o payload chega como `unknown`
@@ -46,7 +46,7 @@ export const ROTULO_DO_STATUS: Readonly<Record<StatusJob, string>> = {
  * Metade do valor desta tela é ensinar isso sem obrigar a ler a especificação.
  */
 export const EXPLICACAO_DO_STATUS: Readonly<Record<StatusJob, string>> = {
-  pendente: 'esperando o poller pegar',
+  pendente: 'esperando o processador da fila pegar',
   rodando: 'em execução agora',
   concluido: 'terminou e gravou',
   falhou: 'esgotou as tentativas; o erro fica visível',
@@ -389,7 +389,7 @@ export function descreverAviso(
       return {
         tipo: 'ok',
         titulo: 'Entrada aceita',
-        corpo: 'Está na fila. O poller pega no próximo tique.',
+        corpo: 'Está na fila. O processador da fila pega no próximo tique.',
       };
     case 'ja_existia':
       return {
@@ -397,7 +397,7 @@ export function descreverAviso(
         titulo: 'Esta entrada já estava na fila',
         corpo:
           'A chave de idempotência é a mesma, então nada foi duplicado e nada foi ' +
-          'cobrado de novo. O job que já existia está na lista abaixo.',
+          'cobrado de novo. A entrada que já existia está na lista abaixo.',
       };
     case 'revisao':
       return {
@@ -405,7 +405,7 @@ export function descreverAviso(
         titulo: 'Entrada guardada, mas precisa de revisão',
         corpo:
           'A classificação ficou abaixo do limiar de confiança, então o sistema não ' +
-          'gastou extração. Nada foi descartado: o job está em "revisar" com o motivo.',
+          'gastou extração. Nada foi descartado: a entrada está em "revisar" com o motivo.',
       };
     case 'sem_entrada':
       return {
@@ -424,13 +424,13 @@ export function descreverAviso(
     case 'reenfileirado':
       return {
         tipo: 'ok',
-        titulo: 'Job de volta à fila',
+        titulo: 'Entrada de volta à fila',
         corpo: 'As tentativas voltaram a zero e o erro anterior foi limpo.',
       };
     case 'processado':
       return {
         tipo: 'ok',
-        titulo: `${String(n)} ${plural('job processado', 'jobs processados')}`,
+        titulo: `${String(n)} ${plural('entrada processada', 'entradas processadas')}`,
         corpo: 'Execução manual, sem esperar o poller.',
       };
     case 'nada_para_processar':
@@ -442,11 +442,15 @@ export function descreverAviso(
           'de nova tentativa.',
       };
     case 'job_inexistente':
-      return { tipo: 'erro', titulo: 'Job não encontrado', corpo: 'Talvez tenha sido limpo.' };
+      return {
+        tipo: 'erro',
+        titulo: 'Entrada não encontrada',
+        corpo: 'Talvez tenha sido limpa.',
+      };
     case 'job_rodando':
       return {
         tipo: 'erro',
-        titulo: 'Job em execução',
+        titulo: 'Entrada em execução',
         corpo: 'Não é seguro reenfileirar agora. Espere terminar ou o prazo de execução estourar.',
       };
   }
@@ -476,9 +480,9 @@ export function avisoDeFilaParada(params: {
 
   const n = params.prontos;
   return (
-    `${String(n)} ${n === 1 ? 'job está pronto' : 'jobs estão prontos'} para rodar e nada ` +
-    'terminou no último minuto. Se nenhum processo estiver consumindo a fila, use ' +
-    '"Processar agora" ou rode o poller.'
+    `${String(n)} ${n === 1 ? 'entrada está pronta' : 'entradas estão prontas'} para rodar ` +
+    'e nada terminou no último minuto. Se nenhum processo estiver consumindo a fila, use ' +
+    '"Processar agora" ou ligue o processador da fila.'
   );
 }
 

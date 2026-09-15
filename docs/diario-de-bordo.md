@@ -26,6 +26,46 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-15 — A interface parou de falar o nome das tabelas
+
+### 🔀 Tela fala vendedor, código fala domínio — e a tradução mora num lugar só
+
+O dono já tinha dito que não entendia "Jobs" nem "Identidade". Fechadas as fases, dava
+para consertar de verdade, e o conserto foi maior que dois rótulos: as duas telas
+estavam escritas no vocabulário do banco.
+
+A tradução que passou a valer na interface:
+
+| na tela                | no código                       | por que a palavra do código não serve |
+| ---------------------- | ------------------------------- | ------------------------------------- |
+| entrada                | `job`                           | nome de tabela, e em inglês           |
+| processador da fila    | `poller`                        | nome de processo, não de trabalho     |
+| oferta                 | `produto_externo`, "ocorrência" | "ocorrência" é palavra de log         |
+| produto                | `sku`                           | sigla que o dono não usa falando      |
+| como o sistema compara | `forma_canonica`                | nome de algoritmo                     |
+| de onde veio           | `fonte`, "procedência"          | correto e frio                        |
+
+O código ficou como estava. A regra que vale daqui em diante: **`apresentacao.ts` é a
+fronteira da tradução** — dentro dele e para baixo, o vocabulário é o do domínio; para
+cima, o de quem vende. Traduzir no meio (renomear a propriedade `ocorrencias` do
+componente e deixar a tabela como `produto_externo`) seria ter dois vocabulários sem
+fronteira, que é pior que ter um só errado: ninguém saberia qual está lendo.
+
+A troca mais útil não foi de palavra e sim de frase. "Resolver 10 agora" virou "Tentar
+juntar 10 automaticamente": o verbo velho não dizia o que ia acontecer, e num botão que
+dispara trabalho automático isso é a informação principal.
+
+### 🔀 A rota acompanhou o rótulo, menos a do leitor
+
+`/jobs` virou `/importar` e `/identidade` virou `/juntar-iguais`, com redirecionamento
+permanente das duas antigas: a URL é texto que alguém lê, e um favorito que cai em 404
+faz parecer que a tela foi removida.
+
+`/leitor` ficou. É a tela instalável como aplicativo, e trocar a rota de uma PWA já
+instalada quebra o atalho que está na tela inicial do celular — o rótulo virou "Bipar na
+loja" e a rota continuou `/leitor`. Rótulo e rota não precisam coincidir; o que não pode
+é o rótulo mentir.
+
 ## 2026-09-15 — O contêiner parou o Postgres, e desta vez foi só isso
 
 ### 🐛 Cluster parado com as bases intactas — o roteiro de reconstrução era maior que o problema

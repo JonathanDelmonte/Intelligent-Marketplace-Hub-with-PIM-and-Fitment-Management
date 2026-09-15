@@ -1,5 +1,5 @@
 /**
- * Tipos das classes de `jobs.module.css`.
+ * Tipos das classes de `importar.module.css`.
  *
  * Escrito à mão de propósito. A declaração que o Next injeta para
  * `*.module.css` é uma assinatura de índice, e com `noPropertyAccessFromIndexSignature`

@@ -1,6 +1,6 @@
 /**
- * Tela de revisão de identidade — a "fila de revisão sua, de dois cliques" da
- * especificação (M3, etapa 5.5).
+ * Tela de juntar iguais — a "fila de revisão sua, de dois cliques" da especificação
+ * (M3, etapa 5.5).
  *
  * O que esta tela existe para não deixar acontecer: agrupamento automático que
  * ninguém conferiu. A resolução decide sozinha o que é decidível sozinho, e **tudo
@@ -22,9 +22,9 @@ import { banco } from '@/infra/banco/cliente';
 import { LIMITE_DA_FILA, LIMITE_DE_RESOLUCAO_MANUAL } from './constantes';
 import { descreverAviso, estadoDaBase, inteiroDaUrl } from './apresentacao';
 import { AvisoDaAcao, BotaoResolverAgora, Fila, Painel, ParaCriarProduto } from './componentes';
-import estilo from './identidade.module.css';
+import estilo from './juntar-iguais.module.css';
 
-export const metadata: Metadata = { title: 'Identidade' };
+export const metadata: Metadata = { title: 'Juntar iguais' };
 
 /** Sempre dinâmica: pré-renderizar exigiria banco durante o `build`. */
 export const dynamic = 'force-dynamic';
@@ -39,7 +39,7 @@ function paraProposta(lado: LadoDaFila) {
   };
 }
 
-export default async function PaginaDeIdentidade({
+export default async function PaginaDeJuntarIguais({
   searchParams,
 }: {
   readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -84,11 +84,12 @@ export default async function PaginaDeIdentidade({
   return (
     <main className={estilo.pagina}>
       <header className={estilo.cabecalho}>
-        <h1 className={estilo.titulo}>Identidade de produto</h1>
+        <h1 className={estilo.titulo}>Juntar iguais</h1>
         <p className={estilo.subtitulo}>
-          Duas ocorrências do mesmo produto, em fontes diferentes, viram um SKU só — e aí dá para
-          ver qual fornecedor é mais barato e a que preço o mercado vende. O sistema junta o que
-          consegue provar; o que sobra vem para cá.
+          A mesma peça aparece em vários lugares: no anúncio de um concorrente, na planilha de dois
+          fornecedores. Aqui as ofertas do mesmo produto viram <strong>um produto só</strong> do seu
+          catálogo — e aí dá para ver qual fornecedor é mais barato e a que preço o mercado vende. O
+          sistema junta o que consegue provar; o que sobra vem para cá.
         </p>
       </header>
 
@@ -96,7 +97,7 @@ export default async function PaginaDeIdentidade({
 
       <Painel contagem={contagem} exemplos={contagemDeExemplos} ocorrencias={totalDeOcorrencias} />
 
-      <section className={estilo.secao} aria-label="Executar a resolução">
+      <section className={estilo.secao} aria-label="Juntar automaticamente">
         <BotaoResolverAgora limite={LIMITE_DE_RESOLUCAO_MANUAL} />
       </section>
 

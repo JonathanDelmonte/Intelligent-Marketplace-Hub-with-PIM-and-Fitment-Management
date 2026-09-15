@@ -1,5 +1,5 @@
 /**
- * Componentes da tela de jobs.
+ * Componentes da tela de importação.
  *
  * Tudo aqui é Server Component sem estado: recebe dados prontos e devolve marcação.
  * A lógica que decide o que dizer está em `apresentacao.ts`, que tem teste; estes
@@ -26,7 +26,7 @@ import {
   type Aviso,
 } from './apresentacao';
 import { enviarEntrada, processarAgora, reenfileirar } from './acoes';
-import estilo from './jobs.module.css';
+import estilo from './importar.module.css';
 
 // ─── Aviso da última ação ────────────────────────────────────────────────────
 
@@ -267,7 +267,7 @@ export function BotaoProcessarAgora({ limite }: { readonly limite: number }) {
       <button
         type="submit"
         className={estilo.botaoSecundario}
-        title={`processa até ${String(limite)} jobs nesta requisição`}
+        title={`processa até ${String(limite)} entradas nesta requisição`}
       >
         Processar agora
       </button>

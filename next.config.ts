@@ -23,6 +23,22 @@ const config: NextConfig = {
    * `node_modules/next/dist/docs/`.
    */
   agentRules: false,
+  /**
+   * As duas telas que trocaram de nome continuam atendendo no endereço antigo.
+   *
+   * `/jobs` era nome de tabela e `/identidade` nome de módulo; viraram `/importar` e
+   * `/juntar-iguais`, que é o nome do trabalho que cada uma faz. Quem tiver a URL
+   * antiga num favorito cai na tela certa em vez de num 404 — e um 404 no próprio
+   * sistema é o tipo de coisa que faz alguém achar que a tela foi removida.
+   *
+   * Permanente porque os dois endereços antigos não vão voltar a existir.
+   */
+  redirects: () =>
+    Promise.resolve([
+      { source: '/jobs', destination: '/importar', permanent: true },
+      { source: '/jobs/:id', destination: '/importar/:id', permanent: true },
+      { source: '/identidade', destination: '/juntar-iguais', permanent: true },
+    ]),
   experimental: {
     // O mesmo número que a ação valida em runtime. Ver src/config/limites.ts.
     serverActions: { bodySizeLimit: MAX_UPLOAD_BYTES },

@@ -89,8 +89,8 @@ export default async function PaginaDoLeitor() {
 
       <p className={estilo.ajuda} style={{ marginTop: '1.5rem' }}>
         A base tem {contarCodigos(quantidadeNaBase).replace(' na base', '')}. Ela cresce quando você
-        importa planilha de exportação em <Link href="/jobs">jobs</Link> — sem base, o leitor lê o
-        código e não tem com o que comparar.
+        importa planilha de exportação em <Link href="/importar">importar</Link> — sem base, o
+        leitor lê o código e não tem com o que comparar.
       </p>
     </main>
   );

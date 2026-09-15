@@ -1,5 +1,5 @@
 /**
- * Componentes da tela de identidade.
+ * Componentes da tela de juntar iguais.
  *
  * Server Components sem estado: recebem dados prontos e devolvem marcação. O que
  * decide **texto** está em `apresentacao.ts`, que tem teste.
@@ -21,7 +21,7 @@ import {
   rotuloDoNivel,
   type Aviso,
 } from './apresentacao';
-import estilo from './identidade.module.css';
+import estilo from './juntar-iguais.module.css';
 
 const CLASSE_DO_AVISO: Readonly<Record<Aviso['tom'], string>> = {
   ok: estilo.aviso,
@@ -65,11 +65,11 @@ export function Painel({
   const ordem: readonly StatusDoPar[] = ['pendente', 'automatico', 'resolvido', 'descartado'];
 
   return (
-    <section aria-label="Situação do grafo de identidade">
+    <section aria-label="Situação das ofertas e dos pares">
       <ul className={estilo.painel}>
         <li className={estilo.cartao}>
           <span className={estilo.cartaoNumero}>{ocorrencias}</span>
-          <span className={estilo.cartaoRotulo}>ocorrências na base</span>
+          <span className={estilo.cartaoRotulo}>ofertas na base</span>
           <span className={estilo.cartaoNota}>tudo que entrou por link ou planilha</span>
         </li>
         {ordem.map((status) => (
@@ -96,11 +96,12 @@ export function BotaoResolverAgora({ limite }: { readonly limite: number }) {
   return (
     <form action={resolverAgora}>
       <button type="submit" className={estilo.botaoSecundario}>
-        Resolver {limite} agora
+        Tentar juntar {limite} automaticamente
       </button>
       <p className={estilo.dica}>
-        Compara as ocorrências contra os candidatos e decide o que dá para decidir sem julgamento.
-        Roda aqui mesmo, sem processo de fundo.
+        Compara as ofertas entre si e junta as que dá para provar que são o mesmo produto — código
+        de barras igual, ou marca e código de peça iguais. O que depender de julgamento cai na fila
+        abaixo. Roda aqui mesmo, sem processo de fundo.
       </p>
     </form>
   );
@@ -121,18 +122,18 @@ function Lado({ lado, titulo }: { readonly lado: LadoDaFila; readonly titulo: st
         <dd>{lado.vendedor ?? 'não informado'}</dd>
         <dt>onde</dt>
         <dd>{lado.plataformaOuSite ?? 'não informado'}</dd>
-        <dt>procedência</dt>
+        <dt>de onde veio</dt>
         <dd>{fonteLegivel(lado.fonte)}</dd>
         <dt>código de barras</dt>
         <dd>{lado.ean ?? 'sem GTIN'}</dd>
-        <dt>forma canônica</dt>
+        <dt>como o sistema compara</dt>
         <dd className={estilo.canonico}>
           {lado.formaCanonica === null || lado.formaCanonica === ''
-            ? 'não foi possível montar: falta marca ou modelo extraídos'
+            ? 'não deu para montar: o sistema não achou marca nem modelo'
             : lado.formaCanonica}
         </dd>
-        <dt>SKU</dt>
-        <dd>{lado.skuId === null ? 'ainda não é um SKU' : 'já pertence a um SKU'}</dd>
+        <dt>produto</dt>
+        <dd>{lado.skuId === null ? 'ainda não virou produto' : 'já faz parte de um produto'}</dd>
       </dl>
       {lado.url !== null && (
         <a className={estilo.link} href={lado.url} target="_blank" rel="noreferrer noopener">
@@ -173,8 +174,8 @@ export function CartaoDoPar({
           evidência: {rotuloDoNivel(par.nivel)}
           {par.confiancaBp > 0 && ` · confiança ${confiancaLegivel(par.confiancaBp)}`}
           {par.a.skuId === null && par.b.skuId === null
-            ? ' · nenhum dos dois é um SKU ainda'
-            : ' · um dos dois já é um SKU'}
+            ? ' · nenhum dos dois virou produto ainda'
+            : ' · um dos dois já é produto'}
         </p>
       </div>
 
@@ -193,8 +194,8 @@ export function CartaoDoPar({
       )}
 
       <div className={estilo.lados}>
-        <Lado lado={par.a} titulo="ocorrência A" />
-        <Lado lado={par.b} titulo="ocorrência B" />
+        <Lado lado={par.a} titulo="oferta A" />
+        <Lado lado={par.b} titulo="oferta B" />
       </div>
 
       <div className={estilo.acoes}>
@@ -210,7 +211,7 @@ export function CartaoDoPar({
           <form action={criarSkuDoPar} className={estilo.formularioDeSku}>
             <input type="hidden" name="parId" value={par.id} />
             <label className={estilo.rotuloDoTitulo} htmlFor={`titulo-${par.id}`}>
-              título do SKU
+              nome do produto
             </label>
             <input
               className={estilo.campoDeTitulo}
@@ -222,7 +223,7 @@ export function CartaoDoPar({
               required
             />
             <button type="submit" className={estilo.botaoSim}>
-              É o mesmo — criar SKU
+              É o mesmo — criar o produto
             </button>
           </form>
         ) : (
@@ -276,7 +277,7 @@ export function Fila({
  * pode tomar sozinho — dar nome ao produto.
  *
  * Estava faltando, e o buraco só apareceu seguindo o roteiro do README de ponta a
- * ponta: duas ocorrências do mesmo código de barras são ligadas automaticamente, e
+ * ponta: duas ofertas do mesmo código de barras são ligadas automaticamente, e
  * por isso **não** entram na fila de revisão. O par ficava correto e sem caminho na
  * interface para virar produto — e sem produto não há comparação de preço nem ficha
  * de compatibilidade.
@@ -301,8 +302,8 @@ export function ParaCriarProduto({
           </div>
 
           <div className={estilo.lados}>
-            <Lado lado={par.a} titulo="ocorrência A" />
-            <Lado lado={par.b} titulo="ocorrência B" />
+            <Lado lado={par.a} titulo="oferta A" />
+            <Lado lado={par.b} titulo="oferta B" />
           </div>
 
           {proposta.avisos.length > 0 && (

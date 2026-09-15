@@ -1,5 +1,5 @@
 /**
- * Detalhe de um job.
+ * Detalhe de uma entrada.
  *
  * Existe para fechar um buraco que a lista deixava: o executor guarda em
  * `resultado.rejeitadas` **cada linha da planilha que não passou**, com a linha
@@ -30,9 +30,9 @@ import {
   rotuloDoTipoDeEntrada,
 } from '../apresentacao';
 import { reenfileirar } from '../acoes';
-import estilo from '../jobs.module.css';
+import estilo from '../importar.module.css';
 
-export const metadata: Metadata = { title: 'Job' };
+export const metadata: Metadata = { title: 'Entrada' };
 export const dynamic = 'force-dynamic';
 
 export default async function PaginaDoJob({
@@ -169,7 +169,7 @@ export default async function PaginaDoJob({
               )}
               {linha.temColunasOriginais ? null : (
                 <p className={estilo.dica} style={{ padding: '0.5rem 0.875rem', margin: 0 }}>
-                  Job gravado antes de a linha original passar a ser guardada: abaixo estão os
+                  Entrada gravada antes de a linha original passar a ser guardada: abaixo estão os
                   campos já mapeados, não os nomes de coluna do arquivo.
                 </p>
               )}

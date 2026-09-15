@@ -1,5 +1,5 @@
 /**
- * Apresentação da tela de identidade — funções puras, com teste.
+ * Apresentação da tela de juntar iguais — funções puras, com teste.
  *
  * Tudo que decide **texto** vive aqui e não no componente, pelo motivo de sempre:
  * regra dentro de JSX não tem teste, e a primeira coisa que quebra numa tela de
@@ -36,11 +36,11 @@ export interface Aviso {
 /**
  * Traduz o código da URL em aviso.
  *
- * `n` carrega a quantidade quando o aviso precisa dela — quantas ocorrências foram
+ * `n` carrega a quantidade quando o aviso precisa dela — quantas ofertas foram
  * ligadas, quantos pares foram avaliados.
  */
 export function descreverAviso(codigo: string | undefined, n: number | undefined): Aviso | null {
-  // Guarda antes do `switch`, como na tela de jobs: estreita o tipo e descarta
+  // Guarda antes do `switch`, como na tela de importação: estreita o tipo e descarta
   // código desconhecido — link antigo ou URL editada à mão não são erro, e inventar
   // aviso para eles seria pior que não dizer nada.
   if (codigo === undefined) return null;
@@ -57,25 +57,25 @@ export function descreverAviso(codigo: string | undefined, n: number | undefined
       return {
         tom: 'ok',
         titulo: 'Decisão registrada.',
-        corpo: `${contar(n, 'ocorrência ligada ao SKU', 'ocorrências ligadas ao SKU')}. O preço de cada fonte já aparece no SKU.`,
+        corpo: `${contar(n, 'oferta ligada ao produto', 'ofertas ligadas ao produto')}. O preço de cada fonte já aparece no produto.`,
       };
     case 'decidido_sem_propagar':
       return {
         tom: 'atencao',
-        titulo: 'Decisão registrada, mas não deu para ligar ao SKU.',
+        titulo: 'Decisão registrada, mas não deu para ligar ao produto.',
         corpo:
-          'A equivalência está gravada e vale como exemplo; a ligação ao SKU falhou — em geral porque o perfil padrão aponta para um slug que não existe no banco. O erro está no log, e a ligação pode ser refeita depois sem perder nada.',
+          'A equivalência está gravada e vale como exemplo; a ligação ao produto falhou — em geral porque o perfil padrão aponta para um slug que não existe no banco. O erro está no log, e a ligação pode ser refeita depois sem perder nada.',
       };
     case 'sku_criado':
       return {
         tom: 'ok',
-        titulo: 'SKU criado.',
-        corpo: `${contar(n, 'ocorrência ligada a ele', 'ocorrências ligadas a ele')}. O preço de cada fonte já aparece junto, e a margem passa a ser calculável.`,
+        titulo: 'Produto criado.',
+        corpo: `${contar(n, 'oferta ligada a ele', 'ofertas ligadas a ele')}. O preço de cada fonte já aparece junto, e a margem passa a ser calculável.`,
       };
     case 'titulo_curto':
       return {
         tom: 'atencao',
-        titulo: 'O título do SKU está curto demais.',
+        titulo: 'O nome do produto está curto demais.',
         corpo: 'Três caracteres é o mínimo. Nada foi criado.',
       };
     case 'resolvido_sem_exemplo':
@@ -83,30 +83,30 @@ export function descreverAviso(codigo: string | undefined, n: number | undefined
         tom: 'atencao',
         titulo: 'Decisão registrada, mas não virou exemplo.',
         corpo:
-          'Um dos lados não tem forma canônica — sem marca nem modelo extraídos, não há texto para ensinar. A decisão vale; o aprendizado fica para quando a extração melhorar.',
+          'Num dos lados o sistema não achou marca nem modelo, então não há texto comparável para ensinar. A decisão vale; o aprendizado fica para quando a extração melhorar.',
       };
     case 'par_sumiu':
       return {
         tom: 'atencao',
         titulo: 'Esse par já não está na fila.',
-        corpo: 'Alguém decidiu antes, ou uma das ocorrências foi apagada.',
+        corpo: 'Alguém decidiu antes, ou uma das duas ofertas foi apagada.',
       };
     case 'resolucao_feita':
       return {
         tom: 'ok',
-        titulo: 'Resolução executada.',
-        corpo: `${contar(n, 'ocorrência avaliada', 'ocorrências avaliadas')}.`,
+        titulo: 'Comparação feita.',
+        corpo: `${contar(n, 'oferta avaliada', 'ofertas avaliadas')}.`,
       };
     case 'resolucao_vazia':
       return {
         tom: 'atencao',
-        titulo: 'Não havia o que resolver.',
-        corpo: 'Toda ocorrência da base já foi avaliada contra os candidatos que existem hoje.',
+        titulo: 'Não havia o que comparar.',
+        corpo: 'Toda oferta da base já foi avaliada contra as candidatas que existem hoje.',
       };
     case 'sem_chave_de_llm':
       return {
         tom: 'atencao',
-        titulo: 'Resolvido o que dava sem LLM.',
+        titulo: 'Juntado o que dava sem LLM.',
         corpo:
           'GTIN igual e marca com código de peça igual foram decididos aqui mesmo. O que depende de julgamento está na fila abaixo, esperando chave de LLM ou você.',
       };
@@ -227,7 +227,7 @@ export function precoLegivel(preco: number | null): string {
   return preco === null ? 'sem preço na fonte' : formatarBRL(preco as Centavos);
 }
 
-/** Etiqueta de procedência, reusando a tabela do domínio. */
+/** De onde a oferta veio, reusando a tabela de procedência do domínio. */
 export function fonteLegivel(fonte: string): string {
   return fonte in ETIQUETA_DA_FONTE ? ETIQUETA_DA_FONTE[fonte as Fonte] : fonte;
 }
@@ -249,7 +249,7 @@ export function estadoDaBase(params: {
       tom: 'atencao',
       titulo: 'A base está vazia.',
       corpo:
-        'Não há ocorrência nenhuma para comparar. Importe uma planilha ou cole um link em /jobs primeiro.',
+        'Não há oferta nenhuma para comparar. Importe uma planilha ou cole um link em /importar primeiro.',
     };
   }
   if (params.avaliadas === 0) {
@@ -257,7 +257,7 @@ export function estadoDaBase(params: {
       tom: 'atencao',
       titulo: 'Nada foi avaliado ainda.',
       corpo:
-        'A base tem ocorrências, e nenhum par foi comparado. O botão acima faz a primeira passada.',
+        'A base tem ofertas, e nenhum par foi comparado. O botão acima faz a primeira passada.',
     };
   }
   if (params.pendentes === 0) {
@@ -265,7 +265,7 @@ export function estadoDaBase(params: {
       tom: 'ok',
       titulo: 'Nada esperando por você.',
       corpo:
-        'Todo par avaliado foi decidido — pelo sistema ou por alguém. A fila enche de novo quando entrar ocorrência nova.',
+        'Todo par avaliado foi decidido — pelo sistema ou por alguém. A fila enche de novo quando entrar oferta nova.',
     };
   }
   return null;

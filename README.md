@@ -140,10 +140,10 @@ Há uma exportação de exemplo em
 de um relatório do Mercado Livre — com linha de título, separador `;` e preço em
 vírgula, como vem de verdade.
 
-1. Abra **`/jobs`** e suba esse arquivo no campo único.
+1. Abra **`/importar`** e suba esse arquivo no campo único.
 2. Clique em **"Processar agora"** (ou deixe `npm run poller` rodando em outro
    terminal). São **3 anúncios**, nenhuma linha recusada.
-3. Abra **`/identidade`**. Duas das três ocorrências compartilham o mesmo EAN, e o
+3. Abra **`/juntar-iguais`**. Duas das três ocorrências compartilham o mesmo EAN, e o
    sistema **já as ligou sozinho** — aparecem como "decidido pelo sistema", com
    evidência `código de barras` e 100% de confiança. Ninguém clicou em nada.
 4. Na mesma tela, em **"Juntados pelo sistema, esperando um nome"**, clique em
@@ -221,7 +221,7 @@ npm run poller:uma-vez   # drena a fila e sai — serve para cron
 npm run poller -- --ajuda
 ```
 
-A tela de `/jobs` funciona **sem** poller: tem um botão que processa alguns jobs
+A tela de `/importar` funciona **sem** poller: tem um botão que processa alguns jobs
 na hora, e uma tela de detalhe por job com cada linha de planilha recusada e o
 motivo.
 
@@ -236,7 +236,7 @@ do celular. Informe o custo, leia o código, e o veredito sai com preço pratica
 margem, markup e até quanto dá para pagar. Funciona sem rede: a leitura fica no
 aparelho e sobe quando a conexão volta.
 
-A revisão de identidade fica em `/identidade`. O sistema liga sozinho as ocorrências
+A revisão de identidade fica em `/juntar-iguais`. O sistema liga sozinho as ocorrências
 que consegue provar que são o mesmo produto — mesmo GTIN, ou mesma marca com o mesmo
 código de peça — e manda para essa fila o que exige julgamento, com os dois lados no
 mesmo formato e a evidência à vista. Dois cliques por par, e cada decisão vira exemplo

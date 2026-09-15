@@ -8,11 +8,17 @@
  *
  * Nenhum rótulo aqui é nome de marca — são nomes de função (ADR 0003).
  *
- * **Os rótulos "Jobs" e "Identidade" são nomes internos e o dono do repositório já
- * disse que não entende nenhum dos dois.** Ficam como estão nesta passada por
- * decisão dele — a revisão de vocabulário e de navegação é uma tarefa própria,
- * depois das fases, e meia renomeação seria pior que nenhuma. Está anotado em
- * `docs/pendencias.md`.
+ * ## Os nomes internos saíram daqui
+ *
+ * "Jobs" era o nome da tabela e "Identidade" o nome do módulo, e o dono do
+ * repositório disse que não entendia nenhum dos dois. Viraram "Importar" e "Juntar
+ * iguais" — o nome do trabalho que cada tela faz —, e a rota acompanhou, porque a
+ * URL também é texto que alguém lê. "Leitor" caía no mesmo teste ("leitor de quê?")
+ * e virou "Bipar na loja".
+ *
+ * A rota `/leitor` ficou como estava, de propósito: é a tela instalável como
+ * aplicativo, e trocar a rota de uma PWA já instalada quebra o atalho que está no
+ * celular. Rótulo e rota não precisam coincidir; o que não pode é o rótulo mentir.
  */
 export interface Porta {
   readonly href: string;
@@ -25,16 +31,16 @@ export interface Porta {
 export const PORTAS: readonly Porta[] = [
   { href: '/', rotulo: 'Início', descricao: null },
   {
-    href: '/jobs',
-    rotulo: 'Jobs',
+    href: '/importar',
+    rotulo: 'Importar',
     descricao:
       'Sobe a exportação do painel do marketplace ou uma planilha de fornecedor, e mostra o que o sistema está processando.',
   },
   {
-    href: '/identidade',
-    rotulo: 'Identidade',
+    href: '/juntar-iguais',
+    rotulo: 'Juntar iguais',
     descricao:
-      'O mesmo produto, anunciado em lugares diferentes, junta num só — e aí dá para comparar preço de fornecedor.',
+      'O mesmo produto, encontrado em lugares diferentes, vira um produto só do seu catálogo — e aí dá para comparar preço de fornecedor.',
   },
   {
     href: '/postagem',
@@ -74,7 +80,7 @@ export const PORTAS: readonly Porta[] = [
   },
   {
     href: '/leitor',
-    rotulo: 'Leitor',
+    rotulo: 'Bipar na loja',
     descricao:
       'Aponta a câmera para o código de barras na prateleira e diz se vale comprar, com o preço de mercado.',
   },

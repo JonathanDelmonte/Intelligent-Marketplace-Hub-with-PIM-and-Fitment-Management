@@ -17,7 +17,7 @@
  */
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import estilo from './jobs.module.css';
+import estilo from './importar.module.css';
 
 export function AtualizacaoAutomatica({ intervaloMs = 5000 }: { readonly intervaloMs?: number }) {
   const router = useRouter();

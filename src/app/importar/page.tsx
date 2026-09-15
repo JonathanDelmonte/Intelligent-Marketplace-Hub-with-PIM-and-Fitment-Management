@@ -1,5 +1,6 @@
 /**
- * Tela de jobs — a observabilidade mínima que a seção 7 da especificação exige:
+ * Tela de importação — o campo único de entrada, e a observabilidade mínima que a
+ * seção 7 da especificação exige:
  * "log estruturado e uma tela de últimos 100 jobs com erro visível".
  *
  * É também a primeira tela de verdade do sistema, e por isso define três coisas
@@ -31,9 +32,9 @@ import {
   TabelaDeJobs,
 } from './componentes';
 import { AtualizacaoAutomatica } from './atualizacao-automatica';
-import estilo from './jobs.module.css';
+import estilo from './importar.module.css';
 
-export const metadata: Metadata = { title: 'Jobs' };
+export const metadata: Metadata = { title: 'Importar' };
 
 /**
  * Sempre dinâmica.
@@ -44,7 +45,7 @@ export const metadata: Metadata = { title: 'Jobs' };
  */
 export const dynamic = 'force-dynamic';
 
-export default async function PaginaDeJobs({
+export default async function PaginaDeImportacao({
   searchParams,
 }: {
   readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -73,7 +74,7 @@ export default async function PaginaDeJobs({
 
   return (
     <main className={estilo.pagina}>
-      <h1 className={estilo.titulo}>Jobs</h1>
+      <h1 className={estilo.titulo}>Importar</h1>
       <p className={estilo.subtitulo}>
         Tudo que entra no sistema passa por aqui. Nada é descartado: entrada que o sistema não sabe
         tratar fica em <strong>revisar</strong>, com o motivo, esperando decisão humana.
@@ -108,7 +109,7 @@ export default async function PaginaDeJobs({
       <section className={estilo.secao}>
         <div className={estilo.acoesDaSecao}>
           <h2 className={estilo.tituloDaSecao} style={{ margin: 0 }}>
-            Últimos {String(LIMITE_DA_LISTA)} jobs
+            Últimas {String(LIMITE_DA_LISTA)} entradas
           </h2>
           <div className={estilo.acoesDaSecao} style={{ gap: '1rem', marginBottom: 0 }}>
             <AtualizacaoAutomatica />
@@ -118,7 +119,7 @@ export default async function PaginaDeJobs({
         <TabelaDeJobs
           jobs={jobs}
           agora={agora}
-          vazio="Nenhum job ainda. Cole um link ou suba uma planilha acima."
+          vazio="Nenhuma entrada ainda. Cole um link ou suba uma planilha acima."
         />
       </section>
     </main>

@@ -1,5 +1,5 @@
 /**
- * Tipos das classes de `identidade.module.css`.
+ * Tipos das classes de `juntar-iguais.module.css`.
  *
  * Escrito à mão pelo mesmo motivo de `jobs.module.css.d.ts`: a declaração que o Next
  * injeta para `*.module.css` é uma assinatura de índice, e com

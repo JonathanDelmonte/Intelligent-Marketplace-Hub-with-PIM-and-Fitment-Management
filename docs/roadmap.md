@@ -153,7 +153,7 @@ rodá-lo contra página de verdade produziria código que parece funcionar.
 fila e sai, o que serve para cron. Em contêiner ou supervisor, chamar
 `tsx scripts/poller.ts` direto em vez de passar pelo `npm` — o npm não repassa
 `SIGTERM` para o filho, e o encerramento limpo do poller nunca seria acionado (ver
-o diário). A tela fica em `/jobs` e funciona sem poller nenhum: tem um botão que
+o diário). A tela fica em `/importar` e funciona sem poller nenhum: tem um botão que
 processa alguns jobs na hora.
 
 A fronteira está desenhada: `exigeLlm()` diz quais tipos de entrada gastam token
@@ -182,7 +182,7 @@ em vez de reimportar quatro mil.
 **O que ainda não existe na interface.** Não há tela de catálogo, de SKU nem de
 precificação: o motor de margem (fase 1) e o repositório de SKU (3.10) são
 chamáveis por código e por teste, não por tela. A ordem do roadmap é deliberada —
-a tela de jobs vinha primeiro porque sem ela nada do que a ingestão faz é
+a tela de importação vinha primeiro porque sem ela nada do que a ingestão faz é
 auditável.
 
 ---
@@ -248,7 +248,7 @@ o que comparar. As duas fases se completam, e é por isso que esta vem depois.
 | 5.6 | Decisão humana vira exemplo few-shot para as chamadas seguintes          | ✅     |
 | 5.7 | Cache por conteúdo — resolver o mesmo produto uma única vez              | ✅     |
 | 5.8 | Propagação de equivalência para SKU, com `perfil_id` exigido pelo tipo   | ✅     |
-| 5.9 | Tela de revisão em `/identidade`, de dois cliques                        | ✅     |
+| 5.9 | Tela de revisão em `/juntar-iguais`, de dois cliques                        | ✅     |
 | 5.10 | Job de resolução na fila, consumido pelo poller junto com a ingestão    | ✅     |
 | 5.11 | Criar SKU a partir de um par, com título proposto e editável            | ✅     |
 
@@ -267,7 +267,7 @@ resolver — o anúncio que diz `PA21G` e o catálogo do distribuidor que diz
 sem esse filtro, cada vizinho que o `pgvector` devolvesse viraria uma chamada paga.
 
 O que fica na fila de revisão, com o motivo escrito: o par que só julgamento resolve.
-Sem chave, ele aparece em `/identidade` dizendo "sem chave de LLM, então ninguém
+Sem chave, ele aparece em `/juntar-iguais` dizendo "sem chave de LLM, então ninguém
 julgou" — o sistema sabe que não sabe, e quem olha entende por quê.
 
 **O que as três linhas 🚧 esperam.** Não é código: é `LLM_API_KEY`. O contrato do
@@ -294,7 +294,7 @@ entrasse, cada decisão humana invalidaria o cache de todos os pares, e o sistem
 re-resolveria a base inteira justamente por estar aprendendo. Pergunta define o cache;
 contexto vai gravado ao lado, para a chamada continuar reproduzível.
 
-**Como usar.** A tela fica em `/identidade`. O botão resolve algumas ocorrências na
+**Como usar.** A tela fica em `/juntar-iguais`. O botão resolve algumas ocorrências na
 hora, sem processo de fundo. Cada par pendente mostra os dois lados no mesmo formato —
 preço, vendedor, procedência, GTIN, forma canônica —, a evidência que os aproximou e a
 justificativa de quem julgou. Três botões: é o mesmo, são diferentes, não sei dizer.

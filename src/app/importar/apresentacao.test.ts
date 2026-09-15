@@ -281,12 +281,12 @@ describe('avisos de ação', () => {
   });
 
   it('plural acompanha a quantidade', () => {
-    expect(descreverAviso('processado', 1)?.titulo).toBe('1 job processado');
-    expect(descreverAviso('processado', 4)?.titulo).toBe('4 jobs processados');
+    expect(descreverAviso('processado', 1)?.titulo).toBe('1 entrada processada');
+    expect(descreverAviso('processado', 4)?.titulo).toBe('4 entradas processadas');
   });
 
   it('quantidade inválida na URL não vira texto estranho', () => {
-    expect(descreverAviso('processado', -3)?.titulo).toBe('0 jobs processados');
+    expect(descreverAviso('processado', -3)?.titulo).toBe('0 entradas processadas');
     expect(inteiroDaUrl('abc')).toBeNull();
     expect(inteiroDaUrl('-1')).toBeNull();
     expect(inteiroDaUrl('12')).toBe(12);
@@ -315,13 +315,13 @@ describe('aviso de fila parada', () => {
       ultimoTermino: new Date(AGORA.getTime() - JANELA_DE_FILA_PARADA_MS - 1),
       agora: AGORA,
     });
-    expect(aviso).toContain('3 jobs estão prontos');
+    expect(aviso).toContain('3 entradas estão prontas');
     expect(aviso).toContain('Processar agora');
   });
 
   it('avisa também quando nada terminou nunca', () => {
     expect(avisoDeFilaParada({ prontos: 1, ultimoTermino: null, agora: AGORA })).toContain(
-      '1 job está pronto',
+      '1 entrada está pronta',
     );
   });
 });

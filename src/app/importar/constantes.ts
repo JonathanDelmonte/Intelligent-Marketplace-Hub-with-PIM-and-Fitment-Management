@@ -1,5 +1,5 @@
 /**
- * Constantes da tela de jobs.
+ * Constantes da tela de importação.
  *
  * Existe por uma regra do Next que não é óbvia: **arquivo com `'use server'` só
  * pode exportar função assíncrona.** Uma `export const` ali derruba o build
@@ -10,7 +10,7 @@
  */
 
 /** Rota da tela. Usada pela ação para revalidar e redirecionar. */
-export const CAMINHO = '/jobs';
+export const CAMINHO = '/importar';
 
 /**
  * Quantos jobs a execução manual processa por clique.

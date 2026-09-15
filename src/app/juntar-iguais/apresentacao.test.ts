@@ -18,18 +18,21 @@ describe('descreverAviso', () => {
   });
 
   it('conjuga o plural da quantidade', () => {
-    expect(descreverAviso('decidido_com_ligacao', 1)?.corpo).toContain('1 ocorrência ligada');
-    expect(descreverAviso('decidido_com_ligacao', 3)?.corpo).toContain('3 ocorrências ligadas');
+    expect(descreverAviso('decidido_com_ligacao', 1)?.corpo).toContain('1 oferta ligada');
+    expect(descreverAviso('decidido_com_ligacao', 3)?.corpo).toContain('3 ofertas ligadas');
   });
 
   it('trata quantidade ausente como zero em vez de mostrar undefined', () => {
-    expect(descreverAviso('resolucao_feita', undefined)?.corpo).toBe('0 ocorrências avaliadas.');
+    expect(descreverAviso('resolucao_feita', undefined)?.corpo).toBe('0 ofertas avaliadas.');
   });
 
   it('o aviso de decisão sem exemplo explica por que não ensinou', () => {
     const aviso = descreverAviso('resolvido_sem_exemplo', undefined);
     expect(aviso?.tom).toBe('atencao');
-    expect(aviso?.corpo).toContain('forma canônica');
+    // A frase não pode usar "forma canônica": é o nome interno do texto comparável, e
+    // quem lê o aviso precisa entender o que faltou, não como o campo se chama.
+    expect(aviso?.corpo).toContain('marca nem modelo');
+    expect(aviso?.corpo).not.toContain('canônica');
   });
 
   it('propagação falhada não diz que a decisão falhou', () => {
@@ -203,6 +206,8 @@ describe('estadoDaBase', () => {
   });
 
   it('base vazia manda para a tela de entrada, que é a ação que resolve', () => {
-    expect(estadoDaBase({ ocorrencias: 0, pendentes: 0, avaliadas: 0 })?.corpo).toContain('/jobs');
+    expect(estadoDaBase({ ocorrencias: 0, pendentes: 0, avaliadas: 0 })?.corpo).toContain(
+      '/importar',
+    );
   });
 });

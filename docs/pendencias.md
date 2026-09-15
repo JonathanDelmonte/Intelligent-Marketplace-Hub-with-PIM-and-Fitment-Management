@@ -182,7 +182,7 @@ foram confirmados contra uma exportação real** do Mercado Livre, da Shopee ou 
 Amazon. A tabela de sinônimos foi montada por inferência.
 
 **Mitigação que já está no código:** o mapeamento relata toda coluna que não
-reconhece, e a tela de jobs mostra isso como alerta em cada job. Então a primeira
+reconhece, e a tela de importação mostra isso como alerta em cada entrada. Então a primeira
 importação de verdade diz exatamente o que falta acrescentar.
 
 **O que destrava:** exportar uma planilha de cada painel e rodar. Meia hora.
@@ -229,7 +229,7 @@ Ordem do roadmap, que é por utilidade e não por arquitetura. Nada aqui espera 
 
 ### 3.1 Telas que não existem
 
-Há dez telas: início, `/jobs` (com detalhe por job), `/leitor`, `/identidade`,
+Há dez telas: início, `/importar` (com detalhe por job), `/leitor`, `/juntar-iguais`,
 `/compatibilidade`, `/fornecedores`, `/postagem`, `/consignacao`, `/anuncios` e
 `/fiscal`. **Não há tela de catálogo, de SKU nem de precificação.** O motor de margem (fase 1)
 e o repositório de SKU (3.10) seguem chamáveis por código e por teste, não por tela.
@@ -250,7 +250,7 @@ listar catálogo, e informar custo — que é o dado que falta para a margem sai
 proposta de SKU deliberadamente não presume custo: preço de anúncio é o que outro
 cobra, e presumir um pelo outro erraria a margem para o lado otimista.
 
-A ordem é deliberada: a tela de jobs veio primeiro porque sem ela nada do que a
+A ordem é deliberada: a tela de importação veio primeiro porque sem ela nada do que a
 ingestão faz é auditável, e o leitor veio depois porque é a primeira função que
 gera dinheiro. Mas a consequência é que **usar o M8 hoje exige escrever código**.
 
@@ -542,15 +542,15 @@ coisa que um refactor distraído reintroduz.
 
 ### 5.4 A tela demorando, e por que a medição local não reproduz
 
-O dono relatou a tela de identidade "muito lenta, muito travada, fica
+O dono relatou a tela de juntar iguais (então `/identidade`) "muito lenta, muito travada, fica
 renderizando". Medido aqui em 13/09/2026, contra Postgres **local**, servidor de
 desenvolvimento já aquecido:
 
 | rota               | primeira visita | segunda |
 | ------------------ | --------------- | ------- |
 | `/`                | 0,79 s          | 0,04 s  |
-| `/jobs`            | 0,43 s          | 0,08 s  |
-| `/identidade`      | 0,13 s          | 0,05 s  |
+| `/importar`            | 0,43 s          | 0,08 s  |
+| `/juntar-iguais`      | 0,13 s          | 0,05 s  |
 | `/compatibilidade` | 0,18 s          | 0,09 s  |
 
 Ou seja: **não é a consulta nem a renderização.** A primeira visita carrega o custo

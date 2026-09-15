@@ -1,13 +1,13 @@
 /**
- * Constantes da tela de identidade.
+ * Constantes da tela de juntar iguais.
  *
- * Arquivo próprio pela mesma regra da tela de jobs: módulo com `'use server'` só
+ * Arquivo próprio pela mesma regra da tela de importação: módulo com `'use server'` só
  * pode exportar função assíncrona, e uma `export const` ali derruba o build com a
  * mensagem enganosa "the module has no exports at all".
  */
 
 /** Rota da tela. */
-export const CAMINHO = '/identidade';
+export const CAMINHO = '/juntar-iguais';
 
 /** Quantos pares a fila mostra por vez. */
 export const LIMITE_DA_FILA = 25;
