@@ -15,6 +15,7 @@ import type { Ficha } from '@/dominio/compatibilidade/ficha';
 import type { Plataforma } from '@/dominio/precificacao/tipos';
 import type { AnuncioParaExportar } from '@/plataformas/adaptador';
 import type { Centavos } from '@/lib/dinheiro';
+import { avaliarRegulacao, type AvaliacaoDeRegulacao } from '@/dominio/fiscal/regulada';
 import { avisosDaConferencia, conferirAtributos, type Conferencia } from './atributos';
 import { gerarDescricao } from './descricao';
 import { gerarTituloPara, type TituloGerado } from './titulo';
@@ -40,6 +41,15 @@ export interface DadosDoProduto {
   } | null;
   readonly voltagem?: string | null;
   readonly medida?: string | null;
+
+  /**
+   * Como o produto é chamado no catálogo, e a marcação de categoria regulada.
+   *
+   * Entram só para o alerta de M12: anúncio irregular de categoria regulada é
+   * **cancelado**, e a hora de saber é antes de publicar, não depois.
+   */
+  readonly tituloInterno?: string | null;
+  readonly categoriaRegulada?: string | null;
 }
 
 export interface AnuncioMontado {
@@ -54,6 +64,13 @@ export interface AnuncioMontado {
    * *e* o que já está certo lê a conferência.
    */
   readonly conferencia: Conferencia;
+  /**
+   * Categoria regulada (M12 — 9.6), avaliada aqui e não em tela própria.
+   *
+   * O alerta só vale antes de publicar, e este é o único lugar por onde tudo que vai
+   * ser publicado passa.
+   */
+  readonly regulacao: AvaliacaoDeRegulacao;
 }
 
 export interface ParametrosDaMontagem {
@@ -114,7 +131,20 @@ export function montarAnuncio(
     ficha: produto.ficha,
   });
 
-  const avisos = [...titulo.avisos, ...descricao.avisos, ...avisosDaConferencia(conferencia)];
+  // O alerta de categoria regulada entra nos avisos porque publicar irregular é
+  // anúncio cancelado — custo maior que qualquer item do checklist de atributos.
+  const regulacao = avaliarRegulacao({
+    categoriaRegulada: produto.categoriaRegulada ?? null,
+    tituloInterno: produto.tituloInterno ?? titulo.titulo,
+    tipoProduto: produto.tipoProduto,
+  });
+
+  const avisos = [
+    ...titulo.avisos,
+    ...descricao.avisos,
+    ...avisosDaConferencia(conferencia),
+    ...(regulacao.mensagem === null ? [] : [regulacao.mensagem]),
+  ];
 
   // Quantidade é do parâmetro, não do produto, então fica fora da conferência: ela
   // confere o cadastro, e isto é a decisão do momento de anunciar.
@@ -135,5 +165,6 @@ export function montarAnuncio(
     titulo,
     avisos,
     conferencia,
+    regulacao,
   };
 }

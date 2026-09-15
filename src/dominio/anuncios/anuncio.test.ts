@@ -47,6 +47,27 @@ const montar = (campos: Partial<DadosDoProduto> = {}) =>
   );
 
 describe('montarAnuncio', () => {
+  it('avisa de categoria regulada antes de publicar, que é a hora que importa', () => {
+    // Anúncio irregular de suplemento é cancelado. Descobrir depois custa a venda e
+    // uma marca na conta, que é o ativo — então o alerta vive no único lugar por
+    // onde tudo que vai ser publicado passa.
+    const r = montar({ tipoProduto: 'suplemento de colágeno', tituloInterno: 'Colágeno 300g' });
+    expect(r.regulacao.area).toBe('anvisa_suplemento');
+    expect(r.avisos.join(' ')).toContain('ANVISA');
+  });
+
+  it('a marcação do SKU vence o palpite da palavra', () => {
+    const r = montar({ tipoProduto: 'refil de purificador', categoriaRegulada: 'inmetro' });
+    expect(r.regulacao.origem).toBe('marcado_no_sku');
+    expect(r.avisos.join(' ')).toContain('INMETRO');
+  });
+
+  it('produto comum não ganha aviso de regulação', () => {
+    const r = montar();
+    expect(r.regulacao.mensagem).toBeNull();
+    expect(r.avisos.join(' ')).not.toContain('ANVISA');
+  });
+
   it('produz o objeto que o adaptador exporta', () => {
     const r = montar();
     expect(r.anuncio.tituloInterno).toContain('PA21G');
