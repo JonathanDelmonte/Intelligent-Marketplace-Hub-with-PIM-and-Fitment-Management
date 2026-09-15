@@ -26,6 +26,106 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-15 — Fase 10: a máquina do prospector, separada do julgamento
+
+### 🔀 O que é máquina e o que é julgamento, e por que a linha fica ali
+
+A especificação diz que o prospector é IA de verdade porque "as decisões de o que
+investigar a seguir, em quem acreditar quando as fontes discordam, e quando parar não
+são expressáveis como regra fixa".
+
+Duas das três são. **Quando parar** é regra fixa: orçamento gasto, ou três
+investigações seguidas sem achado novo. E escolher o próximo item da fronteira é
+ordenação, não julgamento — o julgamento está em *que valor atribuir* a cada item, não
+em *qual dos valores é maior*.
+
+Então a linha ficou aqui: a máquina ordena, conta, detecta saturação e não repete; o
+LLM atribui valor, levanta hipótese e decide em quem acreditar. E isso paga duas vezes
+— máquina determinística se testa com dezenas de cenários em milissegundos, e o erro
+caro do módulo (não parar) é falha de máquina, não de julgamento.
+
+### 🔀 Valor esperado **por custo**, e por que a divisão importa
+
+A especificação diz "o item de maior valor esperado por custo", e é fácil ler isso
+como "maior valor esperado". Não é a mesma coisa, e a diferença aparece no primeiro
+orçamento pequeno: duas hipóteses de valor 80, uma custando uma busca e a outra seis
+páginas. Ordenar por valor escolhe qualquer uma; por valor por custo escolhe a barata.
+
+Num teto de dez passos, a primeira leitura gasta seis num item e sobra quatro; a
+segunda investiga seis itens. É a diferença entre meia investigação e uma inteira.
+
+A divisão é inteira (valor × 1000 ÷ custo) e o desempate é pelo id. Sem ordem estável,
+duas execuções do mesmo dossiê investigam em ordens diferentes, e aí o dossiê não é
+auditável — que era o ponto dele.
+
+### 🔀 Saturação é verificada antes de orçamento
+
+Parecem dois limites da mesma natureza, e não são: orçamento é parada por **limite**,
+saturação é parada por **ter terminado**. Se as duas condições valem ao mesmo tempo, o
+motivo reportado precisa ser saturação — senão o dono aumenta o teto e paga passos
+para confirmar o que o sistema já sabia.
+
+A mensagem diz isso com palavras: "parar aqui é ter terminado, não ter esbarrado no
+teto — aumentar o orçamento não traria mais nada".
+
+### 🔀 Dossiê parcial é o caminho normal, não o de exceção
+
+`paraGravar` monta um dossiê completo e salvável em qualquer ponto da execução, e o
+repositório grava a cada passo. Estourar o teto então não perde nada: o que está no
+banco é o que foi descoberto até ali, e continuar não recomeça.
+
+Se o dossiê só fosse montado no fim, estourar o orçamento jogaria fora a investigação
+inteira — pagando duas vezes pela mesma coisa, que é exatamente o que o teto existe
+para evitar.
+
+O upsert é por alvo normalizado. "Refil Purificador PA21G" e "refil purificador pa21g"
+como dois dossiês seria o jeito mais silencioso de perder investigação paga: nenhum dos
+dois estaria errado, e nenhum dos dois estaria completo.
+
+### 🔀 `achadosSemOrigem` existe para a auditoria ser verificável
+
+A especificação promete que cada item do dossiê tem a URL de onde veio. Promessa em
+prosa não se verifica, então há uma função que lista os achados sem origem e um resumo
+que avisa quando há algum. Achado sem fonte é afirmação sem fonte, e a disciplina de
+evidência do M4 já decidiu o que isso vale.
+
+### ⚠️ A rede deste ambiente recusa o PNCP
+
+`curl` em `pncp.gov.br` volta `CONNECT tunnel failed, response 403` — a política de
+rede do ambiente remoto libera registries de pacote e as APIs da Anthropic, e nada
+mais. Então 10.4 ficou 🔒 com a porta pronta: leitura com Zod, casamento de descrição e
+referência de preço testados, e implementação de consulta ausente, como a base de GTIN
+do M14.
+
+Vale registrar porque a conclusão errada seria "o PNCP não serve": ele serve, e o
+código para usá-lo está escrito. O que falta é a rede de um ambiente que possa sair.
+
+### 🔀 A referência de preço público é mediana, e a mediana par não faz média
+
+Compra pública tem cauda longa: um contrato de mil unidades a preço de atacado, ou um
+item cadastrado com dois zeros a mais, arrasta a média para longe do que o mercado
+pratica. Mediana não se move por causa de um — a mesma escolha do detector de queda de
+preço do M13.
+
+Com quantidade par, devolve o **menor** dos dois centrais em vez da média deles. A
+média de dois centavos inteiros pode dar meio centavo, e meio centavo não existe
+(ADR 0004) — arredondar ali seria inventar precisão que a fonte não tem.
+
+### 🐛 Commitei com o `tsc` quebrado, pela segunda vez na semana
+
+Rodei `npm run check > log 2>&1; echo "EXIT=$?"` e emendei `&& git add … && commit`. O
+`&&` olha o código de saída do `echo`, que sempre passa — então o commit entrou com dois
+erros de tipo.
+
+É o mesmo erro de forma que o `npm run check | tail` de duas semanas atrás, e o
+conserto é o mesmo: **o commit tem de estar depois de um `&&` cuja esquerda seja o
+`check`**, sem `echo` no meio. Consertei os tipos e emendei o commit antes de publicar,
+mas o hábito é que falhou, não a sorte.
+
+O que os dois erros eram, de passagem: a classe de porta ausente não aceitava o
+parâmetro que a interface declara, e o `EstadoDaCapacidade` do projeto exige um
+`rotulo` que meus fixtures não tinham.
+
 ## 2026-09-15 — Fase 9: fiscal, e o regex de dinheiro escrito quatro vezes
 
 ### 🔀 O alerta de teto do MEI lidera pela projeção, não pelo acumulado

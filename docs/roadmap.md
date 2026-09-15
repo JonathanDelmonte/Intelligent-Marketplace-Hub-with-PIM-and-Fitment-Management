@@ -552,14 +552,43 @@ saber disso.
 
 | #    | Entrega                                                                    | Estado |
 | ---- | -------------------------------------------------------------------------- | ------ |
-| 10.1 | Loop de fronteira: hipóteses, fronteira, achados                           | ⬜     |
-| 10.2 | Seleção por valor esperado por custo                                       | ⬜     |
-| 10.3 | Famílias de hipótese (fabricante, distribuidor, custo, compatibilidade, …) | ⬜     |
-| 10.4 | Sensor de demanda pública via PNCP                                         | ⬜     |
-| 10.5 | **Orçamento obrigatório por execução** (passos e reais)                    | ⬜     |
-| 10.6 | Critério de parada por saturação                                           | ⬜     |
-| 10.7 | Dossiê auditável, com URL de origem em cada item                           | ⬜     |
-| 10.8 | Dossiê parcial salvo quando o orçamento estoura                            | ⬜     |
+| 10.1 | Loop de fronteira: hipóteses, fronteira, achados                           | ✅     |
+| 10.2 | Seleção por valor esperado por custo                                       | ✅     |
+| 10.3 | Famílias de hipótese (fabricante, distribuidor, custo, compatibilidade, …) | ✅     |
+| 10.4 | Sensor de demanda pública via PNCP                                         | 🔒     |
+| 10.5 | **Orçamento obrigatório por execução** (passos e reais)                    | ✅     |
+| 10.6 | Critério de parada por saturação                                           | ✅     |
+| 10.7 | Dossiê auditável, com URL de origem em cada item                           | ✅     |
+| 10.8 | Dossiê parcial salvo quando o orçamento estoura                            | ✅     |
+
+**A máquina do prospector está pronta; o agente que a dirige não.** Sete de oito
+entregas em pé, e o que falta é de dois tipos: a 10.4 espera rede (a política deste
+ambiente recusa `pncp.gov.br` com `CONNECT` 403), e o **executor** — o laço que chama
+LLM e ferramentas a cada passo — espera chave de LLM, como o resto de M3 e a 9.1.
+
+**A separação entre máquina e julgamento é a decisão desta fase.** O que é
+determinístico está em `dominio/prospector` e é testado com dezenas de cenários em
+milissegundos: escolher da fronteira, contar orçamento, detectar saturação, não
+repetir investigação, montar o dossiê salvável. O que exige julgamento — *o que
+investigar quando a fronteira esvazia*, *em quem acreditar quando as fontes
+discordam* — é LLM e entra por fora.
+
+Paga duas vezes. Máquina determinística se testa; agente com LLM não. E **o erro caro
+do módulo não é escolher a hipótese errada — é não parar**, e não parar é falha de
+máquina.
+
+**Ordenação por valor esperado por custo, não por valor.** Duas hipóteses de valor 80:
+uma custa uma busca, a outra ler seis páginas. Ordenar por valor escolheria qualquer
+uma; por valor por custo escolhe a barata — e é o que faz orçamento pequeno render
+investigação inteira em vez de meia.
+
+**A ordem das paradas é a ordem da honestidade:** saturação antes de orçamento. Um
+agente que reporta "estourei o teto" quando na verdade saturou faz o dono aumentar o
+teto para nada.
+
+**O dossiê parcial é o caminho normal**, não a exceção. `paraGravar` funciona em
+qualquer ponto e o repositório grava a cada passo, por alvo normalizado — investigar o
+mesmo alvo duas vezes continua o dossiê em vez de criar um segundo.
 
 ---
 

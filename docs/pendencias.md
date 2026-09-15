@@ -29,6 +29,11 @@ julgamento binário (5.4) e a **sugestão** de NCM/CEST (9.1). Também os extrat
 ingestão 3.2 a 3.6 — anúncio, listagem, catálogo de distribuidor, PDF de tabela de
 preços e imagem de tabela.
 
+Também o **executor do prospector** (M6): a máquina de fronteira está pronta e testada,
+e o que falta é o laço que, a cada passo, pede ao LLM que atribua valor, levante
+hipótese e decida em quem acreditar. `dominio/prospector` não conhece LLM de propósito
+— é o que permitiu testar a parada com dezenas de cenários sem rede.
+
 A 9.1 é o caso mais fácil de ligar: o classificador está completo e testado, e onde
 ele senta é `infra/llm/ambiente.ts` — o **único** arquivo que precisa saber que
 provedor existe. Sem chave, a tela fiscal diz "ninguém sugeriu" e o campo continua
@@ -128,6 +133,28 @@ da virada sem prejuízo; o cadastro, não.
 homologação em ambiente da SEFAZ, contingência e versionamento de layout. O ADR de
 capacidades vale aqui como em plataforma: integrar o que existe, e tratar a ausência
 como estado normal.
+
+---
+
+### 1.6 Rede de saída — trava a 10.4 (🔒) e o prospector com ferramenta de web
+
+A política de rede do ambiente remoto libera registries de pacote e as APIs da
+Anthropic, e recusa o resto: `curl https://pncp.gov.br/...` volta
+`CONNECT tunnel failed, response 403`.
+
+**O que fica parado:** a consulta ao PNCP (10.4) e, quando o executor do prospector
+existir, as famílias de hipótese que dependem de `busca_web` e `ler_pagina` — que são
+cinco das sete.
+
+**O que não depende dela, e por isso está pronto:** a máquina de fronteira inteira, o
+dossiê, o orçamento, a estatística de preço de referência do PNCP e o casamento de
+descrição. O loop já sabe **pular** item cuja ferramenta não está disponível, em vez de
+gastar passo para descobrir no meio — então um prospector rodando só com `base_local`
+funciona, com menos famílias.
+
+**A conclusão errada a evitar:** não é que o PNCP não sirva. Ele serve, e o código para
+usá-lo está escrito e testado contra respostas sintéticas. O que falta é sair para a
+rede.
 
 ---
 
