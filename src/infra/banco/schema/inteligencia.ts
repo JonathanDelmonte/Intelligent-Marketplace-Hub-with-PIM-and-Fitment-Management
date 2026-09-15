@@ -15,6 +15,19 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 import { auditoria, centavos, id, plataformaEnum, procedencia, severidadeEnum } from './comum';
+import type { Achado, Hipotese, MotivoDeParada } from '@/dominio/prospector/fronteira';
+import type { FamiliaDeHipotese } from '@/dominio/prospector/hipoteses';
+
+/**
+ * Um item de fronteira **como fica gravado**: só o que interessa a quem lê o dossiê.
+ *
+ * Peso e custo são da máquina de busca e não ajudam a ler o resultado, então não
+ * entram — ver `paraGravar` em `dominio/prospector/dossie.ts`.
+ */
+export interface ItemDeFronteiraGravado {
+  readonly alvo: string;
+  readonly familia: FamiliaDeHipotese;
+}
 
 /**
  * Resultado de uma avaliação de nicho (M7).
@@ -58,16 +71,24 @@ export const dossie = pgTable(
     id: id(),
     /** O alvo: um produto, um aparelho, uma marca, um nicho ou um link. */
     alvo: text('alvo').notNull(),
-    hipoteses: jsonb('hipoteses').notNull().default([]),
-    fronteira: jsonb('fronteira').notNull().default([]),
-    achados: jsonb('achados').notNull().default([]),
+    /**
+     * As três listas vivas, tipadas pelo domínio.
+     *
+     * `$type` em vez de `jsonb` cru pelo mesmo motivo de `compatibilidade.evidencias`:
+     * sem ele, cada leitura precisaria de um `as` para virar o tipo do domínio — e as
+     * convenções proíbem `as` justamente porque ele cala o compilador no lugar onde
+     * ele ajudaria. O tipo mora no schema, e quem lê recebe pronto.
+     */
+    hipoteses: jsonb('hipoteses').$type<Hipotese[]>().notNull().default([]),
+    fronteira: jsonb('fronteira').$type<ItemDeFronteiraGravado[]>().notNull().default([]),
+    achados: jsonb('achados').$type<Achado[]>().notNull().default([]),
     /** Orçamento por execução, obrigatório. Agente sem teto não roda (ADR 0005). */
     orcamentoCentavos: centavos('orcamento_centavos').notNull(),
     gastoCentavos: centavos('gasto_centavos').notNull().default(0),
     orcamentoPassos: integer('orcamento_passos').notNull(),
     passosGastos: integer('passos_gastos').notNull().default(0),
-    /** `orcamento` | `saturacao` | `concluido` | `erro`, ou nulo se em andamento. */
-    motivoParada: text('motivo_parada'),
+    /** Por que parou, ou nulo se em andamento. Ver `MOTIVOS_DE_PARADA` no domínio. */
+    motivoParada: text('motivo_parada').$type<MotivoDeParada>(),
     recomendacao: text('recomendacao'),
     ...auditoria,
   },
