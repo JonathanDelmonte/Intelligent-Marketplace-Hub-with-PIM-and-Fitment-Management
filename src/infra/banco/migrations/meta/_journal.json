@@ -57,6 +57,13 @@
       "when": 1789500460118,
       "tag": "0007_married_expediter",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789512569007,
+      "tag": "0008_acoustic_ser_duncan",
+      "breakpoints": true
     }
   ]
 }

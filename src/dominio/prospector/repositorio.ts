@@ -35,6 +35,10 @@ export interface DossieGravado extends DossieParaGravar {
  * "Refil Purificador PA21G" e "refil purificador pa21g " são o mesmo alvo, e tratar
  * como dois criaria dois dossiês parciais do mesmo assunto — o modo mais silencioso de
  * perder investigação paga.
+ *
+ * O resultado vai para `alvo_chave`, e **não** para `alvo`. Ficava nos dois até a tela
+ * do garimpo existir, e aí "correia de máquina de lavar" apareceu escrito "correia de
+ * maquina de lavar" para quem ia ler o dossiê.
  */
 export function chaveDoAlvo(alvo: string): string {
   return alvo
@@ -60,7 +64,7 @@ export class RepositorioDeDossies {
     const existentes = await this.db
       .select({ id: dossie.id })
       .from(dossie)
-      .where(eq(sql`lower(${dossie.alvo})`, chave))
+      .where(eq(dossie.alvoChave, chave))
       .limit(1);
 
     // As listas são copiadas para array mutável porque é o que a escrita do Drizzle
@@ -84,7 +88,11 @@ export class RepositorioDeDossies {
       existente === undefined
         ? await this.db
             .insert(dossie)
-            .values({ alvo: chave, ...valores })
+            // `alvo` guarda o que a pessoa escreveu, `alvo_chave` a identidade. Na
+            // atualização o `alvo` **não** entra: quem salva a cada passo é o executor,
+            // com o mesmo alvo, e deixar a escrita de fora impede que uma chamada
+            // posterior com grafia pior sobrescreva a boa.
+            .values({ alvo: paraGravar.alvo.trim(), alvoChave: chave, ...valores })
             .returning()
         : await this.db.update(dossie).set(valores).where(eq(dossie.id, existente.id)).returning();
 
@@ -97,7 +105,7 @@ export class RepositorioDeDossies {
     const [linha] = await this.db
       .select()
       .from(dossie)
-      .where(eq(sql`lower(${dossie.alvo})`, chaveDoAlvo(alvo)))
+      .where(eq(dossie.alvoChave, chaveDoAlvo(alvo)))
       .limit(1);
 
     return linha === undefined ? null : paraDossie(linha);

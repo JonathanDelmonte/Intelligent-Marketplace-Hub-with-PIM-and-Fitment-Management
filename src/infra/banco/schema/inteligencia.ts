@@ -12,6 +12,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from 'drizzle-orm/pg-core';
 import { auditoria, centavos, id, plataformaEnum, procedencia, severidadeEnum } from './comum';
@@ -72,6 +73,20 @@ export const dossie = pgTable(
     /** O alvo: um produto, um aparelho, uma marca, um nicho ou um link. */
     alvo: text('alvo').notNull(),
     /**
+     * O mesmo alvo, normalizado: chave de identidade, e não texto de tela.
+     *
+     * Existia só a coluna `alvo`, e o repositório gravava nela a **chave** — sem
+     * acento e em minúsculas — para o upsert por alvo funcionar. O efeito apareceu
+     * quando a tela mostrou o dossiê: "correia de máquina de lavar" virava "correia de
+     * maquina de lavar" na cara do dono. Chave e texto de tela são coisas diferentes,
+     * e agora são colunas diferentes.
+     *
+     * Única, e é a garantia que a verificação de leitura do repositório não dá: dois
+     * dossiês do mesmo alvo é a pior forma de perder investigação paga — nenhum dos
+     * dois estaria errado e nenhum dos dois estaria completo.
+     */
+    alvoChave: text('alvo_chave').notNull(),
+    /**
      * As três listas vivas, tipadas pelo domínio.
      *
      * `$type` em vez de `jsonb` cru pelo mesmo motivo de `compatibilidade.evidencias`:
@@ -92,7 +107,7 @@ export const dossie = pgTable(
     recomendacao: text('recomendacao'),
     ...auditoria,
   },
-  (t) => [index('idx_dossie_alvo').on(t.alvo)],
+  (t) => [unique('uq_dossie_alvo_chave').on(t.alvoChave)],
 );
 
 /**

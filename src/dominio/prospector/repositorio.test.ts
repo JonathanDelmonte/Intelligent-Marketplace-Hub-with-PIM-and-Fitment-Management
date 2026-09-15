@@ -59,6 +59,29 @@ describe.skipIf(!temBancoDeTeste())('RepositorioDeDossies', () => {
     repo = new RepositorioDeDossies(conexao.db);
   });
 
+  it('guarda o alvo como a pessoa escreveu, e casa pela chave', async () => {
+    // A coluna `alvo` guardava a chave normalizada, e a tela mostrava "correia de
+    // maquina de lavar" para quem ia ler o dossiê. Chave e texto de tela são coisas
+    // diferentes, e o banco é o que prova que as duas continuam concordando.
+    await repo.salvar(
+      paraGravar({ alvo: 'Correia de Máquina de Lavar', estado: estado(), orcamento: orcamento() }),
+    );
+
+    const lido = await repo.porAlvo('correia de maquina de lavar');
+    expect(lido?.alvo).toBe('Correia de Máquina de Lavar');
+  });
+
+  it('a chave única impede dois dossiês do mesmo alvo, e não só a verificação de leitura', async () => {
+    await repo.salvar(
+      paraGravar({ alvo: 'Refil PA21G', estado: estado(), orcamento: orcamento() }),
+    );
+    await repo.salvar(
+      paraGravar({ alvo: '  refil  pa21g ', estado: estado(), orcamento: orcamento() }),
+    );
+
+    expect(await repo.ultimos()).toHaveLength(1);
+  });
+
   afterAll(async () => {
     await conexao?.encerrar();
   });
