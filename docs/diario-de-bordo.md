@@ -26,6 +26,34 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-15 — Estado do roadmap: o que ⬜ escondia
+
+### 🔀 Nove entregas passaram de ⬜ para 🔒, e a conta de ⬜ agora é zero
+
+Fechada a fase 11, contei os estados do roadmap: 82 ✅, 9 🚧, 9 ⬜, 5 🔒. Fui olhar as
+nove em ⬜ uma por uma — 2.6b, 3.2, 3.3, 3.4, 3.5, 3.6, 6.10, 6.11 e 7.3 — e nenhuma
+delas **pode** começar neste ambiente: cinco precisam de rede de saída, duas de chave de
+LLM, uma de app no Mercado Livre, e a nona é a 3.5, logo abaixo.
+
+"Não começou" e "está bloqueado" parecem a mesma coisa de longe, e são opostos na hora de
+decidir o que fazer amanhã: o primeiro é fila de trabalho, o segundo é fila de decisão — e
+as decisões dessa fila são do dono, não minhas. Uma lista que mistura os dois faz o dono
+procurar tempo quando o que falta é uma chave.
+
+### 🔀 A 3.5 (PDF de tabela de preços) ficou 🔒 por escolha, não por impedimento
+
+É a única das nove que eu **conseguiria** entregar aqui: gerar um PDF sintético de tabela
+de preços, escrever o leitor e passar o teste é trabalho de uma tarde.
+
+Ficou 🔒 de propósito. O problema real da 3.5 não é ler PDF, é a variedade de layout de
+tabela de fornecedor — e um extrator calibrado contra um PDF que eu mesmo gerei testaria a
+minha suposição de layout, não o mundo. Sairia com teste verde, a primeira tabela real
+quebraria, e o verde já teria comprado confiança que não existia.
+
+É o mesmo cuidado de `ingestao/planilha/mapeamento.ts`, que relata coluna não reconhecida
+em vez de adivinhar — com a diferença que decide o caso: lá existe uma planilha de verdade
+do outro lado para corrigir o mapeamento; aqui não existiria nada para corrigir.
+
 ## 2026-09-15 — Fase 11: monitor, pós-venda e afiliados
 
 ### 🐛 `codigosDeModelo` inventava código juntando números por uma palavra

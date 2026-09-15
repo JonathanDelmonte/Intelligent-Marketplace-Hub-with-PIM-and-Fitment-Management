@@ -11,13 +11,18 @@ o que fazer no próximo fim de semana.
 
 Organizado por **quem destrava**, não por módulo: é o eixo que muda a ação.
 
-Atualizado em 2026-09-12.
+Atualizado em 2026-09-15.
 
 ---
 
 ## 1. Só o dono do repositório destrava
 
 Nada aqui é problema de código. São decisões, contas e chaves.
+
+**O roadmap não tem mais nenhum item em ⬜.** As nove entregas que estavam assim passaram
+a 🔒 porque nenhuma delas pode começar neste ambiente, e "não começou" sugeria que era
+questão de tempo. As causas são as desta seção mais a rede (1.6) — e o que está em 🚧 é
+entrega cujo miolo está pronto e testado, esperando só a chamada externa.
 
 ### 1.1 Chave de LLM — trava a fase 5 quase inteira
 
@@ -147,9 +152,11 @@ A política de rede do ambiente remoto libera registries de pacote e as APIs da
 Anthropic, e recusa o resto: `curl https://pncp.gov.br/...` volta
 `CONNECT tunnel failed, response 403`.
 
-**O que fica parado:** a consulta ao PNCP (10.4) e, quando o executor do prospector
-existir, as famílias de hipótese que dependem de `busca_web` e `ler_pagina` — que são
-cinco das sete.
+**O que fica parado:** a consulta ao PNCP (10.4), os extratores de anúncio e de listagem
+(3.2 e 3.3), o manual do fabricante e a página oficial como fontes de evidência (6.10), o
+fórum e o catálogo de distribuidor (6.11), a verificação de fornecedor por nome e CNPJ
+(7.3), e — quando o executor do prospector existir — as famílias de hipótese que
+dependem de `busca_web` e `ler_pagina`, que são cinco das sete.
 
 **O que não depende dela, e por isso está pronto:** a máquina de fronteira inteira, o
 dossiê, o orçamento, a estatística de preço de referência do PNCP e o casamento de

@@ -12,6 +12,26 @@ a 4 existem para que cada noite de código tenha contrapartida em venda possíve
 Legenda de estado: ✅ pronto · 🚧 em andamento · ⬜ não começou · 🔒 bloqueado por
 dependência externa.
 
+**Não há mais nada em ⬜, e isso é informação e não conquista.** As nove entregas que
+estavam marcadas como "não começou" passaram a 🔒 porque nenhuma delas **pode** começar
+neste ambiente — e "não começou" sugeria que era questão de tempo. São três causas, todas
+já descritas em [pendências](./pendencias.md):
+
+- **Chave de LLM** (1.1): 3.4 e 3.6 dependem dela por definição — catálogo de
+  distribuidor e visão sobre print de tabela.
+- **Rede de saída** (1.6): 3.2, 3.3, 6.10, 6.11 e 7.3 precisam buscar página, PDF e
+  CNPJ. A política de rede daqui libera registries de pacote e as APIs da Anthropic, e
+  recusa o resto.
+- **App no Mercado Livre** (1.2): a 2.6b é o fluxo de OAuth, e não há app para o qual
+  fazer OAuth.
+
+A 3.5 (PDF de tabela de preços) é a única com nuance: um leitor de PDF **daria** para
+escrever e testar contra um PDF sintético. Ficou 🔒 de propósito — o problema real dela
+é a variedade de layout de tabela de fornecedor, e um extrator calibrado contra um PDF
+que eu mesmo gerei testaria a minha suposição, não o mundo. É o erro que
+`ingestao/planilha/mapeamento.ts` evita ao relatar coluna não reconhecida, e ali há
+feedback; aqui não haveria.
+
 Este arquivo diz **o que falta construir**, em ordem de utilidade. Para saber **o
 que está travado e por quem** — chave de LLM, app no Mercado Livre, exportação
 real de planilha, dívida consciente — ver [pendências](./pendencias.md).
@@ -69,7 +89,7 @@ dinheiro no mesmo dia em que existe, e não depende de nada.
 | 2.4 | `matriz-capacidades.md` — arquivo de configuração, não surpresa em produção | ✅     |
 | 2.5 | Sonda de capacidades — roda sem credencial, ainda não bate em endpoint | 🚧     |
 | 2.6 | Seed de `perfil_vendedor` (primeira linha, regime CPF)                 | ✅     |
-| 2.6b | Fluxo de OAuth que grava `credencial` cifrada                         | ⬜     |
+| 2.6b | Fluxo de OAuth que grava `credencial` cifrada                         | 🔒     |
 | 2.7 | Cifragem de credencial em repouso (AES-256-GCM), nunca em `.env`            | ✅     |
 
 **Entrega:** saber o que é possível em vez de supor, e nunca precisar refatorar
@@ -100,11 +120,11 @@ a `bloqueado`, com o status HTTP na mão.
 | #    | Entrega                                                               | Estado |
 | ---- | --------------------------------------------------------------------- | ------ |
 | 3.1  | Classificador de entrada (URL, xlsx, csv, pdf, imagem, texto)         | ✅     |
-| 3.2  | Extrator de HTML de anúncio — seletores por plataforma + fallback LLM | ⬜     |
-| 3.3  | Extrator de listagem/categoria com paginação                          | ⬜     |
-| 3.4  | Extrator de catálogo de distribuidor (LLM obrigatório)                | ⬜     |
-| 3.5  | Extrator de PDF de tabela de preços                                   | ⬜     |
-| 3.6  | Extrator de imagem de tabela (print de WhatsApp) — visão              | ⬜     |
+| 3.2  | Extrator de HTML de anúncio — seletores por plataforma + fallback LLM | 🔒     |
+| 3.3  | Extrator de listagem/categoria com paginação                          | 🔒     |
+| 3.4  | Extrator de catálogo de distribuidor (LLM obrigatório)                | 🔒     |
+| 3.5  | Extrator de PDF de tabela de preços                                   | 🔒     |
+| 3.6  | Extrator de imagem de tabela (print de WhatsApp) — visão              | 🔒     |
 | 3.7  | Importadores de planilha de exportação das três plataformas           | 🚧     |
 | 3.8  | Fila `job` idempotente e retomável + contagem por status              | ✅     |
 | 3.11 | Orquestrador e executor: entrada → fila → extração → `produto_externo` | ✅     |
@@ -319,8 +339,8 @@ acumula ocorrência que não liga a nada. Ver [pendências](./pendencias.md), 3.
 | 6.7  | Saída dupla: ficha do anúncio e resposta ao comprador na tela                | ✅     |
 | 6.8  | Coleta como tarefa de fila, ligada à resolução de identidade                | ✅     |
 | 6.9  | Tela de compatibilidade: fila de conferência, ficha e cadastro de aparelho  | ✅     |
-| 6.10 | Manual do fabricante em PDF e página oficial como fontes de coleta          | ⬜     |
-| 6.11 | Fórum e catálogo de distribuidor como fontes de coleta                      | ⬜     |
+| 6.10 | Manual do fabricante em PDF e página oficial como fontes de coleta          | 🔒     |
+| 6.11 | Fórum e catálogo de distribuidor como fontes de coleta                      | 🔒     |
 
 **Entrega:** vender sem disputar centavo. É o que ninguém no mercado brasileiro
 faz bem, e é a razão de construir em vez de assinar.
@@ -348,7 +368,7 @@ identidade → **você confirma o produto** → compatibilidade coletada e infer
 | --- | ----------------------------------------------------------------- | ------ |
 | 7.1 | Triagem pelas cinco perguntas — função pura com teste             | ✅     |
 | 7.2 | `vende_direto_marketplace = true` → descarte automático com aviso | ✅     |
-| 7.3 | Verificação automática desse campo por nome e CNPJ (M0)           | ⬜     |
+| 7.3 | Verificação automática desse campo por nome e CNPJ (M0)           | 🔒     |
 | 7.4 | Histórico de preço por SKU e fornecedor (aumento silencioso)      | ✅     |
 | 7.5 | Score de confiabilidade alimentado por atraso real                | 🔒     |
 | 7.6 | Gerador do primeiro contato com as cinco perguntas preenchidas    | ✅     |
