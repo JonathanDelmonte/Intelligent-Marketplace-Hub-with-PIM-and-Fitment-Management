@@ -1,0 +1,217 @@
+/*
+ * Estilo da tela fiscal. Cores só de variável de tema (convenções, 3.1).
+ *
+ * Trabalho de mesa, feito uma vez por item, com a tabela de NCM aberta em outra
+ * aba. Então o formulário de cada SKU fica aberto ao lado do que falta nele — não
+ * atrás de um clique —, e cada campo carrega sob ele para que serve.
+ */
+
+.pagina {
+  margin: 0 auto;
+  max-width: 64rem;
+  padding: 2.5rem 1.5rem 1rem;
+}
+
+.cabecalho {
+  margin-bottom: 1.5rem;
+}
+
+.titulo {
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.subtitulo {
+  color: var(--cor-texto-fraco);
+  margin: 0.375rem 0 0;
+  max-width: 66ch;
+}
+
+.resumo {
+  margin: 0;
+  max-width: 72ch;
+}
+
+.secao {
+  margin-top: 2.25rem;
+}
+
+.secaoTitulo {
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  margin: 0 0 0.75rem;
+  text-transform: uppercase;
+}
+
+.aviso {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-left: 3px solid var(--cor-ok);
+  border-radius: 0.375rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1.25rem;
+  padding: 0.75rem 1rem;
+}
+
+.avisoAtencao {
+  border-left-color: var(--cor-aviso);
+}
+
+.avisoErro {
+  border-left-color: var(--cor-erro);
+}
+
+.avisoTitulo {
+  font-size: 0.9375rem;
+}
+
+.avisoCorpo {
+  color: var(--cor-texto-fraco);
+  font-size: 0.875rem;
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+}
+
+.item {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+/* Já resolvido: fica, para dar a medida do que falta, mas recua. */
+.itemFeito {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-left: 3px solid var(--cor-ok);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+/* Prazo de outro regime: visível, e claramente de segunda ordem. */
+.itemFraco {
+  border: 1px dashed var(--cor-borda);
+  border-radius: 0.5rem;
+  opacity: 0.75;
+  padding: 1rem;
+}
+
+.itemCabecalho {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.itemTitulo {
+  font-size: 1.0625rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.itemSub {
+  color: var(--cor-texto-fraco);
+  font-size: 0.8125rem;
+  margin: 0.125rem 0 0;
+}
+
+.itemCorpo {
+  margin: 0.625rem 0 0;
+  max-width: 72ch;
+}
+
+/* O que fazer: é a linha que a pessoa vai executar, então não é letra miúda. */
+.itemAcao {
+  border-left: 2px solid var(--cor-aviso);
+  margin: 0.625rem 0 0;
+  max-width: 72ch;
+  padding-left: 0.75rem;
+}
+
+.itemFonte {
+  color: var(--cor-texto-fraco);
+  font-size: 0.75rem;
+  margin: 0.375rem 0 0;
+  max-width: 72ch;
+}
+
+.etiqueta {
+  border: 1px solid var(--cor-borda);
+  border-radius: 999px;
+  color: var(--cor-texto-fraco);
+  font-size: 0.75rem;
+  padding: 0.125rem 0.625rem;
+  white-space: nowrap;
+}
+
+.etiquetaAtencao {
+  border-color: var(--cor-aviso);
+  color: var(--cor-aviso);
+}
+
+.etiquetaAlerta {
+  border-color: var(--cor-erro);
+  color: var(--cor-erro);
+}
+
+.formulario {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.875rem;
+}
+
+.formularioMagro {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.875rem;
+}
+
+.campo {
+  display: flex;
+  flex: 1 1 11rem;
+  flex-direction: column;
+  font-size: 0.875rem;
+  gap: 0.25rem;
+}
+
+.entrada {
+  background: var(--cor-fundo);
+  border: 1px solid var(--cor-borda);
+  border-radius: 0.375rem;
+  color: var(--cor-texto);
+  font: inherit;
+  padding: 0.5rem 0.625rem;
+  width: 100%;
+}
+
+.botao {
+  align-self: flex-end;
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: 0.375rem;
+  color: var(--cor-texto);
+  cursor: pointer;
+  font: inherit;
+  min-height: 2.75rem;
+  padding: 0.5rem 1.25rem;
+}
+
+.vazio {
+  color: var(--cor-texto-fraco);
+  margin: 0;
+  max-width: 66ch;
+}

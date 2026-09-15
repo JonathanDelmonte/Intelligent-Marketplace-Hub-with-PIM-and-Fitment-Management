@@ -67,6 +67,12 @@ export const PORTAS: readonly Porta[] = [
       'As cinco perguntas que eliminam a maioria dos candidatos — e quem vende na mesma vitrine é descartado na hora.',
   },
   {
+    href: '/fiscal',
+    rotulo: 'Fiscal',
+    descricao:
+      'O que a virada de janeiro de 2027 vai exigir: prazos, teto do ano, e o NCM e o cClassTrib de cada produto.',
+  },
+  {
     href: '/leitor',
     rotulo: 'Leitor',
     descricao:
