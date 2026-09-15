@@ -105,6 +105,15 @@ describe('codigosDeModelo', () => {
     expect(codigosDeModelo(titulo)).toEqual(['PA21G', 'PA26G', 'PE11B']);
   });
 
+  it('não junta números através de uma palavra comum', () => {
+    // Veio de pergunta de comprador: `é 110 ou 220?` produzia o código `110OU220`, e a
+    // resposta automática tratava uma dúvida de voltagem como pergunta sobre um modelo
+    // que não existe. `PA 21 G` não tem palavra no meio; `110 ou 220` tem.
+    expect(codigosDeModelo('é 110 ou 220?')).toEqual([]);
+    expect(codigosDeModelo('tem de 21 cm?')).toEqual([]);
+    expect(codigosDeModelo('kit com 2 unidades')).toEqual([]);
+  });
+
   it('junta token separado por espaço', () => {
     expect(codigosDeModelo('Refil PA 21 G para purificador')).toEqual(['PA21G']);
   });

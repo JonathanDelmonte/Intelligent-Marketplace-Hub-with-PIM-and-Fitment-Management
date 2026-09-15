@@ -195,6 +195,39 @@ export function normalizarCodigoDeModelo(bruto: string): string | null {
 const MAX_FRAGMENTO = 4;
 
 /**
+ * Palavras curtas do português que **não** são fragmento de código.
+ *
+ * Todas cabem no limite de quatro caracteres e alternam classe com um número vizinho,
+ * então sem esta lista elas entram em junção: `110 ou 220` produz `110OU220`, e `de 21
+ * cm` produz `DE21`. A lista é curta de propósito — palavra que aparece entre números
+ * numa pergunta de comprador, e nada mais.
+ */
+const PALAVRAS_QUE_NAO_SAO_FRAGMENTO = new Set([
+  'a',
+  'ao',
+  'as',
+  'com',
+  'da',
+  'das',
+  'de',
+  'do',
+  'dos',
+  'e',
+  'em',
+  'na',
+  'nas',
+  'no',
+  'nos',
+  'ou',
+  'os',
+  'por',
+  'pra',
+  'sem',
+  'um',
+  'uma',
+]);
+
+/**
  * A sequência de tokens tem a forma de um código partido por espaço?
  *
  * Sem esta guarda, juntar tokens vizinhos produz código onde não há nenhum, e o
@@ -206,6 +239,10 @@ const MAX_FRAGMENTO = 4;
  * - **Classe alterna.** `por R 89` tem duas palavras seguidas, então não é código.
  * - **O primeiro fragmento tem 2 caracteres ou mais.** É o que recusa `R 89`, que
  *   é o que sobra de `R$ 89,90` depois da pontuação.
+ * - **Nenhum fragmento é palavra comum do português.** Foi o terceiro caso, e ele
+ *   veio de pergunta de comprador: `é 110 ou 220?` virava o código `110OU220`, e a
+ *   resposta automática tratava uma dúvida de voltagem como pergunta sobre um modelo
+ *   inexistente. `PA 21 G` não tem palavra no meio; `110 ou 220` tem.
  */
 function ehCodigoPartido(janela: readonly string[]): boolean {
   const primeiro = janela[0] ?? '';
@@ -214,6 +251,7 @@ function ehCodigoPartido(janela: readonly string[]): boolean {
   let classeAnterior: 'letra' | 'digito' | null = null;
   for (const fragmento of janela) {
     if (fragmento.length > MAX_FRAGMENTO) return false;
+    if (PALAVRAS_QUE_NAO_SAO_FRAGMENTO.has(fragmento.toLowerCase())) return false;
     const classe = /^[a-z]+$/i.test(fragmento)
       ? 'letra'
       : /^\d+$/.test(fragmento)
