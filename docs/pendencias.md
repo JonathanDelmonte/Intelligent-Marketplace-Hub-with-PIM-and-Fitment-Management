@@ -351,20 +351,29 @@ A caixa de "responder um comprador" usa a mesma ficha, então responde sobre o
 mesmo produto. É útil assim porque quem responde sabe de qual anúncio veio a
 pergunta, mas com catálogo grande vai precisar do seletor junto.
 
-### 3.6 Vocabulário e navegação, por decisão do dono
+### 3.6 Vocabulário e navegação — feito
 
-Os rótulos "Jobs" e "Identidade" são nomes internos, e o dono do repositório disse
-com clareza que não entende nenhum dos dois — nem "Resolver 10 agora", nem o texto
-que explica o que é um SKU. Ele pediu para **terminar as fases primeiro** e revisar
-vocabulário, funcionalidades faltantes e aparência depois, de uma vez.
+Estava aberto desde a fase 3 e fechou depois das onze fases, que era a ordem que o
+dono pediu. O que foi entregue:
 
-O que foi feito nesta passada, porque era o mínimo para o sistema ser usável: a
-tela nova não usa nenhum termo interno, e a navegação virou uma lista só, com
-descrição por porta na página inicial — antes a tela de compatibilidade existia e
-só se chegava nela digitando a URL.
+- **As duas telas de nome interno viraram nome de trabalho**: `/jobs` é `/importar`
+  ("Importar") e `/identidade` é `/juntar-iguais` ("Juntar iguais"), com
+  redirecionamento permanente das rotas antigas. "Leitor" virou "Bipar na loja" —
+  mesmo teste, e a rota ficou porque é PWA instalada.
+- **O jargão saiu do texto das telas**: job é entrada, poller é processador da fila,
+  ocorrência é oferta, SKU é produto, forma canônica é "como o sistema compara",
+  procedência é "de onde veio". A tabela completa está no diário; a fronteira da
+  tradução é o `apresentacao.ts` de cada tela, e o código continua falando domínio.
+- **"Resolver 10 agora" virou "Tentar juntar 10 automaticamente"**, que diz o que o
+  botão faz.
+- **A barra agrupa as dez portas** em três momentos de trabalho e marca a tela
+  aberta, com `aria-current`.
+- **A tela inicial mostra estado**, e não nove cartões iguais: seis números
+  ordenados por urgência, com degradação honesta quando uma leitura falha.
 
-O que **não** foi feito, de propósito: renomear as telas antigas. Meia renomeação é
-pior que nenhuma, e a decisão de vocabulário é dele.
+O que continua sendo decisão do dono: se algum desses nomes ainda não é o que ele
+usa falando. Trocar é uma linha em `src/app/navegacao.ts` e o rótulo aparece na
+barra e na tela inicial de uma vez.
 
 ### 3.7 Cadastro de atributo de produto só por código
 

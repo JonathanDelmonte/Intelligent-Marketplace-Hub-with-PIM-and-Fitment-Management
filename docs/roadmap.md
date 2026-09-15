@@ -658,6 +658,36 @@ mesmo caminho.
 
 ---
 
+## A casa — vocabulário, navegação e aparência
+
+Não é fase da especificação: é o que o dono pediu para depois das fases, e o que a
+[pendência 3.6](./pendencias.md) guardava desde a fase 3.
+
+| #   | Entrega                                                               | Estado |
+| --- | --------------------------------------------------------------------- | ------ |
+| C.1 | Rótulo e rota com nome de trabalho (`/importar`, `/juntar-iguais`)    | ✅     |
+| C.2 | Jargão fora do texto das telas, com a fronteira da tradução declarada | ✅     |
+| C.3 | Barra com os três momentos de trabalho e marca de tela aberta         | ✅     |
+| C.4 | Tela inicial mostrando estado, com degradação honesta                 | ✅     |
+| C.5 | Uma definição por peça de estilo (`ui/comum.module.css`)              | ✅     |
+| C.6 | Tokens que faltavam e foco visível em tudo que recebe foco            | ✅     |
+
+**Entrega:** o sistema para de falar o nome das próprias tabelas, a navegação diz
+onde você está, e a tela inicial responde "o que eu faço agora" em vez de listar
+nove portas iguais.
+
+A decisão que vale guardar é a da C.5. As trinta classes de estilo estavam definidas
+de seis a onze vezes, uma por tela, e tinham **divergido no que importa**: `.botao`
+era preenchido em duas telas e de contorno em três, `.campo` era o invólucro do campo
+em seis e a própria entrada em duas. Isso não é dívida de repetição, é a interface
+ensinando coisas contraditórias. Agora cada peça tem uma definição e as telas
+compõem dela com `composes`, sem tocar no JSX.
+
+O que continua aberto e é decisão do dono: se os rótulos novos são os que ele usa
+falando. Trocar é uma linha em `src/app/navegacao.ts`.
+
+---
+
 ## Fase 12 — Adaptadores de Shopee e Amazon por API
 
 Só quando o volume em cada uma justificar a burocracia de aprovação. Até lá, M0
