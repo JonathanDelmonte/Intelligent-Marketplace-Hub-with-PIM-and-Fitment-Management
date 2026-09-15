@@ -1,0 +1,240 @@
+/*
+ * Estilo da tela de garimpo.
+ *
+ * Quase tudo vem de `ui/comum.module.css` por `composes`. O que é desta tela: o cartão
+ * de ferramenta (mais raso que o de dossiê, porque é referência e não trabalho), e os
+ * blocos de conferência atrás de `<details>` — achados com URL, hipóteses e fronteira.
+ */
+
+.pagina {
+  composes: pagina from '../ui/comum.module.css';
+  --largura-pagina: 64rem;
+}
+
+.cabecalho {
+  composes: cabecalho from '../ui/comum.module.css';
+}
+
+.titulo {
+  composes: titulo from '../ui/comum.module.css';
+}
+
+.subtitulo {
+  composes: subtitulo from '../ui/comum.module.css';
+}
+
+.resumo {
+  composes: resumo from '../ui/comum.module.css';
+  font-size: 1.0625rem;
+  margin-top: 0.75rem;
+}
+
+.secao {
+  composes: secao from '../ui/comum.module.css';
+}
+
+.secaoTitulo {
+  composes: secaoTitulo from '../ui/comum.module.css';
+}
+
+.aviso {
+  composes: aviso from '../ui/comum.module.css';
+}
+
+.avisoAtencao {
+  composes: aviso avisoAtencao from '../ui/comum.module.css';
+}
+
+.avisoErro {
+  composes: aviso avisoErro from '../ui/comum.module.css';
+}
+
+.avisoTitulo {
+  composes: avisoTitulo from '../ui/comum.module.css';
+}
+
+.avisoCorpo {
+  composes: avisoCorpo from '../ui/comum.module.css';
+}
+
+.lista {
+  composes: lista from '../ui/comum.module.css';
+}
+
+.item {
+  composes: item from '../ui/comum.module.css';
+}
+
+/*
+ * Cartão de ferramenta: mesma caixa, menos altura.
+ *
+ * É lista de referência — o que dá e o que não dá para usar hoje —, e não trabalho a
+ * fazer. Dar a ela o mesmo peso do dossiê faria a tela parecer que a pergunta principal
+ * é sobre configuração.
+ */
+.ferramenta {
+  composes: item from '../ui/comum.module.css';
+  padding: 0.75rem 1rem;
+}
+
+.ferramentaNome {
+  composes: itemTitulo from '../ui/comum.module.css';
+  font-size: 0.9375rem;
+}
+
+.itemCabecalho {
+  composes: itemCabecalho from '../ui/comum.module.css';
+}
+
+.itemTitulo {
+  composes: itemTitulo from '../ui/comum.module.css';
+}
+
+.itemSub {
+  composes: itemSub from '../ui/comum.module.css';
+}
+
+.itemCorpo {
+  composes: itemCorpo from '../ui/comum.module.css';
+}
+
+.itemAcao {
+  composes: itemAcao from '../ui/comum.module.css';
+}
+
+.itemFonte {
+  composes: itemFonte from '../ui/comum.module.css';
+}
+
+.etiqueta {
+  composes: etiqueta from '../ui/comum.module.css';
+}
+
+.etiquetaOk {
+  composes: etiqueta etiquetaOk from '../ui/comum.module.css';
+}
+
+.etiquetaAtencao {
+  composes: etiqueta etiquetaAtencao from '../ui/comum.module.css';
+}
+
+.etiquetaAlerta {
+  composes: etiqueta etiquetaAlerta from '../ui/comum.module.css';
+}
+
+.etiquetaViva {
+  composes: etiqueta etiquetaViva from '../ui/comum.module.css';
+}
+
+.etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.formulario {
+  composes: formulario from '../ui/comum.module.css';
+}
+
+.campo {
+  composes: campo from '../ui/comum.module.css';
+  --largura-campo: 11rem;
+  max-width: 16rem;
+}
+
+/* O alvo ocupa a linha: é o campo que decide a investigação inteira. */
+.campoLargo {
+  composes: campo from '../ui/comum.module.css';
+  flex-basis: 100%;
+}
+
+.entrada {
+  composes: entrada from '../ui/comum.module.css';
+}
+
+.ajuda {
+  color: var(--cor-texto-fraco);
+  font-size: 0.75rem;
+  max-width: var(--medida-texto);
+}
+
+.botao {
+  composes: botao from '../ui/comum.module.css';
+}
+
+/* O botão numa linha própria, pelo mesmo motivo da tela de afiliados. */
+.acao {
+  display: flex;
+  flex-basis: 100%;
+}
+
+.dica {
+  composes: dica from '../ui/comum.module.css';
+}
+
+.vazio {
+  composes: vazio from '../ui/comum.module.css';
+}
+
+/*
+ * A recomendação do dossiê.
+ *
+ * Fundo em vez de borda: é a conclusão da investigação, a única parte que se lê sem
+ * escolher — como a leitura do monitor e o "o que acrescentar" das perguntas.
+ */
+.recomendacao {
+  background: var(--cor-fundo);
+  border-radius: var(--raio-pequeno);
+  margin: 0.75rem 0 0;
+  max-width: var(--medida-texto);
+  padding: 0.625rem 0.875rem;
+}
+
+.bloco {
+  margin-top: 0.625rem;
+}
+
+.resumoDoBloco {
+  color: var(--cor-texto-fraco);
+  cursor: pointer;
+  font-size: 0.8125rem;
+}
+
+.listaMiuda {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.hipotese {
+  border-top: 1px solid var(--cor-borda);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  justify-content: space-between;
+  padding-top: 0.375rem;
+}
+
+.achado {
+  border-top: 1px solid var(--cor-borda);
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding-top: 0.375rem;
+}
+
+/* URL de origem: endereço, então monoespaçado e quebrável em qualquer ponto. */
+.origem {
+  color: var(--cor-primaria);
+  font-family: var(--fonte-mono);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.semFonte {
+  color: var(--cor-erro);
+  font-size: 0.75rem;
+}

@@ -12,8 +12,7 @@ a 4 existem para que cada noite de código tenha contrapartida em venda possíve
 Legenda de estado: ✅ pronto · 🚧 em andamento · ⬜ não começou · 🔒 bloqueado por
 dependência externa.
 
-**Nas fases da especificação não há mais nada em ⬜, e isso é informação e não
-conquista.** As nove entregas que estavam marcadas como "não começou" passaram a 🔒
+**Não há mais nada em ⬜, e isso é informação e não conquista.** As nove entregas que estavam marcadas como "não começou" passaram a 🔒
 porque nenhuma delas **pode** começar neste ambiente — e "não começou" sugeria que era
 questão de tempo. São três causas, todas já descritas em
 [pendências](./pendencias.md):
@@ -25,10 +24,6 @@ questão de tempo. São três causas, todas já descritas em
   recusa o resto.
 - **App no Mercado Livre** (1.2): a 2.6b é o fluxo de OAuth, e não há app para o qual
   fazer OAuth.
-
-O único ⬜ do documento é a C.10, a tela do prospector, e ali "não começou" é literal:
-depende de tempo e de mais nada. A máquina dela está pronta e testada; o que a rede
-bloqueia é a investigação de fora, não a tela que mostra o dossiê.
 
 A 3.5 (PDF de tabela de preços) é a única com nuance: um leitor de PDF **daria** para
 escrever e testar contra um PDF sintético. Ficou 🔒 de propósito — o problema real dela
@@ -591,6 +586,20 @@ entregas em pé, e o que falta é de dois tipos: a 10.4 espera rede (a política
 ambiente recusa `pncp.gov.br` com `CONNECT` 403), e o **executor** — o laço que chama
 LLM e ferramentas a cada passo — espera chave de LLM, como o resto de M3 e a 9.1.
 
+**A máquina tem tela desde 15/09** (`/garimpo`): o que dá para investigar hoje
+ferramenta por ferramenta, os dossiês com gasto contra teto e motivo de parada, e abrir
+um alvo — que escreve as sete hipóteses e a fronteira, em ordem de valor por custo, com
+o teto declarado antes de gastar o primeiro centavo. Não há botão de investigar, porque
+o executor não existe: botão que não faz nada é pior que ausência de botão.
+
+Ligar a tela achou três coisas. O repositório gravava o alvo **normalizado** na coluna de
+exibição, e o dossiê aparecia escrito "correia de maquina de lavar" — agora `alvo` guarda
+a grafia e `alvo_chave` tem índice único, que é a garantia que a verificação de leitura
+não dava. O resumo do dossiê convidava a continuar o que havia saturado, duas frases
+contraditórias no mesmo parágrafo. E faltava `abrirAlvo`: a máquina recebia estado
+montado à mão em teste, e o começo de uma investigação — quais hipóteses levantar — nunca
+tinha sido escrito.
+
 **A separação entre máquina e julgamento é a decisão desta fase.** O que é
 determinístico está em `dominio/prospector` e é testado com dezenas de cenários em
 milissegundos: escolher da fronteira, contar orçamento, detectar saturação, não
@@ -682,7 +691,7 @@ Não é fase da especificação: é o que o dono pediu para depois das fases, e 
 | C.7 | Tela do monitor: o que mudou, agrupado, e o que vale publicar hoje    | ✅     |
 | C.8 | Tela de perguntas: dúvida recorrente e o que acrescentar ao anúncio   | ✅     |
 | C.9 | Tela de afiliados: fila espaçada, teto do dia e o que o grupo deu     | ✅     |
-| C.10 | Tela do prospector: dossiê, fronteira, orçamento e por que parou     | ⬜     |
+| C.10 | Tela do garimpo: dossiê, fronteira, orçamento e por que parou        | ✅     |
 
 **Entrega:** o sistema para de falar o nome das próprias tabelas, a navegação diz
 onde você está, e a tela inicial responde "o que eu faço agora" em vez de listar
@@ -704,6 +713,12 @@ chegam ao longo de semanas, não de uma vez. A de afiliados achou três frases d
 com `(s)` de plural e uma delas errada ("saiu há 0 minuto(s)", quando zero minuto é
 "agora"). É o padrão: **texto e caminho de escrita sem tela não são revisados**, porque o
 teste unitário verifica um pedaço da frase e chama a função direto.
+
+**A C.10 fechou o mesmo padrão pela quarta vez.** A tela do garimpo achou o alvo do
+dossiê gravado normalizado na coluna de exibição, um parágrafo do domínio que se
+contradizia, e uma função que faltava na máquina (`abrirAlvo`). Quatro telas, quatro
+achados que o teste unitário não pegaria — porque o teste chama a função direto e confere
+um pedaço da frase, e a tela é o primeiro leitor que lê tudo e mostra tudo.
 
 O que continua aberto e é decisão do dono: se os rótulos novos são os que ele usa
 falando. Trocar é uma linha em `src/app/navegacao.ts`.

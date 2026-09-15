@@ -229,10 +229,10 @@ Ordem do roadmap, que é por utilidade e não por arquitetura. Nada aqui espera 
 
 ### 3.1 Telas que não existem
 
-Há treze telas: início, `/importar` (com detalhe por job), `/leitor`, `/juntar-iguais`,
-`/compatibilidade`, `/fornecedores`, `/postagem`, `/consignacao`, `/anuncios`,
-`/fiscal`, `/monitor`, `/perguntas` e `/afiliados`. **Não há tela de catálogo, de SKU
-nem de precificação** — e nem do prospector (ver 3.8). O motor de margem (fase 1)
+Há catorze telas: início, `/importar` (com detalhe por job), `/leitor`,
+`/juntar-iguais`, `/compatibilidade`, `/fornecedores`, `/postagem`, `/consignacao`,
+`/anuncios`, `/fiscal`, `/monitor`, `/perguntas`, `/afiliados` e `/garimpo`. **Não há
+tela de catálogo, de SKU nem de precificação.** O motor de margem (fase 1)
 e o repositório de SKU (3.10) seguem chamáveis por código e por teste, não por tela.
 
 A de anúncio fechou o próprio laço na parte que importa: monta, mostra o checklist,
@@ -410,15 +410,20 @@ sem registrar, então as regras liam tabela vazia para sempre. A de perguntas ex
 tabela nova, porque a conta de repetição precisa de histórico. A de afiliados achou três
 frases de domínio com `(s)` de plural, uma delas errada. Está tudo no diário de 15/09.
 
-**O que continua sem tela é a fase 10, o prospector.** Dossiê, hipótese, fronteira,
-orçamento e o motivo de parar são funções puras com teste, e nada disso aparece na
-interface — mesmo estado em que a fase 11 estava ontem.
+**A fase 10 também tem tela**, `/garimpo`: ferramenta por ferramenta o que dá para
+investigar hoje, os dossiês com gasto contra teto e motivo de parada, e abrir um alvo com
+o teto declarado antes de começar.
 
-**Por que ainda não:** a investigação em si depende de rede de saída, que a política
-daqui recusa (ver 3.3), então a tela mostraria dossiê que ninguém consegue abrir. Mas
-mostrar **o que já existe** — o dossiê retomável, a fronteira e o teto de orçamento — não
-depende de rede, e é o que falta: sem tela, um agente que gasta orçamento é um agente que
-gasta sem ninguém ver.
+**O que ainda não existe ali é o executor** — o laço que gasta passo e chama ferramenta.
+Das seis ferramentas, duas são chamáveis (base local e visão, esta com a chave de LLM
+que este ambiente tem) e quatro não têm adaptador nenhum implementado, além de a rede
+daqui recusar `pncp.gov.br` (ver 3.3). Então três das sete perguntas dão para investigar,
+e é a tela que diz isso — com o nome da variável ou o nome do que falta escrever, em vez
+de um "indisponível" que manda a pessoa procurar.
+
+Por isso não há botão de investigar: botão que não faz nada é pior que ausência de botão.
+O dossiê aberto fica com motivo de parada `fronteira_vazia`, que é a verdade, e não "em
+andamento".
 
 ---
 

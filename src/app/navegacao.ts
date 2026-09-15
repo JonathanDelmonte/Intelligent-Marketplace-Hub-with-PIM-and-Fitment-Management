@@ -109,6 +109,13 @@ export const PORTAS: readonly Porta[] = [
     grupo: 'oportunidade',
   },
   {
+    href: '/garimpo',
+    rotulo: 'Garimpo',
+    descricao:
+      'Investigação dirigida a um alvo, com teto declarado antes de começar: quem fabrica, quem distribui, onde é mais barato — e o dossiê com a fonte de cada achado.',
+    grupo: 'oportunidade',
+  },
+  {
     href: '/afiliados',
     rotulo: 'Afiliados',
     descricao:

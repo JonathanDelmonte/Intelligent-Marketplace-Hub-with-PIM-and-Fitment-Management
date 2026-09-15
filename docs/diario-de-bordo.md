@@ -26,6 +26,104 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-15 — A tela do garimpo, e o nome do alvo que o banco estava comendo
+
+### 🐛 A coluna `alvo` do dossiê guardava a chave, e a tela mostrou isso
+
+`chaveDoAlvo` normaliza — sem acento, minúsculas, espaço colapsado — para o upsert por
+alvo funcionar: "Refil Purificador PA21G" e "refil purificador pa21g " são o mesmo alvo,
+e tratar como dois criaria dois dossiês parciais do mesmo assunto.
+
+O problema é que o repositório gravava **a chave** na coluna `alvo`. Ninguém viu por
+duas fases, porque nenhuma tela lia dossiê. Na primeira vez que uma leu, o cartão dizia
+"correia de maquina de lavar" para quem ia auditar.
+
+Conserto: `alvo` guarda o que a pessoa escreveu, `alvo_chave` é a identidade, e a chave
+ganhou **índice único** — que é a garantia que a verificação de leitura do repositório
+não dá, porque duas chamadas simultâneas passam as duas pela verificação. As linhas que
+já existiam ficam com o `alvo` sem acento: a grafia original não é recuperável, e está
+dito na migração.
+
+A migração é em três passos (coluna nula, backfill, `SET NOT NULL`) porque
+`ADD COLUMN ... NOT NULL` sem valor padrão falha em tabela com linha.
+
+### 🐛 O resumo do dossiê convidava a continuar o que tinha terminado
+
+"7 hipóteses em aberto — dá para continuar de onde parou. Parou por saturação: aumentar
+o teto não traria mais nada neste alvo." As duas frases no mesmo parágrafo, uma em
+seguida da outra. Cada uma estava certa isolada, e juntas se contradizem.
+
+Só apareceu porque a tela mostra a mensagem **inteira** — o teste conferia
+`toContain('não traria mais nada')` e não olhava o resto. Agora a cláusula de continuar
+some quando o motivo é saturação, e há teste do parágrafo completo.
+
+Mesma família do "0 minuto(s)" de ontem, e a terceira vez que texto de domínio sem tela
+se revela errado ao ganhar tela.
+
+### 🔀 `abrirAlvo` entrou no domínio, e não na tela
+
+A fase 10 entregou a máquina e recebia `EstadoDaBusca` montado à mão em teste. Faltava o
+começo: dado um alvo, quais hipóteses levantar e o que entra na fronteira.
+
+Isso é **máquina**, não julgamento: as sete famílias são declaradas, o valor de cada uma
+também, e a ordenação é valor por custo. O que é julgamento — levantar hipótese nova a
+partir do que a página dizia, escolher em quem acreditar quando as fontes discordam — é
+do agente, e o agente continua não existindo.
+
+Uma decisão dentro dela: a família entra na fronteira com a primeira ferramenta
+**disponível** dela, e não com a primeira declarada. `em_que_mais_serve` aceita
+`busca_web`, `ler_pagina` e `base_local`; gravar `busca_web` faria a fronteira recusar um
+item que dava para investigar aqui dentro.
+
+### 🔀 Ferramenta declara o que lhe falta, e não só que falta
+
+`estadoDaFerramenta` devolve três estados, e a diferença entre dois deles é a ação:
+"falta chave" é uma linha no `.env`, "não existe adaptador" é código para escrever. Um
+rótulo único de "indisponível" apagaria exatamente isso.
+
+Hoje o placar é: `base_local` e `visao` dão para usar, e `busca_web`, `ler_pagina`,
+`cnpj` e `pncp` não têm adaptador nenhum implementado — mais a rede daqui, que recusa
+`pncp.gov.br`. Três das sete perguntas dão para investigar. É declaração, e não sonda:
+descobrir no meio do passo que a rede recusa o domínio é justamente o gasto que o teto
+existe para impedir.
+
+### 🔀 Reabrir alvo é recusado, porque `salvar` é upsert
+
+Abrir um alvo que já tem dossiê gravaria um plano em branco em cima dos achados —
+`salvar` casa por chave e atualiza as três listas. A tela recusa e explica. Não há botão
+de investigar, e é por isso: o executor não existe, e botão que não faz nada é pior que
+ausência de botão.
+
+### 🐛 "3 perguntas de 7 dá para investigar"
+
+Concordância de verbo no resumo, achada olhando a tela. Uma pergunta "dá"; três
+"dão".
+
+### ⚠️ O Playwright inventou o segundo erro de hidratação
+
+Ontem foi o `caret-color` do `screenshot()`. Hoje foi o `open=""` que eu mesmo punha nos
+`<details>` antes da hidratação terminar, para o print mostrar o conteúdo. O React
+compara e reclama, e o indicador do Next acusa "1 Issue" na aplicação.
+
+Nos dois casos a confirmação é a mesma: visitar a página **sem** tirar print não produz
+aviso nenhum de console. O `waitForTimeout` antes de mexer no DOM resolve. Vale a
+paciência de confirmar antes de caçar — hidratação falsa custa uma hora.
+
+### 🧹 `(s)` de plural em oito módulos de domínio
+
+`contagem(n, singular, plural)` saiu de `afiliados/publicacao.ts` para `lib/texto.ts` na
+segunda cópia, e foi usada no dossiê. Mas o padrão `${n} coisa(s)` continua em
+`consignacao/aviso.ts`, `precificacao/fiscal.ts`, `fiscal/repositorio.ts`,
+`garimpo/scanner.ts`, `leitor/veredito.ts`, `compatibilidade/resolucao.ts`,
+`compatibilidade/gramatica.ts` e `pedidos/fila-do-dia.ts` — e vários desses textos já
+aparecem em tela.
+
+**Custo:** o sistema fala como formulário em oito lugares, e o parêntese esconde erro de
+verdade (foi o caso do "0 minuto(s)" e do "0 passo(s)").
+**Sai quando:** uma passada dedicada, que é tarefa própria — não cabia junto com a tela.
+
+---
+
 ## 2026-09-15 — A tela de afiliados, e o que ela achou no texto
 
 ### 🔀 A tag de afiliado ficou em ambiente, e não na tabela `credencial`
