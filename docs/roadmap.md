@@ -397,7 +397,27 @@ aparência de medição, que é o oposto do que o resto do sistema faz.
 | 8.8  | Etiqueta e envio ao fornecedor no dropship, com cobrança de confirmação | 🔒     |
 | 8.9  | Conferência de repasse: previsto contra o que caiu                      | ✅     |
 | 8.10 | M11: consignação, alerta de conferência, fechamento por período         | ✅     |
-| 8.11 | Tela de anúncio: montar, revisar avisos e baixar o arquivo              | ⬜     |
+| 8.11 | Tela de anúncio: montar, revisar avisos e baixar o arquivo              | ✅     |
+
+**A fase 8 fechou, menos a 8.8, que depende da API do ML.** Onze das doze entregas
+estão em pé, e a operação do dia a dia sai da planilha: a venda entra por planilha,
+casa com SKU, calcula margem realizada, aparece na fila de postagem ordenada por
+prazo, e o repasse é conferido contra o que as taxas explicam. Do outro lado, o
+anúncio é montado com título, descrição, checklist e arquivo de importação, sem
+plataforma conectada.
+
+**8.11 revelou um buraco que só o uso mostra.** A tela bloqueava o download por
+falta de `categoria` — corretamente, porque a importação recusaria — e **nenhuma
+tela do sistema escrevia `categoria_ml`**. O checklist apontava um problema sem
+caminho de conserto, e a entrega "baixar o arquivo" era inalcançável para qualquer
+SKU real. O conserto entrou na mesma tela, ao lado do item que aponta a falta.
+
+**A montagem mora na URL, e isso não é detalhe de implementação.** Formulário GET
+em vez de ação de servidor: o link é compartilhável, o botão de voltar funciona, e a
+rota do arquivo monta o mesmo anúncio que a tela mostrou porque recebe os mesmos
+parâmetros. Com estado de sessão, "o arquivo saiu diferente do que eu vi" seria um
+bug possível — e é o mais caro desta tela, porque ninguém confere um CSV antes de
+subir.
 
 **8.3 é por traço do produto, não por categoria da plataforma.** A tabela de
 atributo obrigatório por categoria é da plataforma e daqui não há como obtê-la — o

@@ -162,11 +162,17 @@ Ordem do roadmap, que é por utilidade e não por arquitetura. Nada aqui espera 
 
 ### 3.1 Telas que não existem
 
-Há oito telas: início, `/jobs` (com detalhe por job), `/leitor`, `/identidade`,
-`/compatibilidade`, `/fornecedores`, `/postagem` e `/consignacao`. **Não há tela de
-catálogo, de SKU, de precificação nem de anúncio.** O motor de margem (fase 1), o
-repositório de SKU (3.10) e o gerador de anúncio (8.1/8.2/8.3/8.5) seguem chamáveis
-por código e por teste, não por tela — a de anúncio é a 8.11.
+Há nove telas: início, `/jobs` (com detalhe por job), `/leitor`, `/identidade`,
+`/compatibilidade`, `/fornecedores`, `/postagem`, `/consignacao` e `/anuncios`.
+**Não há tela de catálogo, de SKU nem de precificação.** O motor de margem (fase 1)
+e o repositório de SKU (3.10) seguem chamáveis por código e por teste, não por tela.
+
+A de anúncio fechou o próprio laço na parte que importa: monta, mostra o checklist,
+e **grava a categoria** — o único atributo que impede exportar. O resto do cadastro
+continua sem tela: peso, dimensões, voltagem e quantidade de embalagem aparecem no
+checklist como falta e só se preenchem por código. São `ranqueia` e `devolucao`, não
+`bloqueia`, então o arquivo sai sem eles; mas sair sem eles custa frete errado e
+devolução, e é a próxima tela que vale a pena (ver 3.7).
 
 A de identidade fechou o próprio laço: decide pares, **propaga** para um SKU que já
 exista e **cria** SKU a partir de um par quando nenhum dos dois lados tem um — com o
@@ -292,6 +298,26 @@ só se chegava nela digitando a URL.
 
 O que **não** foi feito, de propósito: renomear as telas antigas. Meia renomeação é
 pior que nenhuma, e a decisão de vocabulário é dele.
+
+### 3.7 Cadastro de atributo de produto só por código
+
+O checklist de atributos (8.3) nomeia o que falta em cada anúncio e o que cada falta
+custa. Dá para **consertar** um item pela tela: a categoria, que é o único de nível
+`bloqueia`.
+
+Os outros não: `peso`, `dimensoes`, `voltagem` e `quantidade_embalagem` são
+`ranqueia` ou `devolucao`, e só se preenchem escrevendo código. O arquivo de
+importação sai sem eles — a plataforma aceita — mas peso ausente é frete errado, e
+voltagem ausente é devolução.
+
+**Por que não entrou junto:** `voltagem` e `medida` não têm coluna em `sku`; vêm do
+registro extraído, como o tipo do produto. Colocá-los na tela é decidir onde eles
+passam a morar, e isso é schema — não cabia na tela que faltava para a fase fechar.
+
+**Quando deixa de servir:** no primeiro anúncio publicado sem peso que trouxer frete
+comido, ou na primeira devolução por voltagem.
+
+---
 
 ## 4. Dívida consciente, com o custo anotado
 

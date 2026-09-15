@@ -26,6 +26,101 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-15 — Fase 8: a tela de anúncio, e o banco que o contêiner levou
+
+### 🔀 A montagem do anúncio mora na URL, não em estado de sessão
+
+Formulário GET em vez de ação de servidor, e a escolha tem uma razão concreta: a
+rota que devolve o arquivo de importação precisa montar **o mesmo anúncio** que a
+tela mostrou. Se a montagem vivesse em estado, o botão de baixar refaria as escolhas
+de memória, e "o arquivo saiu diferente do que eu vi na tela" seria um bug possível.
+
+É o bug mais caro desta tela, porque ninguém confere um CSV de sete colunas antes de
+subir na plataforma — o erro apareceria como anúncio publicado errado. Com os dois
+lados lendo a mesma query string pela mesma função, não há por onde divergir, e o
+teste de ida e volta da query string fixa isso.
+
+De brinde: link compartilhável, botão de voltar funcionando, e histórico do
+navegador servindo de rascunho.
+
+### 🐛 O checklist apontava um problema que nenhuma tela sabia consertar
+
+Dirigindo a tela recém-escrita, o download ficou bloqueado por falta de
+`categoria` — corretamente, porque a importação do ML recusaria a linha. Aí veio a
+descoberta: **nenhuma tela do sistema escrevia `categoria_ml`**. Só código.
+
+Ou seja, a entrega da fase — "baixar o arquivo" — era inalcançável para qualquer SKU
+real, e o checklist que eu tinha acabado de escrever apontava o único atributo
+bloqueante sem oferecer caminho de conserto. Meio checklist, e a metade inútil.
+
+O conserto entrou na mesma tela, ao lado do item que aponta a falta, e volta para a
+mesma montagem depois de gravar — a pessoa preencheu a categoria **para** ver o
+anúncio sair, e perder a escolha ali faria ela refazer tudo.
+
+A lição de método: só dirigir a tela mostra isso. Teste de unidade da conferência
+passava, teste do repositório passava, e a tela estava correta — o buraco era entre
+as peças, num lugar que nenhum teste olhava.
+
+### 🔀 O tipo do produto não tem coluna, e vem do registro das ocorrências
+
+`montarAnuncio` pede `tipoProduto` ("refil de purificador de água"), e `sku` não tem
+esse campo. O dado existe: mora em `atributos_extraidos` de `produto_externo`, que é
+de onde a propagação de identidade monta o título interno como "tipo marca modelo".
+
+Então é de lá que ele volta, com duas decisões. Entre duas ocorrências vence a **mais
+completa**, não a mais recente — uma ocorrência nova de distribuidor que só publica o
+código da peça é mais recente e sabe menos que a antiga de um anúncio com a ficha
+inteira; `riquezaDoRegistro` já existia para essa comparação, escrita para decidir se
+valia gastar LLM. E o valor aparece em **campo editável** na tela em vez de ser usado
+em silêncio, porque extração erra e quem está vendo a tela sabe mais que ela.
+
+### 🔀 A rota recusa o que a plataforma recusaria
+
+Primeira rota de API do projeto, e ela abre uma convenção: rota só existe quando a
+resposta não é HTML.
+
+A decisão que vale registrar é a recusa. Anúncio com atributo de nível `bloqueia`
+faltando devolve 409 e diz o que falta, em vez de gerar o arquivo. Gerar seria
+entregar algo que a importação rejeita — o sistema gastaria a confiança de quem subiu
+para a pessoa descobrir sozinha o que ele já sabia. E a tela, pelo mesmo motivo, só
+mostra o link quando o arquivo sai: **botão que existe e recusa é pior que botão que
+não existe**, porque o primeiro promete e o segundo explica.
+
+### 🐛 O contêiner reiniciou e levou o Postgres inteiro
+
+A suíte de banco falhou com `ECONNREFUSED` em 5433. O cluster estava parado, e ao
+subir voltou na porta 5432 com `pg_hba.conf` de fábrica e **sem as bases**: `bancada`
+e `bancada_teste` não existiam mais, nem o papel `bancada`.
+
+O que consertou, na ordem: subir o cluster, mover a porta de volta para 5433, trocar
+`scram-sha-256` por `trust` em 127.0.0.1 (a URL local não tem senha), recriar papel e
+as duas bases com `vector`, migrar as duas, semear o perfil, e refazer o passeio do
+README para ter dado de demonstração.
+
+Fica registrado porque vai acontecer de novo, e porque o diagnóstico inicial engana:
+`ECONNREFUSED` parece problema de configuração do projeto, e era o contêrner tendo
+sido reciclado. **Nada disso vive em disco persistente** — em ambiente remoto, banco
+local é descartável, e é por isso que o passeio do README precisa continuar
+funcionando de ponta a ponta.
+
+### 🐛 Dois testes meus passavam no vitest e não no `tsc`
+
+Escrevi a fixture da conferência de atributos sem anotação de tipo, então
+`categoria: 'MLB1234'` foi inferido como `string` e não `string | null` — e os testes
+que passam `null` para ver a falta compilavam errado. O vitest não typecheca, então
+passaram; `npm run check` pegou.
+
+Segunda ocorrência do mesmo tema desta semana: **rodar o teste não é o mesmo que
+verificar o código.** A primeira foi `npm run check | tail`, que devolve o código de
+saída do `tail`.
+
+### 🧹 Fixture de teste esqueceu duas colunas obrigatórias
+
+`aparelho.fonte` e `compatibilidade.verificado_por` são `not null`, e a fixture nova
+não as preenchia. O erro é bom: significa que o schema não deixa entrar registro sem
+procedência nem afirmação de compatibilidade sem quem a verificou, que é exatamente a
+regra da seção 3.3 das convenções sendo cumprida pelo banco em vez de por disciplina.
+
 ## 2026-09-14 — Fase 8: gerador de anúncio
 
 ### 🔀 Exigência de atributo nomeada pela consequência, não pela força

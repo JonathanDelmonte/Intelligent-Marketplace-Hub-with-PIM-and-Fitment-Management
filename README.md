@@ -166,12 +166,27 @@ vírgula, como vem de verdade.
 6. Abra **`/leitor`**, informe um custo (por exemplo `30`) e digite o código
    `7896541200909`. O veredito sai com o preço praticado que a planilha trouxe,
    margem, markup e até quanto dá para pagar.
+7. Abra **`/anuncios`**, escolha o produto, preço `89,90`, quantidade `10`, e
+   descreva o tipo como o comprador diria — `refil de purificador de água`. Clique
+   em **"Montar"**.
+
+   Sai o título com o código do aparelho na frente (`Refil de purificador de água
+   PA21G`), a descrição com a tabela de onde serve montada da ficha da etapa 5, e o
+   checklist dizendo o que falta **com o custo de cada falta**. O download fica
+   bloqueado enquanto faltar categoria, porque a importação recusaria a linha —
+   preencha `MLB1234` no campo que aparece ao lado do item e o link surge, junto com
+   a instrução de onde subir o arquivo naquela plataforma.
 
 Os passos 3 e 5 são as fases 5 e 6 em duas telas: a ingestão enfileirou a
 resolução, o poller consumiu, o grafo de identidade cresceu sem ninguém pedir, e a
 ficha de compatibilidade se montou a partir dos títulos que já estavam no banco —
 com o corte de publicação e a regra de autoconfirmação à vista, em vez de
 escondidos.
+
+O passo 7 é onde isso paga: o mesmo `PA21G` que você confirmou na etapa 5 vira termo
+de busca no título e linha na tabela de compatibilidade da descrição, e o `PA21X`,
+que ficou abaixo do corte, **não entra em nenhum dos dois**. Nada disso exigiu
+plataforma conectada — o arquivo de importação é o caminho padrão, não o plano B.
 
 ### Testes: o banco da suíte é outro, e isso não é preferência
 
