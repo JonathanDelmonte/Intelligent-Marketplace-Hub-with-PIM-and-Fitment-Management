@@ -226,7 +226,7 @@
 
 .leituraDoCodigo {
   color: var(--cor-texto-fraco);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--fonte-mono);
   font-size: 0.8125rem;
   margin-top: 0.125rem;
   overflow-wrap: anywhere;

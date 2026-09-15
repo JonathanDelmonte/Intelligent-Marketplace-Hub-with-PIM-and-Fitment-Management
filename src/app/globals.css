@@ -29,6 +29,14 @@
   /* Contorno de foco, igual em toda a interface, para teclado ter caminho visível. */
   --foco: 2px solid var(--cor-primaria);
   --foco-deslocamento: 2px;
+  /*
+   * Fonte monoespaçada: código de anúncio, GTIN, link com tag, hash de job.
+   *
+   * Estava literal em oito lugares, e duas das cópias já divergiam — metade tinha
+   * `Consolas` e metade não, o que significa fonte diferente no mesmo sistema no
+   * Windows. Ninguém decidiu isso; é o que acontece com literal repetido.
+   */
+  --fonte-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   color-scheme: light;
 }

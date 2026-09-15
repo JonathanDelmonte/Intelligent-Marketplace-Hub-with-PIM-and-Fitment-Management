@@ -223,7 +223,7 @@
 }
 
 .canonico {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--fonte-mono);
 }
 
 .link {

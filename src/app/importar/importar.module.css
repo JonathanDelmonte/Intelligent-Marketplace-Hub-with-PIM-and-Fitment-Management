@@ -218,7 +218,7 @@
 }
 
 .mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--fonte-mono);
   font-size: 0.75rem;
 }
 
@@ -263,7 +263,7 @@
 }
 
 .fichaValor {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--fonte-mono);
   font-size: 0.8125rem;
   overflow-wrap: anywhere;
 }
@@ -279,7 +279,7 @@
 }
 
 .blocoTexto {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--fonte-mono);
   font-size: 0.75rem;
   line-height: 1.5;
   margin: 0;
@@ -353,7 +353,7 @@
 }
 
 .rejeitadaValor {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--fonte-mono);
   font-size: 0.8125rem;
   overflow-wrap: anywhere;
 }
@@ -366,6 +366,6 @@
 }
 
 .linkDoJob {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--fonte-mono);
   font-size: 0.75rem;
 }
