@@ -43,6 +43,12 @@ export const PORTAS: readonly Porta[] = [
       'O que postar hoje, em ordem de prazo. É a tela do dia a dia, e no fim dela a conferência do que a plataforma repassou.',
   },
   {
+    href: '/anuncios',
+    rotulo: 'Montar anúncio',
+    descricao:
+      'Título com os códigos que o comprador busca, descrição com a tabela de onde serve, e o arquivo de importação da plataforma.',
+  },
+  {
     href: '/consignacao',
     rotulo: 'Consignação',
     descricao:
