@@ -1,0 +1,182 @@
+/*
+ * Estilo da tela inicial. Cores só de variável de tema (convenções, 3.1).
+ *
+ * A tela tem dois blocos e eles têm pesos diferentes de propósito: as pendências em
+ * cima, com o número grande, porque é o que decide o que fazer agora; as portas
+ * embaixo, em cartão, porque é o que se usa para aprender o sistema e para ir a uma
+ * tela que ninguém está cobrando.
+ */
+
+.pagina {
+  margin: 0 auto;
+  max-width: 56rem;
+  padding: 2.5rem 1.5rem 1rem;
+}
+
+.titulo {
+  font-size: 1.5rem;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+
+.subtitulo {
+  color: var(--cor-texto-fraco);
+  margin: 0.5rem 0 0;
+}
+
+/* ─── Pendências ─────────────────────────────────────────────────────────── */
+
+.pendencias {
+  display: grid;
+  gap: 0.5rem;
+  /*
+   * Duas colunas, e a mesma medida dos cartões de porta: em uma coluna só as seis
+   * linhas ocupavam quase 500px de altura para dizer, na maior parte, "nada aqui" —
+   * e a primeira porta ficava fora da tela. A ordem de urgência continua legível
+   * porque a grade preenche por linha: as duas primeiras células são as duas
+   * primeiras pendências.
+   */
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+}
+
+.pendencia {
+  align-items: center;
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  /*
+   * O tom vive na borda esquerda, e não no fundo do cartão: fundo colorido em seis
+   * linhas seguidas viraria semáforo, e o que precisa saltar é a linha urgente contra
+   * as outras — não cada linha contra a página.
+   */
+  border-left-width: 3px;
+  border-radius: var(--raio);
+  color: inherit;
+  display: flex;
+  gap: 0.875rem;
+  padding: 0.75rem 1rem;
+  text-decoration: none;
+}
+
+.pendencia:hover,
+.pendencia:focus-visible {
+  border-color: var(--cor-primaria);
+}
+
+.pendencia:focus-visible {
+  outline: 2px solid var(--cor-primaria);
+  outline-offset: 2px;
+}
+
+.pendenciaAgora {
+  border-left-color: var(--cor-erro);
+}
+
+.pendenciaAtencao {
+  border-left-color: var(--cor-aviso);
+}
+
+.numero {
+  /* Tabular para os números ficarem alinhados de uma linha para a outra. */
+  font-variant-numeric: tabular-nums;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.1;
+  min-width: 2.5rem;
+  text-align: right;
+}
+
+/* Zero e "não deu para ler" não competem com o número que importa. */
+.numeroFraco {
+  color: var(--cor-texto-fraco);
+  font-weight: 500;
+}
+
+.pendenciaTexto {
+  display: flex;
+  flex-direction: column;
+}
+
+.pendenciaTitulo {
+  font-weight: 600;
+}
+
+.pendenciaOQueE {
+  color: var(--cor-texto-fraco);
+  font-size: 0.875rem;
+}
+
+/* ─── Portas ─────────────────────────────────────────────────────────────── */
+
+.todas {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin: 2.5rem 0 0;
+}
+
+.grupo {
+  margin-top: 1.5rem;
+}
+
+/*
+ * Título de grupo pequeno e em caixa alta de propósito: ele organiza a lista sem
+ * competir com o nome das portas, que é o que a pessoa vem procurar.
+ */
+.grupoTitulo {
+  color: var(--cor-texto-fraco);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  margin: 0 0 0.625rem;
+  text-transform: uppercase;
+}
+
+.portas {
+  display: grid;
+  gap: 0.75rem;
+  /*
+   * Duas colunas largas, e não três estreitas: com 15rem de coluna a descrição de
+   * cada porta quebrava em cinco linhas e os cartões da mesma fileira saíam com
+   * alturas muito diferentes. Cartão largo é cartão baixo.
+   */
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.porta {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  height: 100%;
+  padding: 0.875rem 1rem;
+  text-decoration: none;
+}
+
+.porta:hover,
+.porta:focus-visible {
+  border-color: var(--cor-primaria);
+}
+
+.porta:focus-visible {
+  outline: 2px solid var(--cor-primaria);
+  outline-offset: 2px;
+}
+
+.portaTitulo {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.portaDescricao {
+  color: var(--cor-texto-fraco);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}

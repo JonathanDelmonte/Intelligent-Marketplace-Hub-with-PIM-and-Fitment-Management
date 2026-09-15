@@ -5,6 +5,7 @@
  * gravar um campo não apaga os outros, que apagar é diferente de não enviar, e que a
  * receita do teto sai do **preço bruto** e não do repasse.
  */
+import { eq } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { perfilId, type PerfilId } from '@/dominio/catalogo/sku';
 import { pedido, perfilVendedor, sku } from '@/infra/banco/schema';
@@ -59,6 +60,38 @@ describe.skipIf(!temBancoDeTeste())('RepositorioFiscal', () => {
     expect(r.regime).toBe('mei');
     expect(r.skus[0]?.estado.prontoPara2027).toBe(false);
     expect(r.skus[0]?.estado.faltando).toEqual(['ncm', 'cst', 'cclasstrib']);
+  });
+
+  it('a contagem rápida de pendentes concorda com o resumo, que varre tudo', async () => {
+    // Duas implementações da mesma pergunta — uma em SQL, uma em TypeScript — e é por
+    // isso que este teste existe: divergirem é o risco de ter as duas.
+    const so = await repo.contarPendentes(perfil);
+    expect(so).toBe((await repo.resumo(perfil)).pendentes);
+
+    await repo.gravarCodigos(perfil, skuId, {
+      ncm: '84212100',
+      cst: '000',
+      cclasstrib: '000001',
+    });
+
+    expect(await repo.contarPendentes(perfil)).toBe(0);
+    expect(await repo.contarPendentes(perfil)).toBe((await repo.resumo(perfil)).pendentes);
+  });
+
+  it('a contagem rápida não conta CEST, que não é obrigatório em 2027', async () => {
+    await repo.gravarCodigos(perfil, skuId, { ncm: '84212100', cst: '000', cclasstrib: '000001' });
+    expect(await repo.contarPendentes(perfil)).toBe(0);
+  });
+
+  it('a contagem rápida trata campo com espaço em branco como vazio', async () => {
+    // Um `update` direto, porque `gravarCodigos` recusa espaço na validação — e é
+    // exatamente por isso que o banco pode ter espaço gravado por outro caminho.
+    await conexao.db
+      .update(sku)
+      .set({ ncm: '84212100', cst: '   ', cclasstrib: '000001' })
+      .where(eq(sku.id, skuId));
+
+    expect(await repo.contarPendentes(perfil)).toBe(1);
   });
 
   it('gravar um campo não apaga os outros', async () => {

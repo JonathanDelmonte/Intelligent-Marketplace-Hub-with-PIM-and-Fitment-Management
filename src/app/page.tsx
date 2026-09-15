@@ -1,53 +1,46 @@
-import Link from 'next/link';
-import { lerAmbiente } from '@/config/ambiente';
-import { montarMarca } from '@/config/marca';
-import { portasPorGrupo } from './navegacao';
-import estilo from './pagina.module.css';
-
 /**
- * Página inicial: as portas do sistema, agrupadas pelo momento de trabalho.
+ * Tela inicial: o que precisa de você, e depois todas as telas.
  *
- * Existia só para o shell do App Router ser verificável desde a fase 0. Virou índice
- * quando as telas passaram de uma, e por um motivo dito em voz alta pelo dono do
- * repositório: as telas existiam e não havia como chegar nelas sem digitar a URL.
+ * Começou como o mínimo para o shell do App Router ser verificável na fase 0, virou
+ * índice quando as telas passaram de uma, e agora mostra estado — porque índice não
+ * responde a pergunta que se faz ao abrir o sistema de manhã. Nove cartões iguais
+ * obrigam a abrir nove telas para descobrir que oito não têm nada.
  *
- * Os nomes internos ("jobs", "identidade") saíram na passada de vocabulário, e o
- * agrupamento é o resto do mesmo problema: nove cartões iguais, em ordem de
- * construção, obrigam a ler todos para achar o do dia. Agora a ordem é a do trabalho
- * — o que se faz hoje, o que alimenta o catálogo, o que protege de prejuízo.
+ * Duas garantias desta tela, e as duas são de propósito:
  *
- * Não tem gate de conexão, e nenhuma tela do sistema pode ter — ADR 0002, regra 1.
+ * 1. **Não tem porta de conexão** (ADR 0002, regra 1). Nenhuma plataforma ligada, e a
+ *    tela funciona igual.
+ * 2. **Não quebra.** Cada leitura falha sozinha e vira "não deu para ler" naquela
+ *    linha. A porta de entrada mostrando erro de servidor faz parecer que o sistema
+ *    todo caiu, quando o que caiu foi uma contagem.
  */
+import type { Metadata } from 'next';
+import { montarPendencias, resumoDaCasa } from './inicio/apresentacao';
+import { Pendencias, Portas } from './inicio/componentes';
+import { lerCasa } from './inicio/dados';
+import estilo from './inicio/inicio.module.css';
 
-export default function Pagina() {
-  const marca = montarMarca(lerAmbiente());
+export const metadata: Metadata = { title: 'Início' };
+
+/** Sempre dinâmica: são contagens de agora, e pré-renderizar as congelaria. */
+export const dynamic = 'force-dynamic';
+
+export default async function Pagina() {
+  // Um `agora` para a tela inteira: duas leituras de relógio na mesma renderização
+  // podem cair em lados diferentes da virada do dia, e aí a fila do dia e o prazo
+  // fiscal contariam dias diferentes lado a lado.
+  const agora = new Date();
+  const pendencias = montarPendencias(await lerCasa(agora));
 
   return (
     <main className={estilo.pagina}>
-      <h1 className={estilo.titulo}>{marca.nomeSistema}</h1>
-      <p className={estilo.subtitulo}>Hub de operação e inteligência para venda em marketplaces.</p>
+      <h1 className={estilo.titulo}>O que precisa de você</h1>
+      <p className={estilo.subtitulo}>{resumoDaCasa(pendencias)}</p>
 
-      {portasPorGrupo().map((grupo) => (
-        <section
-          aria-labelledby={`grupo-${grupo.grupo}`}
-          className={estilo.grupo}
-          key={grupo.grupo}
-        >
-          <h2 className={estilo.grupoTitulo} id={`grupo-${grupo.grupo}`}>
-            {grupo.titulo}
-          </h2>
-          <ul className={estilo.portas}>
-            {grupo.portas.map((porta) => (
-              <li key={porta.href}>
-                <Link className={estilo.porta} href={porta.href}>
-                  <span className={estilo.portaTitulo}>{porta.rotulo}</span>
-                  <span className={estilo.portaDescricao}>{porta.descricao}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
+      <Pendencias itens={pendencias} />
+
+      <h2 className={estilo.todas}>Todas as telas</h2>
+      <Portas />
     </main>
   );
 }

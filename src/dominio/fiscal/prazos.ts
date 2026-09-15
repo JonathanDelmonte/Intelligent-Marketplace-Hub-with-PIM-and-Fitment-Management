@@ -47,11 +47,22 @@ export const DIAS_QUE_JA_SAO_AGORA = 30;
 /** Fim da faixa "este mês": depois disso ainda dá para planejar. */
 export const DIAS_DO_HORIZONTE = 90;
 
+/**
+ * Comprimento máximo do rótulo curto.
+ *
+ * Existe porque o rótulo aparece no fim de uma linha da tela inicial, junto com a
+ * contagem de dias. Um título de oitenta caracteres ali empurra o resto da frase para
+ * a segunda linha e some com o número, que é o que se vai ler.
+ */
+export const LIMITE_DO_ROTULO_CURTO = 24;
+
 export interface PrazoFiscal {
   readonly id: string;
   /** Dia civil, `2027-01-01`. Comparado como texto, no fuso do vendedor. */
   readonly dia: string;
   readonly titulo: string;
+  /** O mesmo prazo em até `LIMITE_DO_ROTULO_CURTO` caracteres, para caber em linha. */
+  readonly rotuloCurto: string;
   /** O que acontece se a data chegar sem o preparo feito. */
   readonly consequencia: string;
   /** O que fazer antes. Tem de ser acionável, não informativo. */
@@ -72,6 +83,7 @@ export const PRAZOS: readonly PrazoFiscal[] = [
     id: 'cnpj_pf_cbs',
     dia: '2027-01-01',
     titulo: 'CNPJ exigido de pessoa física contribuinte de CBS',
+    rotuloCurto: 'CNPJ obrigatório',
     consequencia:
       'Vender como pessoa física deixa de ser possível nas plataformas que exigem nota. Sem CNPJ, a operação para.',
     oQueFazer:
@@ -83,6 +95,7 @@ export const PRAZOS: readonly PrazoFiscal[] = [
     id: 'nfe_ibs_cbs',
     dia: '2027-01-04',
     titulo: 'NF-e sem os grupos de IBS/CBS passa a ser rejeitada',
+    rotuloCurto: 'NF-e com IBS e CBS',
     consequencia:
       'Cada nota sai rejeitada até o cadastro fiscal do item estar completo — e nota rejeitada é venda que não pode ser enviada.',
     oQueFazer:

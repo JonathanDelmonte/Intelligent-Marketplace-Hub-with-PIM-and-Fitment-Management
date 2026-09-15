@@ -15,7 +15,7 @@
  * fora entra à mão. Os dois campos existem separados para a pessoa saber de onde
  * veio cada parte quando o número não fechar.
  */
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, sql, type SQL } from 'drizzle-orm';
 import type { PerfilId } from '@/dominio/catalogo/sku';
 import type { RegimeFiscal } from '@/dominio/precificacao/tipos';
 import type { Banco } from '@/infra/banco/cliente';
@@ -29,7 +29,7 @@ import {
 } from '@/infra/banco/schema';
 import { centavos, type Centavos } from '@/lib/dinheiro';
 import type { ProdutoParaClassificar } from './classificador';
-import { estadoFiscal, type CampoFiscal, type EstadoFiscal } from './codigos';
+import { OBRIGATORIOS_EM_2027, estadoFiscal, type CampoFiscal, type EstadoFiscal } from './codigos';
 import { avaliarRegulacao, type AvaliacaoDeRegulacao } from './regulada';
 import { avaliarTeto, type AvaliacaoDoTeto } from './teto';
 
@@ -63,6 +63,45 @@ export type CodigosParaGravar = Partial<Record<CampoFiscal | 'categoriaRegulada'
 
 export class RepositorioFiscal {
   constructor(private readonly db: Banco) {}
+
+  /**
+   * Quantos produtos ativos ainda não têm o cadastro que 2027 exige.
+   *
+   * Existe separado de `resumo` porque a tela inicial quer **o número**, e `resumo`
+   * carrega o catálogo inteiro para calcular o estado de cada item — custo que não se
+   * paga numa tela que só mostra a contagem.
+   *
+   * A condição é derivada de `OBRIGATORIOS_EM_2027`, e não escrita à mão em SQL: a
+   * lista é a mesma que `estadoFiscal` usa, então acrescentar um campo obrigatório
+   * amanhã muda os dois lugares de uma vez. SQL escrito à mão aqui seria a segunda
+   * definição da mesma regra, e as duas divergiriam na primeira mudança.
+   */
+  async contarPendentes(perfil: PerfilId): Promise<number> {
+    // Vazio aqui é "nulo ou só espaço", o mesmo critério do `vazio` de `codigos.ts`:
+    // campo gravado com espaço em branco não é cadastro preenchido.
+    const vazioNoBanco: Readonly<Record<CampoFiscal, SQL>> = {
+      ncm: sql`(${sku.ncm} is null or btrim(${sku.ncm}) = '')`,
+      cest: sql`(${sku.cest} is null or btrim(${sku.cest}) = '')`,
+      cst: sql`(${sku.cst} is null or btrim(${sku.cst}) = '')`,
+      cclasstrib: sql`(${sku.cclasstrib} is null or btrim(${sku.cclasstrib}) = '')`,
+    };
+
+    const linhas = await this.db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(sku)
+      .where(
+        and(
+          eq(sku.perfilId, perfil),
+          eq(sku.ativo, true),
+          sql.join(
+            OBRIGATORIOS_EM_2027.map((campo) => vazioNoBanco[campo]),
+            sql` or `,
+          ),
+        ),
+      );
+
+    return linhas[0]?.n ?? 0;
+  }
 
   /**
    * O cadastro fiscal de todos os SKUs ativos, com o que falta em cada um.

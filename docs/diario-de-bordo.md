@@ -26,6 +26,58 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-15 — A tela inicial passou a responder a pergunta de quem abre o sistema
+
+### 🔀 Nove cartões iguais não são um painel
+
+A tela inicial listava as nove telas, todas do mesmo tamanho, em ordem de construção.
+Para saber se havia trabalho era preciso abrir as nove — e descobrir que oito não tinham
+nada. Agora ela mostra seis números, cada um ligado à tela que o resolve, ordenados por
+urgência; as portas continuam abaixo, com a descrição, que é o que serve para aprender o
+sistema e para ir a uma tela que ninguém está cobrando.
+
+A decisão que vale registrar não é o layout: é **onde mora a regra de urgência**. Ela é
+regra de negócio disfarçada de estilo — "pedido sem prazo conta como atrasado",
+"consignação em risco é agora, não depois", "cadastro fiscal faltando com prazo dentro de
+trinta dias não espera o fim de semana" são afirmações sobre o que custa dinheiro. Estão
+em `inicio/apresentacao.ts`, funções puras com treze testes, e não dentro do JSX.
+
+### 🔀 A porta de entrada é a única tela que não pode quebrar
+
+As seis leituras vêm de seis repositórios, e cada uma falha sozinha: `tentar()` captura,
+registra no log com o nome da leitura, e devolve `null`. A linha então mostra `—` e "não
+deu para ler agora", e não zero — zero é uma afirmação sobre o banco, e aqui não se sabe.
+
+O caso que obrigou a pensar: **quando nenhuma leitura volta**, a frase do alto não pode
+ser "nada esperando por você". Seria o pior texto possível nesta tela — tranquilizar com
+banco fora do ar. Tem um terceiro texto para isso, e um teste que o fixa.
+
+Verificado no navegador, não suposto: com o Postgres parado, `/` responde 200, diz "Não
+deu para ler o estado do sistema agora", mostra as seis linhas com `—` e mantém as nove
+portas clicáveis.
+
+### 🧹 Duas definições da mesma pergunta, e um teste para elas não divergirem
+
+`RepositorioFiscal.resumo` carrega o catálogo inteiro para calcular o estado de cada
+item; a tela inicial só quer a contagem. Escrevi `contarPendentes`, que é uma consulta de
+agregação — e aí passaram a existir duas implementações da mesma pergunta, uma em SQL e
+uma em TypeScript.
+
+O custo foi aceito com duas salvaguardas: a condição em SQL é **derivada de
+`OBRIGATORIOS_EM_2027`**, a mesma lista que `estadoFiscal` usa (acrescentar um campo
+obrigatório muda os dois de uma vez), e um teste compara os dois resultados antes e depois
+de preencher o cadastro. Sem esse teste, a divergência apareceria como um número errado na
+tela inicial — o tipo de erro que ninguém confere.
+
+### 🐛 O título do prazo fiscal não cabia na linha do painel
+
+`PRAZOS` tem `titulo` de frase inteira — "NF-e sem os grupos de IBS/CBS passa a ser
+rejeitada" —, e no fim de uma linha de painel, junto com a contagem de dias, isso empurra
+o número para a segunda linha. Acrescentei `rotuloCurto` ao prazo, com limite declarado
+(`LIMITE_DO_ROTULO_CURTO`) e teste que recusa rótulo comprido e rótulo terminado em "...".
+Cortar o título no código daria um painel com frase truncada, que é pior que um rótulo
+próprio.
+
 ## 2026-09-15 — `uptime` responde em um segundo o que eu ia investigar por meia hora
 
 ### 🐛 O Postgres não morre: o contêiner reinicia — e o relógio é a prova

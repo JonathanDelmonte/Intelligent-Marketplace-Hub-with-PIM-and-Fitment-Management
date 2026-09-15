@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DIAS_DO_HORIZONTE,
   DIAS_QUE_JA_SAO_AGORA,
+  LIMITE_DO_ROTULO_CURTO,
   PRAZOS,
   URGENCIAS_DO_PRAZO,
   avaliarPrazos,
@@ -22,6 +23,16 @@ describe('PRAZOS', () => {
       expect(p.oQueFazer.length, p.id).toBeGreaterThan(40);
       expect(p.base.length, p.id).toBeGreaterThan(5);
       expect(p.regimes.length, p.id).toBeGreaterThan(0);
+    }
+  });
+
+  it('o rótulo curto cabe numa linha, e não é o título cortado', () => {
+    // A tela inicial mostra o rótulo no fim de uma linha, com a contagem de dias. Um
+    // título inteiro ali empurra o número para a segunda linha.
+    for (const p of PRAZOS) {
+      expect(p.rotuloCurto.length, p.id).toBeGreaterThan(3);
+      expect(p.rotuloCurto.length, p.id).toBeLessThanOrEqual(LIMITE_DO_ROTULO_CURTO);
+      expect(p.rotuloCurto.endsWith('...'), p.id).toBe(false);
     }
   });
 
