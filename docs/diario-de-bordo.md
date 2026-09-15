@@ -26,6 +26,93 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-15 — Fase 11: monitor, pós-venda e afiliados
+
+### 🐛 `codigosDeModelo` inventava código juntando números por uma palavra
+
+`codigosDeModelo("é 110 ou 220?")` devolvia `110OU220`. A junção de tokens vizinhos
+existe porque metade das fontes escreve `PA 21 G` com espaço, e as três guardas dela
+olhavam tamanho do fragmento, alternância de classe e tamanho do primeiro — nenhuma
+reparava que o fragmento do meio era **uma palavra**.
+
+O efeito não era teórico. `responder()` usa esta função desde a fase 6: uma pergunta de
+voltagem chegava como pergunta sobre um modelo inexistente, e o comprador receberia a
+resposta errada. Dois módulos, um bug, e ele só apareceu quando escrevi o detector de
+pergunta recorrente — que agrupa dúvidas pelo mesmo caminho e, por isso, tropeçou nele.
+
+Vale como padrão: **função compartilhada carrega bug compartilhado**, e o segundo
+chamador é quem costuma encontrá-lo. A guarda nova é uma lista curta de palavras do
+português que cabem no limite de quatro caracteres e alternam classe com um número.
+
+### 🐛 `par` casava dentro de "paralelo"
+
+No detector de tema da pergunta, `par` (de "vem em par?") estava na lista de quantidade
+e casava por substring — então "é original ou paralelo?" era classificada como pergunta
+de quantidade.
+
+Consertei o **casamento**, não a lista: palavra curta agora é comparada por fronteira.
+Tirar `par` da lista resolveria este caso e deixaria o próximo em pé — "par" mora dentro
+de parafuso, aparelho e separado, e a lista tem outras palavras de três letras.
+
+Fronteira escrita à mão em vez de `\b`, porque há termos numéricos na tabela (`110`,
+`220`) e `\b` trata dígito como caractere de palavra, o que daria comportamento
+diferente para os dois tipos de termo na mesma função.
+
+### 🔀 O agrupamento é o que separa alerta de inteligência, e é determinístico
+
+A especificação define M15 pela diferença entre "o preço do concorrente caiu 8%" e
+"caiu 8% **e** aumentou o estoque ao mesmo tempo… provável troca de fornecedor, não
+queima de estoque".
+
+Achei que a segunda frase fosse toda LLM, e não é. "Mesmo alvo, mesma semana" é regra;
+"preço caindo com estoque subindo" é uma combinação nomeável; e a conclusão — queima de
+estoque não vem com reposição — é uma frase escrita uma vez. O que sobra para o LLM é
+a leitura específica daquele caso, e ela entra **em cima** disso, não em vez disso.
+
+Então o exemplo que dá nome ao módulo sai sem chave de LLM. O que não sai é a nuance
+("três semanas depois de um fornecedor novo aparecer no 1688"), e isso é honesto: essa
+parte exige ligar eventos de fontes diferentes com julgamento.
+
+### 🔀 A mudança pequena não é evento, e dizer isso é metade da entrega
+
+Preço de marketplace oscila por centavo e por arredondamento de frete embutido. Um
+monitor que avisa de 0,5% é um monitor desligado na segunda semana — então
+`eventoDePreco` devolve `null` abaixo de 3%, e devolver `null` é parte do contrato.
+
+A severidade é assimétrica de propósito: queda de concorrente é mais grave que alta.
+Alta é oportunidade e pode esperar; queda come a venda de hoje.
+
+### 🔀 Sem clique, a conversão é nula e não zero
+
+No rastreio de afiliados, zero conversão sobre zero clique não é "o grupo não
+converte" — é "ninguém clicou". As duas leituras levam a ações opostas: uma manda mexer
+na oferta, a outra no texto do post e no horário. Então `conversaoBp` é `null` sem
+clique, com a frase que diz qual é qual.
+
+Mesmo raciocínio do dossiê sem achado e da referência de preço sem observação: **falta
+de dado tem nome próprio**, e colapsá-la num zero é a forma mais comum de o sistema
+mentir sem mentir.
+
+### 🔀 No grupo de ofertas, o limite não é técnico
+
+É a paciência de quem lê. A especificação dá o número que mata — 40 por dia silencia o
+grupo — e o detalhe que torna isso perigoso é que grupo silenciado **não dá erro**: não
+aparece em log, não falha, e continua recebendo publicação para ninguém.
+
+Por isso o teto diário e o espaçamento são a entrega deste item, e não uma precaução em
+volta dela. Oito por dia e 45 minutos são escolha declarada, e ficam nomeados para
+ajustar com taxa de saída do grupo na mão — a medida que importa, e que não existe ainda.
+
+### 🧹 Dois `as` que eu escrevi e tirei na mesma sessão
+
+`as PontosBase` no cálculo de conversão e `as MotivoDeParada` na leitura do dossiê. Os
+dois foram atalho para fazer o compilador calar num lugar onde ele estava certo, e os
+dois tinham conserto de uma linha: `pontosBase()` na borda, e `$type` no schema.
+
+Anotado porque a tentação foi idêntica nos dois casos e o custo era baixo nos dois —
+que é exatamente quando a regra das convenções vale: se `as` fosse aceitável quando o
+conserto é barato, ele apareceria em todo lugar onde o conserto é barato.
+
 ## 2026-09-15 — Fase 10: a máquina do prospector, separada do julgamento
 
 ### 🔀 O que é máquina e o que é julgamento, e por que a linha fica ali

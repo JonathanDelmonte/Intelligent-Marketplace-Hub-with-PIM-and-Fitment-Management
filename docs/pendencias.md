@@ -29,6 +29,11 @@ julgamento binário (5.4) e a **sugestão** de NCM/CEST (9.1). Também os extrat
 ingestão 3.2 a 3.6 — anúncio, listagem, catálogo de distribuidor, PDF de tabela de
 preços e imagem de tabela.
 
+Também a **leitura** do monitor (M15 — 11.1): a detecção, a severidade e o agrupamento
+estão prontos, e a combinação conhecida já sai com leitura determinística. O que falta é
+a hipótese específica de cada caso — ligar eventos de fontes diferentes com julgamento,
+que é o que a especificação chama de inteligência em vez de alerta.
+
 Também o **executor do prospector** (M6): a máquina de fronteira está pronta e testada,
 e o que falta é o laço que, a cada passo, pede ao LLM que atribua valor, levante
 hipótese e decida em quem acreditar. `dominio/prospector` não conhece LLM de propósito
@@ -371,6 +376,23 @@ passam a morar, e isso é schema — não cabia na tela que faltava para a fase 
 
 **Quando deixa de servir:** no primeiro anúncio publicado sem peso que trouxer frete
 comido, ou na primeira devolução por voltagem.
+
+---
+
+### 3.8 A fase 11 não tem tela nenhuma
+
+Monitor, queda real de preço, pergunta recorrente e fila de afiliados são funções puras
+com teste, e **nenhuma delas aparece na interface**. O mesmo estado em que M8 ficou da
+fase 1 até a 8.
+
+**Por que foi assim:** as regras são o que não se pode errar — o teto do grupo, o corte
+de desconto, o agrupamento de eventos — e elas se testam sem tela. A tela é onde a ordem
+das informações importa, e ordenar informação que ninguém viu ainda é palpite.
+
+**O que falta, em ordem de valor:** a caixa de eventos agrupados (é o que se olha toda
+manhã), a lista de dúvidas recorrentes por anúncio (é conserto de descrição, feito em
+lote), e a fila de ofertas com o botão de publicar. O envio ao grupo em si depende de
+canal — e canal é decisão do dono, não do código.
 
 ---
 

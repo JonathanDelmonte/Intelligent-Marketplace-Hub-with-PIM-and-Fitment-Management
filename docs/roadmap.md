@@ -596,12 +596,45 @@ mesmo alvo duas vezes continua o dossiê em vez de criar um segundo.
 
 | #    | Entrega                                                             | Estado |
 | ---- | ------------------------------------------------------------------- | ------ |
-| 11.1 | Monitor com leitura, hipótese, recomendação e severidade            | ⬜     |
-| 11.2 | Agrupamento de eventos relacionados antes de avisar                 | ⬜     |
-| 11.3 | M16: resposta a pergunta de comprador a partir de M4, como rascunho | ⬜     |
-| 11.4 | M16: detector de pergunta recorrente                                | ⬜     |
-| 11.5 | M13: detector de queda real de preço contra mediana de 90 dias      | ⬜     |
-| 11.6 | M13: link de afiliado, fila de publicação espaçada, rastreio        | ⬜     |
+| 11.1 | Monitor com leitura, hipótese, recomendação e severidade            | 🚧     |
+| 11.2 | Agrupamento de eventos relacionados antes de avisar                 | ✅     |
+| 11.3 | M16: resposta a pergunta de comprador a partir de M4, como rascunho | 🚧     |
+| 11.4 | M16: detector de pergunta recorrente                                | ✅     |
+| 11.5 | M13: detector de queda real de preço contra mediana de 90 dias      | ✅     |
+| 11.6 | M13: link de afiliado, fila de publicação espaçada, rastreio        | ✅     |
+
+**Quatro fechadas; 11.1 e 11.3 em 🚧 pela metade que depende de fora.** Em 11.1 a
+detecção, a severidade e o agrupamento estão prontos — falta a **leitura** por LLM, que
+é a hipótese em linguagem natural. Em 11.3 o rascunho existe desde a fase 6
+(`responder()` monta a resposta a partir da ficha de M4, com as fontes); falta o
+**envio**, que depende da API do ML e que a especificação já dizia para deixar manual
+no começo.
+
+**O agrupamento é o que separa alerta de inteligência, e é determinístico.** "Mesmo
+alvo, mesma semana" é regra, não opinião — e a combinação conhecida ganha leitura
+própria: preço caindo **e** estoque subindo na mesma semana não é queima de estoque,
+porque queima de estoque não vem com reposição. É fornecedor novo, e aí o piso do nicho
+baixou de forma permanente. É exatamente o exemplo com que a especificação define M15, e
+ele sai sem LLM.
+
+**A mudança pequena não é evento.** Abaixo de 3% é oscilação de arredondamento e frete
+embutido; avisar dela treina a pessoa a ignorar o painel. E queda de concorrente é mais
+grave que alta, de propósito: alta é oportunidade e pode esperar, queda come a venda
+hoje.
+
+**Em 11.5, a referência é a mediana de 90 dias, nunca o "preço de" anunciado** — que é
+escrito pelo vendedor e não é evidência de nada. Quatro vereditos, e `preco_inflado`
+existe para nomear o truque de subir para depois baixar.
+
+**Em 11.6 o limite não é técnico: é a paciência de quem lê o grupo.** Grupo silenciado
+não dá erro e continua recebendo publicação para ninguém, então o teto diário é a
+entrega. E o rastreio devolve conversão **nula** sem clique, porque zero afirmaria que o
+grupo não converte quando o que houve foi ninguém clicar.
+
+**Um defeito antigo caiu junto:** `codigosDeModelo` juntava `110 ou 220` no código
+`110OU220`, e `responder()` tratava pergunta de voltagem como pergunta sobre um modelo
+inexistente. Apareceu ao escrever o detector de pergunta recorrente, que agrupa pelo
+mesmo caminho.
 
 ---
 
