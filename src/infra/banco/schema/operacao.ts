@@ -18,7 +18,15 @@ import {
   unique,
   uuid,
 } from 'drizzle-orm/pg-core';
-import { auditoria, centavos, fonteEnum, id, plataformaEnum, tipoAnuncioEnum } from './comum';
+import {
+  auditoria,
+  centavos,
+  fonteEnum,
+  id,
+  plataformaEnum,
+  procedencia,
+  tipoAnuncioEnum,
+} from './comum';
 import { sku } from './catalogo';
 import { perfilVendedor } from './perfil';
 
@@ -59,6 +67,49 @@ export const anuncio = pgTable(
  * plataforma efetivamente cobrou, para a conferência de repasse comparar com o
  * que M8 previu. É onde aparecem as taxas que ninguém previu.
  */
+/**
+ * Pergunta de comprador, como ela chegou.
+ *
+ * ## Por que existe
+ *
+ * O detector de pergunta recorrente (M16) precisa de **cinco** perguntas parecidas
+ * para acusar o anúncio, e cinco não chegam de uma vez: chegam ao longo de semanas.
+ * Sem tabela, a tela só conseguiria contar o que foi colado naquele instante, e o
+ * detector praticamente nunca dispararia.
+ *
+ * ## Por que o texto fica cru
+ *
+ * O tema e o código de modelo são **recalculados na leitura**, e não gravados: a
+ * gramática de modelo melhora (aconteceu duas vezes na fase 6), e pergunta guardada
+ * com o tema velho ficaria classificada errado para sempre. O que se guarda é o que
+ * o comprador escreveu.
+ *
+ * `anuncio_externo` é texto livre, e não referência: a pergunta vem do painel da
+ * plataforma, com o id **da plataforma**, e exigir que o anúncio já exista aqui faria
+ * perder a pergunta — que é justamente o dado que ensina o que falta no anúncio.
+ */
+export const perguntaRecebida = pgTable(
+  'pergunta_recebida',
+  {
+    id: id(),
+    perfilId: uuid('perfil_id')
+      .notNull()
+      .references(() => perfilVendedor.id, { onDelete: 'cascade' }),
+    /** Identificador do anúncio na plataforma, como aparece no painel. */
+    anuncioExterno: text('anuncio_externo').notNull(),
+    texto: text('texto').notNull(),
+    recebidaEm: timestamp('recebida_em', { withTimezone: true }).notNull().defaultNow(),
+    /** Hash do texto normalizado, para colar a mesma lista duas vezes não duplicar. */
+    hashTexto: text('hash_texto').notNull(),
+    ...procedencia,
+    ...auditoria,
+  },
+  (t) => [
+    index('idx_pergunta_perfil').on(t.perfilId, t.recebidaEm),
+    unique('uq_pergunta_hash').on(t.perfilId, t.anuncioExterno, t.hashTexto),
+  ],
+);
+
 export const pedido = pgTable(
   'pedido',
   {

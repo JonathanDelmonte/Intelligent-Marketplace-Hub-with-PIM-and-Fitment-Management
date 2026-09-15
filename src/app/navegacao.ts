@@ -67,6 +67,13 @@ export const PORTAS: readonly Porta[] = [
     grupo: 'hoje',
   },
   {
+    href: '/perguntas',
+    rotulo: 'Perguntas',
+    descricao:
+      'A mesma dúvida repetida é o anúncio pedindo conserto. Guarda as perguntas e diz o que acrescentar na descrição.',
+    grupo: 'hoje',
+  },
+  {
     href: '/importar',
     rotulo: 'Importar',
     descricao:

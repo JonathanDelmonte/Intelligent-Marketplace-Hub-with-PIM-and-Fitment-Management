@@ -198,9 +198,10 @@ const MAX_FRAGMENTO = 4;
  * Palavras curtas do português que **não** são fragmento de código.
  *
  * Todas cabem no limite de quatro caracteres e alternam classe com um número vizinho,
- * então sem esta lista elas entram em junção: `110 ou 220` produz `110OU220`, e `de 21
- * cm` produz `DE21`. A lista é curta de propósito — palavra que aparece entre números
- * numa pergunta de comprador, e nada mais.
+ * então sem esta lista elas entram em junção: `110 ou 220` produz `110OU220`, `de 21
+ * cm` produz `DE21`, e `vem 1 ou 2 unidades` produz `VEM1`. A lista é curta de
+ * propósito — palavra que aparece colada a número em pergunta de comprador, e nada
+ * mais.
  */
 const PALAVRAS_QUE_NAO_SAO_FRAGMENTO = new Set([
   'a',
@@ -225,6 +226,19 @@ const PALAVRAS_QUE_NAO_SAO_FRAGMENTO = new Set([
   'sem',
   'um',
   'uma',
+  // Verbos curtos que aparecem imediatamente antes de número em pergunta de
+  // comprador: "vem 1 ou 2 unidades?" produzia o código inexistente `VEM1`, e a
+  // pergunta ia para o tema de compatibilidade em vez do de quantidade. Achado na
+  // tela de perguntas, com pergunta escrita como as pessoas escrevem.
+  'era',
+  'fica',
+  'sao',
+  'ser',
+  'tem',
+  'vai',
+  'vao',
+  'veio',
+  'vem',
 ]);
 
 /**

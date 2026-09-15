@@ -112,6 +112,12 @@ describe('codigosDeModelo', () => {
     expect(codigosDeModelo('é 110 ou 220?')).toEqual([]);
     expect(codigosDeModelo('tem de 21 cm?')).toEqual([]);
     expect(codigosDeModelo('kit com 2 unidades')).toEqual([]);
+    // Segunda ocorrência, achada na tela de perguntas: `vem 1 ou 2 unidades?`
+    // produzia `VEM1`, e a dúvida de quantidade virava dúvida de compatibilidade
+    // sobre um modelo inexistente. Verbo curto antes de número é o mesmo caso.
+    expect(codigosDeModelo('vem 1 ou 2 unidades?')).toEqual([]);
+    expect(codigosDeModelo('tem 2 anos de garantia?')).toEqual([]);
+    expect(codigosDeModelo('vai 3 meses?')).toEqual([]);
   });
 
   it('junta token separado por espaço', () => {

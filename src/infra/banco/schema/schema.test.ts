@@ -26,6 +26,10 @@ const OPERACIONAIS = [
   // balcão, com o que ele decidiu. Não é conhecimento do mundo — o preço
   // praticado que embasou o veredito é, e mora em `produto_externo`.
   'leitura',
+  // Pergunta de comprador é operacional: é pergunta feita no anúncio DESTE vendedor,
+  // e é o anúncio dele que ela acusa. O que é conhecimento do mundo é a
+  // compatibilidade que a resposta usa, e essa mora em `compatibilidade`.
+  'pergunta_recebida',
 ] as const;
 
 /**

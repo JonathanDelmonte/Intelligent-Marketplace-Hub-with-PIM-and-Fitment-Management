@@ -26,6 +26,64 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-15 — Duas telas a mais, e o que elas acharam no domínio
+
+### 🔀 A pergunta de comprador passou a ser gravada, e isso mudou o desenho
+
+O detector de pergunta recorrente precisa de **cinco** perguntas parecidas para acusar
+o anúncio, e cinco não chegam de uma vez: chegam ao longo de semanas. A primeira versão
+da tela ia processar o que estivesse colado na caixa e esquecer — e nesse desenho o
+detector praticamente nunca dispararia.
+
+Então entrou tabela: `pergunta_recebida`, com `perfil_id` (pergunta é sobre **o seu**
+anúncio) e o **texto cru**. Tema e código de modelo são recalculados na leitura, e não
+gravados: a gramática de modelo melhora — melhorou duas vezes na fase 6 e mais uma hoje
+—, e pergunta classificada com a gramática velha ficaria errada para sempre.
+
+`anuncio_externo` é texto livre, e não referência: a pergunta vem do painel da
+plataforma, com o id da plataforma, e exigir que o anúncio já exista aqui perderia
+justamente o dado que ensina o que falta no anúncio.
+
+### 🐛 `vem 1 ou 2 unidades?` produzia o código de modelo `VEM1`
+
+Terceira ocorrência da mesma família: a junção de tokens vizinhos, que existe porque
+metade das fontes escreve `PA 21 G` com espaço, volta a inventar código quando o
+fragmento do meio é uma **palavra do português**. `110 ou 220` foi a primeira, `de 21 cm`
+a segunda, e agora um verbo curto antes de número.
+
+O efeito: a pergunta de quantidade era classificada como compatibilidade, com um modelo
+que não existe — e o "o que acrescentar" mandava pôr `VEM1` no título.
+
+A guarda ganhou os verbos curtos que aparecem colados a número em pergunta de comprador
+(vem, tem, vai, era, ser, fica…). O que vale registrar não é a lista: é que **o bug só
+aparece com texto escrito como as pessoas escrevem**. Os testes da fase 6 usavam títulos
+de anúncio; a tela usa pergunta de comprador, e a terceira ocorrência apareceu no
+primeiro lote realista que passou por ela.
+
+### 🐛 A lista de palavras do tema estava no singular, e as pessoas escrevem no plural
+
+`unidade` estava na tabela, e a pergunta real era "vem 1 ou 2 **unidades**?". Com
+casamento por palavra inteira — que foi o conserto certo do bug do `par` dentro de
+"paralelo" — o plural não casa, e a pergunta caía em "outro".
+
+O conserto é um `s?` no fim da fronteira, que é o plural do português na maioria dos
+casos. Plural irregular continua entrando na lista à mão: `embalagem` e `embalagens` não
+se resolvem com um `s`.
+
+Fica o par de lições, que é o mesmo dos dois lados: **casamento estrito precisa de
+morfologia**, e a forma de descobrir qual falta é passar texto de verdade pela função.
+
+### 🐛 Escrever `̀` numa ferramenta que serializa JSON grava o caractere, não o escape
+
+Quinta ocorrência da armadilha que o `verify:fontes` existe para pegar, e a primeira em
+que ela apareceu no meio de um regex: eu escrevi a faixa de diacríticos combinantes como
+escape, a ferramenta interpretou o escape, e o arquivo recebeu os bytes.
+
+O check pegou na primeira execução, com linha e coluna. E o conserto que evita a
+armadilha de vez, em vez de escrever o escape com mais cuidado: usar a **propriedade
+Unicode** — `/\p{M}/gu` casa marca combinante, é mais legível que a faixa numérica, e
+não tem `\u` nenhum para alguém interpretar no caminho.
+
 ## 2026-09-15 — Trinta classes definidas dez vezes, e o que elas diziam de diferente
 
 ### 🐛 `.botao` era preenchido em duas telas e de contorno em três

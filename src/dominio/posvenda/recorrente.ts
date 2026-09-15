@@ -69,7 +69,10 @@ const PALAVRAS_DO_TEMA: readonly (readonly [
     'medida',
     ['medida', 'tamanho', 'diametro', 'comprimento', 'altura', 'largura', 'cm', 'mm', 'polegada'],
   ],
-  ['quantidade', ['quantas', 'quantos', 'vem quantos', 'unidade', 'par', 'kit', 'embalagem']],
+  [
+    'quantidade',
+    ['quantas', 'quantos', 'vem quantos', 'unidade', 'par', 'kit', 'embalagem', 'embalagens'],
+  ],
   ['prazo', ['prazo', 'quando chega', 'demora', 'entrega', 'frete', 'chega em']],
   ['garantia', ['garantia', 'troca', 'devolucao', 'defeito']],
   ['originalidade', ['original', 'generico', 'paralelo', 'similar', 'nota fiscal']],
@@ -104,12 +107,17 @@ function normalizar(texto: string): string {
  *
  * Termo de uma palavra é comparado por fronteira; termo com espaço ("vem quantos") é
  * comparado como trecho, porque a fronteira do primeiro e do último já basta.
+ *
+ * O `s?` no fim é o plural do português, e ele custou um caso real: a lista tinha
+ * `unidade` e a pergunta era "vem 1 ou **2 unidades**?", que não casava com fronteira
+ * estrita e caía em "outro". Plural irregular continua entrando na lista à mão —
+ * `embalagem` e `embalagens` não se resolvem com um `s`.
  */
 function contemTermo(texto: string, termo: string): boolean {
   if (termo.includes(' ')) return texto.includes(termo);
   // Fronteira escrita à mão em vez de `\b`: `\b` trata dígito como palavra, e aqui há
   // termos numéricos ("110", "220") que precisam da mesma regra das alfabéticas.
-  return new RegExp(`(^|[^a-z0-9])${termo}([^a-z0-9]|$)`).test(texto);
+  return new RegExp(`(^|[^a-z0-9])${termo}s?([^a-z0-9]|$)`).test(texto);
 }
 
 /**

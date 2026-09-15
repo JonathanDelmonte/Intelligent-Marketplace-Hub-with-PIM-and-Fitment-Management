@@ -44,6 +44,14 @@ describe('assuntoDaPergunta', () => {
     expect(assuntoDaPergunta('é 110 ou 220?').tema).toBe('voltagem');
     expect(assuntoDaPergunta('qual o diâmetro em mm?').tema).toBe('medida');
     expect(assuntoDaPergunta('vem quantas unidades?').tema).toBe('quantidade');
+    // `vem 1 ou 2 unidades?` era classificada como compatibilidade, porque `vem 1`
+    // virava um código de modelo. É pergunta de quantidade, e a diferença decide o
+    // que acrescentar no anúncio.
+    expect(assuntoDaPergunta('vem 1 ou 2 unidades?').tema).toBe('quantidade');
+    expect(assuntoDaPergunta('vem 1 ou 2 unidades?').codigo).toBeNull();
+    // O plural também: a lista tem `unidade`, e a pergunta real vem no plural.
+    expect(assuntoDaPergunta('quantas unidades vêm?').tema).toBe('quantidade');
+    expect(assuntoDaPergunta('vem em embalagens de 2?').tema).toBe('quantidade');
     expect(assuntoDaPergunta('qual o prazo de entrega?').tema).toBe('prazo');
     expect(assuntoDaPergunta('tem garantia?').tema).toBe('garantia');
     expect(assuntoDaPergunta('é original ou paralelo?').tema).toBe('originalidade');
