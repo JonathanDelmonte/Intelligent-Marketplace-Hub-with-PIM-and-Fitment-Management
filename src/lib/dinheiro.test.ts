@@ -8,6 +8,7 @@ import {
   centavosParaReais,
   formatarBRL,
   formatarPontosBase,
+  lerReaisDigitados,
   maior,
   menor,
   multiplicarPorFator,
@@ -286,6 +287,50 @@ describe('ratearPorPesos', () => {
     expect(() => ratearPorPesos(centavos(100), [])).toThrow(ValorMonetarioInvalido);
     expect(() => ratearPorPesos(centavos(100), [1, -1])).toThrow(ValorMonetarioInvalido);
     expect(() => ratearPorPesos(centavos(100), [1, Number.NaN])).toThrow(ValorMonetarioInvalido);
+  });
+});
+
+describe('lerReaisDigitados', () => {
+  it('aceita o que a pessoa realmente digita', () => {
+    expect(lerReaisDigitados('89')).toBe(centavos(8900));
+    expect(lerReaisDigitados('89,90')).toBe(centavos(8990));
+    expect(lerReaisDigitados('89.90')).toBe(centavos(8990));
+    expect(lerReaisDigitados(' R$ 89,90 ')).toBe(centavos(8990));
+    expect(lerReaisDigitados('0')).toBe(centavos(0));
+  });
+
+  it('vazio é nulo, não zero', () => {
+    // Campo não preenchido é diferente de valor zero, e quem chama decide o que
+    // fazer com cada um.
+    expect(lerReaisDigitados('')).toBeNull();
+    expect(lerReaisDigitados('   ')).toBeNull();
+    expect(lerReaisDigitados(null)).toBeNull();
+    expect(lerReaisDigitados(undefined)).toBeNull();
+  });
+
+  it('recusa forma ambígua em vez de chutar', () => {
+    // `1.2.3` não é erro recuperável: é número que ninguém sabe ler, e chutar
+    // significa gravar dinheiro inventado.
+    expect(lerReaisDigitados('1.2.3')).toBeNull();
+    expect(lerReaisDigitados('12,5,0')).toBeNull();
+    expect(lerReaisDigitados('muito')).toBeNull();
+    expect(lerReaisDigitados('-5')).toBeNull();
+  });
+
+  it('recusa mais de duas casas em vez de arredondar', () => {
+    expect(lerReaisDigitados('89,905')).toBeNull();
+  });
+
+  it('recusa separador de milhar de propósito', () => {
+    // Num campo de preço de peça, `1.200` é quase sempre `12,00` com o dedo errado,
+    // e aceitar como mil e duzentos transforma digitação em número confiante.
+    expect(lerReaisDigitados('1.200')).toBeNull();
+    expect(lerReaisDigitados('1.200,00')).toBeNull();
+  });
+
+  it('valor fora do inteiro seguro é "não dá para ler", não exceção', () => {
+    // Quem chama é um formulário: ele precisa de um "não", não de um `throw`.
+    expect(lerReaisDigitados('99999999999999999999')).toBeNull();
   });
 });
 

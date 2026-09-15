@@ -129,6 +129,45 @@ export function percentualParaPontosBase(percentual: number): PontosBase {
 
 // ─── Leitura ─────────────────────────────────────────────────────────────────
 
+/**
+ * Forma de valor em reais que uma pessoa digita num formulário.
+ *
+ * Tolerante com o que é só apresentação — `R$`, espaço, vírgula ou ponto decimal —
+ * e **intolerante com forma ambígua**, que é onde está o valor. `1.2.3` e `12,5,0`
+ * não são erro recuperável: são número que ninguém sabe ler, e chutar significa
+ * gravar dinheiro inventado.
+ *
+ * Separador de milhar é recusado de propósito. Num campo de preço de peça, `1.200`
+ * é quase sempre `12,00` com o dedo errado, e aceitar como mil e duzentos
+ * transforma erro de digitação em número confiante.
+ */
+const REAIS_DIGITADOS = /^\d+(?:[.,]\d{1,2})?$/;
+
+/**
+ * Lê um valor em reais digitado por uma pessoa. `null` quando não dá para ler.
+ *
+ * Existe porque este regex estava escrito **quatro vezes** em telas diferentes — no
+ * leitor, na consignação, na montagem de anúncio e no fiscal —, e regra de dinheiro
+ * repetida é regra que vai divergir: basta alguém afrouxar uma cópia para o mesmo
+ * formulário aceitar num lugar e recusar no outro.
+ *
+ * Vazio devolve `null`, não zero: campo não preenchido é diferente de valor zero, e
+ * quem chama decide o que fazer com cada um. Zero é valor legítimo aqui — receita
+ * externa de zero existe.
+ */
+export function lerReaisDigitados(texto: string | null | undefined): Centavos | null {
+  const limpo = (texto ?? '').replace(/r\$/gi, '').replace(/\s/g, '').trim();
+  if (limpo === '' || !REAIS_DIGITADOS.test(limpo)) return null;
+
+  try {
+    return reaisParaCentavos(limpo.replace(',', '.'));
+  } catch {
+    // `reaisParaCentavos` já recusa o que passa do inteiro seguro. Aqui isso é
+    // "não dá para ler", como qualquer outra forma inválida.
+    return null;
+  }
+}
+
 /** Converte para reais. Só usar na borda de apresentação. */
 export function centavosParaReais(valor: Centavos): number {
   return valor / 100;

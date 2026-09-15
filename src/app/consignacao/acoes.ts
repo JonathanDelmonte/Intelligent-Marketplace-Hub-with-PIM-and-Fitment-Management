@@ -17,7 +17,7 @@ import { RepositorioDeConsignacao } from '@/dominio/consignacao/repositorio';
 import { carregarPerfil } from '@/dominio/perfil';
 import { banco } from '@/infra/banco/cliente';
 import { criarRegistrador, nivelDoAmbiente } from '@/infra/log';
-import { reaisParaCentavos } from '@/lib/dinheiro';
+import { lerReaisDigitados } from '@/lib/dinheiro';
 import type { CodigoDeAviso } from './apresentacao';
 import { CAMINHO } from './constantes';
 
@@ -47,7 +47,7 @@ const quantidade = z.coerce.number().int().nonnegative();
 const precoEmReais = z
   .string()
   .trim()
-  .refine((v) => v === '' || /^\d+(?:[.,]\d{1,2})?$/.test(v), {
+  .refine((v) => v === '' || lerReaisDigitados(v) !== null, {
     message: 'use um valor como 40 ou 40,50',
   });
 
@@ -88,10 +88,7 @@ export async function cadastrarConsignacao(dados: FormData): Promise<void> {
       parceiroContato: entrada.parceiroContato === '' ? null : entrada.parceiroContato,
       skuId: entrada.skuId,
       qtdDisponivel: entrada.qtdDisponivel,
-      precoAcordadoRepasse:
-        entrada.precoAcordadoRepasse === ''
-          ? null
-          : reaisParaCentavos(entrada.precoAcordadoRepasse),
+      precoAcordadoRepasse: lerReaisDigitados(entrada.precoAcordadoRepasse),
     });
   } catch (erro) {
     log.erro('consignacao.cadastro_falhou', { erro });

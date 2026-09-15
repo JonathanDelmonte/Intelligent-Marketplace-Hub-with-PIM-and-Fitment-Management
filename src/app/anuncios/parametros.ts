@@ -17,22 +17,23 @@
 import { z } from 'zod';
 import { PLATAFORMAS } from '@/dominio/precificacao/tipos';
 import type { Plataforma } from '@/dominio/precificacao/tipos';
-import { reaisParaCentavos, type Centavos } from '@/lib/dinheiro';
+import { ZERO, lerReaisDigitados, type Centavos } from '@/lib/dinheiro';
 import { QUANTIDADE_PADRAO } from './constantes';
 
 /**
  * Preço como a pessoa digita: `89`, `89,90` ou `89.90`.
  *
- * Validado por regex e entregue como **texto** a `reaisParaCentavos`, que faz a
- * conta em string. Passar por `Number` no meio seria uma volta pelo ponto flutuante
- * — e é justamente o caminho que aquela função existe para evitar.
+ * A leitura é a de `lib/dinheiro`, compartilhada com as outras telas — o mesmo
+ * formulário não pode aceitar num lugar e recusar no outro.
  */
-const PRECO = /^\d+(?:[.,]\d{1,2})?$/;
 
 const esquema = z.object({
   sku: z.string().trim().uuid(),
   plataforma: z.enum(PLATAFORMAS),
-  preco: z.string().trim().regex(PRECO),
+  preco: z
+    .string()
+    .trim()
+    .refine((v) => lerReaisDigitados(v) !== null),
   qtd: z.coerce.number().int().positive().max(100_000).default(QUANTIDADE_PADRAO),
   /**
    * Tipo do produto, editável na tela.
@@ -98,7 +99,8 @@ export function lerParametros(
     parametros: {
       skuId: dados.sku,
       plataforma: dados.plataforma,
-      preco: reaisParaCentavos(dados.preco),
+      // `refine` já garantiu que dá para ler. O `?? ZERO` é o que evita um `as`.
+      preco: lerReaisDigitados(dados.preco) ?? ZERO,
       precoComoTexto: dados.preco,
       quantidade: dados.qtd,
       tipoProduto: dados.tipo === undefined || dados.tipo === '' ? null : dados.tipo,

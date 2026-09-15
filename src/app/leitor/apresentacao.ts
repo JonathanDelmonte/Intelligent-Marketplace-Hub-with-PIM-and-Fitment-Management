@@ -6,7 +6,7 @@
  * Errar por um fator de cem transforma "não compra" em "compra" e vice-versa.
  */
 import { ROTULO_DO_TIPO, formatarGtin, normalizarGtin, prefixoGs1 } from '@/dominio/gtin';
-import { formatarBRL, reaisParaCentavos, type Centavos } from '@/lib/dinheiro';
+import { centavos, formatarBRL, lerReaisDigitados, type Centavos } from '@/lib/dinheiro';
 import { ROTULO_DO_VEREDITO, type Veredito } from '@/dominio/leitor/veredito';
 
 export const IDIOMA = 'pt-BR';
@@ -52,21 +52,18 @@ export function rotuloDoVeredito(veredito: Veredito): string {
  * veredito confiante.
  */
 export function interpretarCusto(texto: string): Centavos | null {
-  const limpo = texto.replace(/r\$/gi, '').replace(/\s/g, '').trim();
-  if (limpo === '') return null;
-  if (!/^\d+(?:[.,]\d{1,2})?$/.test(limpo)) return null;
-
-  try {
-    const valor = reaisParaCentavos(limpo.replace(',', '.'));
-    return valor > 0 ? valor : null;
-  } catch {
-    return null;
-  }
+  // A leitura é a compartilhada de `lib/dinheiro`; o que é próprio do leitor é
+  // **exigir maior que zero**: custo zero no balcão não é custo, é campo em branco
+  // com um dedo no teclado, e viraria markup infinito no veredito.
+  const valor = lerReaisDigitados(texto);
+  return valor !== null && valor > 0 ? valor : null;
 }
 
 export function formatarReais(valor: number | null): string {
   if (valor === null) return '—';
-  return formatarBRL(valor as Centavos);
+  // `centavos()` em vez de `as Centavos`: o valor vem de coluna do banco, e é na
+  // fronteira que a validação acontece (convenções, seção 4).
+  return formatarBRL(centavos(valor));
 }
 
 export function formatarPercentual(pontosBase: number | null): string {
