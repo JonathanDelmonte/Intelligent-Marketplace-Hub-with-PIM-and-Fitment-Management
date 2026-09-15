@@ -36,15 +36,19 @@ const quantidade = z.coerce.number().int().nonnegative();
 /**
  * Preço em reais, do jeito que a pessoa digita: `40`, `40,50` ou `40.50`.
  *
- * Vazio é `null` e não zero — repasse não combinado é diferente de repasse de graça,
- * e é essa diferença que o fechamento usa para não pagar errado.
+ * Entrega **texto** para `reaisParaCentavos`, que já aceita vírgula e recusa mais de
+ * duas casas em vez de arredondar. Passar por `Number` antes seria uma volta pelo
+ * ponto flutuante sem ganho nenhum — e é exatamente o caminho que aquela função
+ * existe para evitar.
+ *
+ * Vazio é `null` e não zero: repasse não combinado é diferente de repasse de graça, e
+ * é essa diferença que o fechamento usa para não pagar errado.
  */
 const precoEmReais = z
   .string()
   .trim()
-  .transform((v) => (v === '' ? null : Number(v.replace(',', '.'))))
-  .refine((v) => v === null || (Number.isFinite(v) && v >= 0), {
-    message: 'preço inválido',
+  .refine((v) => v === '' || /^\d+(?:[.,]\d{1,2})?$/.test(v), {
+    message: 'use um valor como 40 ou 40,50',
   });
 
 const esquemaDeCadastro = z.object({
@@ -85,7 +89,7 @@ export async function cadastrarConsignacao(dados: FormData): Promise<void> {
       skuId: entrada.skuId,
       qtdDisponivel: entrada.qtdDisponivel,
       precoAcordadoRepasse:
-        entrada.precoAcordadoRepasse === null
+        entrada.precoAcordadoRepasse === ''
           ? null
           : reaisParaCentavos(entrada.precoAcordadoRepasse),
     });
