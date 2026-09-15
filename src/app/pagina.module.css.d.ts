@@ -4,6 +4,8 @@
  * classe errado compilaria.
  */
 declare const estilo: {
+  readonly grupo: string;
+  readonly grupoTitulo: string;
   readonly pagina: string;
   readonly porta: string;
   readonly portaDescricao: string;

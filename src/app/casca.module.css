@@ -1,0 +1,138 @@
+/*
+ * A casca do sistema: barra do topo e rodapé.
+ *
+ * Existia como estilo em linha dentro do `layout.tsx`, o que quer dizer: sem
+ * `:hover`, sem `:focus-visible` e sem media query — estilo em linha não tem estado.
+ * Uma barra de navegação sem retorno visual ao passar o mouse e sem contorno de foco
+ * é uma barra que não responde a quem usa teclado.
+ *
+ * Cores só de variável de tema, nunca literal (ADR 0003).
+ */
+
+.barra {
+  background: var(--cor-superficie);
+  border-bottom: 1px solid var(--cor-borda);
+  /*
+   * Fixa no topo porque as telas longas deste sistema — importar, fiscal, onde serve
+   * — são de trabalho em lista: rolar até o fim e ter de voltar ao topo para trocar de
+   * tela é atrito em cima de atrito.
+   */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.barraInterna {
+  align-items: center;
+  display: flex;
+  /*
+   * Quebra de linha não é enfeite: com dez portas a barra passava de 390px e a página
+   * inteira ganhava rolagem horizontal, em todas as telas. Uma linha de `flex` que não
+   * quebra é uma largura mínima escondida.
+   */
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  margin: 0 auto;
+  /* A mesma largura da tela mais larga do sistema, para a barra nunca parecer estreita. */
+  max-width: 76rem;
+  padding: 0.625rem 1.5rem;
+}
+
+.marca {
+  color: var(--cor-texto);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.marca:hover,
+.marca:focus-visible {
+  color: var(--cor-primaria);
+}
+
+.navegacao {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+}
+
+.grupo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* O traço separa os três momentos de trabalho sem gastar uma linha de título. */
+.grupo:not(:first-child) {
+  border-left: 1px solid var(--cor-borda);
+  padding-left: 1rem;
+}
+
+.porta {
+  border-radius: 999px;
+  color: var(--cor-texto-fraco);
+  display: block;
+  font-size: 0.8125rem;
+  padding: 0.3125rem 0.625rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.porta:hover {
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+}
+
+.porta:focus-visible {
+  outline: 2px solid var(--cor-primaria);
+  outline-offset: 2px;
+}
+
+/*
+ * A página atual é a única marcação de estado da barra, e é chapada de propósito:
+ * quem chega por um redirecionamento ou por um link de outra tela precisa saber onde
+ * caiu sem ler a URL.
+ */
+.portaAtual,
+.portaAtual:hover {
+  background: var(--cor-primaria);
+  color: var(--cor-superficie);
+  font-weight: 500;
+}
+
+/*
+ * No celular a barra sai do topo e cada grupo ganha a sua linha.
+ *
+ * Os dois ajustes são o mesmo problema: com dez portas em 390px a barra ocupa quatro
+ * linhas, e quatro linhas fixas no topo de uma tela de 844px são um quinto da tela
+ * gasto em menu. Sem o traço lateral — que numa linha quebrada aparece no começo dela,
+ * onde não separa nada — o agrupamento passa a ser dito pela quebra de linha.
+ */
+@media (max-width: 40rem) {
+  .barra {
+    position: static;
+  }
+
+  .grupo {
+    flex-basis: 100%;
+  }
+
+  .grupo:not(:first-child) {
+    border-left: 0;
+    padding-left: 0;
+  }
+}
+
+.rodape {
+  border-top: 1px solid var(--cor-borda);
+  color: var(--cor-texto-fraco);
+  font-size: 0.8125rem;
+  margin: 3rem auto 0;
+  max-width: 76rem;
+  padding: 1.25rem 1.5rem;
+}

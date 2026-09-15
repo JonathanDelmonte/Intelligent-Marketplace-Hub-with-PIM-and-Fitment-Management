@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import Link from 'next/link';
 import { lerAmbiente } from '@/config/ambiente';
 import { montarMarca, variaveisCssDaMarca } from '@/config/marca';
-import { PORTAS } from './navegacao';
+import { Barra } from './barra';
+import estilo from './casca.module.css';
 import './globals.css';
 
 /**
@@ -33,42 +33,9 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
   return (
     <html lang="pt-BR" style={variaveisCssDaMarca(marca.visual)}>
       <body>
-        <header
-          style={{
-            alignItems: 'center',
-            borderBottom: '1px solid var(--cor-borda)',
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '1.5rem',
-            padding: '0.875rem 1.5rem',
-          }}
-        >
-          <strong>{marca.nomeSistema}</strong>
-          {/*
-           * `flexWrap` não é enfeite: a barra é uma linha de `flex` e, com cinco
-           * portas, ela passava de 390px e a página inteira ganhava rolagem
-           * horizontal — em todas as telas, não só na nova. Medido no navegador ao
-           * acrescentar a quinta porta. Uma linha de `flex` que não quebra é uma
-           * largura mínima escondida.
-           */}
-          <nav style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.875rem' }}>
-            {PORTAS.map((item) => (
-              <Link key={item.href} href={item.href}>
-                {item.rotulo}
-              </Link>
-            ))}
-          </nav>
-        </header>
+        <Barra nomeSistema={marca.nomeSistema} />
         {children}
-        <footer
-          style={{
-            borderTop: '1px solid var(--cor-borda)',
-            color: 'var(--cor-texto-fraco)',
-            fontSize: '0.8125rem',
-            marginTop: '3rem',
-            padding: '1.25rem 1.5rem',
-          }}
-        >
+        <footer className={estilo.rodape}>
           {marca.copyright}
           {marca.creditoRodape !== null ? ` · ${marca.creditoRodape}` : ''}
         </footer>

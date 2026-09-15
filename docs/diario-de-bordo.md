@@ -26,6 +26,40 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-15 — A barra passou a dizer onde você está
+
+### 🔀 O único componente de cliente da casca existe para uma informação só
+
+Marcar a tela aberta precisa do caminho da URL, e no App Router o caminho só existe no
+cliente (`usePathname`). Um layout de servidor não o recebe.
+
+A alternativa era cada `page.tsx` passar o seu caminho para o layout. Custaria zero
+JavaScript e criaria um jeito silencioso de errar: a décima primeira tela esqueceria de
+passar, ficaria sem marca nenhuma, e nada quebraria — o tipo de bug que só aparece
+quando alguém repara. Um pedaço pequeno de JavaScript em toda página é o preço, e foi
+pago de propósito.
+
+### 🔀 No celular a barra não fica fixa, e é decisão de quem tem dez portas
+
+Fixa no topo, a barra é ganho claro nas telas longas de trabalho em lista — importar,
+fiscal, onde serve — onde rolar até o fim e ter de voltar para trocar de tela é atrito
+em cima de atrito.
+
+Em 390px, porém, as dez portas ocupam quatro linhas: 150px de menu fixo numa tela de
+844px é um quinto da tela gasto em navegação. Então `position: sticky` vale de 40rem
+para cima e a barra volta a rolar com a página abaixo disso. Medido no navegador, não
+suposto.
+
+O traço que separa os três grupos também sai no celular: numa linha quebrada ele aparece
+no começo dela, onde não separa nada. Lá o agrupamento é dito pela quebra de linha.
+
+### 🐛 Três colunas estreitas faziam os cartões da tela inicial saírem tortos
+
+`minmax(15rem, 1fr)` dava três colunas em 56rem, e a descrição de cada porta quebrava em
+até cinco linhas — cartões da mesma fileira com alturas muito diferentes. Com
+`minmax(20rem, 1fr)` são duas colunas largas, a descrição cabe em duas ou três linhas, e
+a fileira fica reta. Cartão largo é cartão baixo.
+
 ## 2026-09-15 — A interface parou de falar o nome das tabelas
 
 ### 🔀 Tela fala vendedor, código fala domínio — e a tradução mora num lugar só
