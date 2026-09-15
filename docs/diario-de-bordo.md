@@ -26,6 +26,30 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-15 — O contêiner parou o Postgres, e desta vez foi só isso
+
+### 🐛 Cluster parado com as bases intactas — o roteiro de reconstrução era maior que o problema
+
+Depois de uma pausa da sessão, a suíte de banco voltou a falhar com o sintoma da entrada
+"O contêiner reiniciou e levou o Postgres inteiro", da fase 8: teste de banco falhando em
+série, cada um esperando conexão até estourar. `pg_lsclusters` disse o que importava —
+cluster **`down`**, ainda na porta 5433, com o diretório de dados no lugar.
+
+`pg_ctlcluster 16 main start`, e nada além disso. A porta continuou 5433, o `pg_hba.conf`
+continuou com `trust` no laço local, e as duas bases continuaram com schema e com o dado
+de demonstração. O roteiro de sete passos da entrada anterior vale para quando o contêiner
+é reciclado de fato; este era o caso menor, e aplicar o roteiro grande teria recriado à toa
+o que já estava lá.
+
+A ordem certa de diagnóstico, então, é `pg_lsclusters` **antes** de qualquer conserto: ele
+separa "parado" de "sumiu", e são consertos de tamanhos muito diferentes. O sintoma nos
+testes é o mesmo nos dois casos.
+
+Nota sobre o tempo, que vale como sinal: `npm run check` com o banco fora **não** falha
+rápido. Cada teste de banco espera o timeout de conexão, e a suíte que roda em 40 segundos
+passou de cinco minutos antes de eu interrompê-la. Suíte subitamente lenta é sinal de banco
+fora, não de teste pesado.
+
 ## 2026-09-15 — Estado do roadmap: o que ⬜ escondia
 
 ### 🔀 Nove entregas passaram de ⬜ para 🔒, e a conta de ⬜ agora é zero
