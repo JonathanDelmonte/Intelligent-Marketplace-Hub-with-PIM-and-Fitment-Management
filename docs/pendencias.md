@@ -24,9 +24,15 @@ Nada aqui é problema de código. São decisões, contas e chaves.
 `LLM_API_KEY` está vazia em `.env.example` e não há provedor configurado.
 
 **O que fica parado, e é menos do que parecia:** a **chamada** de extração de
-registro estruturado (5.1), a **geração** de embedding (5.2) e a **execução** do
-julgamento binário (5.4). Também os extratores de ingestão 3.2 a 3.6 — anúncio,
-listagem, catálogo de distribuidor, PDF de tabela de preços e imagem de tabela.
+registro estruturado (5.1), a **geração** de embedding (5.2), a **execução** do
+julgamento binário (5.4) e a **sugestão** de NCM/CEST (9.1). Também os extratores de
+ingestão 3.2 a 3.6 — anúncio, listagem, catálogo de distribuidor, PDF de tabela de
+preços e imagem de tabela.
+
+A 9.1 é o caso mais fácil de ligar: o classificador está completo e testado, e onde
+ele senta é `infra/llm/ambiente.ts` — o **único** arquivo que precisa saber que
+provedor existe. Sem chave, a tela fiscal diz "ninguém sugeriu" e o campo continua
+preenchível à mão: nada no cadastro fiscal depende disso para ficar pronto.
 
 **O que não depende dela, e por isso está pronto e testado:** o contrato do registro
 extraído com a regra de `null` em vez de invenção, a forma canônica, o reconhecedor de
@@ -103,6 +109,28 @@ dono.
 
 ---
 
+### 1.5 Emissor de NF-e — trava a 9.5 (🔒)
+
+A especificação é explícita: "integrar emissor existente, **não escrever**. Começar
+pelo emissor gratuito da SEFAZ do estado."
+
+**O que falta é decisão e credencial, não código:** qual emissor, e o certificado
+digital A1 ou A3 da empresa. Nenhum dos dois existe neste ambiente, e nenhum dos dois
+é escolha de quem programa — emissor errado é retrabalho de semanas, e certificado é
+documento do dono.
+
+**O que já está pronto do lado de cá:** o cadastro por item que a nota exige (NCM,
+CST, cClassTrib), com validação de forma e a lista de pendência por SKU. É o
+pré-requisito real da emissão, e é o que tem prazo — a integração pode entrar depois
+da virada sem prejuízo; o cadastro, não.
+
+**O aviso que vale registrar:** escrever emissor de NF-e é um projeto próprio, com
+homologação em ambiente da SEFAZ, contingência e versionamento de layout. O ADR de
+capacidades vale aqui como em plataforma: integrar o que existe, e tratar a ausência
+como estado normal.
+
+---
+
 ## 2. Trava por dado que não existe neste ambiente
 
 Não é decisão nem código: é informação do mundo que só se consegue com acesso a
@@ -162,9 +190,9 @@ Ordem do roadmap, que é por utilidade e não por arquitetura. Nada aqui espera 
 
 ### 3.1 Telas que não existem
 
-Há nove telas: início, `/jobs` (com detalhe por job), `/leitor`, `/identidade`,
-`/compatibilidade`, `/fornecedores`, `/postagem`, `/consignacao` e `/anuncios`.
-**Não há tela de catálogo, de SKU nem de precificação.** O motor de margem (fase 1)
+Há dez telas: início, `/jobs` (com detalhe por job), `/leitor`, `/identidade`,
+`/compatibilidade`, `/fornecedores`, `/postagem`, `/consignacao`, `/anuncios` e
+`/fiscal`. **Não há tela de catálogo, de SKU nem de precificação.** O motor de margem (fase 1)
 e o repositório de SKU (3.10) seguem chamáveis por código e por teste, não por tela.
 
 A de anúncio fechou o próprio laço na parte que importa: monta, mostra o checklist,

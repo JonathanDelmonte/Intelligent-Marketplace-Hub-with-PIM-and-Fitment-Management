@@ -494,15 +494,54 @@ curto para a devolução que a fase 6 existe para evitar.
 
 | #   | Entrega                                                               | Estado |
 | --- | --------------------------------------------------------------------- | ------ |
-| 9.1 | Classificador de NCM/CEST com alternativas justificadas e confirmação | ⬜     |
-| 9.2 | CST e cClassTrib por SKU (rejeição de NF-e em 04/01/2027)             | ⬜     |
-| 9.3 | Controle de teto do MEI com projeção; avisos em 70% e 85%             | ⬜     |
-| 9.4 | Painel de prazos (01/01/2027, 04/01/2027)                             | ⬜     |
-| 9.5 | Integração com emissor de NF-e existente — não reescrever             | ⬜     |
-| 9.6 | Alerta de categoria regulada (ANVISA em suplemento)                   | ⬜     |
+| 9.1 | Classificador de NCM/CEST com alternativas justificadas e confirmação | 🚧     |
+| 9.2 | CST e cClassTrib por SKU (rejeição de NF-e em 04/01/2027)             | ✅     |
+| 9.3 | Controle de teto do MEI com projeção; avisos em 70% e 85%             | ✅     |
+| 9.4 | Painel de prazos (01/01/2027, 04/01/2027)                             | ✅     |
+| 9.5 | Integração com emissor de NF-e existente — não reescrever             | 🔒     |
+| 9.6 | Alerta de categoria regulada (ANVISA em suplemento)                   | ✅     |
 
 **Por que tem prazo:** esse cadastro com 20 SKUs é uma tarde; com 200 no meio da
 operação é uma semana perdida em janeiro.
+
+**A fase 9 fechou o que dá para fechar sem chave de LLM e sem emissor de NF-e.**
+Quatro entregas ✅, a 9.1 em 🚧 pelo mesmo motivo das de M3, e a 9.5 🔒. O prazo de
+janeiro deixou de ser uma data no papel: há tela que
+mostra quantos dias faltam, o que acontece na data, e o que fazer antes — com a base
+legal de cada prazo, para ser conferível.
+
+**9.4 mostra quanto tempo ainda dá para fazer com calma**, e não avisa no dia. O
+corte de trinta dias vem do trabalho que o prazo exige, não do calendário. Prazo de
+outro regime aparece marcado em vez de escondido, porque o regime muda: quem é CPF
+hoje pode ser MEI em dezembro.
+
+**9.3 lidera pela projeção, porque o acumulado sozinho avisa tarde.** 70% em setembro
+é tranquilo; 70% em abril vai estourar, e o acumulado é o mesmo número. A projeção é
+linear e declarada como hipótese — modelar sazonalidade exigiria histórico de anos
+que não existe, e projeção sazonal errada assusta mais que linear honesta. O teto é
+proporcional ao mês de abertura do CNPJ, senão o controle diria "tranquilo" para quem
+já estourou.
+
+**9.2 valida forma e deixa a lista aberta.** Erro de formato recusa, porque dígito a
+menos é digitação; valor fora da lista conhecida grava com aviso, porque a lista é o
+que este sistema conhece e não o que existe — recusar um código correto pararia a
+operação por ignorância do sistema. Ponto e espaço são ignorados, para dar para colar
+como está na tabela oficial.
+
+**9.6 vive no checklist do anúncio, não em relatório.** Anúncio irregular de
+categoria regulada é cancelado, e a hora de saber é antes de publicar. A marcação no
+SKU vence a detecção por palavra, sempre: é onde a pessoa decidiu.
+
+**A 9.1 está 🚧 e não ✅, pelo mesmo critério das entregas de M3.** O classificador
+existe, valida a resposta, ordena candidatos por certeza, descarta código fora de
+forma e é cacheado por conteúdo — e **não produz sugestão nenhuma hoje**, porque não
+há provedor de LLM. Marcar ✅ diria que a entrega funciona, e ela não funciona: o que
+está pronto é tudo menos a chamada.
+
+Sem chave, a tela diz "ninguém sugeriu" e explica que isso não trava nada — o campo
+continua preenchível à mão e o cadastro fica pronto do mesmo jeito. Ligar a chave é
+implementar `Chamador` em `infra/llm/ambiente.ts`, que é o único arquivo que precisa
+saber disso.
 
 ---
 

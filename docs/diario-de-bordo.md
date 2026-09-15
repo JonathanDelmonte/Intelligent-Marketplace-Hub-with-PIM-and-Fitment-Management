@@ -26,6 +26,122 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-15 — Fase 9: fiscal, e o regex de dinheiro escrito quatro vezes
+
+### 🔀 O alerta de teto do MEI lidera pela projeção, não pelo acumulado
+
+70% do teto em setembro é tranquilo. 70% em abril vai estourar. O acumulado é o
+**mesmo número** nos dois casos, e é por isso que ele sozinho avisa tarde — quando
+avisa, já não dá para fazer nada além de mudar de regime.
+
+Então há dois avisos, de naturezas diferentes: o acumulado cruzou 70% ou 85%, que é
+fato sobre o passado, e a projeção estoura no ritmo atual, que é hipótese sobre o
+futuro. A mensagem diz qual é qual, com essas palavras — "é hipótese, calculada em
+linha reta".
+
+A projeção linear é escolha declarada. Receita de reposição tem estação, e linear
+subestima quem vende em novembro e dezembro. Modelar sazonalidade exigiria histórico
+de anos que este sistema não tem, e projeção sazonal errada assusta mais que linear
+honesta. A linear erra para o lado conservador: quem projeta estouro com ela vai
+estourar mesmo.
+
+### 🐛 O teto proporcional era a diferença entre "tranquilo" e "já estourou"
+
+R$ 40.000 de receita é metade do teto cheio — tranquilo. E é quase todo o teto de
+quem abriu o CNPJ em julho, porque o teto do MEI é proporcional no ano de abertura.
+Sem isso o controle diria "com folga" para quem está a um mês do desenquadramento.
+
+Só apareceu ao escrever o teste do caso; a primeira versão dividia por doze sem olhar
+o mês de abertura. Trunca em vez de arredondar para cima, porque arredondar daria ao
+vendedor um teto que ele não tem.
+
+### 🔀 Erro de formato recusa; valor fora da lista grava com aviso
+
+O cadastro fiscal tem duas formas de estar errado, e elas merecem tratamentos
+opostos.
+
+NCM com sete dígitos é **digitação**, não opinião: recusa, porque gravar viraria nota
+rejeitada em janeiro descoberta com o pedido esperando postagem. CST com um valor que
+não está na minha lista de valores comuns é outra coisa: a lista é o que **eu**
+conheço, não o que existe, e recusar um código correto pararia a operação por causa da
+minha ignorância. Esse grava, com aviso.
+
+É a pior assimetria possível de errar ao contrário — um sistema que recusa o certo e
+aceita o errado.
+
+### 🔀 A sugestão de NCM nunca grava, e o botão dela é separado
+
+A especificação pede "exige confirmação sua", e a forma mais fácil de trair isso
+seria um botão que sugere e grava de uma vez. Então são dois formulários: "Sugerir
+NCM" preenche o campo e mostra a justificativa; "Gravar" é outro clique.
+
+NCM errado não dá erro na hora — dá nota emitida com tributo errado, descoberta na
+fiscalização. É o tipo de erro em que a confirmação humana não é burocracia.
+
+A justificativa é obrigatória no schema da resposta, com tamanho mínimo. Sem ela não
+existe a "revisão de trinta segundos" que a especificação promete: `84212100` sozinho
+não dá para conferir.
+
+### 🧹 O mesmo regex de dinheiro estava escrito quatro vezes
+
+`^\d+(?:[.,]\d{1,2})?$` aparecia no leitor, na consignação, na montagem de anúncio e
+na tela fiscal. Cada cópia nasceu de um formulário novo, e nenhuma era errada — o
+problema é que regra de dinheiro repetida é regra que vai divergir: basta alguém
+afrouxar uma cópia para o mesmo valor ser aceito numa tela e recusado na outra.
+
+Virou `lerReaisDigitados` em `lib/dinheiro`, com a versão mais pensada das quatro (a
+do leitor, que recusa separador de milhar de propósito: num campo de preço de peça,
+`1.200` é quase sempre `12,00` com o dedo errado). Devolve nulo em vez de lançar,
+porque quem chama é formulário e formulário precisa de um "não", não de uma exceção.
+
+O que era específico ficou específico: o leitor continua exigindo maior que zero,
+porque custo zero no balcão é campo em branco com um dedo no teclado, e viraria markup
+infinito no veredito.
+
+### 🐛 `Record<string, …>` escondeu o nome errado de uma coluna
+
+`gravarCodigos` montava o objeto de atualização num `Record<string, string | null |
+Date>` e escrevia `categoria_regulada` — o nome da **coluna**. O Drizzle espera
+`categoriaRegulada`, o nome da **propriedade**, e aceita chave desconhecida em
+silêncio: a gravação simplesmente não aconteceria, sem erro nenhum.
+
+O tipo solto foi o que escondeu. Trocado por `Partial<typeof sku.$inferInsert>`, que
+recusa a chave errada na compilação, e o teste de banco grava e relê a marcação para
+provar.
+
+É a mesma família do `as` que as convenções proíbem: tipo largo demais não é
+conveniência, é o compilador desligado no lugar exato onde ele ajudaria.
+
+### 🐛 Três testes meus não alcançavam a guarda que nomeavam
+
+Escrevi testes de "descarta NCM fora de forma" com códigos de sete caracteres — que o
+**schema Zod** recusa antes, então nunca chegavam à guarda. A guarda existe para
+caractere errado (`8421.21.0X`, dez caracteres, passa o schema), e é isso que os
+testes testam agora.
+
+O terceiro pedia `Orcamento(1_000, 0)` esperando estouro, e `Orcamento` recusa teto
+zero na construção — com razão: orçamento zero é configuração errada, não execução sem
+orçamento. Agora o teto é de uma chamada, a primeira passa e a segunda estoura.
+
+Teste que passa sem exercitar o que nomeia é pior que teste ausente: ele afirma uma
+garantia que não existe.
+
+### 🔀 O tom de prazo vencido é neutro, não alerta
+
+Parece errado à primeira vista, e é deliberado: ou o prazo foi cumprido, e não há
+alerta nenhum, ou não foi — e aí o alerta de verdade é a nota sendo rejeitada, não a
+data no painel. Pintar de vermelho para sempre uma data que passou treina a pessoa a
+ignorar a cor.
+
+Por outro lado, prazo vencido **não desaparece** da lista. Desaparecer faria parecer
+que estava tudo bem.
+
+### 🐛 "Os 1 produtos ativos estão com NCM preenchido"
+
+Concordância no plural fixo, e um produto só é exatamente o caso de quem está
+começando — a primeira pessoa a ver a tela ia ver a frase errada. Só apareceu no
+navegador; nenhum teste lia a frase com contagem 1.
+
 ## 2026-09-15 — Fase 8: a tela de anúncio, e o banco que o contêiner levou
 
 ### 🔀 A montagem do anúncio mora na URL, não em estado de sessão
