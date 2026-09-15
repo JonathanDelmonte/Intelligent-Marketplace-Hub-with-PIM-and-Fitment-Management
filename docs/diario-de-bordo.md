@@ -26,6 +26,47 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-15 — `uptime` responde em um segundo o que eu ia investigar por meia hora
+
+### 🐛 O Postgres não morre: o contêiner reinicia — e o relógio é a prova
+
+Segunda queda do banco no mesmo dia, e desta vez com o log do Postgres **sem nenhuma
+linha de desligamento** e o `postmaster.pid` do processo anterior ainda no lugar. Fui
+atrás de assassino: OOM (16 GB livres), disco cheio (28 GB livres), algum `pkill` meu,
+algum script do projeto que parasse o cluster. Nada.
+
+O que respondeu foi `uptime`: **`up 13 min`**. A máquina tinha reiniciado. E o carimbo de
+hora das execuções do `check` mostrava o mesmo de outro ângulo — 04:05, 07:19, 07:22,
+07:35, e a seguinte às **17:33**. Dois saltos grandes de relógio de parede, duas quedas
+do banco, na mesma ordem.
+
+Então não há processo matando o Postgres. O contêiner reinicia (entre turnos, ou durante
+uma pausa longa), o diretório de dados sobrevive porque está em disco, e o cluster não
+sobe sozinho. É a mesma queda de sempre, com a causa finalmente no nome certo.
+
+O diagnóstico em ordem, que passa a valer:
+
+1. `uptime` — minutos de vida significam contêiner reiniciado, e aí não há o que
+   investigar: `pg_ctlcluster 16 main start` e segue.
+2. `pg_lsclusters` — separa "parado" de "sumiu" (bases recriadas ou não).
+3. Só depois disso vale procurar culpado.
+
+A lição é a de sempre, na terceira ocorrência: eu tinha uma hipótese boa ("alguma coisa
+está matando o processo") e ela me fez ler o log do Postgres antes de perguntar à
+máquina quanto tempo ela tinha de vida. O log conta o que o processo fez; não conta o
+que aconteceu com a máquina embaixo dele.
+
+### 🐛 `pkill -f <padrão>` mata o próprio shell que o executa
+
+Duas vezes hoje um `pkill -f` devolveu código de saída 144 e a ferramenta reportou falha
+estranha. O motivo: `-f` casa a **linha de comando inteira** de cada processo, e a linha
+de comando do shell que está rodando o `pkill` contém o padrão. `pkill -f "next dev"`
+mata o servidor e, no mesmo varrer, o `bash -c` que o chamou.
+
+Não é teórico: foi o que interrompeu a execução em segundo plano do `check` na primeira
+vez, e me fez desconfiar do ambiente. Para matar processo daqui em diante: `pgrep -x`
+com nome exato, ou PID explícito — `kill 766 476`, que foi o que funcionou.
+
 ## 2026-09-15 — A barra passou a dizer onde você está
 
 ### 🔀 O único componente de cliente da casca existe para uma informação só
