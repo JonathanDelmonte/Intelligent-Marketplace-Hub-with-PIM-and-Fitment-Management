@@ -6,6 +6,7 @@
  * ocorrências vence a mais completa e não a mais recente, e que nenhuma leitura
  * atravessa perfil.
  */
+import { eq } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { perfilId, type PerfilId } from '@/dominio/catalogo/sku';
 import { LIMIAR_PUBLICACAO_BP, TOTAL_BP } from '@/dominio/compatibilidade/resolucao';
@@ -126,6 +127,35 @@ describe.skipIf(!temBancoDeTeste())('RepositorioDeAnuncios', () => {
 
     const dados = await repo.dadosDoSku(perfil, skuId);
     expect(dados?.tipoProduto).toBe('refil de purificador de água');
+  });
+
+  it('voltagem, medida e categoria regulada vêm do cadastro', async () => {
+    // As três ficavam em `null` na conferência porque ninguém as passava: duas não
+    // existiam no schema, e a terceira existia e não era lida. Checklist e alerta
+    // decidiam sobre nada.
+    await conexao.db
+      .update(sku)
+      .set({ voltagem: 'Bivolt', medida: 'Rosca 1/2 polegada', categoriaRegulada: 'anvisa' })
+      .where(eq(sku.id, skuId));
+
+    const dados = await repo.dadosDoSku(perfil, skuId);
+    expect(dados?.voltagem).toBe('Bivolt');
+    expect(dados?.medida).toBe('Rosca 1/2 polegada');
+    expect(dados?.categoriaRegulada).toBe('anvisa');
+  });
+
+  it('a quantidade do cadastro vence a extraída da ocorrência', async () => {
+    // Mesma regra da marca: o número do cadastro é de quem tem a caixa na mão, e o do
+    // registro é o que um LLM leu de anúncio de terceiro.
+    await ocorrencia('h-quantidade', { quantidadeEmbalagem: 2 });
+    await conexao.db.update(sku).set({ quantidadeEmbalagem: 3 }).where(eq(sku.id, skuId));
+
+    expect((await repo.dadosDoSku(perfil, skuId))?.quantidadeEmbalagem).toBe(3);
+  });
+
+  it('sem quantidade no cadastro, ainda cai na extraída', async () => {
+    await ocorrencia('h-so-extraida', { quantidadeEmbalagem: 4 });
+    expect((await repo.dadosDoSku(perfil, skuId))?.quantidadeEmbalagem).toBe(4);
   });
 
   it('registro ilegível não impede a montagem', async () => {

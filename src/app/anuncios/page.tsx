@@ -87,7 +87,13 @@ export default async function PaginaDeAnuncios({
             categoria: dados.categoria,
             pesoGramas: dados.pesoGramas,
             dimensoesMm: dados.dimensoesMm,
+            voltagem: dados.voltagem,
+            medida: dados.medida,
             ficha: dados.ficha,
+            // O alerta de categoria regulada (M12 — 9.6) depende destes dois, e antes
+            // nenhum chegava aqui: ele decidia sempre sobre `null`.
+            tituloInterno: dados.tituloInterno,
+            categoriaRegulada: dados.categoriaRegulada,
           },
           {
             plataforma: leitura.parametros.plataforma,

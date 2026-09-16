@@ -54,6 +54,13 @@ export interface DadosParaMontagem {
    */
   readonly tipoProduto: string;
   readonly modeloPeca: string | null;
+  /**
+   * Quantas peças vêm na embalagem.
+   *
+   * **O cadastro vence a extração**, como em `marca`: o número do `sku` é decisão de
+   * quem tem a caixa na mão, e o do registro é o que um LLM leu de um anúncio de
+   * terceiro. Só cai no extraído quando a coluna está vazia.
+   */
   readonly quantidadeEmbalagem: number | null;
   readonly marca: string | null;
   readonly ean: string | null;
@@ -64,6 +71,24 @@ export interface DadosParaMontagem {
     readonly largura: number;
     readonly altura: number;
   } | null;
+  /**
+   * Voltagem e medida funcional, do cadastro.
+   *
+   * Entram porque o checklist de atributos cobra as duas no nível `devolucao` e lia
+   * `null` sempre: ninguém passava o valor, porque ele não existia no schema. Ganharam
+   * coluna na migração 0010, e é daqui que saem para a conferência.
+   */
+  readonly voltagem: string | null;
+  readonly medida: string | null;
+  /**
+   * Categoria com regra de órgão regulador, para o alerta de M12 (9.6).
+   *
+   * Mesma história das duas de cima em outro ponto: a coluna existe e a tela fiscal a
+   * preenche, mas a montagem nunca a recebia — então `avaliarRegulacao` decidia sempre
+   * sobre `null`, e o alerta que existe para evitar anúncio **cancelado** não tinha como
+   * disparar.
+   */
+  readonly categoriaRegulada: string | null;
   readonly custoAtual: Centavos | null;
   readonly ficha: Ficha;
   readonly ocorrencias: readonly OcorrenciaParaCatalogo[];
@@ -161,7 +186,7 @@ export class RepositorioDeAnuncios {
       tituloInterno: l.tituloInterno,
       tipoProduto: registro.tipoProduto ?? l.tituloInterno,
       modeloPeca: registro.modeloPeca,
-      quantidadeEmbalagem: registro.quantidadeEmbalagem,
+      quantidadeEmbalagem: l.quantidadeEmbalagem ?? registro.quantidadeEmbalagem,
       marca: l.marca ?? registro.marca,
       ean: l.ean,
       // A categoria do ML é a que manda no arquivo de importação dele; a tela é por
@@ -169,6 +194,9 @@ export class RepositorioDeAnuncios {
       categoria: l.categoriaMl,
       pesoGramas: l.pesoG,
       dimensoesMm: l.dimMm,
+      voltagem: l.voltagem,
+      medida: l.medida,
+      categoriaRegulada: l.categoriaRegulada,
       custoAtual: l.custoAtual === null ? null : centavos(l.custoAtual),
       ficha: montarFicha(compatibilidades),
       ocorrencias,
