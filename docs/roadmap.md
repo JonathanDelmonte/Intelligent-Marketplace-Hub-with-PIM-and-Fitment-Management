@@ -74,6 +74,13 @@ adiada para o momento em que doer.
 **Por que primeiro:** é a única função do sistema que muda uma decisão de
 dinheiro no mesmo dia em que existe, e não depende de nada.
 
+**E tem tela desde 16/09** (`/catalogo`), depois de nove fases sendo chamável só por
+código: oito entregas prontas, com teste em cada degrau de comissão, e nenhum jeito de
+informar custo pela interface. A tela mostra o preço mínimo para uma margem alvo, a conta
+linha por linha, a faixa recomendada com os degraus marcados e os avisos — zona morta do
+ML, ticket abaixo do corte, DAS sem unidades previstas, tabela presumida. Ver C.12 em
+[A casa](#a-casa--vocabulário-navegação-e-aparência).
+
 ---
 
 ## Fase 2 — Teste de capacidades + perfil
@@ -712,6 +719,7 @@ Não é fase da especificação: é o que o dono pediu para depois das fases, e 
 | C.9 | Tela de afiliados: fila espaçada, teto do dia e o que o grupo deu     | ✅     |
 | C.10 | Tela do garimpo: dossiê, fronteira, orçamento e por que parou        | ✅     |
 | C.11 | Executor do prospector, com a base local como primeira ferramenta    | ✅     |
+| C.12 | Tela de catálogo: informar custo e ver a margem do M8 sair            | ✅     |
 
 **Entrega:** o sistema para de falar o nome das próprias tabelas, a navegação diz
 onde você está, e a tela inicial responde "o que eu faço agora" em vez de listar
@@ -733,6 +741,19 @@ chegam ao longo de semanas, não de uma vez. A de afiliados achou três frases d
 com `(s)` de plural e uma delas errada ("saiu há 0 minuto(s)", quando zero minuto é
 "agora"). É o padrão: **texto e caminho de escrita sem tela não são revisados**, porque o
 teste unitário verifica um pedaço da frase e chama a função direto.
+
+**A C.12 fechou a pendência mais antiga do projeto.** O M8 é a fase 1, tem teste em cada
+degrau de comissão, e usar ele exigia escrever código — não havia onde informar custo.
+Agora `/catalogo` lista os produtos pela falta mais grave de cada um, e o detalhe de um
+produto responde "quanto cobrar": preço mínimo para a margem que você quer, a conta linha
+por linha a um preço dado, a faixa que funciona com os degraus marcados, e os avisos do
+M8 — inclusive o da zona morta do Mercado Livre, que estava calculado desde o começo e
+nunca tinha sido visto.
+
+O que a tela achou está no diário de 16/09, e o mais instrutivo é o primeiro: o campo de
+margem alvo mandava percentual e a leitura interpretava ponto-base, então pedir 25% pedia
+0,25% — e a tela respondia um número plausível. O teste que eu tinha escrito fixava a
+unidade errada, porque foi escrito olhando a função e não o formulário.
 
 **A C.11 é a metade que faltava do garimpo:** a tela mostrava dossiê e ninguém preenchia
 dossiê. Agora "Investigar" enfileira, o poller roda o laço, e o dossiê aparece com os

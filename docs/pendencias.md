@@ -229,11 +229,17 @@ Ordem do roadmap, que é por utilidade e não por arquitetura. Nada aqui espera 
 
 ### 3.1 Telas que não existem
 
-Há catorze telas: início, `/importar` (com detalhe por job), `/leitor`,
-`/juntar-iguais`, `/compatibilidade`, `/fornecedores`, `/postagem`, `/consignacao`,
-`/anuncios`, `/fiscal`, `/monitor`, `/perguntas`, `/afiliados` e `/garimpo`. **Não há
-tela de catálogo, de SKU nem de precificação.** O motor de margem (fase 1)
-e o repositório de SKU (3.10) seguem chamáveis por código e por teste, não por tela.
+Há quinze telas: início, `/catalogo` (com detalhe por produto), `/importar` (com
+detalhe por job), `/leitor`, `/juntar-iguais`, `/compatibilidade`, `/fornecedores`,
+`/postagem`, `/consignacao`, `/anuncios`, `/fiscal`, `/monitor`, `/perguntas`,
+`/afiliados` e `/garimpo`.
+
+**O catálogo e a precificação passaram a ter tela em 16/09**, e com isso a frase que
+esta pendência carregava desde a fase 1 — "usar o M8 hoje exige escrever código" — deixou
+de valer. `/catalogo` lista os produtos pela falta mais grave de cada um (sem custo antes
+de custo velho, custo velho antes de peso ausente), cria produto direto, e o detalhe
+responde "quanto cobrar": preço mínimo para a margem alvo, a conta linha por linha, a
+faixa que funciona com os degraus marcados, e os avisos do M8.
 
 A de anúncio fechou o próprio laço na parte que importa: monta, mostra o checklist,
 e **grava a categoria** — o único atributo que impede exportar. O resto do cadastro
@@ -246,14 +252,18 @@ A de identidade fechou o próprio laço: decide pares, **propaga** para um SKU q
 exista e **cria** SKU a partir de um par quando nenhum dos dois lados tem um — com o
 título preenchido por proposta e editável, porque criar SKU é decisão humana.
 
-O que continua só por código: criar SKU **fora** de um par de identidade, editar SKU,
-listar catálogo, e informar custo — que é o dado que falta para a margem sair. A
-proposta de SKU deliberadamente não presume custo: preço de anúncio é o que outro
-cobra, e presumir um pelo outro erraria a margem para o lado otimista.
+O que continua só por código: **desativar** SKU (o repositório desativa em vez de apagar,
+porque pedido antigo ainda precisa resolver para o SKU) e editar os campos fiscais fora
+da tela de fiscal. A proposta de SKU continua deliberadamente sem presumir custo: preço
+de anúncio é o que outro cobra, e presumir um pelo outro erraria a margem para o lado
+otimista — a tela diz isso quando o custo está ausente, em vez de inventar um.
 
-A ordem é deliberada: a tela de importação veio primeiro porque sem ela nada do que a
-ingestão faz é auditável, e o leitor veio depois porque é a primeira função que
-gera dinheiro. Mas a consequência é que **usar o M8 hoje exige escrever código**.
+A ordem foi deliberada: a tela de importação veio primeiro porque sem ela nada do que a
+ingestão faz é auditável, e o leitor veio depois porque é a primeira função que gera
+dinheiro. O custo do atraso foi real — o motor mais antigo do sistema passou nove fases
+sem interface —, e o que ele mostra é que **tela não é acabamento**: ligar a do catálogo
+achou quatro defeitos em uma tarde, incluindo um campo de margem que pedia 0,25% quando
+se digitava 25.
 
 ### 3.2 O grafo cresce sozinho, mas a via mais valiosa dele espera extração
 
@@ -376,20 +386,23 @@ O que continua sendo decisão do dono: se algum desses nomes ainda não é o que
 usa falando. Trocar é uma linha em `src/app/navegacao.ts` e o rótulo aparece na
 barra e na tela inicial de uma vez.
 
-### 3.7 Cadastro de atributo de produto só por código
+### 3.7 Voltagem e quantidade de embalagem só por código
 
 O checklist de atributos (8.3) nomeia o que falta em cada anúncio e o que cada falta
 custa. Dá para **consertar** um item pela tela: a categoria, que é o único de nível
 `bloqueia`.
 
-Os outros não: `peso`, `dimensoes`, `voltagem` e `quantidade_embalagem` são
-`ranqueia` ou `devolucao`, e só se preenchem escrevendo código. O arquivo de
-importação sai sem eles — a plataforma aceita — mas peso ausente é frete errado, e
-voltagem ausente é devolução.
+**Peso e dimensões passaram a ter tela em 16/09**, na ficha do produto em `/catalogo`:
+são os campos que a margem usa, e agora se preenchem olhando a peça — peso na balança,
+medida na régua.
 
-**Por que não entrou junto:** `voltagem` e `medida` não têm coluna em `sku`; vêm do
-registro extraído, como o tipo do produto. Colocá-los na tela é decidir onde eles
-passam a morar, e isso é schema — não cabia na tela que faltava para a fase fechar.
+Continuam só por código `voltagem` e `quantidade_embalagem`, que são `ranqueia` e
+`devolucao`. O arquivo de importação sai sem eles — a plataforma aceita — mas voltagem
+ausente é devolução.
+
+**Por que os dois últimos não entraram junto:** `voltagem` e `medida` não têm coluna em
+`sku`; vêm do registro extraído, como o tipo do produto. Colocá-los na tela é decidir
+onde eles passam a morar, e isso é schema.
 
 **Quando deixa de servir:** no primeiro anúncio publicado sem peso que trouxer frete
 comido, ou na primeira devolução por voltagem.

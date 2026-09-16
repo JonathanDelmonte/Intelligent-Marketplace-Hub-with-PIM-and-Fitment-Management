@@ -74,6 +74,13 @@ export const PORTAS: readonly Porta[] = [
     grupo: 'hoje',
   },
   {
+    href: '/catalogo',
+    rotulo: 'Produtos e custo',
+    descricao:
+      'O que você vende, com o custo de cada peça — e quanto cobrar por ela, com a conta aberta linha por linha.',
+    grupo: 'catalogo',
+  },
+  {
     href: '/importar',
     rotulo: 'Importar',
     descricao:

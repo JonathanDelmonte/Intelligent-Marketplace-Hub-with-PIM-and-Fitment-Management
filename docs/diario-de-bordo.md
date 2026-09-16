@@ -26,6 +26,91 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-16 — O motor de margem ganhou tela, e a tela achou quatro coisas
+
+A fase 1 tem oito entregas prontas e teste em cada degrau de comissão **desde o começo
+do projeto**, e usar ela exigia escrever código: não havia onde informar custo. A
+pendência 3.1 registrava isso com a frase que resume o problema — "usar o M8 hoje exige
+escrever código". Agora `/catalogo` existe.
+
+### 🐛 Pedir 25% de margem virava 0,25%
+
+O campo do formulário manda **percentual** ("25"), e `lerParametros` lia o parâmetro
+como **ponto-base**. Então pedir 25% pedia 0,25%, e a tela respondia "o preço mínimo é
+R$ 30,66" — um número plausível, com cara de resposta certa, para uma pergunta que
+ninguém fez.
+
+Só apareceu exercitando a tela no navegador: o teste de `lerParametros` que eu tinha
+escrito **fixava a unidade errada** (`alvo: '3000'` → 3000 bp), porque foi escrito
+olhando a função e não o formulário. Ida e volta agora passam pelas mesmas duas funções
+(`alvoEmPercentual` e `lerAlvo`), e o teste conferindo o par.
+
+Lição que vale mais que o conserto: **teste de leitura de parâmetro tem de usar o valor
+que o formulário manda de verdade**, e não o que a função aceita.
+
+### 🐛 `type="number"` não aceita vírgula, e 2,5% é como se escreve
+
+O campo de devolução era `type="number"`. Digitar "2,5" nele não produz 2,5 — produz
+**nada**, sem aviso, porque o navegador recusa a vírgula. O Playwright foi mais explícito
+que o navegador: `Cannot type text into input[type=number]`.
+
+Todo campo numérico da tela virou `type="text"` com `inputMode`, que é o que o resto do
+sistema já fazia nos campos de dinheiro. O `inputMode` dá o teclado numérico no celular
+do mesmo jeito, e a leitura no servidor já trocava vírgula por ponto.
+
+### 🐛 Código de barras torto respondia "peso em gramas é positivo"
+
+A ação de criar produto reaproveitava o código de aviso da ficha. Resultado: quem
+digitava um EAN com dígito verificador errado recebia, na lista, "Número que não fecha.
+Peso em gramas e medida em milímetros são positivos" — texto correto para outra coisa.
+
+Virou código próprio, com a mensagem do motivo: o nome precisa de três caracteres, e o
+código de barras é conferido pelo dígito verificador — e código interno de fornecedor não
+é código de barras, tem campo próprio. Reaproveitar código de aviso economiza uma linha
+e custa a confiança na tela.
+
+### 🐛 Rótulo de linha em caixa alta
+
+A camada compartilhada põe `text-transform: uppercase` em `th`, que é certo para
+cabeçalho de coluna. Numa conta de nove linhas com `th scope="row"`, o resultado é
+"COMISSÃO DA PLATAFORMA" gritando em cada linha. Classe própria na tela, e não uma regra
+`.tabela th` contando com a ordem em que os dois módulos entram na página.
+
+### 🔀 A ponte declara o que presumiu
+
+`entradaParaMargem` devolve `presumidos` junto com a entrada do M8. É o que permite a
+tela dizer "esta margem usou peso de 300 g porque o seu não está cadastrado" — presunção
+que não aparece na tela é a forma mais barata de perder dinheiro com confiança.
+
+Custo ausente é caso separado: entra **zero**, e o M8 avisa que a margem é o teto. Presumir
+custo erraria para o lado otimista, que é o pior lado.
+
+As três presunções (peso, embalagem, devolução) saíram de `app/leitor/constantes.ts` para
+o domínio na segunda tela que precisou delas. `ROTULO_DA_PLATAFORMA` saiu de duas telas
+para `ui/rotulos.ts` na terceira. Terceira e quarta aplicação da mesma regra esta semana:
+**unificar na segunda cópia, antes de divergirem**.
+
+### 🔀 Custo tem formulário próprio, e o motivo é a data
+
+`atualizarCusto` grava `custo_atualizado_em`; `atualizarFicha` não toca nele. Se fossem o
+mesmo salvamento, informar o peso reescreveria a data do custo — e a data do custo é
+justamente o que responde se ele ainda vale. `custoDefasado` usa isso, com trinta dias de
+frescor, que é o ciclo de tabela de fornecedor.
+
+### ⚠️ Quarta armadilha de arnês de teste em dois dias
+
+Duas de uma vez, no mesmo script: `waitForURL(/\?r=/)` casa na hora quando a URL **já**
+tem `?r=` da ação anterior, e `waitForSelector('h1')` casa no `h1` da página velha — a
+lista e o detalhe têm os dois um `h1`. O efeito foi eu ler a página anterior e concluir
+que a ação não tinha funcionado.
+
+O que espera de fato é `waitForNavigation({ waitUntil: 'domcontentloaded' })` em
+`Promise.all` com o clique. Junto com o `caret-color` e o `open=""` de ontem, são quatro
+ocorrências da mesma família: o arnês mentindo sobre a aplicação. A regra continua a
+mesma — **confirmar por um segundo caminho antes de caçar**.
+
+---
+
 ## 2026-09-16 — O prospector passou a investigar, e o dossiê não era retomável
 
 ### 🐛 O dossiê prometia ser retomável desde a fase 1, e não era

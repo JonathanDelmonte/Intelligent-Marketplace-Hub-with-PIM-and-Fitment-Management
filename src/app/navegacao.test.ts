@@ -52,8 +52,11 @@ describe('portasPorGrupo', () => {
   });
 
   it('dentro do grupo, mantém a ordem de PORTAS', () => {
+    // A ordem do grupo do catálogo é a do fluxo, com a lista de produtos na frente:
+    // ela é o "o que eu vendo", e o resto do grupo é o que alimenta e consome ela.
     const catalogo = portasPorGrupo().find((g) => g.grupo === 'catalogo');
     expect(catalogo?.portas.map((p) => p.href)).toEqual([
+      '/catalogo',
       '/importar',
       '/juntar-iguais',
       '/compatibilidade',
