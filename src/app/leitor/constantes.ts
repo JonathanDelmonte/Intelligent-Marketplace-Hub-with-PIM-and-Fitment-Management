@@ -17,25 +17,12 @@ export const CAMINHO = '/leitor';
  */
 export const INTERVALO_DE_LEITURA_MS = 250;
 
-/**
- * Peso presumido, em gramas, quando não se sabe o do produto.
- *
- * Entra no cálculo de frete do M8. Trezentos gramas é a faixa de um refil de
- * purificador, que é o nicho — e a tela **diz** que está presumindo, porque peso
- * errado muda a faixa de frete e portanto a margem.
+/*
+ * As três presunções do cálculo — peso, embalagem e devolução — saíram daqui para
+ * `dominio/precificacao/entrada.ts` quando a tela de catálogo precisou das mesmas. São
+ * presunção de negócio, não constante de tela, e duas cópias divergiriam do mesmo jeito
+ * que a fonte monoespaçada divergiu.
  */
-export const PESO_PRESUMIDO_GRAMAS = 300;
-
-/** Embalagem presumida: caixa, plástico e fita de um item pequeno. */
-export const EMBALAGEM_PRESUMIDA_CENTAVOS = 150;
-
-/**
- * Taxa de devolução presumida, em pontos-base.
- *
- * 2%. Vem do M8 como provisão, e sem histórico de pedido (M10) não há como medir
- * a real. A tela mostra que é presunção.
- */
-export const DEVOLUCAO_PRESUMIDA_BP = 200;
 
 /** Quantas leituras a tela lista. */
 export const LIMITE_DO_HISTORICO = 30;

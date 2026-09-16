@@ -198,6 +198,104 @@ describe.skipIf(!temBancoDeTeste())('RepositorioDeSku (contra Postgres real)', (
     });
   });
 
+  describe('ficha do produto', () => {
+    async function skuNovo(titulo = 'Refil PA21G') {
+      const criado = await repo.criar({ perfil: perfilA, dados: { tituloInterno: titulo } });
+      return criado.id;
+    }
+
+    it('grava peso, dimensões, devolução e marca de uma vez', async () => {
+      // Quem preenche preenche de uma vez, com a peça na mão: peso na balança, medida
+      // na régua.
+      const id = await skuNovo();
+      expect(
+        await repo.atualizarFicha({
+          perfil: perfilA,
+          skuId: id,
+          pesoG: 420,
+          dimMm: { comprimento: 120, largura: 80, altura: 60 },
+          taxaDevolucaoEsperadaBp: 350,
+          marca: 'Electrolux',
+        }),
+      ).toBe(true);
+
+      const lido = await repo.buscarPorId(perfilA, id);
+      expect(lido?.pesoG).toBe(420);
+      expect(lido?.dimMm).toEqual({ comprimento: 120, largura: 80, altura: 60 });
+      expect(lido?.taxaDevolucaoEsperadaBp).toBe(350);
+      expect(lido?.marca).toBe('Electrolux');
+    });
+
+    it('campo ausente do objeto não é tocado', async () => {
+      // "Não informei agora" é diferente de "apaguei o que tinha".
+      const id = await skuNovo();
+      await repo.atualizarFicha({ perfil: perfilA, skuId: id, pesoG: 420 });
+      await repo.atualizarFicha({ perfil: perfilA, skuId: id, taxaDevolucaoEsperadaBp: 100 });
+
+      const lido = await repo.buscarPorId(perfilA, id);
+      expect(lido?.pesoG).toBe(420);
+      expect(lido?.taxaDevolucaoEsperadaBp).toBe(100);
+    });
+
+    it('nulo explícito apaga o que tinha', async () => {
+      const id = await skuNovo();
+      await repo.atualizarFicha({ perfil: perfilA, skuId: id, pesoG: 420 });
+      await repo.atualizarFicha({ perfil: perfilA, skuId: id, pesoG: null });
+      expect((await repo.buscarPorId(perfilA, id))?.pesoG).toBeNull();
+    });
+
+    it('formulário sem alteração nenhuma não escreve', async () => {
+      const id = await skuNovo();
+      expect(await repo.atualizarFicha({ perfil: perfilA, skuId: id })).toBe(false);
+    });
+
+    it('recusa número que não faz sentido, com o campo na mensagem', async () => {
+      const id = await skuNovo();
+      await expect(repo.atualizarFicha({ perfil: perfilA, skuId: id, pesoG: 0 })).rejects.toThrow(
+        /peso/,
+      );
+      await expect(
+        repo.atualizarFicha({ perfil: perfilA, skuId: id, taxaDevolucaoEsperadaBp: 20_000 }),
+      ).rejects.toThrow(/devolução/);
+      await expect(
+        repo.atualizarFicha({
+          perfil: perfilA,
+          skuId: id,
+          dimMm: { comprimento: 10, largura: 0, altura: 5 },
+        }),
+      ).rejects.toThrow(/dimensão/);
+    });
+
+    it('não atualiza ficha de SKU de outro perfil', async () => {
+      const id = await skuNovo();
+      expect(await repo.atualizarFicha({ perfil: perfilB, skuId: id, pesoG: 999 })).toBe(false);
+      expect((await repo.buscarPorId(perfilA, id))?.pesoG).toBeNull();
+    });
+
+    it('a data do custo vem na leitura, e é ela que diz se o custo ainda vale', async () => {
+      const id = await skuNovo();
+      expect((await repo.buscarPorId(perfilA, id))?.custoAtualizadoEm).toBeNull();
+
+      await repo.atualizarCusto({ perfil: perfilA, skuId: id, custo: reaisParaCentavos(18.4) });
+      const lido = await repo.buscarPorId(perfilA, id);
+      expect(lido?.custoAtual).toBe(reaisParaCentavos(18.4));
+      expect(lido?.custoAtualizadoEm).toBeInstanceOf(Date);
+    });
+
+    it('salvar a ficha não mexe na data do custo', async () => {
+      // Se mexesse, um salvamento de peso reescreveria a data — e a data do custo é o
+      // que responde se ele ainda vale.
+      const id = await skuNovo();
+      await repo.atualizarCusto({ perfil: perfilA, skuId: id, custo: reaisParaCentavos(10) });
+      const antes = (await repo.buscarPorId(perfilA, id))?.custoAtualizadoEm;
+
+      await repo.atualizarFicha({ perfil: perfilA, skuId: id, pesoG: 300 });
+      const depois = (await repo.buscarPorId(perfilA, id))?.custoAtualizadoEm;
+
+      expect(depois?.toISOString()).toBe(antes?.toISOString());
+    });
+  });
+
   describe('criação', () => {
     it('grava os campos informados', async () => {
       const criado = await repo.criar({

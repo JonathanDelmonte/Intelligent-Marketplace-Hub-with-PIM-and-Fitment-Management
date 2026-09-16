@@ -25,9 +25,9 @@ import { avaliarGtin, sincronizarLeituras, type AvaliacaoDeGtin } from './acoes'
 import {
   DEVOLUCAO_PRESUMIDA_BP,
   EMBALAGEM_PRESUMIDA_CENTAVOS,
-  INTERVALO_DE_LEITURA_MS,
   PESO_PRESUMIDO_GRAMAS,
-} from './constantes';
+} from '@/dominio/precificacao/entrada';
+import { INTERVALO_DE_LEITURA_MS } from './constantes';
 import { escolherDetector, temDetectorNativo, type DetectorDeCodigo } from './detector';
 import { FilaDeLeituras, escolherArmazenamento, type LeituraLocal } from './fila-local';
 import {

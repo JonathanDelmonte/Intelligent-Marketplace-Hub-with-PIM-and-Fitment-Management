@@ -27,7 +27,7 @@ import {
   DEVOLUCAO_PRESUMIDA_BP,
   EMBALAGEM_PRESUMIDA_CENTAVOS,
   PESO_PRESUMIDO_GRAMAS,
-} from './constantes';
+} from '@/dominio/precificacao/entrada';
 
 const log = criarRegistrador({
   nivelMinimo: nivelDoAmbiente(process.env['LOG_NIVEL']),

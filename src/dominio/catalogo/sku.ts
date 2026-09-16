@@ -96,6 +96,12 @@ export const esquemaNovoSku = z.object({
 
 export type NovoSku = z.input<typeof esquemaNovoSku>;
 
+export interface Dimensoes {
+  readonly comprimento: number;
+  readonly largura: number;
+  readonly altura: number;
+}
+
 export interface SkuGravado {
   readonly id: string;
   readonly perfilId: string;
@@ -103,7 +109,20 @@ export interface SkuGravado {
   readonly ean: string | null;
   readonly marca: string | null;
   readonly custoAtual: number | null;
+  /**
+   * Quando o custo foi informado.
+   *
+   * Não é enfeite e não é auditoria: é o que permite avisar que o custo envelheceu —
+   * ver `custoDefasado` em `catalogo/custo.ts`. Ficou fora de `SkuGravado` até a tela
+   * de catálogo existir, e sem ele a tela mostraria custo de oito meses com a mesma
+   * cara de custo de ontem.
+   */
+  readonly custoAtualizadoEm: Date | null;
   readonly pesoG: number | null;
+  readonly dimMm: Dimensoes | null;
+  /** Taxa de devolução esperada, em pontos-base. Entra como custo no M8. */
+  readonly taxaDevolucaoEsperadaBp: number | null;
+  readonly categoriaMl: string | null;
   readonly tipo: TipoSku;
   readonly ncm: string | null;
   readonly cst: string | null;
@@ -273,6 +292,66 @@ export class RepositorioDeSku {
     return atualizados.length > 0;
   }
 
+  /**
+   * Atualiza os campos da ficha que a margem usa.
+   *
+   * Um método e não quatro porque quem preenche preenche de uma vez, olhando a peça na
+   * mão: peso na balança, medida na régua. Campo ausente do objeto **não é tocado** —
+   * é o que separa "não informei agora" de "apaguei o que tinha".
+   *
+   * Não mexe em custo: custo tem `atualizarCusto`, que grava a data. Juntar os dois
+   * faria um salvamento de peso reescrever a data do custo, e a data do custo é o que
+   * responde se ele ainda vale.
+   */
+  async atualizarFicha(params: {
+    readonly perfil: PerfilId;
+    readonly skuId: string;
+    readonly pesoG?: number | null;
+    readonly dimMm?: Dimensoes | null;
+    readonly taxaDevolucaoEsperadaBp?: number | null;
+    readonly marca?: string | null;
+    readonly categoriaMl?: string | null;
+  }): Promise<boolean> {
+    if (params.pesoG !== undefined && params.pesoG !== null && params.pesoG <= 0) {
+      throw new CatalogoError('peso precisa ser positivo');
+    }
+    if (
+      params.taxaDevolucaoEsperadaBp !== undefined &&
+      params.taxaDevolucaoEsperadaBp !== null &&
+      (params.taxaDevolucaoEsperadaBp < 0 || params.taxaDevolucaoEsperadaBp > 10_000)
+    ) {
+      throw new CatalogoError('taxa de devolução precisa estar entre 0 e 100%');
+    }
+    if (params.dimMm !== undefined && params.dimMm !== null) {
+      const { comprimento, largura, altura } = params.dimMm;
+      if (comprimento <= 0 || largura <= 0 || altura <= 0) {
+        throw new CatalogoError('dimensão precisa ser positiva nos três lados');
+      }
+    }
+
+    const campos = {
+      ...(params.pesoG === undefined ? {} : { pesoG: params.pesoG }),
+      ...(params.dimMm === undefined ? {} : { dimMm: params.dimMm }),
+      ...(params.taxaDevolucaoEsperadaBp === undefined
+        ? {}
+        : { taxaDevolucaoEsperadaBp: params.taxaDevolucaoEsperadaBp }),
+      ...(params.marca === undefined ? {} : { marca: params.marca }),
+      ...(params.categoriaMl === undefined ? {} : { categoriaMl: params.categoriaMl }),
+    };
+
+    // Nada a mudar não é erro e não é escrita: um formulário enviado sem alteração
+    // nenhuma não deve mexer em `atualizado_em`.
+    if (Object.keys(campos).length === 0) return false;
+
+    const atualizados = await this.db
+      .update(sku)
+      .set({ ...campos, atualizadoEm: new Date() })
+      .where(and(eq(sku.perfilId, params.perfil), eq(sku.id, params.skuId)))
+      .returning({ id: sku.id });
+
+    return atualizados.length > 0;
+  }
+
   /** Desativa em vez de apagar: pedido antigo ainda precisa resolver para o SKU. */
   async desativar(perfil: PerfilId, id: string): Promise<boolean> {
     const atualizados = await this.db
@@ -367,7 +446,11 @@ interface LinhaDeSku {
   ean: string | null;
   marca: string | null;
   custoAtual: number | null;
+  custoAtualizadoEm: Date | null;
   pesoG: number | null;
+  dimMm: Dimensoes | null;
+  taxaDevolucaoEsperadaBp: number | null;
+  categoriaMl: string | null;
   tipo: string | null;
   ncm: string | null;
   cst: string | null;
@@ -384,7 +467,11 @@ function paraSku(linha: LinhaDeSku): SkuGravado {
     ean: linha.ean,
     marca: linha.marca,
     custoAtual: linha.custoAtual,
+    custoAtualizadoEm: linha.custoAtualizadoEm,
     pesoG: linha.pesoG,
+    dimMm: linha.dimMm,
+    taxaDevolucaoEsperadaBp: linha.taxaDevolucaoEsperadaBp,
+    categoriaMl: linha.categoriaMl,
     tipo: tipo.success ? tipo.data : 'revenda',
     ncm: linha.ncm,
     cst: linha.cst,
