@@ -720,6 +720,7 @@ Não é fase da especificação: é o que o dono pediu para depois das fases, e 
 | C.10 | Tela do garimpo: dossiê, fronteira, orçamento e por que parou        | ✅     |
 | C.11 | Executor do prospector, com a base local como primeira ferramenta    | ✅     |
 | C.12 | Tela de catálogo: informar custo e ver a margem do M8 sair            | ✅     |
+| C.13 | Voltagem, medida e quantidade na ficha, e o cadastro vencendo o extraído | ✅   |
 
 **Entrega:** o sistema para de falar o nome das próprias tabelas, a navegação diz
 onde você está, e a tela inicial responde "o que eu faço agora" em vez de listar
@@ -765,6 +766,19 @@ dossiê gravado normalizado na coluna de exibição, um parágrafo do domínio q
 contradizia, e uma função que faltava na máquina (`abrirAlvo`). Quatro telas, quatro
 achados que o teste unitário não pegaria — porque o teste chama a função direto e confere
 um pedaço da frase, e a tela é o primeiro leitor que lê tudo e mostra tudo.
+
+**A C.13 tirou o último item do checklist sem caminho de conserto.** `voltagem`, `medida`
+e `quantidade_embalagem` eram cobradas no nível `devolucao` e não tinham onde ser
+preenchidas — as duas primeiras não existiam no schema, e a terceira só vinha do registro
+extraído das ocorrências. Migração 0010 dá coluna às três, a ficha do produto ganha os
+campos, e a montagem passa a preferir o cadastro ao extraído, pela mesma regra da marca.
+
+E achou o defeito mais instrutivo da rodada: **o alerta de categoria regulada nunca
+disparou**. A coluna existe desde a fase 9, a tela fiscal a preenche, e nenhuma das duas
+chamadas de `montarAnuncio` passava o campo — `categoriaRegulada?: string | null` compila
+com a chamada que a esquece, e o ausente virou `null`, que é exatamente o que "não é
+categoria regulada" significa. Faltar e não haver ficaram indistinguíveis, e um alerta
+calculado e testado passou uma fase inteira desligado.
 
 O que continua aberto e é decisão do dono: se os rótulos novos são os que ele usa
 falando. Trocar é uma linha em `src/app/navegacao.ts`.

@@ -242,11 +242,10 @@ responde "quanto cobrar": preço mínimo para a margem alvo, a conta linha por l
 faixa que funciona com os degraus marcados, e os avisos do M8.
 
 A de anúncio fechou o próprio laço na parte que importa: monta, mostra o checklist,
-e **grava a categoria** — o único atributo que impede exportar. O resto do cadastro
-continua sem tela: peso, dimensões, voltagem e quantidade de embalagem aparecem no
-checklist como falta e só se preenchem por código. São `ranqueia` e `devolucao`, não
-`bloqueia`, então o arquivo sai sem eles; mas sair sem eles custa frete errado e
-devolução, e é a próxima tela que vale a pena (ver 3.7).
+e **grava a categoria** — o único atributo que impede exportar. O resto do checklist
+passou a se preencher na ficha do produto no mesmo dia: peso e dimensões, que a margem
+usa, e voltagem, medida e quantidade de embalagem, que decidem devolução (ver 3.7). Hoje
+não sobra item do checklist sem caminho de conserto por tela.
 
 A de identidade fechou o próprio laço: decide pares, **propaga** para um SKU que já
 exista e **cria** SKU a partir de um par quando nenhum dos dois lados tem um — com o
@@ -386,26 +385,26 @@ O que continua sendo decisão do dono: se algum desses nomes ainda não é o que
 usa falando. Trocar é uma linha em `src/app/navegacao.ts` e o rótulo aparece na
 barra e na tela inicial de uma vez.
 
-### 3.7 Voltagem e quantidade de embalagem só por código
+### 3.7 Atributos do checklist sem onde preencher — feito
 
-O checklist de atributos (8.3) nomeia o que falta em cada anúncio e o que cada falta
-custa. Dá para **consertar** um item pela tela: a categoria, que é o único de nível
-`bloqueia`.
+**Fechada em 16/09.** Todo item do checklist de atributos (8.3) tem agora caminho de
+conserto por tela. A categoria já tinha; peso e dimensões entraram com a ficha do produto
+em `/catalogo`; e `voltagem`, `medida` e `quantidade_embalagem` ganharam coluna em `sku`
+(migração 0010) e campo no mesmo formulário — que é onde a pessoa está com a peça na mão.
 
-**Peso e dimensões passaram a ter tela em 16/09**, na ficha do produto em `/catalogo`:
-são os campos que a margem usa, e agora se preenchem olhando a peça — peso na balança,
-medida na régua.
+Voltagem e medida são **texto livre**, decidido e não por falta de ideia melhor: voltagem
+tem quatro respostas certas na prática (110 V, 220 V, bivolt, e "dois modelos, um de
+cada") e um enum de dois forçaria a errar no bivolt; medida é a medida funcional, e a
+unidade é parte da resposta. A quantidade passou a preferir o cadastro ao registro
+extraído, pela mesma regra que já valia para a marca.
 
-Continuam só por código `voltagem` e `quantidade_embalagem`, que são `ranqueia` e
-`devolucao`. O arquivo de importação sai sem eles — a plataforma aceita — mas voltagem
-ausente é devolução.
+**O que a ligação achou:** `categoria_regulada` tinha coluna desde a fase 9 e tela
+fiscal desde então, e nunca chegava a `montarAnuncio` — o alerta de anúncio cancelado em
+categoria regulada decidia sempre sobre `null`. Ver o diário de 16/09; é o segundo caso
+do mesmo tipo, e os dois eram parâmetro opcional que o compilador não cobra.
 
-**Por que os dois últimos não entraram junto:** `voltagem` e `medida` não têm coluna em
-`sku`; vêm do registro extraído, como o tipo do produto. Colocá-los na tela é decidir
-onde eles passam a morar, e isso é schema.
-
-**Quando deixa de servir:** no primeiro anúncio publicado sem peso que trouxer frete
-comido, ou na primeira devolução por voltagem.
+**O que continua por código:** desativar SKU, e os campos fiscais fora da tela de fiscal
+(ver 3.1).
 
 ---
 

@@ -26,6 +26,71 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-16 — Três atributos que o checklist cobrava e ninguém podia preencher
+
+O checklist de atributos (8.3) cobra `voltagem`, `medida` e `quantidade_embalagem` no
+nível `devolucao` — o mesmo peso de `bloqueia`, porque um é anúncio que não existe e o
+outro é anúncio que existe e perde dinheiro com a reputação junto. Nenhum dos três tinha
+onde ser preenchido. Era meio checklist: apontava o problema e não tinha o conserto.
+
+Migração 0010 dá coluna aos três em `sku`, a ficha do catálogo ganha os campos, e a
+montagem de anúncio passa a ler dali.
+
+### 🔀 Texto livre em voltagem e medida, e não enum
+
+Voltagem parece candidata óbvia a enum de dois valores, e não é: as respostas certas na
+prática são quatro — 110 V, 220 V, bivolt, e "vendo os dois modelos, um de cada". Um enum
+de dois forçaria a errar no bivolt, que é justamente o caso em que o comprador pergunta.
+
+Medida é a medida **funcional** da peça, a que decide se encaixa, e a unidade é parte da
+resposta: "1/2 polegada" e "52 mm de diâmetro" estão as duas certas, e normalizar as duas
+para milímetros perderia a primeira. Não confundir com `dim_mm`, que é a caixa e serve ao
+frete — a tela diz isso no campo, porque as duas se chamam "medida" em português.
+
+### 🐛 O alerta de categoria regulada nunca disparou
+
+Achado de tabela: procurando de onde `voltagem` chegava à conferência, apareceu que
+`categoria_regulada` **tem** coluna desde a fase 9, **é** preenchida pela tela fiscal, e
+nunca chegava a `montarAnuncio` — nenhuma das duas chamadas passava o campo. Então
+`avaliarRegulacao` decidia sempre sobre `null`.
+
+O alerta existe para evitar anúncio **cancelado** em categoria de órgão regulador, que é
+a consequência mais cara do M12. Ele estava calculado, testado e desligado. Duas linhas
+em cada chamada.
+
+Vale como padrão, e é o segundo do tipo no projeto (o primeiro foi o monitor, que não
+tinha quem escrevesse nele): **função de domínio com parâmetro opcional é um lugar onde o
+compilador não ajuda**. `categoriaRegulada?: string | null` compila com a chamada que a
+esquece, e o valor ausente virou `null` — que é exatamente o que "não é categoria
+regulada" significa. Faltar e não haver ficam indistinguíveis.
+
+### 🔀 O cadastro vence a extração, mesma regra da marca
+
+`quantidade_embalagem` vinha do registro extraído das ocorrências, e agora prefere a
+coluna: o número do cadastro é de quem tem a caixa na mão, o do registro é o que um LLM
+leu de anúncio de terceiro. Sem cadastro, continua caindo no extraído — a via antiga não
+foi jogada fora, foi despromovida.
+
+### 🐛 `git commit -- caminho` não vê arquivo novo
+
+O commit do schema saiu com o `_journal.json` alterado e **sem o `.sql` da migração**:
+`git commit -- <caminho>` commita o que está rastreado e casa com o caminho, e ignora o
+que é novo em silêncio. Uma migração pela metade no histórico é pior que nenhuma — quem
+rodar `db:migrate` recebe um journal que aponta para um arquivo que não existe.
+
+Conserto foi `git add` dos dois arquivos e `--amend`. O que fica: `git status --short`
+depois de commitar, sempre, e não só antes.
+
+### 🧹 Frase de ajuda do quadro precisou de `max-width: none`
+
+A frase que explica os três campos ficava ao lado do último deles, parecendo ser dele. O
+`flex-basis: 100%` não quebrava a linha porque o flex decide a quebra pelo tamanho
+**hipotético** do item, que o `max-width` da `.ajuda` reduzia o bastante para caber no
+espaço que restava. Com `max-width: none` a linha é própria, e em troca a frase encurtou
+— porque agora ela ocupa a largura do quadro.
+
+---
+
 ## 2026-09-16 — O motor de margem ganhou tela, e a tela achou quatro coisas
 
 A fase 1 tem oito entregas prontas e teste em cada degrau de comissão **desde o começo
