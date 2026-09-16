@@ -7,6 +7,7 @@ import {
   emPorcento,
   estadoDaBase,
   explicarSituacao,
+  nomeDoArquivoDaFicha,
   resumoDasEvidencias,
   rotuloDaConfianca,
   rotuloDaDecisao,
@@ -185,5 +186,35 @@ describe('estadoDaBase', () => {
 
   it('cala a boca quando a base está andando', () => {
     expect(estadoDaBase({ aparelhos: 2, publicaveis: 5, emRevisao: 1, skus: 3 })).toBeNull();
+  });
+});
+
+describe('nomeDoArquivoDaFicha', () => {
+  it('tira acento, espaço e pontuação do título do produto', () => {
+    expect(nomeDoArquivoDaFicha('Refil Purificador Electrolux PA21G Original')).toBe(
+      'ficha-refil-purificador-electrolux-pa21g-original.csv',
+    );
+    expect(nomeDoArquivoDaFicha('Vedação (tampa) — 1/2"')).toBe('ficha-vedacao-tampa-1-2.csv');
+  });
+
+  it('não termina em hífen quando o corte de tamanho cai num separador', () => {
+    const nome = nomeDoArquivoDaFicha(`${'a'.repeat(59)} bbb`);
+    expect(nome.endsWith('-.csv')).toBe(false);
+  });
+
+  it('título que não sobra nada legível ainda dá um nome usável', () => {
+    expect(nomeDoArquivoDaFicha('«»—')).toBe('ficha.csv');
+    expect(nomeDoArquivoDaFicha('')).toBe('ficha.csv');
+  });
+});
+
+describe('aviso de produto de outro perfil', () => {
+  it('diz que a ficha abaixo é de outro produto, e não só que deu erro', () => {
+    // Mostrar a ficha de abertura em silêncio é o caminho para responder a um
+    // comprador com a ficha errada.
+    const aviso = descreverAviso('produto_de_outro_perfil');
+    expect(aviso?.tom).toBe('erro');
+    expect(aviso?.corpo).toContain('outro produto');
+    expect(CODIGOS_DE_AVISO).toContain('produto_de_outro_perfil');
   });
 });

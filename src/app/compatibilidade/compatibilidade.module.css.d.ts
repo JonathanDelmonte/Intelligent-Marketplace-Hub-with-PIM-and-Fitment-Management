@@ -18,6 +18,7 @@ declare const estilo: {
   readonly botao: string;
   readonly botaoNao: string;
   readonly botaoSecundario: string;
+  readonly botaoBaixar: string;
   readonly botaoSim: string;
   readonly cabecalho: string;
   readonly campo: string;
@@ -29,6 +30,7 @@ declare const estilo: {
   readonly detalhe: string;
   readonly dica: string;
   readonly entrada: string;
+  readonly escolha: string;
   readonly etiqueta: string;
   readonly etiquetaNao: string;
   readonly etiquetaNeutra: string;

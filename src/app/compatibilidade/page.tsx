@@ -30,7 +30,9 @@ import { sku } from '@/infra/banco/schema';
 import { descreverAviso, emPorcento, estadoDaBase } from './apresentacao';
 import {
   AvisoDaAcao,
+  BaixarFicha,
   BotaoProcurar,
+  EscolhaDeProduto,
   Fila,
   FichaPublicavel,
   FormularioDeAparelho,
@@ -64,7 +66,9 @@ export default async function PaginaDeCompatibilidade({
   const perfil = await carregarPerfil(db, lerAmbiente().BANCADA_PERFIL_PADRAO);
   const repo = new RepositorioDeCompatibilidade(db);
 
-  const [estado, fila, aparelhos, skus, emFoco] = await Promise.all([
+  const pedido = Array.isArray(parametros['sku']) ? parametros['sku'][0] : parametros['sku'];
+
+  const [estado, fila, aparelhos, skus, escolha] = await Promise.all([
     repo.estado(perfil.id),
     repo.fila(perfil.id, LIMITE_DA_FILA),
     repo.aparelhos(LIMITE_DE_APARELHOS),
@@ -73,12 +77,13 @@ export default async function PaginaDeCompatibilidade({
       .from(sku)
       .where(and(eq(sku.perfilId, perfil.id), eq(sku.ativo, true)))
       .then((linhas) => linhas[0]?.n ?? 0),
-    repo.skuEmFoco(perfil.id),
+    repo.skuParaFicha(perfil.id, pedido),
   ]);
 
-  // Uma ficha por tela, do produto com mais compatibilidade registrada. Seletor de
-  // produto entra junto com a tela de catálogo, que é onde escolher vai fazer
-  // sentido — está nas pendências.
+  // Uma ficha por vez, e agora a pessoa escolhe qual. Sem escolha, abre a do produto
+  // com mais compatibilidade registrada — que é o que a tela fazia antes de existir
+  // seletor, e continua sendo a resposta certa para quem tem três produtos.
+  const emFoco = escolha.escolhido;
   const linhasDaFicha = emFoco === null ? [] : await repo.doSku(emFoco.id);
   const ficha = montarFicha(linhasDaFicha);
 
@@ -88,7 +93,12 @@ export default async function PaginaDeCompatibilidade({
     pergunta === '' ? null : responder({ pergunta, compatibilidades: linhasDaFicha });
 
   const codigo = Array.isArray(parametros['r']) ? parametros['r'][0] : parametros['r'];
-  const aviso = descreverAviso(codigo, inteiroDaUrl(parametros['n']));
+  // Produto pedido que não é deste perfil vira aviso, e não troca de ficha em
+  // silêncio: responder a um comprador com a ficha de outro produto é o erro que esta
+  // tela existe para não deixar acontecer.
+  const aviso = escolha.pedidoInvalido
+    ? descreverAviso('produto_de_outro_perfil', undefined)
+    : descreverAviso(codigo, inteiroDaUrl(parametros['n']));
   const diagnostico = estadoDaBase({
     aparelhos: estado.aparelhos,
     publicaveis: estado.publicaveis,
@@ -151,7 +161,9 @@ export default async function PaginaDeCompatibilidade({
           <h2 className={estilo.secaoTitulo} id="ficha-titulo">
             Ficha de {emFoco.titulo}
           </h2>
+          <EscolhaDeProduto escolhido={emFoco} pergunta={pergunta} produtos={escolha.lista} />
           <FichaPublicavel ficha={ficha} />
+          <BaixarFicha publicaveis={ficha.publicaveis.length} skuId={emFoco.id} />
         </section>
       )}
 
@@ -160,7 +172,12 @@ export default async function PaginaDeCompatibilidade({
           <h2 className={estilo.secaoTitulo} id="responder-titulo">
             Responder um comprador
           </h2>
-          <ResponderComprador pergunta={pergunta} produto={emFoco.titulo} resposta={resposta} />
+          <ResponderComprador
+            pergunta={pergunta}
+            produto={emFoco.titulo}
+            resposta={resposta}
+            skuId={emFoco.id}
+          />
         </section>
       )}
 

@@ -139,6 +139,7 @@ export const CODIGOS_DE_AVISO = [
   'sem_coleta',
   'sem_anuncio',
   'linha_sumiu',
+  'produto_de_outro_perfil',
   'falha',
 ] as const;
 export type CodigoDeAviso = (typeof CODIGOS_DE_AVISO)[number];
@@ -221,6 +222,13 @@ export function descreverAviso(codigo: string | undefined, quantidade?: number):
         titulo: 'Essa linha não existe mais',
         corpo: 'Alguém pode ter decidido antes. A lista abaixo já está atualizada.',
       };
+    case 'produto_de_outro_perfil':
+      return {
+        tom: 'erro',
+        titulo: 'Esse produto não é deste perfil',
+        corpo:
+          'A ficha abaixo é de outro produto — o de abertura. Escolha na lista antes de responder a um comprador: ficha errada com cara de ficha certa é o erro que esta tela existe para não deixar acontecer.',
+      };
     case 'falha':
       return {
         tom: 'erro',
@@ -261,4 +269,25 @@ export function estadoDaBase(numeros: {
     };
   }
   return null;
+}
+
+/**
+ * Nome do arquivo da ficha, a partir do título do produto.
+ *
+ * Título de produto tem acento, barra e parêntese, e nome de arquivo com isso
+ * atravessa mal cabeçalho HTTP e pior ainda pen drive — então sai `ficha-refil-pa21g.csv`.
+ * Título que não sobra nada depois da limpeza cai em `ficha.csv`, que é melhor que
+ * `ficha-.csv`.
+ */
+export function nomeDoArquivoDaFicha(titulo: string): string {
+  const base = titulo
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+    .replace(/-+$/g, '');
+
+  return base === '' ? 'ficha.csv' : `ficha-${base}.csv`;
 }

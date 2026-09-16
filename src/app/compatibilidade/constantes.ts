@@ -9,6 +9,9 @@
 /** Rota da tela. */
 export const CAMINHO = '/compatibilidade';
 
+/** Rota que devolve a ficha em planilha. Rota só existe quando a resposta não é HTML. */
+export const CAMINHO_DO_ARQUIVO = '/compatibilidade/baixar';
+
 /** Quantas linhas a fila de conferência mostra por vez. */
 export const LIMITE_DA_FILA = 25;
 

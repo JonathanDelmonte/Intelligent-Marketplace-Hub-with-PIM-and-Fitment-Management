@@ -71,6 +71,13 @@ export interface CompatibilidadeGravada {
   readonly aparelho: AparelhoGravado;
 }
 
+/** Um produto na escolha de ficha, com quanta compatibilidade já tem registrada. */
+export interface SkuParaFicha {
+  readonly id: string;
+  readonly titulo: string;
+  readonly linhas: number;
+}
+
 export class RepositorioDeCompatibilidade {
   constructor(
     private readonly db: Banco,
@@ -391,19 +398,20 @@ export class RepositorioDeCompatibilidade {
   }
 
   /**
-   * O produto cuja ficha a tela mostra.
+   * Os produtos que a tela oferece para ver a ficha, do mais provado ao menos.
    *
-   * O que tem mais compatibilidade registrada, e, na falta de qualquer uma, o
-   * primeiro produto ativo do perfil. A primeira versão da tela usava o primeiro
-   * item da fila de conferência, e isso tinha um efeito absurdo: **a ficha
-   * desaparecia justamente quando ficava completa**, porque fila vazia significa
-   * tudo conferido. Ordem estável por título para a tela não trocar de produto
+   * Ordenado por quanta compatibilidade cada um tem registrada, e **o primeiro da
+   * lista é o que a tela abre** quando ninguém escolheu. A primeira versão da tela
+   * usava o primeiro item da fila de conferência, e isso tinha um efeito absurdo: a
+   * ficha desaparecia justamente quando ficava completa, porque fila vazia significa
+   * tudo conferido. Empate desfeito pelo título, para a tela não trocar de produto
    * entre dois carregamentos.
+   *
+   * `linhas` viaja junto porque é o que o seletor mostra ao lado do nome: escolher
+   * entre vinte produtos sem saber qual tem ficha é escolher no escuro.
    */
-  async skuEmFoco(
-    perfil: PerfilId,
-  ): Promise<{ readonly id: string; readonly titulo: string } | null> {
-    const comCompatibilidade = await this.db
+  async skusParaFicha(perfil: PerfilId, limite = 200): Promise<readonly SkuParaFicha[]> {
+    return this.db
       .select({
         id: sku.id,
         titulo: sku.tituloInterno,
@@ -414,10 +422,35 @@ export class RepositorioDeCompatibilidade {
       .where(and(eq(sku.perfilId, perfil), eq(sku.ativo, true)))
       .groupBy(sku.id, sku.tituloInterno)
       .orderBy(sql`count(${compatibilidade.aparelhoId}) desc`, sku.tituloInterno)
-      .limit(1);
+      .limit(limite);
+  }
 
-    const escolhido = comCompatibilidade[0];
-    return escolhido === undefined ? null : { id: escolhido.id, titulo: escolhido.titulo };
+  /**
+   * O produto escolhido, ou o primeiro da lista quando a escolha não vale.
+   *
+   * `null` em `escolhido` significa "não é deste perfil, ou não existe" — e a tela
+   * diz isso em vez de mostrar em silêncio a ficha de outro produto, que é o defeito
+   * que faria alguém responder a um comprador com a ficha errada.
+   */
+  async skuParaFicha(
+    perfil: PerfilId,
+    pedido: string | undefined,
+  ): Promise<{
+    readonly lista: readonly SkuParaFicha[];
+    readonly escolhido: SkuParaFicha | null;
+    readonly pedidoInvalido: boolean;
+  }> {
+    const lista = await this.skusParaFicha(perfil);
+    const primeiro = lista[0] ?? null;
+
+    if (pedido === undefined || pedido === '') {
+      return { lista, escolhido: primeiro, pedidoInvalido: false };
+    }
+
+    const pedido_ = lista.find((s) => s.id === pedido);
+    return pedido_ === undefined
+      ? { lista, escolhido: primeiro, pedidoInvalido: true }
+      : { lista, escolhido: pedido_, pedidoInvalido: false };
   }
 
   /** Aparelhos de um conjunto de ids, para a inferência montar os grupos. */

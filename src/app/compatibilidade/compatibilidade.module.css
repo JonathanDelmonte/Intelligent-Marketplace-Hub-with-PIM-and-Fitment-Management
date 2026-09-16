@@ -161,6 +161,29 @@
   composes: botaoSecundario from '../ui/comum.module.css';
 }
 
+/*
+ * O link de baixar com forma de botão, como na tela de anúncio.
+ *
+ * `text-decoration: none` porque sublinhado dentro de botão lê como defeito, e
+ * `inline-block` porque `a` sem isso ignora o `padding` vertical.
+ */
+.botaoBaixar {
+  composes: botaoSim from '../ui/comum.module.css';
+  display: inline-block;
+  margin-top: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  text-decoration: none;
+}
+
+/* O seletor de produto: campo e botão na mesma linha, quebrando no telefone. */
+.escolha {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+}
+
 .dica {
   composes: dica from '../ui/comum.module.css';
 }

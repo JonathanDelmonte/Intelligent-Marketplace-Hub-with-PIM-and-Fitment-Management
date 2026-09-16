@@ -8,8 +8,11 @@
  */
 import type { Evidencia } from '@/dominio/compatibilidade/evidencia';
 import type { Ficha, Resposta } from '@/dominio/compatibilidade/ficha';
+import type { SkuParaFicha } from '@/dominio/compatibilidade/repositorio';
 import type { Decisao } from '@/dominio/compatibilidade/resolucao';
+import { contagem } from '@/lib/texto';
 import { cadastrarAparelho, decidirLinha, procurarNosAnuncios } from './acoes';
+import { CAMINHO_DO_ARQUIVO } from './constantes';
 import {
   emPorcento,
   explicarRetencao,
@@ -339,13 +342,20 @@ export function ResponderComprador({
   produto,
   pergunta,
   resposta,
+  skuId,
 }: {
   readonly produto: string;
   readonly pergunta: string;
   readonly resposta: Resposta | null;
+  readonly skuId: string;
 }) {
   return (
     <form className={estilo.formulario} method="get">
+      {/*
+        O produto viaja junto, senão perguntar sobre o item escolhido devolveria a
+        resposta do produto de abertura — a ficha errada com cara de ficha certa.
+      */}
+      <input name="sku" type="hidden" value={skuId} />
       <label className={estilo.campo} htmlFor="pergunta">
         <span>Pergunta do comprador sobre “{produto}”</span>
         <input
@@ -372,5 +382,85 @@ export function ResponderComprador({
         </>
       )}
     </form>
+  );
+}
+
+/**
+ * Qual produto a ficha mostra.
+ *
+ * `GET` e sem JavaScript, como o resto das telas de servidor: a escolha fica na URL,
+ * recarregar não perde, e a URL de um produto é compartilhável — que é exatamente o
+ * que se quer quando duas pessoas conferem a mesma ficha.
+ *
+ * A pergunta do comprador viaja escondida no formulário para a escolha não apagar o
+ * que já estava digitado. Um `<select>` sozinho num formulário com um só campo
+ * dispensaria o botão se houvesse JavaScript; sem ele o botão é o que submete.
+ */
+export function EscolhaDeProduto({
+  produtos,
+  escolhido,
+  pergunta,
+}: {
+  readonly produtos: readonly SkuParaFicha[];
+  readonly escolhido: SkuParaFicha;
+  readonly pergunta: string;
+}) {
+  if (produtos.length <= 1) return null;
+
+  return (
+    <form className={estilo.escolha} method="get">
+      {pergunta !== '' && <input name="p" type="hidden" value={pergunta} />}
+      <label className={estilo.campo} htmlFor="escolha-de-produto">
+        <span>Ficha de qual produto</span>
+        <select
+          className={estilo.entrada}
+          defaultValue={escolhido.id}
+          id="escolha-de-produto"
+          name="sku"
+        >
+          {produtos.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.titulo} —{' '}
+              {p.linhas === 0
+                ? 'nada registrado'
+                : contagem(p.linhas, 'linha registrada', 'linhas registradas')}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button className={estilo.botao} type="submit">
+        Ver esta ficha
+      </button>
+    </form>
+  );
+}
+
+/**
+ * O link que baixa a ficha em planilha.
+ *
+ * Só aparece quando há linha publicável, pela mesma regra da tela de anúncio: link
+ * que devolve um arquivo com só o cabeçalho gasta a confiança de quem clicou para
+ * descobrir o que o sistema já sabia.
+ */
+export function BaixarFicha({
+  skuId,
+  publicaveis,
+}: {
+  readonly skuId: string;
+  readonly publicaveis: number;
+}) {
+  if (publicaveis === 0) return null;
+
+  return (
+    <>
+      <a className={estilo.botaoBaixar} href={`${CAMINHO_DO_ARQUIVO}?sku=${skuId}`}>
+        Baixar a ficha em planilha
+      </a>
+      <p className={estilo.dica}>
+        {contagem(publicaveis, 'linha publicável', 'linhas publicáveis')}, separadas por ponto e
+        vírgula, que é o que a planilha brasileira abre. Só o publicável entra — afirmar na vitrine
+        o que está abaixo do corte é o caminho curto para a devolução.
+      </p>
+    </>
   );
 }
