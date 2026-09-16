@@ -15,12 +15,13 @@ import {
 } from './apresentacao';
 
 describe('situacaoDoDossie', () => {
-  it('dossiê sem passo gasto está esperando, e não em andamento', () => {
+  it('dossiê sem passo gasto está esperando a fila, e não em andamento', () => {
     // O domínio usa `motivoParada` nulo para "em andamento", e um dossiê recém-aberto
-    // também tem motivo nulo. Chamar isso de "em andamento" afirmaria que algo está
-    // rodando — e nada está: o executor não existe.
+    // também tem motivo nulo. Chamar isso de "em andamento" afirmaria que o laço está
+    // rodando, quando o que houve foi a tela gravar o plano e enfileirar o job.
     const s = situacaoDoDossie({ motivoParada: null, passosGastos: 0, hipotesesAbertas: 7 });
-    expect(s.rotulo).toBe('esperando investigação');
+    expect(s.rotulo).toBe('esperando a fila');
+    expect(s.explicacao).toContain('fila');
     expect(s.valeContinuar).toBe(false);
   });
 
@@ -78,22 +79,14 @@ describe('explicacaoAcrescenta', () => {
 });
 
 describe('textoDoEstadoDaFerramenta', () => {
-  it('falta de chave e falta de adaptador são ações diferentes', () => {
-    const chave = textoDoEstadoDaFerramenta(estadoDaFerramenta('visao', { temChaveDeLlm: false }));
-    expect(chave.rotulo).toBe('falta chave');
-    expect(chave.detalhe).toContain('LLM_API_KEY');
-
-    const adaptador = textoDoEstadoDaFerramenta(
-      estadoDaFerramenta('busca_web', { temChaveDeLlm: true }),
-    );
-    expect(adaptador.rotulo).toBe('não existe ainda');
-    expect(adaptador.detalhe).toContain('buscador');
+  it('o que falta vira detalhe, porque é o que diz o que fazer', () => {
+    const busca = textoDoEstadoDaFerramenta(estadoDaFerramenta('busca_web', ['base_local']));
+    expect(busca.rotulo).toBe('não existe ainda');
+    expect(busca.detalhe).toContain('buscador');
   });
 
   it('o que dá para usar não precisa de detalhe', () => {
-    const local = textoDoEstadoDaFerramenta(
-      estadoDaFerramenta('base_local', { temChaveDeLlm: false }),
-    );
+    const local = textoDoEstadoDaFerramenta(estadoDaFerramenta('base_local', ['base_local']));
     expect(local.tom).toBe('ok');
     expect(local.detalhe).toBeNull();
   });
@@ -203,10 +196,18 @@ describe('descreverAviso', () => {
     expect(descreverAviso('inventado')).toBeNull();
   });
 
-  it('reabrir alvo é recusa explicada, e não erro', () => {
-    const aviso = descreverAviso('ja_aberto');
-    expect(aviso?.tom).toBe('atencao');
+  it('alvo que já existe não é reaberto, e o aviso diz o que aconteceu', () => {
+    // Reabrir gravaria plano em branco sobre os achados. O que acontece é enfileirar.
+    const aviso = descreverAviso('na_fila');
+    expect(aviso?.tom).toBe('ok');
+    expect(aviso?.titulo).toContain('fila');
     expect(aviso?.corpo).toContain('duas vezes');
+  });
+
+  it('plano salvo e job não criado é erro que não mente sobre o plano', () => {
+    const aviso = descreverAviso('nao_enfileirou');
+    expect(aviso?.tom).toBe('erro');
+    expect(aviso?.corpo).toContain('O plano está salvo');
   });
 
   it('teto inválido lembra por que o teto existe', () => {

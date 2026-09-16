@@ -1,34 +1,27 @@
 /**
- * Quais ferramentas do prospector existem nesta instalação (M6).
+ * O estado de cada ferramenta do prospector (M6).
  *
- * A fronteira já sabe recusar item cuja ferramenta falta — `escolherDaFronteira` filtra
+ * A fronteira já sabia recusar item cuja ferramenta falta — `escolherDaFronteira` filtra
  * por `limites.ferramentas`. O que não existia é **quem responde a essa pergunta**, e
  * sem isso a tela não conseguia dizer por que um dossiê não avança.
  *
- * ## Declaração, e não sonda
+ * ## "Disponível" é ter investigador, e não ter configuração
  *
- * O mesmo desenho de `plataformas/capacidades.ts`: cada ferramenta declara o que faz e
- * o que lhe falta. Sondar aqui seria pior — descobrir no meio do passo que a rede
- * recusa o domínio é exatamente o que gasta orçamento para nada, e a especificação põe
- * o teto justamente para isso não acontecer.
- *
- * Só uma linha é derivada de configuração (`visao`, que precisa de chave de LLM). As
- * outras são fato sobre **este código**: não há buscador, não há leitor de página, não
- * há consulta de CNPJ e não há sensor de PNCP implementado. Enquanto não houver, dizer
- * "disponível" seria mentir para o próprio agente.
+ * A primeira versão deste arquivo declarava o estado de cada ferramenta e derivava a
+ * visão da chave de LLM no ambiente. Estava errado do jeito que engana: a tela dizia
+ * "falta chave" para a visão, o que implica que pôr a chave a faria rodar — e não
+ * faria, porque ninguém a chama. Agora a fonte da verdade é o registro de
+ * investigadores (`registro.ts`), e o que sobra aqui é o **texto**: o que cada
+ * ferramenta faz e o que falta para ela existir.
  *
  * ## O que isto não diz
  *
- * Não diz que a investigação vai rodar. O executor — o laço que gasta passo e chama
- * ferramenta — não existe (ver roadmap, fase 10). Isto responde "o que **poderia** ser
- * chamado", que é a metade da pergunta que dá para responder com honestidade.
+ * Não diz que a investigação vai achar algo. Diz que a chamada existe.
  */
 import { FERRAMENTAS, type Ferramenta } from './hipoteses';
 
 export type EstadoDaFerramenta =
-  | { readonly tipo: 'disponivel' }
-  | { readonly tipo: 'falta_chave'; readonly variavel: string }
-  | { readonly tipo: 'sem_adaptador'; readonly oQueFalta: string };
+  { readonly tipo: 'disponivel' } | { readonly tipo: 'falta'; readonly oQueFalta: string };
 
 /** O que cada ferramenta faz, em uma linha. É o que a tela mostra. */
 export const O_QUE_A_FERRAMENTA_FAZ: Readonly<Record<Ferramenta, string>> = {
@@ -37,62 +30,43 @@ export const O_QUE_A_FERRAMENTA_FAZ: Readonly<Record<Ferramenta, string>> = {
   visao: 'Lê print de tabela de preços e foto de etiqueta.',
   cnpj: 'Confere se o candidato é distribuidor de verdade, e se está ativo.',
   pncp: 'Consulta compra pública: demanda em volume e preço de referência abertos.',
-  base_local: 'Procura no que já está aqui: catálogo, compatibilidade e fornecedores.',
+  base_local: 'Procura no que já está aqui: anúncio e ocorrência já coletados.',
 };
 
-export interface ContextoDasFerramentas {
-  readonly temChaveDeLlm: boolean;
-}
+/**
+ * O que falta para cada ferramenta existir.
+ *
+ * Texto com o nome da coisa que alguém tem de escrever ou ligar, e não "indisponível":
+ * a diferença entre as duas é que a segunda manda a pessoa procurar.
+ */
+export const O_QUE_FALTA_PARA_A_FERRAMENTA: Readonly<Record<Ferramenta, string>> = {
+  busca_web: 'Nenhum buscador implementado, e rede de saída para ele.',
+  ler_pagina: 'Nenhum leitor de página implementado, e rede de saída.',
+  visao: 'Nenhum investigador de visão, e o prospector não tem de onde receber imagem.',
+  cnpj: 'Nenhuma consulta de CNPJ implementada, e rede de saída.',
+  // `SensorDePncpAusente` já é o estado correto disto no domínio: a política de rede
+  // deste ambiente recusa `pncp.gov.br` com CONNECT 403.
+  pncp: 'Sensor de PNCP ausente, e a rede daqui recusa pncp.gov.br.',
+  base_local: 'Nenhum investigador de base local registrado.',
+};
 
 /**
- * O estado de uma ferramenta.
+ * O estado de uma ferramenta, dado o que a instalação sabe chamar.
  *
- * `base_local` é a única disponível sem nada de fora, e é por isso que ela importa mais
- * do que o valor base das famílias dela sugere: é a única investigação que este
- * ambiente consegue pagar hoje.
+ * `prontas` vem do registro de investigadores, e não de configuração. Sem parâmetro
+ * padrão de propósito: um padrão que importasse o registro puxaria banco e executor
+ * para dentro de um módulo de texto.
  */
 export function estadoDaFerramenta(
   ferramenta: Ferramenta,
-  contexto: ContextoDasFerramentas,
+  prontas: readonly Ferramenta[],
 ): EstadoDaFerramenta {
-  switch (ferramenta) {
-    case 'base_local':
-      return { tipo: 'disponivel' };
-
-    case 'visao':
-      return contexto.temChaveDeLlm
-        ? { tipo: 'disponivel' }
-        : { tipo: 'falta_chave', variavel: 'LLM_API_KEY' };
-
-    case 'busca_web':
-      return {
-        tipo: 'sem_adaptador',
-        oQueFalta: 'Nenhum buscador implementado, e rede de saída para o buscador.',
-      };
-
-    case 'ler_pagina':
-      return {
-        tipo: 'sem_adaptador',
-        oQueFalta: 'Nenhum leitor de página implementado, e rede de saída.',
-      };
-
-    case 'cnpj':
-      return {
-        tipo: 'sem_adaptador',
-        oQueFalta: 'Nenhuma consulta de CNPJ implementada, e rede de saída.',
-      };
-
-    case 'pncp':
-      return {
-        tipo: 'sem_adaptador',
-        // `SensorDePncpAusente` já é o estado correto disto no domínio: a política de
-        // rede deste ambiente recusa `pncp.gov.br` com CONNECT 403.
-        oQueFalta: 'Sensor de PNCP ausente, e a rede daqui recusa pncp.gov.br.',
-      };
-  }
+  return prontas.includes(ferramenta)
+    ? { tipo: 'disponivel' }
+    : { tipo: 'falta', oQueFalta: O_QUE_FALTA_PARA_A_FERRAMENTA[ferramenta] };
 }
 
-/** As ferramentas que dão para chamar. Entra direto em `LimitesDaBusca.ferramentas`. */
-export function ferramentasDisponiveis(contexto: ContextoDasFerramentas): readonly Ferramenta[] {
-  return FERRAMENTAS.filter((f) => estadoDaFerramenta(f, contexto).tipo === 'disponivel');
+/** As que faltam, na ordem de `FERRAMENTAS`. */
+export function ferramentasQueFaltam(prontas: readonly Ferramenta[]): readonly Ferramenta[] {
+  return FERRAMENTAS.filter((f) => !prontas.includes(f));
 }

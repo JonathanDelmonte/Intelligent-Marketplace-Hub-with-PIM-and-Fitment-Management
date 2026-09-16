@@ -14,11 +14,15 @@ declare const estilo: {
   readonly avisoTitulo: string;
   readonly bloco: string;
   readonly botao: string;
+  readonly botaoMiudo: string;
   readonly cabecalho: string;
   readonly campo: string;
   readonly campoLargo: string;
+  readonly campoMiudo: string;
+  readonly continuar: string;
   readonly dica: string;
   readonly entrada: string;
+  readonly entradaMiuda: string;
   readonly etiqueta: string;
   readonly etiquetaAlerta: string;
   readonly etiquetaAtencao: string;

@@ -1,13 +1,20 @@
 /**
  * Ações da tela de garimpo.
  *
- * Uma: abrir um alvo. Não há ação de investigar — o executor, o laço que gasta passo e
- * chama ferramenta, não existe (ver roadmap, fase 10). E não há ação de apagar dossiê:
- * dossiê é conhecimento do mundo, e o parcial é o caminho normal.
+ * Uma: investigar um alvo. Ela abre o alvo quando ele é novo — escrevendo o plano e o
+ * teto — e em seguida **enfileira** a investigação.
  *
- * Abrir um alvo que já tem dossiê é **recusado**, e essa é a decisão que importa deste
- * arquivo. `salvar` faz upsert por alvo normalizado, então reabrir gravaria um plano em
- * branco em cima dos achados — e achado perdido é investigação paga duas vezes.
+ * Enfileira em vez de investigar aqui porque cada passo é uma chamada de ferramenta: no
+ * dia em que a ferramenta for rede, rodar o laço dentro da ação seria a pessoa olhando
+ * uma tela parada por minutos. A fila é a mesma de ingestão, identidade,
+ * compatibilidade e pedido, com o mesmo poller.
+ *
+ * Alvo que já tem dossiê **não é reaberto**: `salvar` casa por chave e reescreveria o
+ * plano em cima dos achados. O que acontece é só o enfileiramento, e investigar continua
+ * de onde parou — com o teto que a pessoa acabou de pedir, que é como "continuar com um
+ * teto maior" funciona.
+ *
+ * Não há ação de apagar dossiê: é conhecimento do mundo, e o parcial é o caminho normal.
  *
  * `redirect()` do Next sinaliza por exceção, então nenhum `redirect` daqui está dentro
  * de `try`.
@@ -17,13 +24,11 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
-import { lerAmbiente } from '@/config/ambiente';
 import { abrirAlvo } from '@/dominio/prospector/abertura';
 import { OrcamentoDaBusca, paraGravar } from '@/dominio/prospector/dossie';
-import { ferramentasDisponiveis } from '@/dominio/prospector/ferramentas';
-import { proximoPasso } from '@/dominio/prospector/fronteira';
-import { RepositorioDeDossies } from '@/dominio/prospector/repositorio';
-import { banco } from '@/infra/banco/cliente';
+import { FERRAMENTAS_PRONTAS } from '@/dominio/prospector/registro';
+import { enfileirarInvestigacao, gatilhoDoMinuto } from '@/dominio/prospector/tarefa';
+import { montarNucleo } from '@/infra/montagem';
 import { criarRegistrador, nivelDoAmbiente } from '@/infra/log';
 import { lerTeto, type CodigoDeAviso } from './apresentacao';
 import { CAMINHO } from './constantes';
@@ -49,7 +54,7 @@ const esquemaDoAlvo = z.object({
   passos: z.coerce.number().int().min(1).max(500),
 });
 
-export async function abrirUmAlvo(dados: FormData): Promise<void> {
+export async function investigarAlvo(dados: FormData): Promise<void> {
   const lido = esquemaDoAlvo.safeParse({
     alvo: dados.get('alvo') ?? '',
     teto: dados.get('teto') ?? '',
@@ -65,36 +70,39 @@ export async function abrirUmAlvo(dados: FormData): Promise<void> {
   if (teto === null) redirect(paraOnde('teto_invalido'));
 
   let jaExistia = false;
+  let enfileirou = false;
+
   try {
-    const repo = new RepositorioDeDossies(banco());
-    jaExistia = (await repo.porAlvo(lido.data.alvo)) !== null;
+    const nucleo = montarNucleo();
+    jaExistia = (await nucleo.dossies.porAlvo(lido.data.alvo)) !== null;
 
     if (!jaExistia) {
-      const ferramentas = ferramentasDisponiveis({
-        temChaveDeLlm: lerAmbiente().LLM_API_KEY !== undefined,
-      });
-
-      const estado = abrirAlvo(lido.data.alvo, ferramentas);
-
-      // O motivo de parada sai da própria máquina, e não de um palpite da tela: sem
-      // ferramenta para nenhum item, `proximoPasso` devolve `fronteira_vazia`, que é
-      // exatamente o que aconteceu — e é diferente de "em andamento".
-      const passo = proximoPasso(estado, { passos: lido.data.passos, ferramentas });
-
-      await repo.salvar(
+      // Motivo de parada nulo com zero passo é "esperando investigação", que é a
+      // verdade: o plano está escrito e o job está na fila. Quem escreve o motivo de
+      // verdade é o motor, quando parar.
+      await nucleo.dossies.salvar(
         paraGravar({
           alvo: lido.data.alvo,
-          estado,
+          estado: abrirAlvo(lido.data.alvo, FERRAMENTAS_PRONTAS),
           orcamento: new OrcamentoDaBusca(teto, lido.data.passos),
-          motivoParada: passo.tipo === 'parar' ? passo.motivo : null,
+          motivoParada: null,
         }),
       );
     }
+
+    enfileirou = await enfileirarInvestigacao(
+      nucleo.fila,
+      { alvo: lido.data.alvo, tetoCentavos: teto, tetoPassos: lido.data.passos },
+      gatilhoDoMinuto(new Date()),
+      log,
+    );
   } catch (erro) {
-    log.erro('garimpo.abertura_falhou', { erro });
+    log.erro('garimpo.investigacao_falhou', { erro });
     redirect(paraOnde('falha'));
   }
 
   revalidatePath(CAMINHO);
-  redirect(paraOnde(jaExistia ? 'ja_aberto' : 'aberto'));
+
+  if (!enfileirou) redirect(paraOnde('nao_enfileirou'));
+  redirect(paraOnde(jaExistia ? 'na_fila' : 'aberto'));
 }

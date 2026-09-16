@@ -6,13 +6,15 @@
  * auditar abre. Esconder atrás de clique só vale para o que é conferência; o estado e o
  * motivo de parada ficam abertos, porque são a razão de olhar a tela.
  */
+import { fronteiraRestante } from '@/dominio/prospector/dossie';
 import type { DossieGravado } from '@/dominio/prospector/repositorio';
 import { definicaoDaFamilia, FERRAMENTAS, type Ferramenta } from '@/dominio/prospector/hipoteses';
 import { estadoDaFerramenta, O_QUE_A_FERRAMENTA_FAZ } from '@/dominio/prospector/ferramentas';
 import { formatarAbsoluto, formatarRelativo } from '../ui/tempo';
-import { abrirUmAlvo } from './acoes';
+import { investigarAlvo } from './acoes';
 import {
   explicacaoAcrescenta,
+  reaisDoTeto,
   linhaDaFronteira,
   orcamentoLegivel,
   ROTULO_DA_FAMILIA,
@@ -45,11 +47,11 @@ export function AvisoDaAcao({ aviso }: { readonly aviso: Aviso }) {
  * Fica antes dos dossiês de propósito: sem isto, "nenhum achado" se lê como sinal sobre
  * o alvo, quando o que houve foi não ter com que olhar.
  */
-export function Ferramentas({ temChaveDeLlm }: { readonly temChaveDeLlm: boolean }) {
+export function Ferramentas({ prontas }: { readonly prontas: readonly Ferramenta[] }) {
   return (
     <ul className={estilo.lista}>
       {FERRAMENTAS.map((ferramenta) => (
-        <Ferramenta ferramenta={ferramenta} key={ferramenta} temChaveDeLlm={temChaveDeLlm} />
+        <Ferramenta ferramenta={ferramenta} key={ferramenta} prontas={prontas} />
       ))}
     </ul>
   );
@@ -57,12 +59,12 @@ export function Ferramentas({ temChaveDeLlm }: { readonly temChaveDeLlm: boolean
 
 function Ferramenta({
   ferramenta,
-  temChaveDeLlm,
+  prontas,
 }: {
   readonly ferramenta: Ferramenta;
-  readonly temChaveDeLlm: boolean;
+  readonly prontas: readonly Ferramenta[];
 }) {
-  const texto = textoDoEstadoDaFerramenta(estadoDaFerramenta(ferramenta, { temChaveDeLlm }));
+  const texto = textoDoEstadoDaFerramenta(estadoDaFerramenta(ferramenta, prontas));
   const classe =
     texto.tom === 'ok'
       ? estilo.etiquetaOk
@@ -107,6 +109,9 @@ function Dossie({
         : estilo.etiqueta;
 
   const restantes = dossie.achados.length - ACHADOS_NA_TELA;
+  // O que ficou, e não a fronteira inteira: ela passou a ser gravada completa para a
+  // investigação ser retomável, e quem lê quer o que sobrou.
+  const restaram = fronteiraRestante(dossie);
 
   return (
     <li className={estilo.item}>
@@ -136,6 +141,43 @@ function Dossie({
       )}
 
       {dossie.recomendacao !== null && <p className={estilo.recomendacao}>{dossie.recomendacao}</p>}
+
+      {/*
+        Continuar é passar um teto maior, e é por isso que o teto é campo e não botão:
+        a mensagem de parada do domínio diz exatamente isso, e sem os dois números aqui
+        a pessoa teria de reabrir o alvo pelo formulário de baixo — que recusa, com
+        razão, para não reescrever o plano.
+      */}
+      <form action={investigarAlvo} className={estilo.continuar}>
+        <input name="alvo" type="hidden" value={dossie.alvo} />
+        <label className={estilo.campoMiudo}>
+          Teto em reais
+          <input
+            className={estilo.entradaMiuda}
+            defaultValue={reaisDoTeto(dossie.orcamentoCentavos)}
+            inputMode="decimal"
+            name="teto"
+            required
+            type="text"
+          />
+        </label>
+        <label className={estilo.campoMiudo}>
+          Teto em passos
+          <input
+            className={estilo.entradaMiuda}
+            defaultValue={dossie.orcamentoPassos}
+            inputMode="numeric"
+            max={500}
+            min={1}
+            name="passos"
+            required
+            type="number"
+          />
+        </label>
+        <button className={estilo.botaoMiudo} type="submit">
+          {dossie.passosGastos === 0 ? 'Investigar' : 'Investigar mais'}
+        </button>
+      </form>
 
       {dossie.achados.length > 0 && (
         <details className={estilo.bloco}>
@@ -184,13 +226,13 @@ function Dossie({
         </ul>
       </details>
 
-      {dossie.fronteira.length > 0 && (
+      {restaram.length > 0 && (
         <details className={estilo.bloco}>
           <summary className={estilo.resumoDoBloco}>
-            ver o que ficou na fronteira ({dossie.fronteira.length})
+            ver o que ficou na fronteira ({restaram.length})
           </summary>
           <ul className={estilo.listaMiuda}>
-            {dossie.fronteira.map((item, indice) => {
+            {restaram.map((item, indice) => {
               const linha = linhaDaFronteira(item, dossie.alvo);
               return (
                 <li className={estilo.hipotese} key={`${item.familia}-${String(indice)}`}>
@@ -238,15 +280,15 @@ export function Dossies({
 }
 
 /**
- * Abrir um alvo.
+ * Investigar um alvo novo.
  *
  * Os dois tetos são campo, e não configuração escondida: o de reais é o que interessa
  * ao bolso, e o de passos é o que continua valendo quando uma ferramenta não informa
- * custo. Declarar os dois antes de começar é o que a especificação pede.
+ * custo. Declarar os dois antes de começar é o que separa curiosidade de fatura.
  */
 export function FormularioDeAlvo({ tetoPadrao }: { readonly tetoPadrao: string }) {
   return (
-    <form action={abrirUmAlvo} className={estilo.formulario}>
+    <form action={investigarAlvo} className={estilo.formulario}>
       <label className={estilo.campoLargo}>
         O alvo
         <input
@@ -292,7 +334,7 @@ export function FormularioDeAlvo({ tetoPadrao }: { readonly tetoPadrao: string }
 
       <div className={estilo.acao}>
         <button className={estilo.botao} type="submit">
-          Abrir alvo
+          Investigar
         </button>
       </div>
     </form>

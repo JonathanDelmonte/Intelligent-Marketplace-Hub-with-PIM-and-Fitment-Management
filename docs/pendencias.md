@@ -396,7 +396,7 @@ comido, ou na primeira devolução por voltagem.
 
 ---
 
-### 3.8 A fase 11 tem tela; a fase 10 não
+### 3.8 As fases 10 e 11 têm tela, e o prospector tem uma ferramenta
 
 **Fechado para a fase 11.** As três telas existem: `/monitor` (o que mudou, agrupado por
 vendedor e semana, e o que vale publicar hoje), `/perguntas` (dúvida repetida e o que
@@ -414,16 +414,21 @@ frases de domínio com `(s)` de plural, uma delas errada. Está tudo no diário 
 investigar hoje, os dossiês com gasto contra teto e motivo de parada, e abrir um alvo com
 o teto declarado antes de começar.
 
-**O que ainda não existe ali é o executor** — o laço que gasta passo e chama ferramenta.
-Das seis ferramentas, duas são chamáveis (base local e visão, esta com a chave de LLM
-que este ambiente tem) e quatro não têm adaptador nenhum implementado, além de a rede
-daqui recusar `pncp.gov.br` (ver 3.3). Então três das sete perguntas dão para investigar,
-e é a tela que diz isso — com o nome da variável ou o nome do que falta escrever, em vez
-de um "indisponível" que manda a pessoa procurar.
+**O executor existe desde 16/09.** "Investigar" enfileira, o poller roda o laço, e o
+dossiê aparece com os achados. A ferramenta que roda é a **base local**, que mineira as
+ocorrências já coletadas e responde duas das sete perguntas — "em que mais serve" e "que
+outras peças" —, cada achado com a URL do anúncio de onde veio, custo zero.
 
-Por isso não há botão de investigar: botão que não faz nada é pior que ausência de botão.
-O dossiê aberto fica com motivo de parada `fronteira_vazia`, que é a verdade, e não "em
-andamento".
+**O que falta são as outras cinco ferramentas.** Buscador, leitor de página e consulta de
+CNPJ precisam ser escritos e precisam de rede de saída (ver 3.3); o sensor de PNCP é 🔒
+porque a política daqui recusa `pncp.gov.br`; e a visão precisa de chave de LLM **e** de
+um caminho de imagem que o prospector não tem. Então duas das sete perguntas dão para
+investigar, e a tela diz ferramenta por ferramenta o que falta — com o nome do que
+alguém tem de escrever, em vez de um "indisponível" que manda a pessoa procurar.
+
+Registrar um investigador é uma linha em `prospector/registro.ts`. Os dossiês que já
+estão na fila são reencaminhados para a ferramenta nova na retomada, sem migração de
+dado.
 
 ---
 

@@ -11,23 +11,23 @@
  *
  * A ordem da tela é a da honestidade. Primeiro **o que dá para investigar hoje**, porque
  * sem isso "nenhum achado" se lê como sinal sobre o alvo quando o que houve foi não ter
- * com que olhar. Depois os dossiês, com o estado de cada um e o motivo de parada.
- * Por último abrir um alvo, que é a única coisa que a tela escreve.
+ * com que olhar. Depois os dossiês, com o estado de cada um, o motivo de parada e o
+ * campo de teto para continuar. Por último, investigar um alvo novo.
  *
- * **Investigar não é ação desta tela**, e é por isso que não há botão. O executor — o
- * laço que gasta passo e chama ferramenta a cada volta — não existe: das seis
- * ferramentas, uma é chamável (a base local), e o que existe é a máquina que decidiria
- * a ordem. A tela diz isso em vez de oferecer um botão que não faz nada.
+ * **Investigar é enfileirar.** Cada passo é uma chamada de ferramenta, então o laço roda
+ * no poller e não dentro da ação: a tela responde na hora e o dossiê aparece preenchido
+ * na próxima olhada. Das seis ferramentas, uma é chamável hoje — a base local —, e a
+ * tela diz ferramenta por ferramenta o que falta para as outras existirem.
  */
 import type { Metadata } from 'next';
 import { lerAmbiente } from '@/config/ambiente';
-import { ferramentasDisponiveis } from '@/dominio/prospector/ferramentas';
 import { FAMILIAS_DE_HIPOTESE, familiasPossiveis } from '@/dominio/prospector/hipoteses';
+import { FERRAMENTAS_PRONTAS } from '@/dominio/prospector/registro';
 import { RepositorioDeDossies } from '@/dominio/prospector/repositorio';
 import { banco } from '@/infra/banco/cliente';
-import { centavos, formatarBRL } from '@/lib/dinheiro';
+import { centavos } from '@/lib/dinheiro';
 import estilo from './garimpo.module.css';
-import { descreverAviso, resumoDoGarimpo } from './apresentacao';
+import { descreverAviso, reaisDoTeto, resumoDoGarimpo } from './apresentacao';
 import { AvisoDaAcao, Dossies, Ferramentas, FormularioDeAlvo } from './componentes';
 import { LIMITE_DE_DOSSIES } from './constantes';
 
@@ -51,17 +51,14 @@ export default async function PaginaDeGarimpo({
     repo.valeContinuar(LIMITE_DE_DOSSIES),
   ]);
 
-  const temChaveDeLlm = ambiente.LLM_API_KEY !== undefined;
-  const possiveis = familiasPossiveis(ferramentasDisponiveis({ temChaveDeLlm }));
+  const possiveis = familiasPossiveis(FERRAMENTAS_PRONTAS);
 
   const codigo = Array.isArray(parametros['r']) ? parametros['r'][0] : parametros['r'];
   const aviso = descreverAviso(codigo);
 
   // O teto sugerido é o mesmo padrão de orçamento de LLM do ambiente: é o mesmo bolso,
   // e dois padrões diferentes para a mesma coisa divergem na primeira vez que um muda.
-  const tetoPadrao = formatarBRL(centavos(ambiente.LLM_ORCAMENTO_PADRAO_CENTAVOS))
-    .replace('R$', '')
-    .trim();
+  const tetoPadrao = reaisDoTeto(centavos(ambiente.LLM_ORCAMENTO_PADRAO_CENTAVOS));
 
   return (
     <main className={estilo.pagina}>
@@ -92,10 +89,10 @@ export default async function PaginaDeGarimpo({
         <p className={estilo.dica}>
           Cada pergunta depende de uma ferramenta, e ferramenta ausente é estado normal, não erro: o
           item fica na fronteira e não é escolhido, em vez de gastar um passo para descobrir no meio
-          que não dava. O laço que chamaria essas ferramentas a cada passo ainda não existe — o que
-          existe é a máquina que decide a ordem, o teto e a parada.
+          que não dava. Acrescentar uma ferramenta é registrar um investigador — e ela passa a
+          aparecer aqui como disponível, sem mais nada.
         </p>
-        <Ferramentas temChaveDeLlm={temChaveDeLlm} />
+        <Ferramentas prontas={FERRAMENTAS_PRONTAS} />
       </section>
 
       <section aria-labelledby="dossies-titulo" className={estilo.secao}>
@@ -103,9 +100,10 @@ export default async function PaginaDeGarimpo({
           Dossiês
         </h2>
         <p className={estilo.dica}>
-          Um por alvo, e o parcial é o caminho normal: o dossiê é salvo a cada passo, então o teto
-          interrompe sem perder o que já foi descoberto. Cada achado carrega a URL de onde veio —
-          achado sem fonte não é auditável, e a tela marca quando isso acontece.
+          Um por alvo, e o parcial é o caminho normal: o dossiê é salvo a cada passo, então o teto —
+          ou uma ferramenta que quebrou — interrompe sem perder o que já foi descoberto. Cada achado
+          carrega a URL de onde veio: achado sem fonte não é auditável, e a tela marca quando isso
+          acontece. Continuar é pedir um teto maior no próprio cartão.
         </p>
         <Dossies
           agora={agora}
@@ -116,12 +114,12 @@ export default async function PaginaDeGarimpo({
 
       <section aria-labelledby="alvo-titulo" className={estilo.secao}>
         <h2 className={estilo.secaoTitulo} id="alvo-titulo">
-          Abrir um alvo
+          Investigar um alvo
         </h2>
         <p className={estilo.dica}>
-          Escreve o plano — as sete hipóteses e a fronteira, em ordem de valor por custo — e grava o
-          teto. Alvo que já tem dossiê não é reaberto: escrever plano novo em cima dos achados seria
-          pagar a mesma investigação duas vezes.
+          Escreve o plano — as sete hipóteses e a fronteira, em ordem de valor por custo —, grava o
+          teto e põe a investigação na fila. Alvo que já tem dossiê não é reaberto: o plano fica
+          como está e a investigação continua de onde parou, com o teto que você pedir aqui.
         </p>
         <FormularioDeAlvo tetoPadrao={tetoPadrao} />
       </section>

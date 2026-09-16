@@ -41,23 +41,14 @@ export interface TextoDoEstado {
 /**
  * O estado de uma ferramenta, em texto.
  *
- * "Falta chave" e "não tem adaptador" viram ações diferentes: a primeira é uma linha no
- * `.env`, a segunda é código para escrever. Um rótulo só de "indisponível" apagaria
- * justamente essa diferença.
+ * O detalhe é o que transforma o rótulo em ação: "não existe ainda" sozinho manda a
+ * pessoa procurar, e "nenhum buscador implementado, e rede de saída para ele" diz o que
+ * falta escrever. Quem produz esse texto é o domínio.
  */
 export function textoDoEstadoDaFerramenta(estado: EstadoDaFerramenta): TextoDoEstado {
-  switch (estado.tipo) {
-    case 'disponivel':
-      return { tom: 'ok', rotulo: 'dá para usar', detalhe: null };
-    case 'falta_chave':
-      return {
-        tom: 'atencao',
-        rotulo: 'falta chave',
-        detalhe: `Uma linha no ambiente: ${estado.variavel}.`,
-      };
-    case 'sem_adaptador':
-      return { tom: 'neutro', rotulo: 'não existe ainda', detalhe: estado.oQueFalta };
-  }
+  return estado.tipo === 'disponivel'
+    ? { tom: 'ok', rotulo: 'dá para usar', detalhe: null }
+    : { tom: 'neutro', rotulo: 'não existe ainda', detalhe: estado.oQueFalta };
 }
 
 export const ROTULO_DO_MOTIVO: Readonly<Record<MotivoDeParada, string>> = {
@@ -92,9 +83,9 @@ export function situacaoDoDossie(dossie: {
     return dossie.passosGastos === 0
       ? {
           tom: 'neutro',
-          rotulo: 'esperando investigação',
+          rotulo: 'esperando a fila',
           explicacao:
-            'O plano está escrito e nenhum passo foi gasto. O que falta é ferramenta — e o laço que a chama.',
+            'O plano está escrito e nenhum passo foi gasto. A investigação entra pela fila — quem a tira de lá é o processador, que dá para rodar na tela de importação.',
           valeContinuar: false,
         }
       : {
@@ -129,8 +120,7 @@ export function situacaoDoDossie(dossie: {
       return {
         tom: 'atencao',
         rotulo: ROTULO_DO_MOTIVO.fronteira_vazia,
-        explicacao:
-          'Não há item na fronteira que dê para investigar com as ferramentas de hoje. Aumentar o teto não resolve; ligar uma ferramenta resolve.',
+        explicacao: 'Aumentar o teto não resolve aqui; ligar uma ferramenta resolve.',
         valeContinuar: false,
       };
     case 'concluido':
@@ -176,6 +166,17 @@ export function linhaDaFronteira(
   return item.alvo.trim() === alvoDoDossie.trim()
     ? { principal: rotulo, secundario: null }
     : { principal: item.alvo, secundario: rotulo };
+}
+
+/**
+ * O teto em reais, do jeito que se digita de volta no campo.
+ *
+ * `formatarBRL` devolve "R$ 5,00", e o campo de teto é o mesmo que a pessoa preenche —
+ * então o prefixo sai. `lerReaisDigitados` aceitaria o "R$", mas campo pré-preenchido
+ * com prefixo convida a apagar mais do que o número.
+ */
+export function reaisDoTeto(teto: Centavos): string {
+  return formatarBRL(teto).replace('R$', '').trim();
 }
 
 /** O gasto contra o teto, nas duas moedas do orçamento. */
@@ -235,7 +236,8 @@ export function lerTeto(bruto: string): Centavos | null {
 
 export const CODIGOS_DE_AVISO = [
   'aberto',
-  'ja_aberto',
+  'na_fila',
+  'nao_enfileirou',
   'alvo_invalido',
   'teto_invalido',
   'falha',
@@ -256,16 +258,23 @@ export function descreverAviso(codigo: string | undefined): Aviso | null {
     case 'aberto':
       return {
         tom: 'ok',
-        titulo: 'Alvo aberto.',
+        titulo: 'Alvo aberto, e investigação na fila.',
         corpo:
-          'As sete hipóteses estão na fronteira, em ordem de valor por custo, e o teto está declarado. O que rodar depende de ferramenta disponível.',
+          'As sete hipóteses estão na fronteira, em ordem de valor por custo, e o teto está declarado. O que rodar depende de ferramenta disponível — o resto fica esperando.',
       };
-    case 'ja_aberto':
+    case 'na_fila':
       return {
-        tom: 'atencao',
-        titulo: 'Esse alvo já tem dossiê.',
+        tom: 'ok',
+        titulo: 'Investigação na fila.',
         corpo:
-          'Nada foi alterado. Abrir de novo escreveria um plano novo em cima do que já foi achado, e achado perdido é investigação paga duas vezes.',
+          'O plano que já existia não foi reescrito: investigar continua de onde parou, com o teto que você acabou de pedir. Reabrir apagaria os achados, e achado perdido é investigação paga duas vezes.',
+      };
+    case 'nao_enfileirou':
+      return {
+        tom: 'erro',
+        titulo: 'Não entrou na fila.',
+        corpo:
+          'O plano está salvo, mas o job não foi criado. O erro está no log, e clicar de novo tenta outra vez.',
       };
     case 'alvo_invalido':
       return {

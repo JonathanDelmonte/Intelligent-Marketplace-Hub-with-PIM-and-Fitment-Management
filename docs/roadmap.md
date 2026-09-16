@@ -581,10 +581,24 @@ saber disso.
 | 10.7 | Dossiê auditável, com URL de origem em cada item                           | ✅     |
 | 10.8 | Dossiê parcial salvo quando o orçamento estoura                            | ✅     |
 
-**A máquina do prospector está pronta; o agente que a dirige não.** Sete de oito
-entregas em pé, e o que falta é de dois tipos: a 10.4 espera rede (a política deste
-ambiente recusa `pncp.gov.br` com `CONNECT` 403), e o **executor** — o laço que chama
-LLM e ferramentas a cada passo — espera chave de LLM, como o resto de M3 e a 9.1.
+**O prospector investiga desde 16/09.** O laço existe (`prospector/motor.ts`), roda pela
+fila como os outros jobs, e tem uma ferramenta de verdade: o investigador de **base
+local**, que mineira `produto_externo` e responde duas das sete perguntas — "em que mais
+serve" (código citado no mesmo anúncio) e "que outras peças" (anúncio do mesmo aparelho
+com peça diferente). Cada achado com a URL de onde veio. Custo: zero, porque é consulta
+local; o que limita é o teto de passos.
+
+**O que falta são as outras cinco ferramentas, e uma delas é 🔒.** A 10.4 espera rede (a
+política deste ambiente recusa `pncp.gov.br` com `CONNECT` 403); buscador, leitor de
+página e consulta de CNPJ esperam ser escritos, e a visão espera chave de LLM **e** um
+caminho de imagem que o prospector não tem. Registrar um investigador é uma linha em
+`prospector/registro.ts`, e a tela passa a mostrar a ferramenta como disponível sem mais
+nada — inclusive destravando dossiê que já estava na fila.
+
+**Escrever o executor mostrou que o dossiê não era retomável**, apesar de a tabela
+existir para isso desde a fase 1: a fronteira era gravada sem ferramenta, peso nem
+custo, e `investigados` e o contador de saturação não eram gravados. Retomar re-investigava
+e mudava a ordem. Está no diário de 16/09, com o resto do que a ligação achou.
 
 **A máquina tem tela desde 15/09** (`/garimpo`): o que dá para investigar hoje
 ferramenta por ferramenta, os dossiês com gasto contra teto e motivo de parada, e abrir
@@ -599,6 +613,11 @@ não dava. O resumo do dossiê convidava a continuar o que havia saturado, duas 
 contraditórias no mesmo parágrafo. E faltava `abrirAlvo`: a máquina recebia estado
 montado à mão em teste, e o começo de uma investigação — quais hipóteses levantar — nunca
 tinha sido escrito.
+
+**"Disponível" passou a ser "tem investigador registrado", e não "tem configuração".** A
+primeira versão da tela derivava a visão da chave de LLM no ambiente e dizia "falta
+chave" — o que implica que pôr a chave a faria rodar, e não faria, porque ninguém a
+chamava.
 
 **A separação entre máquina e julgamento é a decisão desta fase.** O que é
 determinístico está em `dominio/prospector` e é testado com dezenas de cenários em
@@ -692,6 +711,7 @@ Não é fase da especificação: é o que o dono pediu para depois das fases, e 
 | C.8 | Tela de perguntas: dúvida recorrente e o que acrescentar ao anúncio   | ✅     |
 | C.9 | Tela de afiliados: fila espaçada, teto do dia e o que o grupo deu     | ✅     |
 | C.10 | Tela do garimpo: dossiê, fronteira, orçamento e por que parou        | ✅     |
+| C.11 | Executor do prospector, com a base local como primeira ferramenta    | ✅     |
 
 **Entrega:** o sistema para de falar o nome das próprias tabelas, a navegação diz
 onde você está, e a tela inicial responde "o que eu faço agora" em vez de listar
@@ -713,6 +733,11 @@ chegam ao longo de semanas, não de uma vez. A de afiliados achou três frases d
 com `(s)` de plural e uma delas errada ("saiu há 0 minuto(s)", quando zero minuto é
 "agora"). É o padrão: **texto e caminho de escrita sem tela não são revisados**, porque o
 teste unitário verifica um pedaço da frase e chama a função direto.
+
+**A C.11 é a metade que faltava do garimpo:** a tela mostrava dossiê e ninguém preenchia
+dossiê. Agora "Investigar" enfileira, o poller roda o laço, e o dossiê aparece com os
+achados e a URL de cada um. O que a ligação achou está no diário de 16/09 — e o achado
+grande é que o dossiê não era retomável.
 
 **A C.10 fechou o mesmo padrão pela quarta vez.** A tela do garimpo achou o alvo do
 dossiê gravado normalizado na coluna de exibição, um parágrafo do domínio que se

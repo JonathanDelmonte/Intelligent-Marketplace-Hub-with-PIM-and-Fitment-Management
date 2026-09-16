@@ -26,6 +26,137 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-16 — O prospector passou a investigar, e o dossiê não era retomável
+
+### 🐛 O dossiê prometia ser retomável desde a fase 1, e não era
+
+A tabela `dossie` existe "para que uma execução interrompida seja retomável". Escrever
+o executor mostrou que ela não dava conta: `paraGravar` guardava da fronteira só
+`{alvo, familia}` — "o que interessa a quem lê" — e não guardava `investigados` nem
+`passosSemAchado`.
+
+O que se perdia numa retomada: a **ferramenta** de cada item (sem ela não dá para saber
+o que roda hoje), o **peso e o custo** (sem eles a ordem da fila muda, e ordem instável
+torna a auditoria sem valor), quais itens **já foram** investigados (re-investigar é
+pagar o passo duas vezes) e o contador de **saturação** (três passos de investigação
+sabidamente infrutífera por retomada).
+
+Agora a fronteira gravada é a inteira, e quem lê a tela usa `fronteiraRestante`. O mesmo
+caso do `alvo` de ontem: **armazenamento moldado para um leitor perde o que o outro
+precisa** — e o outro leitor, aqui, era o próprio sistema.
+
+Linha gravada no formato antigo é reparada na leitura, com Zod, em vez de por migração:
+o valor base de cada família mora no domínio, e escrevê-lo num `UPDATE ... jsonb` seria
+a mesma constante em dois lugares.
+
+### 🐛 Item de fronteira ficava preso na rota de uma ferramenta que não existe
+
+Os três dossiês de ontem tinham sido abertos sem executor. Ao rodar o primeiro job, o
+resultado foi `fronteira_vazia` com zero passos: cada item apontava para a busca na web,
+e a única ferramenta registrada é a base local.
+
+O conserto é `rerotearFronteira`, e ele não é remendo de dado velho — é a regra certa:
+a **família** declara várias ferramentas (`em_que_mais_serve` aceita busca na web,
+leitura de página e base local), e um item encaminhado ontem para uma delas não deve
+ficar parado hoje por causa disso. Reencaminha só o item de **abertura**, que é o que tem
+`id` igual ao nome da família; item ramificado tem rota própria — alvo que é URL precisa
+de leitor de página, e trocar para busca na web seria buscar o endereço que já está na
+mão.
+
+Efeito colateral bom: registrar um investigador novo destrava o que já estava na fila,
+sem tocar em dossiê nenhum.
+
+### 🔀 "Disponível" é ter investigador, e não ter configuração
+
+A primeira versão de `ferramentas.ts` declarava o estado de cada ferramenta e derivava a
+visão da chave de LLM no ambiente. Estava errado do jeito que engana: a tela dizia
+"falta chave" para a visão, o que **implica que pôr a chave a faria rodar** — e não
+faria, porque ninguém a chama.
+
+Agora a fonte da verdade é o registro de investigadores, e `ferramentas.ts` só guarda o
+texto: o que cada ferramenta faz e o que falta para ela existir. Uma lista, duas
+derivações (o conjunto e as instâncias), porque a constante escrita à mão ao lado da
+fábrica é a constante que diverge na primeira ferramenta nova.
+
+### 🐛 "Dá para continuar de onde parou" ao lado de "aumentar o teto não resolve"
+
+Segunda ocorrência da mesma frase contradizendo a vizinha. Ontem foi ao lado de "parou
+por saturação"; hoje, num dossiê com seis achados que parou por falta de ferramenta:
+"6 hipóteses em aberto — dá para continuar de onde parou. Aumentar o teto não resolve;
+ligar uma ferramenta resolve."
+
+A cláusula agora depende do motivo: continuar resolve **teto**, e não resolve saturação
+nem fronteira vazia. Vale registrar o padrão: uma frase montada por concatenação de
+cláusulas independentes é uma frase que ninguém leu inteira — e o teste unitário que
+confere `toContain` de um pedaço não lê inteira também.
+
+### 🐛 O mesmo refil em outra loja contava como "outra peça"
+
+O investigador de base local comparava o **título normalizado** para decidir se um
+anúncio era de outra peça. "Refil de purificador de agua PA21G PA26G original
+Electrolux" é título diferente de "Refil de purificador de água PA21G" — e a mesma peça.
+
+Agora compara a **peça**: a primeira palavra do título que não é ligação nem código de
+modelo. Refil contra refil é a mesma peça; vedação e torneira são outras. A comparação é
+de primeira palavra e não de conjunto porque anúncio é escrito curto: exigir que ele
+repita todas as palavras do alvo faria "Refil PA 21 G compatível" passar por peça
+diferente.
+
+Acidente útil: quando o alvo é o **aparelho** em vez da peça, a regra continua certa — a
+primeira palavra do aparelho não é a primeira palavra de nenhuma peça dele.
+
+### 🔀 Achado repetido não conta duas vezes, e não zera a saturação
+
+Id de achado determinístico (`em_que_mais_serve:PA26G`) é o certo: um passo repetido pela
+fila não pode duplicar o achado. Mas aí `aplicarInvestigacao` precisava deduplicar — e,
+junto, deixar de zerar o contador de saturação quando o passo devolveu só o que já se
+sabia. Repetir o conhecido não é progresso, e é disso que a saturação trata.
+
+### 🔀 Evidência direta confirma a hipótese; citação não
+
+O achado de "que outras peças" é o anúncio da peça, que existe e está na mão: confirma a
+hipótese. O de "em que mais serve" é um anúncio que citou dois códigos juntos, e **citar
+não é servir**: fica como candidato, com a segunda fonte pendente, porque é a ficha do M4
+que decide compatibilidade. Confirmar ali seria emprestar certeza que a base local não
+tem.
+
+### 🔀 O teto é do dossiê, e não da chamada
+
+`proximoPasso` compara `passosGastos` acumulado com o teto, e a mensagem de parada diz
+"dá para continuar com um teto maior". Então o teto pertence ao alvo: continuar é pedir
+um teto maior, e a tela mostra gasto contra teto sem que nenhum dos dois minta. O que o
+ADR 0005 exige — nenhuma execução sem teto declarado — continua verificado no construtor
+de `OrcamentoDaBusca`.
+
+O laço verifica o estouro **antes** de cada passo e não prevê o custo do próximo, então o
+último passo pode passar do teto. Só o investigador sabe quanto vai cobrar, e é por isso
+que ele recebe o restante no pedido. O teto garante que a execução **para**, não que o
+gasto caiba no centavo.
+
+### ⚠️ Terceira armadilha do Playwright em dois dias
+
+`waitForURL(/\?r=/)` casa **na hora** quando a URL já tem `?r=` da ação anterior — então
+o teste leu a página velha e reportou que o alvo repetido tinha sido aberto de novo.
+Passei um tempo procurando um bug de normalização de chave que não existia.
+
+As três são da mesma família: o arnês de teste mentindo sobre a aplicação. Antes foi o
+`caret-color` do `screenshot()` e o `open=""` que eu punha nos `<details>` antes da
+hidratação. A regra que sai daí: **confirmar o sintoma por um segundo caminho antes de
+caçar** — aqui bastou consultar o banco e chamar `porAlvo` num script.
+
+### 🧹 A varredura da base local lê 2000 linhas e casa código em TypeScript
+
+`ilike '%PA21G%'` perderia `PA 21 G`, que é como metade das fontes escreve, e a gramática
+que junta tokens vizinhos vive no domínio. Então a varredura é limitada e o casamento é
+feito em memória.
+
+**Custo:** investigação de base local fica O(linhas) e o teto de 2000 corta silenciosamente
+o que passar disso.
+**Sai quando:** doer — e o conserto é uma coluna de códigos normalizados gravada na
+ingestão, com índice, não um `ilike` mais esperto.
+
+---
+
 ## 2026-09-15 — A tela do garimpo, e o nome do alvo que o banco estava comendo
 
 ### 🐛 A coluna `alvo` do dossiê guardava a chave, e a tela mostrou isso

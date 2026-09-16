@@ -1,52 +1,55 @@
 import { describe, expect, it } from 'vitest';
-import { estadoDaFerramenta, ferramentasDisponiveis, O_QUE_A_FERRAMENTA_FAZ } from './ferramentas';
+import {
+  O_QUE_A_FERRAMENTA_FAZ,
+  O_QUE_FALTA_PARA_A_FERRAMENTA,
+  estadoDaFerramenta,
+  ferramentasQueFaltam,
+} from './ferramentas';
 import { escolherDaFronteira, ESTADO_INICIAL, itemDaFamilia, proximoPasso } from './fronteira';
 import { familiasPossiveis, FERRAMENTAS } from './hipoteses';
-
-const SEM_CHAVE = { temChaveDeLlm: false };
-const COM_CHAVE = { temChaveDeLlm: true };
+import { FERRAMENTAS_PRONTAS } from './registro';
 
 describe('estadoDaFerramenta', () => {
-  it('toda ferramenta declarada tem estado e uma linha do que faz', () => {
+  it('toda ferramenta tem uma linha do que faz e uma do que falta', () => {
     for (const f of FERRAMENTAS) {
-      expect(estadoDaFerramenta(f, SEM_CHAVE).tipo).toBeTruthy();
       expect(O_QUE_A_FERRAMENTA_FAZ[f].length).toBeGreaterThan(20);
+      expect(O_QUE_FALTA_PARA_A_FERRAMENTA[f].length).toBeGreaterThan(20);
     }
   });
 
-  it('a base local não depende de nada de fora', () => {
-    expect(estadoDaFerramenta('base_local', SEM_CHAVE)).toEqual({ tipo: 'disponivel' });
+  it('disponível é ter investigador, e não ter configuração', () => {
+    // A primeira versão derivava a visão da chave de LLM no ambiente, e isso enganava:
+    // a tela dizia "falta chave", o que implica que pôr a chave a faria rodar.
+    expect(estadoDaFerramenta('base_local', ['base_local'])).toEqual({ tipo: 'disponivel' });
+
+    const visao = estadoDaFerramenta('visao', ['base_local']);
+    expect(visao.tipo).toBe('falta');
+    if (visao.tipo === 'falta') expect(visao.oQueFalta).toContain('imagem');
   });
 
-  it('visão depende de chave, e o estado nomeia a variável', () => {
-    const sem = estadoDaFerramenta('visao', SEM_CHAVE);
-    expect(sem.tipo).toBe('falta_chave');
-    if (sem.tipo === 'falta_chave') expect(sem.variavel).toBe('LLM_API_KEY');
-    expect(estadoDaFerramenta('visao', COM_CHAVE).tipo).toBe('disponivel');
+  it('o que falta diz o nome do que alguém tem de escrever', () => {
+    // "Indisponível" manda procurar; "nenhum buscador implementado" manda construir.
+    const busca = estadoDaFerramenta('busca_web', []);
+    if (busca.tipo === 'falta') expect(busca.oQueFalta).toContain('buscador');
   });
 
-  it('o que não tem adaptador diz o que falta, e não só que falta', () => {
-    // "indisponível" manda procurar; "nenhum buscador implementado" manda construir.
-    for (const f of ['busca_web', 'ler_pagina', 'cnpj', 'pncp'] as const) {
-      const estado = estadoDaFerramenta(f, COM_CHAVE);
-      expect(estado.tipo).toBe('sem_adaptador');
-      if (estado.tipo === 'sem_adaptador') expect(estado.oQueFalta.length).toBeGreaterThan(20);
-    }
+  it('as que faltam saem na ordem declarada', () => {
+    expect(ferramentasQueFaltam(['base_local'])).toEqual([
+      'busca_web',
+      'ler_pagina',
+      'visao',
+      'cnpj',
+      'pncp',
+    ]);
   });
 });
 
-describe('ferramentasDisponiveis', () => {
-  it('sem chave de LLM, só a base local', () => {
-    expect(ferramentasDisponiveis(SEM_CHAVE)).toEqual(['base_local']);
-  });
-
-  it('com chave, entra a visão', () => {
-    expect([...ferramentasDisponiveis(COM_CHAVE)].sort()).toEqual(['base_local', 'visao']);
+describe('FERRAMENTAS_PRONTAS', () => {
+  it('hoje é a base local, e só', () => {
+    expect(FERRAMENTAS_PRONTAS).toEqual(['base_local']);
   });
 
   it('entra direto nos limites da busca, sem tradução', () => {
-    // É o ponto do módulo: a fronteira já sabe recusar item de ferramenta ausente, e
-    // faltava quem respondesse quais estão presentes.
     const estado = {
       ...ESTADO_INICIAL,
       fronteira: [
@@ -65,20 +68,15 @@ describe('ferramentasDisponiveis', () => {
       ],
     };
 
-    const escolhido = escolherDaFronteira(estado, ferramentasDisponiveis(SEM_CHAVE));
-    expect(escolhido?.id).toBe('b');
-
-    const passo = proximoPasso(estado, {
-      passos: 10,
-      ferramentas: ferramentasDisponiveis(SEM_CHAVE),
-    });
-    expect(passo.tipo).toBe('investigar');
+    expect(escolherDaFronteira(estado, FERRAMENTAS_PRONTAS)?.id).toBe('b');
+    expect(proximoPasso(estado, { passos: 10, ferramentas: FERRAMENTAS_PRONTAS }).tipo).toBe(
+      'investigar',
+    );
   });
 
-  it('as famílias possíveis hoje são as que a base local alcança', () => {
-    // Duas: "que outras peças" e "em que mais serve". As de custo e de distribuidor
-    // exigem sair para fora, e é isso que a tela precisa dizer.
-    expect([...familiasPossiveis(ferramentasDisponiveis(SEM_CHAVE))].sort()).toEqual([
+  it('as famílias possíveis hoje são as duas que a base local alcança', () => {
+    // As de custo e de distribuidor exigem sair para fora, e é isso que a tela diz.
+    expect([...familiasPossiveis(FERRAMENTAS_PRONTAS)].sort()).toEqual([
       'em_que_mais_serve',
       'que_outras_pecas',
     ]);
