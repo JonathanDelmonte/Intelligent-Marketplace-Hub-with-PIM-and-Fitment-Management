@@ -38,6 +38,63 @@
    */
   --fonte-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
+  /*
+   * ── Escala de espaço ──
+   *
+   * Sete passos, e a razão de existirem é a mesma de `--raio`: os valores estavam
+   * soltos em cada módulo, próximos e diferentes, e ninguém tinha decidido nenhuma
+   * dessas diferenças. Com escala, "um pouco mais de ar" é subir um passo, e não
+   * inventar 0.875rem.
+   */
+  --espaco-1: 0.25rem;
+  --espaco-2: 0.5rem;
+  --espaco-3: 0.75rem;
+  --espaco-4: 1rem;
+  --espaco-5: 1.5rem;
+  --espaco-6: 2rem;
+  --espaco-7: 3rem;
+
+  /*
+   * ── Escala de texto ──
+   *
+   * Sete tamanhos nomeados pelo papel, não pelo número: `--texto-numero` é o número
+   * grande do cartão, e `--texto-micro` é o rótulo de categoria em caixa alta. Nomear
+   * pelo papel é o que impede a escala de virar uma lista de tamanhos parecidos.
+   */
+  --texto-micro: 0.6875rem;
+  --texto-miudo: 0.75rem;
+  --texto-menor: 0.8125rem;
+  --texto-base: 0.9375rem;
+  --texto-maior: 1.0625rem;
+  --texto-titulo: 1.375rem;
+  --texto-numero: 2rem;
+
+  /*
+   * ── Superfícies ──
+   *
+   * Três níveis, e o terceiro é novo: uma superfície **afundada**, para a faixa do que
+   * está calmo. Sem ela, "nada esperando você" tem o mesmo peso visual de "três
+   * pedidos atrasados", que é o defeito que esta tela existe para não ter.
+   */
+  --cor-superficie-baixa: #f4f4f5;
+  --cor-borda-forte: #d4d4d8;
+
+  /*
+   * ── Tintas de severidade ──
+   *
+   * Fundo de baixa saturação para o cartão urgente, no par da cor de texto que já
+   * existia. É o que permite a urgência aparecer sem depender de cor de marca — que
+   * aqui vem de configuração e pode ser qualquer uma (ADR 0003).
+   */
+  --tinta-agora: #fef2f2;
+  --tinta-atencao: #fffbeb;
+  --tinta-ok: #f0fdf4;
+
+  /* Largura da lateral de navegação. Uma medida, usada pela casca e pelas medias. */
+  --largura-lateral: 15rem;
+  /* Sombra de elemento que se levanta de verdade: menu, cartão em foco. */
+  --sombra-suspensa: 0 4px 12px rgb(0 0 0 / 8%);
+
   color-scheme: light;
 }
 

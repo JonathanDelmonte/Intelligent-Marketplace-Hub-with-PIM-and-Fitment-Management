@@ -3,8 +3,14 @@ import { DIAS_QUE_JA_SAO_AGORA } from '@/dominio/fiscal/prazos';
 import { PORTAS } from '../navegacao';
 import {
   NAO_DEU_PARA_LER,
+  estaCalma,
+  filtrarPorMomento,
+  lerMomento,
+  momentoDaPendencia,
+  momentosNaTela,
   montarPendencias,
   resumoDaCasa,
+  separarCalmas,
   type LeiturasDaCasa,
   type Pendencia,
 } from './apresentacao';
@@ -174,5 +180,84 @@ describe('resumoDaCasa', () => {
     const resumo = resumoDaCasa(montarPendencias(tudoNulo));
     expect(resumo).toContain('Não deu para ler');
     expect(resumo).not.toContain('Nada esperando');
+  });
+});
+
+describe('separarCalmas', () => {
+  it('casa calma não tem cartão nenhum: tudo desce para a faixa recolhida', () => {
+    const { ativas, calmas } = separarCalmas(montarPendencias(leituras()));
+    expect(ativas).toEqual([]);
+    expect(calmas.length).toBeGreaterThan(0);
+  });
+
+  it('leitura que falhou vira cartão, e não linha recolhida', () => {
+    // É a distinção que justifica a função: zero pode ser recolhido, "não deu para ler"
+    // não pode — recolher o que não se sabe é o jeito de deixar de conferir.
+    const { ativas, calmas } = separarCalmas(
+      montarPendencias(leituras({ entradasEmRevisao: null })),
+    );
+    expect(ativas.map((i) => i.chave)).toEqual(['importar']);
+    expect(ativas[0]?.oQueE).toBe(NAO_DEU_PARA_LER);
+    expect(calmas.map((i) => i.chave)).not.toContain('importar');
+  });
+
+  it('o que tem trabalho vira cartão', () => {
+    const { ativas } = separarCalmas(montarPendencias(leituras({ consignacaoEmRisco: 4 })));
+    expect(ativas.map((i) => i.chave)).toEqual(['consignacao']);
+  });
+
+  it('estaCalma é zero com leitura boa, nunca leitura falha', () => {
+    const zerada = montarPendencias(leituras());
+    expect(zerada.every(estaCalma)).toBe(true);
+
+    const falhou = montarPendencias(leituras({ postagem: null }));
+    expect(falhou.filter((i) => i.chave === 'postagem').every(estaCalma)).toBe(false);
+  });
+});
+
+describe('momentos de trabalho', () => {
+  it('cada pendência cai no momento da porta a que ela aponta', () => {
+    const itens = montarPendencias(leituras());
+    expect(momentoDaPendencia(acharPor(itens, 'postagem') as Pendencia)).toBe('hoje');
+    expect(momentoDaPendencia(acharPor(itens, 'importar') as Pendencia)).toBe('catalogo');
+    expect(momentoDaPendencia(acharPor(itens, 'consignacao') as Pendencia)).toBe('protecao');
+  });
+
+  it('a pílula conta o que pede atenção, não o total do momento', () => {
+    const momentos = momentosNaTela(
+      montarPendencias(leituras({ entradasEmRevisao: 3, paresEsperandoDecisao: 0 })),
+    );
+    const catalogo = momentos.find((m) => m.grupo === 'catalogo');
+    // Três pendências moram em `catalogo`; só uma tem trabalho.
+    expect(catalogo?.ativas).toBe(1);
+    expect(catalogo?.tom).toBe('atencao');
+  });
+
+  it('o tom da pílula é o mais grave do momento', () => {
+    const momentos = momentosNaTela(
+      montarPendencias(leituras({ consignacaoEmRisco: 2, produtosSemCodigoFiscal: 5 })),
+    );
+    // Consignação é `agora` e fiscal é `atencao`, e as duas moram no mesmo momento.
+    expect(momentos.find((m) => m.grupo === 'protecao')?.tom).toBe('agora');
+  });
+
+  it('momento sem pendência nenhuma não vira pílula', () => {
+    // `oportunidade` não tem pendência na tela inicial, e pílula com zero eterno é a
+    // mesma coisa que o contador zerado que esta tela recolheu.
+    const momentos = momentosNaTela(montarPendencias(leituras()));
+    expect(momentos.map((m) => m.grupo)).not.toContain('oportunidade');
+  });
+
+  it('filtrar por momento devolve só o daquele momento, e null não filtra', () => {
+    const itens = montarPendencias(leituras());
+    expect(filtrarPorMomento(itens, 'hoje').map((i) => i.chave)).toEqual(['postagem']);
+    expect(filtrarPorMomento(itens, null)).toEqual(itens);
+  });
+
+  it('momento torto na URL mostra tudo, em vez de derrubar a porta de entrada', () => {
+    expect(lerMomento('catalogo')).toBe('catalogo');
+    expect(lerMomento('inventado')).toBeNull();
+    expect(lerMomento(undefined)).toBeNull();
+    expect(lerMomento(['hoje', 'catalogo'])).toBe('hoje');
   });
 });

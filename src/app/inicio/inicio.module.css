@@ -1,182 +1,432 @@
 /*
- * Estilo da tela inicial. Cores só de variável de tema (convenções, 3.1).
+ * A tela inicial.
  *
- * A tela tem dois blocos e eles têm pesos diferentes de propósito: as pendências em
- * cima, com o número grande, porque é o que decide o que fazer agora; as portas
- * embaixo, em cartão, porque é o que se usa para aprender o sistema e para ir a uma
- * tela que ninguém está cobrando.
+ * ## O que foi tomado de cada referência, e o que foi recusado
+ *
+ * **Do painel de vendedor da Shopee:** a lateral agrupada, que está na casca. O que foi
+ * recusado é o bloco de oito contadores do mesmo tamanho no alto — no dia comum sete
+ * deles são zero, e oito zeros lado a lado treinam a pessoa a não ler nenhum.
+ *
+ * **Do painel do Mercado Livre:** a anatomia do cartão — número grande, o que ele é, e
+ * uma linha dizendo do que ele é feito — e as pílulas com contagem, que respondem *onde
+ * está o trabalho* antes de mostrar trabalho nenhum. O que foi recusado é a faixa
+ * chapada na cor da marca: aqui a cor vem de configuração e pode ser qualquer uma
+ * (ADR 0003), e faixa chapada de cor desconhecida é aposta.
+ *
+ * **O que é próprio:** severidade como princípio de layout. O cartão urgente tem régua
+ * na cor da gravidade, tinta de fundo e número maior; o zerado não é cartão, é uma linha
+ * numa faixa afundada. A hierarquia visual e a ordem de leitura são a mesma coisa, e as
+ * duas saem de `apresentacao.ts`, que tem teste.
+ *
+ * Cores só de variável de tema (ADR 0003). Nenhuma medida solta: escala de `globals.css`.
  */
 
 .pagina {
-  margin: 0 auto;
-  max-width: 56rem;
-  padding: 2.5rem 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-6);
+  margin: 0;
+  max-width: 82rem;
+  padding: var(--espaco-6);
+  width: 100%;
+}
+
+/* ── Cabeçalho ───────────────────────────────────────────────────────────── */
+
+.cabecalho {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-2);
+}
+
+/*
+ * Título e hora na mesma linha, o resumo na de baixo.
+ *
+ * Uma linha de `flex-wrap` com os três não resolve: o `max-width` do resumo reduz o
+ * tamanho hipotético dele o bastante para caber ao lado do título, e o `flex-basis: 100%`
+ * é ignorado. É a terceira vez que essa armadilha aparece neste projeto — está no diário.
+ * Dois contêineres resolvem sem depender de quebra.
+ */
+.linhaDoTitulo {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-2) var(--espaco-4);
+  justify-content: space-between;
 }
 
 .titulo {
-  font-size: 1.5rem;
-  letter-spacing: -0.015em;
+  font-size: var(--texto-titulo);
+  font-weight: 650;
+  letter-spacing: -0.02em;
   margin: 0;
 }
 
 .subtitulo {
   color: var(--cor-texto-fraco);
-  margin: 0.5rem 0 0;
-}
-
-/* ─── Pendências ─────────────────────────────────────────────────────────── */
-
-.pendencias {
-  display: grid;
-  gap: 0.5rem;
-  /*
-   * Duas colunas, e a mesma medida dos cartões de porta: em uma coluna só as seis
-   * linhas ocupavam quase 500px de altura para dizer, na maior parte, "nada aqui" —
-   * e a primeira porta ficava fora da tela. A ordem de urgência continua legível
-   * porque a grade preenche por linha: as duas primeiras células são as duas
-   * primeiras pendências.
-   */
-  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
-  list-style: none;
-  margin: 1.5rem 0 0;
-  padding: 0;
-}
-
-.pendencia {
-  align-items: center;
-  background: var(--cor-superficie);
-  border: 1px solid var(--cor-borda);
-  /*
-   * O tom vive na borda esquerda, e não no fundo do cartão: fundo colorido em seis
-   * linhas seguidas viraria semáforo, e o que precisa saltar é a linha urgente contra
-   * as outras — não cada linha contra a página.
-   */
-  border-left-width: 3px;
-  border-radius: var(--raio);
-  color: inherit;
-  display: flex;
-  gap: 0.875rem;
-  padding: 0.75rem 1rem;
-  text-decoration: none;
-}
-
-.pendencia:hover,
-.pendencia:focus-visible {
-  border-color: var(--cor-primaria);
-}
-
-.pendencia:focus-visible {
-  outline: 2px solid var(--cor-primaria);
-  outline-offset: 2px;
-}
-
-.pendenciaAgora {
-  border-left-color: var(--cor-erro);
-}
-
-.pendenciaAtencao {
-  border-left-color: var(--cor-aviso);
-}
-
-.numero {
-  /* Tabular para os números ficarem alinhados de uma linha para a outra. */
-  font-variant-numeric: tabular-nums;
-  font-size: 1.5rem;
-  font-weight: 600;
-  line-height: 1.1;
-  min-width: 2.5rem;
-  text-align: right;
-}
-
-/* Zero e "não deu para ler" não competem com o número que importa. */
-.numeroFraco {
-  color: var(--cor-texto-fraco);
-  font-weight: 500;
-}
-
-.pendenciaTexto {
-  display: flex;
-  flex-direction: column;
-}
-
-.pendenciaTitulo {
-  font-weight: 600;
-}
-
-.pendenciaOQueE {
-  color: var(--cor-texto-fraco);
-  font-size: 0.875rem;
-}
-
-/* ─── Portas ─────────────────────────────────────────────────────────────── */
-
-.todas {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  margin: 2.5rem 0 0;
-}
-
-.grupo {
-  margin-top: 1.5rem;
+  margin: 0;
+  max-width: var(--medida-texto);
 }
 
 /*
- * Título de grupo pequeno e em caixa alta de propósito: ele organiza a lista sem
- * competir com o nome das portas, que é o que a pessoa vem procurar.
+ * A hora da leitura.
+ *
+ * Existe porque os números desta tela são de um instante, e a pessoa abre o sistema de
+ * manhã e deixa a aba aberta. Sem a hora, "nada esperando você" às 18h pode ser a
+ * verdade das 8h — e é a única tela em que essa confusão custa uma conferência perdida.
  */
+.lido {
+  color: var(--cor-texto-fraco);
+  font-size: var(--texto-menor);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ── Pílulas de momento ──────────────────────────────────────────────────── */
+
+.momentos {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.momento {
+  align-items: center;
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: 999px;
+  color: var(--cor-texto-fraco);
+  display: inline-flex;
+  font-size: var(--texto-menor);
+  gap: var(--espaco-2);
+  padding: var(--espaco-1) var(--espaco-3);
+  text-decoration: none;
+  /* Sem isto, "Fornecedor e obrigação" quebra em três linhas dentro da pílula. */
+  white-space: nowrap;
+}
+
+.momento:hover {
+  border-color: var(--cor-borda-forte);
+  color: var(--cor-texto);
+}
+
+/*
+ * O momento escolhido, marcado por contorno mais escuro e não por cor de marca.
+ *
+ * Fundo na cor da marca aqui competiria com a régua de severidade dos cartões — e entre
+ * "qual filtro está ligado" e "o que é urgente", o segundo tem de ganhar.
+ */
+.momentoAtual {
+  background: var(--cor-texto);
+  border-color: var(--cor-texto);
+  color: var(--cor-superficie);
+  font-weight: 600;
+}
+
+.momentoAtual:hover {
+  color: var(--cor-superficie);
+}
+
+/* A contagem dentro da pílula. Tabular para não dançar entre 9 e 10. */
+.contagemDoMomento {
+  font-size: var(--texto-miudo);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* Bolinha de gravidade na pílula: diz que ali dentro tem coisa urgente. */
+.pontoDoMomento {
+  border-radius: 50%;
+  flex: none;
+  height: 0.4375rem;
+  width: 0.4375rem;
+}
+
+.pontoAgora {
+  background: var(--cor-erro);
+}
+
+.pontoAtencao {
+  background: var(--cor-aviso);
+}
+
+/* ── Cartões do que precisa de você ──────────────────────────────────────── */
+
+.cartoes {
+  display: grid;
+  gap: var(--espaco-4);
+  /*
+   * `auto-fill` com mínimo de 16rem e **máximo de 18rem**: quatro colunas em 1440px, duas
+   * em tablet, uma no telefone, sem media query e sem número de colunas escrito em lugar
+   * nenhum.
+   *
+   * O máximo é o que faltou na primeira versão: com `1fr` e um cartão só, ele esticava
+   * para a largura inteira do conteúdo — um cartão de 1500px com o número 1 dentro. E o
+   * máximo de 23rem da segunda versão dava três colunas em 1440px, deixando o quarto
+   * cartão sozinho numa linha com um vão do tamanho de dois. `justify-content: start`
+   * mantém a fila encostada à esquerda em vez de centralizar o que sobrou.
+   */
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 18rem));
+  justify-content: start;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cartao {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra-cartao);
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-2);
+  /* A régua de gravidade. Transparente no caso calmo, para a caixa não pular. */
+  border-left: 3px solid transparent;
+  height: 100%;
+  padding: var(--espaco-4);
+  text-decoration: none;
+}
+
+.cartao:hover {
+  border-color: var(--cor-borda-forte);
+  box-shadow: var(--sombra-suspensa);
+}
+
+.cartaoAgora {
+  background: var(--tinta-agora);
+  border-left-color: var(--cor-erro);
+}
+
+.cartaoAtencao {
+  border-left-color: var(--cor-aviso);
+}
+
+/*
+ * O rótulo de gravidade, acima do número.
+ *
+ * Existe porque cor sozinha não é informação: quem não distingue vermelho de amarelo lê
+ * dois cartões iguais. A palavra é a informação, e a cor é o atalho para quem a vê.
+ */
+.gravidade {
+  font-size: var(--texto-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.gravidadeAgora {
+  color: var(--cor-erro);
+}
+
+.gravidadeAtencao {
+  color: var(--cor-aviso);
+}
+
+.gravidadeCalmo {
+  color: var(--cor-texto-fraco);
+}
+
+.numero {
+  font-size: var(--texto-numero);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+/* Contagem zero e leitura que falhou não merecem o peso de um número cheio. */
+.numeroFraco {
+  color: var(--cor-texto-fraco);
+  font-weight: 600;
+}
+
+.cartaoTitulo {
+  font-size: var(--texto-maior);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.cartaoOQueE {
+  color: var(--cor-texto-fraco);
+  font-size: var(--texto-menor);
+}
+
+/* "Abrir" empurrado para o pé do cartão, para os cartões da linha alinharem embaixo. */
+.abrir {
+  color: var(--cor-primaria);
+  font-size: var(--texto-menor);
+  font-weight: 600;
+  margin-top: auto;
+  padding-top: var(--espaco-2);
+}
+
+/* ── Faixa do que está calmo ─────────────────────────────────────────────── */
+
+/*
+ * O zerado, em uma linha e numa superfície afundada.
+ *
+ * É a resposta direta ao bloco de oito contadores da referência: continua consultável —
+ * o `details` abre — e para de gastar a atenção que o cartão urgente precisa.
+ */
+.calmas {
+  background: var(--cor-superficie-baixa);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  font-size: var(--texto-menor);
+  padding: var(--espaco-3) var(--espaco-4);
+}
+
+.calmasResumo {
+  color: var(--cor-texto-fraco);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.calmasLista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-2) var(--espaco-4);
+  list-style: none;
+  margin: var(--espaco-3) 0 0;
+  padding: 0;
+}
+
+.calma {
+  color: var(--cor-texto-fraco);
+  text-decoration: none;
+}
+
+.calma:hover {
+  color: var(--cor-texto);
+}
+
+.calmaTitulo {
+  color: var(--cor-texto);
+  font-weight: 600;
+}
+
+/* ── Índice de telas ─────────────────────────────────────────────────────── */
+
+/*
+ * O índice de telas, recolhido.
+ *
+ * Ele nasceu quando a navegação era uma barra de pílulas curtas no topo, e a descrição de
+ * cada tela não existia em nenhum outro lugar. Com a lateral agrupada, o índice passou a
+ * repetir os mesmos quinze nomes nos mesmos quatro grupos, logo abaixo deles — e
+ * repetição estrutural dessa ordem faz a tela parecer mais longa do que tem conteúdo.
+ *
+ * O que ele ainda tem de próprio é a descrição, que ensina. Então fica: fechado por
+ * padrão, para quem está aprendendo abrir.
+ */
+.indice {
+  border-top: 1px solid var(--cor-borda);
+  padding-top: var(--espaco-5);
+}
+
+.indiceResumo {
+  cursor: pointer;
+  font-size: var(--texto-maior);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.secaoTitulo {
+  font-size: var(--texto-maior);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 0 0 var(--espaco-1);
+}
+
+.secaoSub {
+  color: var(--cor-texto-fraco);
+  font-size: var(--texto-menor);
+  margin: var(--espaco-2) 0 var(--espaco-4);
+  max-width: var(--medida-texto);
+}
+
+.grupo {
+  margin-bottom: var(--espaco-5);
+}
+
 .grupoTitulo {
   color: var(--cor-texto-fraco);
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: var(--texto-micro);
+  font-weight: 700;
   letter-spacing: 0.06em;
-  margin: 0 0 0.625rem;
+  margin: 0 0 var(--espaco-2);
   text-transform: uppercase;
 }
 
 .portas {
   display: grid;
-  gap: 0.75rem;
-  /*
-   * Duas colunas largas, e não três estreitas: com 15rem de coluna a descrição de
-   * cada porta quebrava em cinco linhas e os cartões da mesma fileira saíam com
-   * alturas muito diferentes. Cartão largo é cartão baixo.
-   */
-  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: var(--espaco-2);
+  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
 .porta {
-  background: var(--cor-superficie);
   border: 1px solid var(--cor-borda);
-  border-radius: var(--raio);
+  border-radius: var(--raio-pequeno);
   color: inherit;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--espaco-1);
   height: 100%;
-  padding: 0.875rem 1rem;
+  padding: var(--espaco-3);
   text-decoration: none;
 }
 
-.porta:hover,
-.porta:focus-visible {
-  border-color: var(--cor-primaria);
-}
-
-.porta:focus-visible {
-  outline: 2px solid var(--cor-primaria);
-  outline-offset: 2px;
+.porta:hover {
+  background: var(--cor-superficie);
+  border-color: var(--cor-borda-forte);
 }
 
 .portaTitulo {
-  font-size: 1rem;
+  font-size: var(--texto-base);
   font-weight: 600;
 }
 
 .portaDescricao {
   color: var(--cor-texto-fraco);
-  font-size: 0.875rem;
-  line-height: 1.5;
+  font-size: var(--texto-miudo);
+}
+
+/* ── Telefone ────────────────────────────────────────────────────────────── */
+
+@media (max-width: 40rem) {
+  .pagina {
+    gap: var(--espaco-5);
+    padding: var(--espaco-4);
+  }
+
+  /*
+   * No telefone as pílulas rolam em uma linha, em vez de quebrar em duas.
+   *
+   * Quatro pílulas quebradas em duas linhas empurram o primeiro cartão para baixo da
+   * dobra, e o primeiro cartão é o mais urgente — é exatamente o que não pode sair de
+   * vista numa tela de 844px.
+   */
+  .momentos {
+    flex-wrap: nowrap;
+    margin: 0 calc(-1 * var(--espaco-4));
+    overflow-x: auto;
+    padding: 0 var(--espaco-4) var(--espaco-1);
+    scrollbar-width: none;
+  }
+
+  .momento {
+    flex: none;
+  }
+
+  .numero {
+    font-size: 1.75rem;
+  }
 }

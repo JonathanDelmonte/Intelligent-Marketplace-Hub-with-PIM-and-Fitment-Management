@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { lerAmbiente } from '@/config/ambiente';
 import { montarMarca, variaveisCssDaMarca } from '@/config/marca';
-import { Barra } from './barra';
+import { Lateral } from './lateral';
 import estilo from './casca.module.css';
 import './globals.css';
 
@@ -33,12 +33,22 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
   return (
     <html lang="pt-BR" style={variaveisCssDaMarca(marca.visual)}>
       <body>
-        <Barra nomeSistema={marca.nomeSistema} />
-        {children}
-        <footer className={estilo.rodape}>
-          {marca.copyright}
-          {marca.creditoRodape !== null ? ` · ${marca.creditoRodape}` : ''}
-        </footer>
+        {/*
+          Grid de duas colunas: lateral e conteúdo. O rodapé mora **dentro** da coluna de
+          conteúdo, e não embaixo das duas, porque crédito e copyright são sobre o que se
+          está lendo — embaixo da lateral ele ficaria a quinze telas de distância do texto
+          a que se refere.
+        */}
+        <div className={estilo.casca}>
+          <Lateral nomeSistema={marca.nomeSistema} />
+          <div className={estilo.conteudo}>
+            {children}
+            <footer className={estilo.rodape}>
+              {marca.copyright}
+              {marca.creditoRodape !== null ? ` · ${marca.creditoRodape}` : ''}
+            </footer>
+          </div>
+        </div>
       </body>
     </html>
   );

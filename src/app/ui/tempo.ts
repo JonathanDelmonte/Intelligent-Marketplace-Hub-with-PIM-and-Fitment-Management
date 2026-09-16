@@ -44,3 +44,14 @@ export function formatarAbsoluto(quando: Date): string {
     quando,
   );
 }
+
+/**
+ * Data e hora sem os segundos, para cabeçalho de tela.
+ *
+ * `formatarAbsoluto` tem segundos porque serve de `title` em lista de job, onde a
+ * pergunta é comparar dois instantes. No alto de uma tela o segundo é ruído: ninguém
+ * abre o painel de manhã para saber que a leitura foi às 08:31:47.
+ */
+export function formatarDataEHora(quando: Date): string {
+  return new Intl.DateTimeFormat(IDIOMA, { dateStyle: 'short', timeStyle: 'short' }).format(quando);
+}

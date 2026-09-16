@@ -1,86 +1,169 @@
 /*
- * A casca do sistema: barra do topo e rodapé.
+ * A casca do sistema: lateral de navegação, coluna de conteúdo e rodapé.
  *
- * Existia como estilo em linha dentro do `layout.tsx`, o que quer dizer: sem
- * `:hover`, sem `:focus-visible` e sem media query — estilo em linha não tem estado.
- * Uma barra de navegação sem retorno visual ao passar o mouse e sem contorno de foco
- * é uma barra que não responde a quem usa teclado.
+ * ## Por que lateral, e não barra no topo
+ *
+ * A barra no topo empatou com o número de telas. Com quinze portas em uma linha, ela
+ * ocupava quatro linhas em 390px e duas em 1440px, e o agrupamento por momento de
+ * trabalho — que é a única coisa que torna quinze portas navegáveis — tinha de ser dito
+ * por um traço vertical, porque não havia onde escrever o título do grupo.
+ *
+ * Na lateral o título do grupo caber é de graça. É a metade boa do painel de vendedor
+ * da Shopee: a lateral agrupada escala para muitas telas e diz a que categoria cada uma
+ * pertence, sem gastar altura da área onde o trabalho acontece.
+ *
+ * ## Por que o cromo é neutro
+ *
+ * O painel do Mercado Livre põe a cor da marca numa faixa chapada no topo. Aqui a cor
+ * da marca vem de `perfil_vendedor.marca_visual` e pode ser qualquer uma (ADR 0003) —
+ * uma faixa chapada de cor desconhecida é aposta, não desenho. Então a cor de marca
+ * aparece só onde significa alguma coisa: ação, link, e a marca da tela aberta.
  *
  * Cores só de variável de tema, nunca literal (ADR 0003).
  */
 
-.barra {
+/*
+ * A casca é um grid de duas colunas que vira uma só no telefone.
+ *
+ * `min-height: 100dvh` com o rodapé na última linha: sem isso, tela curta deixa o
+ * rodapé no meio da página, com fundo vazio embaixo.
+ */
+.casca {
+  display: grid;
+  grid-template-areas: 'lateral conteudo';
+  grid-template-columns: var(--largura-lateral) minmax(0, 1fr);
+  min-height: 100dvh;
+}
+
+/* ── Lateral ─────────────────────────────────────────────────────────────── */
+
+/*
+ * Duas camadas, e são duas por um motivo que só aparece na tela: a coluna pinta o fundo
+ * até o fim da página, e a lateral **dentro** dela é que fica grudada com a altura da
+ * janela.
+ *
+ * Uma camada só não resolve: `position: sticky` com `height: 100dvh` pinta a lateral até
+ * a altura da janela e deixa o resto da coluna com a cor do corpo — numa página de 2700px
+ * isso é um corte horizontal atravessando a lateral no meio, que foi exatamente o que
+ * apareceu na primeira renderização.
+ */
+.colunaLateral {
   background: var(--cor-superficie);
-  border-bottom: 1px solid var(--cor-borda);
+  border-right: 1px solid var(--cor-borda);
+  grid-area: lateral;
   /*
-   * Fixa no topo porque as telas longas deste sistema — importar, fiscal, onde serve
-   * — são de trabalho em lista: rolar até o fim e ter de voltar ao topo para trocar de
-   * tela é atrito em cima de atrito.
+   * `min-width: 0` na coluna, além de na faixa rolável de dentro.
+   *
+   * Item de grid também tem largura mínima automática, então a coluna crescia até o
+   * tamanho da faixa inteira — 1251px numa janela de 390px — e a página ganhava rolagem
+   * horizontal. Conter o estouro exige `min-width: 0` em **cada** nível entre a janela e
+   * o elemento que rola: foi o primeiro consertado e a página continuou estourando.
    */
+  min-width: 0;
+}
+
+.lateral {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-5);
+  /*
+   * Grudada: as telas longas deste sistema são de trabalho em lista, e rolar até o fim
+   * para voltar ao topo e trocar de tela é atrito em cima de atrito.
+   */
+  max-height: 100dvh;
+  overflow-y: auto;
+  padding: var(--espaco-4) var(--espaco-3) var(--espaco-5);
   position: sticky;
   top: 0;
-  z-index: 10;
 }
 
-.barraInterna {
-  align-items: center;
-  display: flex;
-  /*
-   * Quebra de linha não é enfeite: com dez portas a barra passava de 390px e a página
-   * inteira ganhava rolagem horizontal, em todas as telas. Uma linha de `flex` que não
-   * quebra é uma largura mínima escondida.
-   */
-  flex-wrap: wrap;
-  gap: 0.5rem 1.5rem;
-  margin: 0 auto;
-  /* A mesma largura da tela mais larga do sistema, para a barra nunca parecer estreita. */
-  max-width: 76rem;
-  padding: 0.625rem 1.5rem;
-}
-
+/*
+ * A marca: um quadrado com a inicial, e o nome ao lado.
+ *
+ * A inicial vem do nome do sistema em runtime, e não de um arquivo de logo, porque a
+ * instalação sem logo cadastrado é o caso comum — e um quadrado vazio seria pior que
+ * uma inicial. Quando houver `logoUrl`, é ela que entra aqui.
+ */
 .marca {
+  align-items: center;
+  border-radius: var(--raio);
   color: var(--cor-texto);
-  font-size: 0.9375rem;
+  display: flex;
+  gap: var(--espaco-3);
+  padding: var(--espaco-2);
+  text-decoration: none;
+}
+
+.marca:hover {
+  background: var(--cor-fundo);
+}
+
+.sigla {
+  align-items: center;
+  background: var(--cor-primaria);
+  border-radius: var(--raio-pequeno);
+  color: var(--cor-superficie);
+  display: flex;
+  flex: none;
+  font-size: var(--texto-maior);
+  font-weight: 700;
+  height: 1.875rem;
+  justify-content: center;
+  letter-spacing: -0.02em;
+  width: 1.875rem;
+}
+
+.nomeDoSistema {
+  font-size: var(--texto-base);
   font-weight: 600;
   letter-spacing: -0.01em;
-  text-decoration: none;
   white-space: nowrap;
-}
-
-.marca:hover,
-.marca:focus-visible {
-  color: var(--cor-primaria);
 }
 
 .navegacao {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 1rem;
+  flex-direction: column;
+  gap: var(--espaco-5);
 }
 
 .grupo {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.125rem;
+  flex-direction: column;
+  gap: var(--espaco-1);
+}
+
+/*
+ * Título do grupo em caixa alta e miúdo.
+ *
+ * Caixa alta aqui é certa pelo motivo que a torna errada num rótulo de linha de tabela:
+ * o que se lê é a categoria, não a palavra. Ela some da leitura e fica como marcação.
+ */
+.grupoTitulo {
+  color: var(--cor-texto-fraco);
+  font-size: var(--texto-micro);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  margin: 0;
+  padding: 0 var(--espaco-2) var(--espaco-1);
+  text-transform: uppercase;
+}
+
+.portas {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-/* O traço separa os três momentos de trabalho sem gastar uma linha de título. */
-.grupo:not(:first-child) {
-  border-left: 1px solid var(--cor-borda);
-  padding-left: 1rem;
-}
-
 .porta {
-  border-radius: 999px;
+  border-radius: var(--raio-pequeno);
   color: var(--cor-texto-fraco);
   display: block;
-  font-size: 0.8125rem;
-  padding: 0.3125rem 0.625rem;
+  font-size: var(--texto-menor);
+  padding: var(--espaco-2) var(--espaco-2);
   text-decoration: none;
-  white-space: nowrap;
 }
 
 .porta:hover {
@@ -88,51 +171,118 @@
   color: var(--cor-texto);
 }
 
-.porta:focus-visible {
-  outline: 2px solid var(--cor-primaria);
-  outline-offset: 2px;
-}
-
 /*
- * A página atual é a única marcação de estado da barra, e é chapada de propósito:
- * quem chega por um redirecionamento ou por um link de outra tela precisa saber onde
- * caiu sem ler a URL.
- */
-.portaAtual,
-.portaAtual:hover {
-  background: var(--cor-primaria);
-  color: var(--cor-superficie);
-  font-weight: 500;
-}
-
-/*
- * No celular a barra sai do topo e cada grupo ganha a sua linha.
+ * A tela aberta, marcada por barra lateral e não por fundo chapado.
  *
- * Os dois ajustes são o mesmo problema: com dez portas em 390px a barra ocupa quatro
- * linhas, e quatro linhas fixas no topo de uma tela de 844px são um quinto da tela
- * gasto em menu. Sem o traço lateral — que numa linha quebrada aparece no começo dela,
- * onde não separa nada — o agrupamento passa a ser dito pela quebra de linha.
+ * O fundo chapado na cor da marca funcionava na barra do topo, onde a pílula era
+ * pequena. Numa lista vertical de quinze itens, um bloco chapado de cor de marca é o
+ * elemento mais forte da tela inteira — e o que tem de ser mais forte é o trabalho, não
+ * o menu. A barra de 3px diz a mesma coisa e não grita.
  */
-@media (max-width: 40rem) {
-  .barra {
-    position: static;
-  }
+.portaAtual {
+  background: var(--cor-fundo);
+  box-shadow: inset 3px 0 0 var(--cor-primaria);
+  color: var(--cor-texto);
+  font-weight: 600;
+}
 
-  .grupo {
-    flex-basis: 100%;
-  }
+/* ── Conteúdo ────────────────────────────────────────────────────────────── */
 
-  .grupo:not(:first-child) {
-    border-left: 0;
-    padding-left: 0;
-  }
+.conteudo {
+  display: flex;
+  flex-direction: column;
+  grid-area: conteudo;
+  min-width: 0;
 }
 
 .rodape {
   border-top: 1px solid var(--cor-borda);
   color: var(--cor-texto-fraco);
-  font-size: 0.8125rem;
-  margin: 3rem auto 0;
-  max-width: 76rem;
-  padding: 1.25rem 1.5rem;
+  font-size: var(--texto-menor);
+  /* `auto` no topo: empurra o rodapé para o fim mesmo em tela de conteúdo curto. */
+  margin-top: auto;
+  padding: var(--espaco-4) var(--espaco-6);
+}
+
+/* ── Telefone e tablet ───────────────────────────────────────────────────── */
+
+/*
+ * Abaixo de 60rem a lateral vira uma faixa no topo, com os grupos em linha.
+ *
+ * Sem JavaScript, e por isso sem gaveta: um menu que abre e fecha precisa de estado, e
+ * esta casca é de servidor inteira. O que se perde é altura de tela no telefone; o que
+ * se ganha é a navegação funcionando com JavaScript desligado, que é a condição da tela
+ * de bipar na loja, usada em rede ruim com o aparelho na mão.
+ */
+@media (max-width: 60rem) {
+  .casca {
+    grid-template-areas: 'lateral' 'conteudo';
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .colunaLateral {
+    border-bottom: 1px solid var(--cor-borda);
+    border-right: 0;
+  }
+
+  .lateral {
+    gap: var(--espaco-3);
+    max-height: none;
+    overflow-y: visible;
+    padding: var(--espaco-3) var(--espaco-4);
+    position: static;
+  }
+
+  /*
+   * A navegação no telefone: título do grupo **na mesma linha** das portas dele.
+   *
+   * Duas tentativas antes desta, e as duas anotadas porque a segunda parecia certa:
+   *
+   * 1. Título em linha própria e portas quebrando embaixo: quatro grupos viravam oito
+   *    linhas, 430px de uma tela de 844px gastos em menu antes do primeiro cartão — e o
+   *    primeiro cartão é o mais urgente.
+   * 2. Uma faixa rolável horizontal: elegante, e **estourava a página**. O `nav` media
+   *    390px e o documento 1251px, e nenhum `min-width: 0` nem `overflow-x: clip` na
+   *    cadeia continha. Rolagem horizontal no documento é o defeito que sempre aparece
+   *    primeiro no telefone, e a prova dele é a largura do print de página inteira.
+   *
+   * Título inline gasta quatro linhas em vez de oito, mantém o agrupamento visível, e
+   * não tem eixo X para estourar. Menos bonito que a faixa rolável; correto.
+   */
+  .navegacao {
+    gap: var(--espaco-2);
+  }
+
+  .grupo {
+    align-items: baseline;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--espaco-1) var(--espaco-2);
+  }
+
+  .grupoTitulo {
+    flex: none;
+    padding: 0;
+  }
+
+  .portas {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--espaco-1);
+  }
+
+  /* Em linha as portas voltam a ser pílulas: é a forma que quebra bem. */
+  .porta {
+    border-radius: 999px;
+    font-size: var(--texto-miudo);
+    padding: var(--espaco-1) var(--espaco-2);
+  }
+
+  .portaAtual {
+    box-shadow: inset 0 -2px 0 var(--cor-primaria);
+  }
+
+  .rodape {
+    padding: var(--espaco-4);
+  }
 }
