@@ -723,6 +723,7 @@ Não é fase da especificação: é o que o dono pediu para depois das fases, e 
 | C.13 | Voltagem, medida e quantidade na ficha, e o cadastro vencendo o extraído | ✅   |
 | C.14 | Uma forma de conjugar plural, sem "(s)" em nenhuma frase de tela          | ✅   |
 | C.15 | Seletor de produto e download na ficha de compatibilidade                 | ✅   |
+| C.16 | Diferença de repasse pode ser dada por conferida, com volta               | ✅   |
 
 **Entrega:** o sistema para de falar o nome das próprias tabelas, a navegação diz
 onde você está, e a tela inicial responde "o que eu faço agora" em vez de listar
@@ -803,6 +804,23 @@ O detalhe que não é comodidade: produto de outro perfil vira aviso em vez de a
 ficha de abertura em silêncio. Essa troca silenciosa seria o caminho para responder a um
 comprador com a ficha errada, que é o erro que aquela tela existe inteira para não deixar
 acontecer.
+
+**A C.16 é o terceiro caso do mesmo tipo em um dia, e o mais instrutivo dos três.** A
+lista de diferenças de repasse filtrava por `repasse_conferido_em is null` e nada
+escrevia essa coluna: a diferença investigada no extrato voltava na tela para sempre, e
+a seção só crescia. Nenhum erro, nenhuma conta errada — o que quebra é o uso, porque
+lista que só cresce ninguém lê. É o estrago que o piso de 3% do monitor já evitava do
+outro lado.
+
+Os três de hoje formam a pergunta de revisão que vale guardar: **toda coluna que uma
+consulta usa como filtro tem quem a escreva?** Uma não existia (voltagem), uma existia e
+não era lida (categoria regulada), uma era lida e não era escrita (repasse conferido). O
+compilador não pega nenhuma das três, e teste unitário também não — as três só aparecem
+quando alguém usa a tela duas vezes.
+
+Conferir tem volta, e isso não é comodidade: a marca esconde um número que a plataforma
+não explicou, e um clique errado esconderia uma taxa não prevista sem deixar rastro na
+tela. Mesma regra de `desligarProdutoExterno`.
 
 O que continua aberto e é decisão do dono: se os rótulos novos são os que ele usa
 falando. Trocar é uma linha em `src/app/navegacao.ts`.

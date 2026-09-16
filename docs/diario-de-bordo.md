@@ -26,6 +26,54 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-16 — Uma coluna que a consulta lia e ninguém escrevia
+
+Terceiro caso do mesmo tipo em um dia. A lista de diferenças de repasse em `/postagem`
+filtra por `repasse_conferido_em is null`, e **nada escrevia essa coluna**. Então a
+diferença que a pessoa investigou no extrato da plataforma voltava na tela no dia
+seguinte, e no seguinte, para sempre.
+
+### 🐛 Lista que só cresce é lista que ninguém lê
+
+O defeito não dá erro e não aparece em teste: a consulta está certa, a conta está certa,
+e a tela mostra a verdade. O que quebra é o **uso** — a seção cresce a cada importação,
+nunca encolhe, e em dois meses a pessoa para de olhar.
+
+É exatamente o estrago que o próprio projeto já tinha nomeado do outro lado: o piso de
+3% do monitor existe porque "avisar de mudança pequena treina a pessoa a ignorar o
+painel". Aqui era a mesma coisa, entrando por outra porta — não pelo alerta pequeno, mas
+pelo alerta que não sai.
+
+Vale como pergunta de revisão: **toda coluna que uma consulta usa como filtro tem quem
+a escreva?** As três de hoje foram uma coluna que não existia (voltagem), uma que existia
+e não era lida (categoria regulada), e uma que era lida e não era escrita. O compilador
+não pega nenhuma das três.
+
+### 🔀 Conferir tem volta, e não é comodidade
+
+Primeira versão era só a marca. Percebi olhando a tela: a linha desaparece, e o número
+que desapareceu é dinheiro que a plataforma não explicou. Um clique errado esconderia
+uma taxa não prevista e **nada na tela diria que ela existiu** — não há como procurar o
+que não se sabe que foi escondido.
+
+As conferidas ficam em `details` recolhido, com "Voltar para a lista" em cada uma. É a
+mesma regra de `desligarProdutoExterno`, que existe desde a fase 5: decisão humana sobre
+dado se desfaz por construção, não por restauração de backup. Limitada a vinte de
+propósito — existe para desfazer engano, que se percebe na hora, e não para virar
+histórico de conferência.
+
+### 🧹 Editar por heredoc depois do prettier, de novo
+
+Duas vezes hoje o `assert` do script falhou porque o prettier havia reunido uma
+assinatura de função em uma linha só depois da minha edição anterior, e o `antigo` do
+script ainda tinha a versão em três linhas. O script não escreve nada quando o `assert`
+falha, então não houve estrago — mas custou duas idas.
+
+O hábito que resolve: quando a edição anterior passou pelo prettier, ler o trecho atual
+antes de casar texto contra ele.
+
+---
+
 ## 2026-09-16 — A tela de catálogo destravou duas pendências no mesmo dia
 
 A 3.5 esperava a 3.1 desde a fase 6, e o texto dela dizia por quê: seletor de ficha e
