@@ -33,6 +33,10 @@ import { ResolvedorDeIdentidade } from '@/dominio/identidade/resolucao';
 import { Orquestrador } from '@/dominio/ingestao/orquestrador';
 import { IngestorDeProdutoExterno } from '@/dominio/ingestao/produto-externo';
 import { RepositorioDoMonitor } from '@/dominio/monitor/repositorio';
+import { MotorDoProspector } from '@/dominio/prospector/motor';
+import { investigadoresDaInstalacao } from '@/dominio/prospector/registro';
+import { RepositorioDeDossies } from '@/dominio/prospector/repositorio';
+import { ExecutorDoProspector, tarefaDoProspector } from '@/dominio/prospector/tarefa';
 import { lerAmbiente } from '@/config/ambiente';
 import { ArmazenamentoDeConteudo } from './armazenamento/conteudo';
 import { banco, type Banco } from './banco/cliente';
@@ -55,10 +59,15 @@ export interface Nucleo {
   /** Consome a fila de importação de pedido (M10). */
   readonly executorDePedidos: ExecutorDePedidos;
   readonly pedidos: RepositorioDePedidos;
+  /** Consome a fila de investigação de alvo (M6). */
+  readonly executorDoProspector: ExecutorDoProspector;
+  /** O laço da investigação. A tela lê dele quais ferramentas existem. */
+  readonly prospector: MotorDoProspector;
+  readonly dossies: RepositorioDeDossies;
 }
 
 /** Nome da tarefa composta, no log. */
-export const NOME_DA_TAREFA_COMPLETA = 'ingestao+identidade+compatibilidade+pedidos';
+export const NOME_DA_TAREFA_COMPLETA = 'ingestao+identidade+compatibilidade+pedidos+prospector';
 
 /**
  * A tarefa que o sistema roda, com as três filas na ordem de prioridade.
@@ -79,6 +88,9 @@ export function tarefaCompleta(
     tarefaDeIdentidade(nucleo.executorDeIdentidade, registrador),
     tarefaDeCompatibilidade(nucleo.executorDeCompatibilidade, registrador),
     tarefaDePedidos(nucleo.executorDePedidos, registrador),
+    // O prospector é o último da ordem de propósito: é o único que gasta dinheiro por
+    // passo, e fila de dado novo não deve esperar investigação.
+    tarefaDoProspector(nucleo.executorDoProspector, registrador),
   ]);
 }
 
@@ -157,6 +169,14 @@ export function montarNucleoCom(
     resolverPerfil,
   );
 
+  // O prospector recebe os investigadores da instalação — hoje só o de base local, que
+  // é o único que roda sem rede e sem chave. Acrescentar ferramenta é acrescentar uma
+  // linha em `prospector/registro.ts`, e a tela passa a mostrá-la como disponível sem
+  // mudança nenhuma aqui.
+  const dossies = new RepositorioDeDossies(db);
+  const prospector = new MotorDoProspector(dossies, investigadoresDaInstalacao(db));
+  const executorDoProspector = new ExecutorDoProspector(fila, prospector);
+
   return {
     db,
     fila,
@@ -169,6 +189,9 @@ export function montarNucleoCom(
     compatibilidade,
     executorDePedidos,
     pedidos,
+    executorDoProspector,
+    prospector,
+    dossies,
   };
 }
 

@@ -109,14 +109,27 @@ describe.skipIf(!temBancoDeTeste())('tarefa completa', () => {
     expect(jobs.every((j) => j.status === 'concluido')).toBe(true);
   });
 
-  it('a composição declara as quatro filas, na ordem de prioridade', () => {
+  it('a composição declara as cinco filas, na ordem de prioridade', () => {
+    // A ordem é a da prioridade, e o prospector é o último de propósito: é o único que
+    // gasta dinheiro por passo, e fila de dado novo não espera investigação.
     const nucleo = montarNucleoCom(
       conexao.db,
       diretorio,
       resolvedorDePerfilDeTeste(conexao.db, 'perfil-montagem'),
     );
     expect(tarefaCompleta(nucleo).nome).toBe(NOME_DA_TAREFA_COMPLETA);
-    expect(NOME_DA_TAREFA_COMPLETA).toBe('ingestao+identidade+compatibilidade+pedidos');
+    expect(NOME_DA_TAREFA_COMPLETA).toBe('ingestao+identidade+compatibilidade+pedidos+prospector');
+  });
+
+  it('o prospector monta com os investigadores da instalação', () => {
+    const nucleo = montarNucleoCom(
+      conexao.db,
+      diretorio,
+      resolvedorDePerfilDeTeste(conexao.db, 'perfil-montagem'),
+    );
+    // A tela lê daqui o que dá para investigar hoje, e é por isso que a montagem é o
+    // lugar: a lista de ferramentas prontas não pode ser escrita à mão em dois lugares.
+    expect(nucleo.prospector.ferramentas).toEqual(['base_local']);
   });
 
   it('drena também a fila de compatibilidade', async () => {
