@@ -347,19 +347,24 @@ concorrentes concordando publicam (0,80, a âncora da especificação). Um manua
 fabricante publicaria sozinho, e é o caminho mais rápido para uma ficha completa —
 mas ele entra à mão, uma linha por vez.
 
-### 3.5 Uma ficha por vez na tela, e sem exportação de arquivo
+### 3.5 Seletor de ficha e exportação — feito
 
-A tela mostra a ficha do produto com mais compatibilidade registrada. Não há
-seletor de produto nem botão para baixar o CSV — `fichaEmCsv` existe, tem teste, e
-não tem botão.
+**Fechada em 16/09, no mesmo dia em que a tela de catálogo a destravou.** O que
+faltava não era o código: `fichaEmCsv` tinha teste desde a fase 6. Faltava de qual
+ficha baixar, e isso dependia de haver como escolher produto.
 
-Não é dívida escondida, é ordem: com poucos produtos a ficha de um já responde "o
-que sai daqui". Seletor de produto e download entram junto com a tela de catálogo
-(3.1), que é onde escolher um produto vai fazer sentido.
+Agora a tela lista os produtos do perfil por quanta compatibilidade cada um tem
+registrada, a escolha viaja na URL (`?sku=`), e a pergunta do comprador viaja junto
+para trocar de produto não apagar o que estava digitado. Sem escolha, abre a ficha do
+produto mais provado — o comportamento anterior. Com um produto só, o seletor não
+aparece.
 
-A caixa de "responder um comprador" usa a mesma ficha, então responde sobre o
-mesmo produto. É útil assim porque quem responde sabe de qual anúncio veio a
-pergunta, mas com catálogo grande vai precisar do seletor junto.
+Produto de outro perfil vira aviso e **não** troca de ficha em silêncio: mostrar a
+ficha de abertura quando alguém pediu outra é o caminho para responder a um comprador
+com a ficha errada.
+
+O download recusa o que não vale baixar — 400 sem produto, 404 fora do perfil, 409
+quando não há nada publicável —, e o link só aparece quando o arquivo sai.
 
 ### 3.6 Vocabulário e navegação — feito
 

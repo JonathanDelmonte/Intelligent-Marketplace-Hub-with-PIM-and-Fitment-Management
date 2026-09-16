@@ -722,6 +722,7 @@ Não é fase da especificação: é o que o dono pediu para depois das fases, e 
 | C.12 | Tela de catálogo: informar custo e ver a margem do M8 sair            | ✅     |
 | C.13 | Voltagem, medida e quantidade na ficha, e o cadastro vencendo o extraído | ✅   |
 | C.14 | Uma forma de conjugar plural, sem "(s)" em nenhuma frase de tela          | ✅   |
+| C.15 | Seletor de produto e download na ficha de compatibilidade                 | ✅   |
 
 **Entrega:** o sistema para de falar o nome das próprias tabelas, a navegação diz
 onde você está, e a tela inicial responde "o que eu faço agora" em vez de listar
@@ -791,6 +792,17 @@ número manda no verbo também, e conjugar só o substantivo trocaria um erro po
 
 Três cópias locais da mesma função de plural morreram no caminho, e é o mesmo achado da
 C.5: **função de texto nasce duplicada**, e cada cópia diverge no que importa.
+
+**A C.15 é a segunda pendência que a tela de catálogo destravou no mesmo dia.** A ficha
+de compatibilidade mostrava um produto só, escolhido pelo sistema, e `fichaEmCsv` tinha
+teste desde a fase 6 sem ter botão — porque sem catálogo não havia de qual ficha baixar.
+Agora a escolha viaja na URL, a pergunta do comprador viaja junto, e o download recusa o
+que não vale baixar: nada publicável devolve 409 em vez de um arquivo com só o cabeçalho.
+
+O detalhe que não é comodidade: produto de outro perfil vira aviso em vez de abrir a
+ficha de abertura em silêncio. Essa troca silenciosa seria o caminho para responder a um
+comprador com a ficha errada, que é o erro que aquela tela existe inteira para não deixar
+acontecer.
 
 O que continua aberto e é decisão do dono: se os rótulos novos são os que ele usa
 falando. Trocar é uma linha em `src/app/navegacao.ts`.

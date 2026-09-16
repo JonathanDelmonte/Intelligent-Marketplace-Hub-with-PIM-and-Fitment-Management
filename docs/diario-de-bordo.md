@@ -26,6 +26,38 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-16 — A tela de catálogo destravou duas pendências no mesmo dia
+
+A 3.5 esperava a 3.1 desde a fase 6, e o texto dela dizia por quê: seletor de ficha e
+download "entram junto com a tela de catálogo, que é onde escolher um produto vai fazer
+sentido". A tela de catálogo nasceu de manhã; à tarde a 3.5 fechou.
+
+### 🔀 Trocar de ficha em silêncio seria pior que recusar
+
+A decisão que eu quase tomei pelo caminho fácil: `?sku=` com id que não é do perfil cai
+no produto de abertura, e pronto. A tela abriria, ninguém veria erro, e alguém acabaria
+respondendo a um comprador com a ficha de outra peça — o erro que esta tela existe
+inteira para evitar.
+
+Recusa com aviso, então, e o aviso diz **que a ficha abaixo é de outro produto**, não só
+que deu erro. A resposta também não conta se o produto existe em outro perfil: id de
+outro dono recebe a mesma frase que id inexistente.
+
+### 🐛 O seletor apagava a pergunta digitada
+
+Achado na tela, não no teste: `GET` em dois formulários irmãos, cada um mandando só os
+seus campos. Trocar de produto perdia a pergunta do comprador, e perguntar mantinha o
+produto errado. Os dois passaram a carregar o campo do outro escondido — `sku` no
+formulário da pergunta, `p` no do seletor.
+
+### 🔀 "2 linhas" no seletor era ambíguo
+
+Primeira versão do rótulo dizia "Refil PA21G — 2 linhas", e a ficha logo abaixo mostrava
+uma linha publicável e uma retida. Duas contagens diferentes com a mesma palavra na mesma
+tela. Virou "2 linhas registradas", que é o que o número é.
+
+---
+
 ## 2026-09-16 — O "(s)" saiu, e levou seis frases erradas com ele
 
 Dezoito frases em treze módulos conjugavam plural com parêntese: "7 unidade(s)", "1
