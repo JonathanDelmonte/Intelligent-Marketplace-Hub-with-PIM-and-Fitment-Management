@@ -26,6 +26,51 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-16 — O "(s)" saiu, e levou seis frases erradas com ele
+
+Dezoito frases em treze módulos conjugavam plural com parêntese: "7 unidade(s)", "1
+item(ns)", "3 observação(ões)". Fechada a pendência do `(s)`, que estava aberta desde
+que a tela de afiliados mostrou o primeiro.
+
+### 🐛 "A última conferência foi há 0 dia(s)"
+
+O pior dos seis. Zero dia não é um intervalo: é hoje. A frase pedia conferência de um
+estoque conferido nesta manhã, e dizia "há 0 dia(s)" — que passa por desleixo de
+conjugação quando é erro de conteúdo. Zero tem frase própria agora.
+
+É o mesmo defeito que a tela de afiliados achou em "a última saiu há 0 minuto(s)", em
+outro módulo. Duas vezes o mesmo erro embaixo do mesmo parêntese é o argumento de que o
+parêntese não é economia de escrita, é esconderijo.
+
+### 🐛 Conjugar o substantivo e não o verbo troca um erro por outro
+
+Em oito frases o número também manda no verbo, e o `(s)` cobria as duas pontas:
+
+- "falta(m) 2 número(s)" → `falta 1 número` / `faltam 2 números`
+- "1 leitura(s) não subiram" → `1 leitura não subiu`
+- "Falta 1 item(ns) que só ranqueiam pior ou ajudam a achar" → `que só ranqueia pior ou
+  ajuda a achar`
+- "1 unidade(s) em consignação estão anunciadas" → `está anunciada`
+- "1 modelo(s) não couberam" → `1 modelo não coube`
+- "há 1 observação(ões), mas todas com mais de 30 dias" → `mas ela tem mais de`
+
+Trocar só o substantivo deixaria "1 leitura não subiram", que é pior que o parêntese
+porque tem cara de frase acabada. Cada uma ganhou o par certo e um **teste do caso
+singular** — que é o caso que ninguém exercita, porque o teste é escrito com o exemplo
+de três itens.
+
+### 🧹 Três cópias da mesma função de plural
+
+`contar` em `inicio/apresentacao.ts`, o fecho `plural` em `importar/apresentacao.ts`, e
+dois ternários inline em `monitor` e `perguntas`. Todas eram `contagem` de `lib/texto`
+escrita de novo — e `contagem` existe justamente porque a segunda cópia apareceu. Foram
+para a função compartilhada.
+
+Fica anotado como padrão: **função de texto nasce duplicada**. Quando aparecer a terceira
+frase com a mesma forma, a busca é por `${String(` perto de um ternário.
+
+---
+
 ## 2026-09-16 — Três atributos que o checklist cobrava e ninguém podia preencher
 
 O checklist de atributos (8.3) cobra `voltagem`, `medida` e `quantidade_embalagem` no

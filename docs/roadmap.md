@@ -721,6 +721,7 @@ Não é fase da especificação: é o que o dono pediu para depois das fases, e 
 | C.11 | Executor do prospector, com a base local como primeira ferramenta    | ✅     |
 | C.12 | Tela de catálogo: informar custo e ver a margem do M8 sair            | ✅     |
 | C.13 | Voltagem, medida e quantidade na ficha, e o cadastro vencendo o extraído | ✅   |
+| C.14 | Uma forma de conjugar plural, sem "(s)" em nenhuma frase de tela          | ✅   |
 
 **Entrega:** o sistema para de falar o nome das próprias tabelas, a navegação diz
 onde você está, e a tela inicial responde "o que eu faço agora" em vez de listar
@@ -779,6 +780,17 @@ chamadas de `montarAnuncio` passava o campo — `categoriaRegulada?: string | nu
 com a chamada que a esquece, e o ausente virou `null`, que é exatamente o que "não é
 categoria regulada" significa. Faltar e não haver ficaram indistinguíveis, e um alerta
 calculado e testado passou uma fase inteira desligado.
+
+**A C.14 é a prova do argumento da C.5 em outro material.** Dezoito frases em treze
+módulos conjugavam plural com parêntese, e abrir cada uma achou **seis frases erradas de
+verdade** — não erradas de estilo. A pior repetia, em outro módulo, o erro que a tela de
+afiliados já tinha achado: "há 0 dia(s)" para uma conferência feita hoje. Em oito delas o
+número manda no verbo também, e conjugar só o substantivo trocaria um erro por outro
+("1 leitura não subiram"), então cada uma ganhou o par certo e um teste do caso singular
+— que é o caso que ninguém exercita, porque o exemplo do teste tem três itens.
+
+Três cópias locais da mesma função de plural morreram no caminho, e é o mesmo achado da
+C.5: **função de texto nasce duplicada**, e cada cópia diverge no que importa.
 
 O que continua aberto e é decisão do dono: se os rótulos novos são os que ele usa
 falando. Trocar é uma linha em `src/app/navegacao.ts`.
