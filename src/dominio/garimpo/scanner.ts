@@ -29,6 +29,7 @@
  */
 import { CORTE_MARKUP_MINIMO, CORTE_TICKET_MINIMO } from '@/dominio/precificacao/margem';
 import { formatarBRL, type Centavos } from '@/lib/dinheiro';
+import { contagem } from '@/lib/texto';
 
 /** Os sete cortes da especificação, na ordem em que ela os lista. */
 export const CORTES = [
@@ -260,7 +261,7 @@ export function avaliarNicho(
       cortes,
       reprovados,
       semMedida,
-      resumo: `Passou no que dá para medir, e falta(m) ${String(semMedida.length)} número(s). Falta de dado não é reprovação.`,
+      resumo: `Passou no que dá para medir, e ${semMedida.length === 1 ? 'falta' : 'faltam'} ${contagem(semMedida.length, 'número', 'números')}. Falta de dado não é reprovação.`,
     };
   }
 

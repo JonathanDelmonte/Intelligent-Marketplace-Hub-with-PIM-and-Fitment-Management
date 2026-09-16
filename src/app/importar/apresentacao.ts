@@ -20,6 +20,7 @@ import { z } from 'zod';
 import { TIPOS_DE_ENTRADA, type TipoDeEntrada } from '@/dominio/ingestao/classificador';
 import { STATUS_JOB, type JobDetalhado, type StatusJob } from '@/infra/fila/fila';
 import { IDIOMA, formatarAbsoluto, formatarRelativo } from '../ui/tempo';
+import { contagem } from '@/lib/texto';
 
 // ─── Status ──────────────────────────────────────────────────────────────────
 
@@ -352,7 +353,6 @@ export function descreverAviso(
   if (!(CODIGOS_DE_AVISO as readonly string[]).includes(codigo)) return null;
 
   const n = quantidade === null || !Number.isInteger(quantidade) || quantidade < 0 ? 0 : quantidade;
-  const plural = (um: string, muitos: string): string => (n === 1 ? um : muitos);
 
   switch (codigo as CodigoDeAviso) {
     case 'enfileirado':
@@ -400,7 +400,7 @@ export function descreverAviso(
     case 'processado':
       return {
         tipo: 'ok',
-        titulo: `${String(n)} ${plural('entrada processada', 'entradas processadas')}`,
+        titulo: contagem(n, 'entrada processada', 'entradas processadas'),
         corpo: 'Execução manual, sem esperar o poller.',
       };
     case 'nada_para_processar':
@@ -450,7 +450,7 @@ export function avisoDeFilaParada(params: {
 
   const n = params.prontos;
   return (
-    `${String(n)} ${n === 1 ? 'entrada está pronta' : 'entradas estão prontas'} para rodar ` +
+    `${contagem(n, 'entrada', 'entradas')} ${n === 1 ? 'está pronta' : 'estão prontas'} para rodar ` +
     'e nada terminou no último minuto. Se nenhum processo estiver consumindo a fila, use ' +
     '"Processar agora" ou ligue o processador da fila.'
   );

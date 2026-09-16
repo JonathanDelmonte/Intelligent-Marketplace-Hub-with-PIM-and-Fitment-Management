@@ -20,6 +20,7 @@ import {
   type TipoDeEvidencia,
 } from '@/dominio/compatibilidade/evidencia';
 import { descreverRetencao, type MotivoDeRetencao } from '@/dominio/compatibilidade/ficha';
+import { contagem } from '@/lib/texto';
 import { LIMIAR_PUBLICACAO_BP, TOTAL_BP, type Decisao } from '@/dominio/compatibilidade/resolucao';
 
 /** Confiança em porcentagem inteira, que é como a pessoa lê. */
@@ -193,7 +194,7 @@ export function descreverAviso(codigo: string | undefined, quantidade?: number):
     case 'coletado':
       return {
         tom: 'ok',
-        titulo: `Procura concluída${quantidade === undefined ? '' : `: ${String(quantidade)} afirmação(ões) nova(s)`}`,
+        titulo: `Procura concluída${quantidade === undefined ? '' : `: ${contagem(quantidade, 'afirmação nova', 'afirmações novas')}`}`,
         corpo: 'O que dá para provar já está na ficha; o resto ficou esperando sua conferência.',
       };
     case 'sem_coleta':

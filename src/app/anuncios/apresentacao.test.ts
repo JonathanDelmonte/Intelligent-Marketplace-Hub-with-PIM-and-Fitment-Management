@@ -123,6 +123,12 @@ describe('resumoDaConferencia', () => {
     expect(r).not.toContain('devolução');
   });
 
+  it('um item que só ranqueia usa o verbo no singular', () => {
+    // "Falta 1 item que só ranqueiam pior" é o que o "(s)" deixava passar.
+    const r = resumoDaConferencia(conferir({ marca: null }));
+    expect(r).toContain('Falta 1 item que só ranqueia pior ou ajuda a achar');
+  });
+
   it('checklist cheio diz para o que o produto é', () => {
     const r = resumoDaConferencia(conferir());
     expect(r).toContain('completo');
@@ -201,7 +207,7 @@ describe('descreverCandidato', () => {
   });
 
   it('SKU completo mostra quantos modelos já publicam', () => {
-    expect(descreverCandidato(cand())).toContain('2 modelo(s)');
+    expect(descreverCandidato(cand())).toContain('2 modelos publicáveis');
   });
 
   it('sem modelo publicável é uma falta, e aparece', () => {

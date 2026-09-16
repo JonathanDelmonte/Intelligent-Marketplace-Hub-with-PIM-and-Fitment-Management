@@ -8,6 +8,7 @@
  */
 import type { Tema } from '@/dominio/posvenda/recorrente';
 import { REPETICOES_QUE_ACUSAM, type DuvidaRecorrente } from '@/dominio/posvenda/recorrente';
+import { contagem } from '@/lib/texto';
 
 export const ROTULO_DO_TEMA: Readonly<Record<Tema, string>> = {
   compatibilidade: 'serve no meu modelo?',
@@ -127,7 +128,7 @@ export function descreverAviso(
     case 'gravado':
       return {
         tom: 'ok',
-        titulo: `${String(n)} ${n === 1 ? 'pergunta guardada' : 'perguntas guardadas'}`,
+        titulo: contagem(n, 'pergunta guardada', 'perguntas guardadas'),
         corpo:
           'A conta de repetição considera os últimos 90 dias. Uma dúvida acusa o anúncio ao chegar na quinta vez.',
       };

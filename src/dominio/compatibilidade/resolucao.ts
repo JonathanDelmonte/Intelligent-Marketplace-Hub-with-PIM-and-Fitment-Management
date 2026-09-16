@@ -28,6 +28,7 @@
  * porque discordância em compatibilidade de peça é exatamente o caso que merece
  * olho humano antes de virar anúncio.
  */
+import { contagem } from '@/lib/texto';
 import {
   ehDoFabricante,
   ETIQUETA_DA_EVIDENCIA,
@@ -290,7 +291,7 @@ function motivoDe(
   const lado = uteis.filter((e) => e.negativa !== serve);
   const tipo = maisForte(lado);
   const fonte = tipo === null ? 'evidência' : ETIQUETA_DA_EVIDENCIA[tipo];
-  const quantas = lado.length === 1 ? '' : ` e ${lado.length - 1} outra(s)`;
+  const quantas = lado.length === 1 ? '' : ` e ${contagem(lado.length - 1, 'outra', 'outras')}`;
   const base = `${serve ? 'serve' : 'não serve'} segundo ${fonte}${quantas}`;
   if (conflito !== null) return `${base}, com fonte discordando`;
   if (serve && confiancaBp < LIMIAR_PUBLICACAO_BP) return `${base}, abaixo do corte de publicação`;

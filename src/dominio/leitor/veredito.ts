@@ -43,6 +43,7 @@ import {
 import type { EntradaSemPreco } from '@/dominio/precificacao/simulador';
 import type { ResultadoDeMargem, Severidade } from '@/dominio/precificacao/tipos';
 import { FORCA_DA_FONTE, type Procedencia } from '@/dominio/procedencia';
+import { contagem } from '@/lib/texto';
 import { centavos, type Centavos } from '@/lib/dinheiro';
 
 export const VEREDITOS = [
@@ -190,7 +191,8 @@ export function decidirCompra(entrada: EntradaDoVeredito): ResultadoDoVeredito {
         codigo: 'evidencia_vencida',
         severidade: 'amarelo',
         mensagem:
-          `há ${String(vencidas.length)} observação(ões), mas todas com mais de ` +
+          `há ${contagem(vencidas.length, 'observação', 'observações')}, mas ` +
+          `${vencidas.length === 1 ? 'ela tem' : 'todas têm'} mais de ` +
           `${String(criterio.janelaDeEvidenciaDias)} dias. Preço velho não é preço praticado.`,
       },
       vencidas,

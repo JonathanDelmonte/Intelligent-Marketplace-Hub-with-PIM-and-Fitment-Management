@@ -66,6 +66,10 @@ describe('pergunta sem resposta é tarefa, não veredito', () => {
     expect(r.pendentes).toEqual(['emite_nf']);
   });
 
+  it('uma pergunta pendente é "Falta 1 resposta", com o verbo no singular', () => {
+    expect(triar({ emiteNf: null }).motivos.join(' ')).toContain('Falta 1 resposta das cinco');
+  });
+
   it('lista todas as pendentes', () => {
     const r = triarFornecedor({
       postaComEtiqueta: null,

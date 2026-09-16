@@ -73,7 +73,7 @@ describe('resumoDoQuadro', () => {
         parceirosEmRisco: ['Loja do Centro'],
       }),
     );
-    expect(r.startsWith('7 unidade(s)')).toBe(true);
+    expect(r.startsWith('7 unidades anunciadas')).toBe(true);
     expect(r).toContain('Loja do Centro');
     expect(r).toContain('cancelamento');
   });
@@ -93,7 +93,7 @@ describe('resumoDoQuadro', () => {
   it('nada em risco diz que está em dia, sem alarme falso', () => {
     const r = resumoDoQuadro(quadro({ itens: [{} as never, {} as never], unidadesEmRisco: 0 }));
     expect(r).toContain('em dia');
-    expect(r).toContain('2 item(ns)');
+    expect(r).toContain('2 itens');
   });
 });
 
@@ -143,7 +143,7 @@ describe('resumoDoFechamento', () => {
       }),
     );
     expect(r).toContain('ainda vai subir');
-    expect(r).toContain('1 parceiro(s)');
+    expect(r).toContain('1 parceiro ');
   });
 });
 

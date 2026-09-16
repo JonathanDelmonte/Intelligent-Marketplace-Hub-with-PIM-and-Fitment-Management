@@ -129,6 +129,21 @@ describe('estado da fila', () => {
   });
 });
 
+describe('a fila conjuga com o número', () => {
+  it('uma leitura travada não "subiram", e uma guardada não é "guardadas"', () => {
+    const uma = descreverFila({ pendentes: 1, travadas: 1, online: true, persistente: true });
+    expect(uma.texto).toContain('1 leitura não subiu');
+
+    const guardada = descreverFila({
+      pendentes: 1,
+      travadas: 0,
+      online: false,
+      persistente: true,
+    });
+    expect(guardada.texto).toContain('1 leitura guardada no aparelho');
+  });
+});
+
 describe('completude', () => {
   it('todo veredito tem cor, chamada e rótulo', () => {
     for (const v of VEREDITOS) {

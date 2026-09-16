@@ -94,10 +94,25 @@ describe('pedidoDeConferencia', () => {
       diasDesdeAUltima: 9,
     });
 
-    expect(texto).toContain('há 9 dia(s)');
-    expect(texto).toContain('tenho 5 anotado(s)');
-    expect(texto).toContain('tenho 2 anotado(s)');
+    expect(texto).toContain('há 9 dias');
+    expect(texto).toContain('tenho 5 anotados');
+    expect(texto).toContain('tenho 2 anotados');
     expect(texto).toContain('código EF-ELX-21');
+  });
+
+  it('conferência de hoje não diz "há 0 dias", e a de ontem não diz "dias"', () => {
+    // O plural com "(s)" escondia as duas: zero dia não é um intervalo, é agora.
+    const pedido = (dias: number) =>
+      pedidoDeConferencia({
+        vendedor: VENDEDOR,
+        parceiro: 'Loja',
+        itens: [{ descricao: 'refil', qtdNoSistema: 1 }],
+        diasDesdeAUltima: dias,
+      });
+
+    expect(pedido(0)).toContain('A última conferência foi hoje.');
+    expect(pedido(1)).toContain('há 1 dia.');
+    expect(pedido(1)).toContain('tenho 1 anotado');
   });
 
   it('explica por que está perguntando, que é o que faz o parceiro responder', () => {

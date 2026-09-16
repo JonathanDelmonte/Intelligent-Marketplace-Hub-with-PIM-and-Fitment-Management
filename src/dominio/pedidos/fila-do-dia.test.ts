@@ -144,6 +144,11 @@ describe('resumoDaFila', () => {
     );
   });
 
+  it('um pedido na fila não é "pedidos"', () => {
+    // Sem prazo não entra em atrasado nem em hoje, que é o caminho da frase da fila.
+    expect(resumo([pedido({ prazoPostagemAte: null })])).toContain('1 pedido na fila');
+  });
+
   it('diz quantos para hoje quando não há atraso', () => {
     expect(resumo([pedido({ prazoPostagemAte: new Date('2026-09-14T20:00:00.000Z') })])).toContain(
       '1 para postar hoje',

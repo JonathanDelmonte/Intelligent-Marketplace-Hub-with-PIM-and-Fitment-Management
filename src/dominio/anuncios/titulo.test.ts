@@ -56,6 +56,16 @@ describe('limite de caracteres', () => {
     expect(r.avisos.join(' ')).toContain('segundo anúncio');
   });
 
+  it('um modelo cortado não "couberam"', () => {
+    const um = gerar({ modelosCompativeis: ['PA21G', 'PA26G'] }, 45);
+    expect(um.modelosCortados).toHaveLength(1);
+    expect(um.avisos.join(' ')).toContain('1 modelo não coube');
+
+    const varios = gerar({ modelosCompativeis: ['PA21G', 'PA26G', 'PA31G', 'PA41G'] }, 45);
+    expect(varios.modelosCortados.length).toBeGreaterThan(1);
+    expect(varios.avisos.join(' ')).toContain('modelos não couberam');
+  });
+
   it('avisa quando sobra espaço, porque espaço em título é grátis', () => {
     const r = gerar({ modelosCompativeis: ['PA21G'] }, 120);
     expect(r.avisos.join(' ')).toContain('Sobraram');

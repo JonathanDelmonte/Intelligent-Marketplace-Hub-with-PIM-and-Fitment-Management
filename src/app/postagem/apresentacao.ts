@@ -6,6 +6,7 @@
  * e isso merece teste.
  */
 import { ROTULO_DA_URGENCIA, type Urgencia } from '@/dominio/pedidos/fila-do-dia';
+import { contagem } from '@/lib/texto';
 import { centavos, formatarBRL, type Centavos } from '@/lib/dinheiro';
 
 export type TomDaUrgencia = 'alerta' | 'atencao' | 'neutro';
@@ -67,7 +68,9 @@ export function divergenciaEmTexto(divergencia: Centavos): string {
  */
 export function avisoDeConsignacao(unidadesEmRisco: number): string | null {
   if (unidadesEmRisco <= 0) return null;
-  return `${String(unidadesEmRisco)} unidade(s) em consignação estão anunciadas sem conferência. Confira antes de vender o que talvez já tenha saído no balcão do parceiro.`;
+  const unidades = contagem(unidadesEmRisco, 'unidade', 'unidades');
+  const verbo = unidadesEmRisco === 1 ? 'está anunciada' : 'estão anunciadas';
+  return `${unidades} em consignação ${verbo} sem conferência. Confira antes de vender o que talvez já tenha saído no balcão do parceiro.`;
 }
 
 export const CODIGOS_DE_AVISO = ['postado', 'nao_encontrado', 'falha'] as const;

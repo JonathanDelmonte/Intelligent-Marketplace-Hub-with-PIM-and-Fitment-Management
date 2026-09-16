@@ -28,6 +28,7 @@
  */
 import { normalizarCodigoDeModelo, normalizarTexto } from '@/dominio/identidade/canonico';
 import type { Plataforma } from '@/dominio/precificacao/tipos';
+import { contagem } from '@/lib/texto';
 
 /**
  * Limite de caracteres do título, por plataforma. Levantamento de 13/09/2026.
@@ -280,7 +281,7 @@ export function gerarTitulo(dados: DadosDoTitulo, limite: number): TituloGerado 
   }
   if (cortados.length > 0) {
     avisos.push(
-      `${String(cortados.length)} modelo(s) não couberam: ${cortados.join(', ')}. Cada um é uma busca em que o anúncio não aparece — vale considerar um segundo anúncio.`,
+      `${contagem(cortados.length, 'modelo', 'modelos')} ${cortados.length === 1 ? 'não coube' : 'não couberam'}: ${cortados.join(', ')}. Cada um é uma busca em que o anúncio não aparece — vale considerar um segundo anúncio.`,
     );
   }
   const sobra = limite - titulo.length;

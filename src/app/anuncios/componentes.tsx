@@ -26,6 +26,7 @@ import {
   type Aviso,
 } from './apresentacao';
 import { salvarCategoria } from './acoes';
+import { contagem } from '@/lib/texto';
 import { CAMINHO, CAMINHO_DO_ARQUIVO, QUANTIDADE_PADRAO } from './constantes';
 import { ROTULO_DA_PLATAFORMA } from '../ui/rotulos';
 import estilo from './anuncios.module.css';
@@ -247,9 +248,10 @@ export function Ficha({ ficha }: { readonly ficha: Ficha }) {
   return (
     <>
       <p className={estilo.resumo}>
-        {ficha.publicaveis.length} modelo(s) publicável(is) e {ficha.retidas.length} retido(s). Só o
-        publicável entra no título e na descrição — afirmar na vitrine o que está abaixo do corte é
-        o caminho curto para a devolução.
+        {contagem(ficha.publicaveis.length, 'modelo publicável', 'modelos publicáveis')} e{' '}
+        {contagem(ficha.retidas.length, 'retido', 'retidos')}. Só o publicável entra no título e na
+        descrição — afirmar na vitrine o que está abaixo do corte é o caminho curto para a
+        devolução.
       </p>
       {ficha.retidas.length > 0 && (
         <ul className={estilo.listaFraca}>

@@ -12,6 +12,7 @@
  * sabe é o jeito de alguém deixar de conferir o que precisava conferir.
  */
 import { DIAS_QUE_JA_SAO_AGORA } from '@/dominio/fiscal/prazos';
+import { contagem } from '@/lib/texto';
 
 /** Ordem de atenção: `agora` é dinheiro parado ou vazando hoje. */
 export const TONS = ['agora', 'atencao', 'calmo'] as const;
@@ -56,10 +57,6 @@ export interface LeiturasDaCasa {
 /** Texto de "não deu para ler". Uma frase só, usada em toda linha que falhou. */
 export const NAO_DEU_PARA_LER = 'não deu para ler agora — a tela continua abrindo';
 
-function contar(n: number, singular: string, plural: string): string {
-  return `${String(n)} ${n === 1 ? singular : plural}`;
-}
-
 /**
  * A linha da postagem, que é a única com três números.
  *
@@ -79,7 +76,7 @@ function postagem(leitura: LeiturasDaCasa['postagem']): Pendencia {
   }
 
   const partes: string[] = [];
-  if (leitura.atrasados > 0) partes.push(contar(leitura.atrasados, 'atrasado', 'atrasados'));
+  if (leitura.atrasados > 0) partes.push(contagem(leitura.atrasados, 'atrasado', 'atrasados'));
   if (leitura.semPrazo > 0) partes.push(`${String(leitura.semPrazo)} sem prazo conhecido`);
   if (leitura.hoje > 0) partes.push(`${String(leitura.hoje)} para hoje`);
 
@@ -100,7 +97,7 @@ function fiscal(pendentes: number | null, prazo: LeiturasDaCasa['prazoFiscal']):
 
   const chegando = prazo !== null && prazo.diasRestantes <= DIAS_QUE_JA_SAO_AGORA;
   const comPrazo =
-    prazo === null ? '' : ` · ${prazo.rotulo} em ${contar(prazo.diasRestantes, 'dia', 'dias')}`;
+    prazo === null ? '' : ` · ${prazo.rotulo} em ${contagem(prazo.diasRestantes, 'dia', 'dias')}`;
 
   if (pendentes === 0) {
     return {
@@ -114,7 +111,7 @@ function fiscal(pendentes: number | null, prazo: LeiturasDaCasa['prazoFiscal']):
   return {
     ...base,
     quantidade: pendentes,
-    oQueE: `${contar(pendentes, 'produto sem NCM, CST ou cClassTrib', 'produtos sem NCM, CST ou cClassTrib')}${comPrazo}`,
+    oQueE: `${contagem(pendentes, 'produto sem NCM, CST ou cClassTrib', 'produtos sem NCM, CST ou cClassTrib')}${comPrazo}`,
     // Cadastro faltando com prazo dentro de trinta dias é a única combinação que não
     // pode esperar o fim de semana: nota emitida errada em janeiro não se desfaz.
     tom: chegando ? 'agora' : 'atencao',
@@ -138,7 +135,7 @@ function simples(
     href,
     titulo,
     quantidade,
-    oQueE: quantidade === 0 ? textos.nenhum : contar(quantidade, textos.um, textos.muitos),
+    oQueE: quantidade === 0 ? textos.nenhum : contagem(quantidade, textos.um, textos.muitos),
     tom: quantidade === 0 ? 'calmo' : tomQuandoHa,
   };
 }
@@ -217,10 +214,10 @@ export function resumoDaCasa(itens: readonly Pendencia[]): string {
 
   const agora = comTrabalho.filter((i) => i.tom === 'agora');
   if (agora.length > 0) {
-    return `${contar(agora.length, 'coisa não pode esperar', 'coisas não podem esperar')} — ${agora
+    return `${contagem(agora.length, 'coisa não pode esperar', 'coisas não podem esperar')} — ${agora
       .map((i) => i.titulo.toLocaleLowerCase('pt-BR'))
       .join(', ')}.`;
   }
 
-  return `${contar(comTrabalho.length, 'tela tem trabalho', 'telas têm trabalho')} esperando, nenhuma urgente.`;
+  return `${contagem(comTrabalho.length, 'tela tem trabalho', 'telas têm trabalho')} esperando, nenhuma urgente.`;
 }

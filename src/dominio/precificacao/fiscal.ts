@@ -7,6 +7,7 @@
  */
 import { ZERO, aplicarPontosBase, centavos, ratear } from '@/lib/dinheiro';
 import type { Centavos, PontosBase } from '@/lib/dinheiro';
+import { contagem } from '@/lib/texto';
 import type { ContextoDoVendedor } from './tipos';
 
 export interface TributoCalculado {
@@ -65,7 +66,7 @@ export function tributoPorUnidade(preco: Centavos, vendedor: ContextoDoVendedor)
 
       return {
         valor: primeira,
-        explicacao: `DAS do MEI rateado em ${String(Math.trunc(unidades))} unidade(s) previstas no mês`,
+        explicacao: `DAS do MEI rateado em ${contagem(Math.trunc(unidades), 'unidade prevista', 'unidades previstas')} no mês`,
         incerteza: 'nenhuma',
       };
     }

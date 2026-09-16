@@ -7,6 +7,7 @@
  */
 import { ROTULO_DO_TIPO, formatarGtin, normalizarGtin, prefixoGs1 } from '@/dominio/gtin';
 import { centavos, formatarBRL, lerReaisDigitados, type Centavos } from '@/lib/dinheiro';
+import { contagem } from '@/lib/texto';
 import { ROTULO_DO_VEREDITO, type Veredito } from '@/dominio/leitor/veredito';
 
 export const IDIOMA = 'pt-BR';
@@ -133,7 +134,7 @@ export function descreverFila(params: {
 }): { readonly texto: string; readonly alerta: boolean } {
   if (params.travadas > 0) {
     return {
-      texto: `${String(params.travadas)} leitura(s) não subiram depois de várias tentativas.`,
+      texto: `${contagem(params.travadas, 'leitura', 'leituras')} ${params.travadas === 1 ? 'não subiu' : 'não subiram'} depois de várias tentativas.`,
       alerta: true,
     };
   }
@@ -142,11 +143,14 @@ export function descreverFila(params: {
   }
   if (!params.online) {
     return {
-      texto: `${String(params.pendentes)} leitura(s) guardadas no aparelho, esperando rede.`,
+      texto: `${contagem(params.pendentes, 'leitura guardada', 'leituras guardadas')} no aparelho, esperando rede.`,
       alerta: false,
     };
   }
-  return { texto: `${String(params.pendentes)} leitura(s) subindo...`, alerta: false };
+  return {
+    texto: `${contagem(params.pendentes, 'leitura', 'leituras')} subindo...`,
+    alerta: false,
+  };
 }
 
 /** Aviso de que a fila não sobrevive ao recarregamento. */

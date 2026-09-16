@@ -71,9 +71,13 @@ describe('avisoDeConsignacao', () => {
     expect(avisoDeConsignacao(-1)).toBeNull();
   });
 
+  it('uma unidade está anunciada, e não "estão anunciadas"', () => {
+    expect(avisoDeConsignacao(1)).toContain('1 unidade em consignação está anunciada');
+  });
+
   it('com risco diz o número e o que fazer antes de vender', () => {
     const texto = avisoDeConsignacao(7);
-    expect(texto).toContain('7 unidade(s)');
+    expect(texto).toContain('7 unidades');
     expect(texto).toContain('antes de vender');
   });
 });

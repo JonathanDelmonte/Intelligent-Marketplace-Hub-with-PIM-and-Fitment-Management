@@ -9,6 +9,7 @@ import type { Conferencia, Exigencia } from '@/dominio/anuncios/atributos';
 import type { AvaliacaoDeCatalogo } from '@/dominio/anuncios/catalogo';
 import type { TituloGerado } from '@/dominio/anuncios/titulo';
 import type { CandidatoAAnuncio } from '@/dominio/anuncios/repositorio';
+import { contagem } from '@/lib/texto';
 import { formatarPontosBase } from '@/lib/dinheiro';
 
 export type Tom = 'alerta' | 'atencao' | 'neutro';
@@ -82,7 +83,9 @@ export function resumoDaConferencia(conferencia: Conferencia): string {
   }
 
   if (conferencia.faltando.length > 0) {
-    return `Dá para exportar. Falta ${String(conferencia.faltando.length)} item(ns) que só ranqueiam pior ou ajudam a achar. Checklist ${preenchido} preenchido.`;
+    const quantos = contagem(conferencia.faltando.length, 'item', 'itens');
+    const oQueEle = conferencia.faltando.length === 1 ? 'que só ranqueia' : 'que só ranqueiam';
+    return `Dá para exportar. ${conferencia.faltando.length === 1 ? 'Falta' : 'Faltam'} ${quantos} ${oQueEle} pior ou ${conferencia.faltando.length === 1 ? 'ajuda' : 'ajudam'} a achar. Checklist ${preenchido} preenchido.`;
   }
 
   return `Checklist completo para o que este produto é (${conferencia.tracos.join(', ') || 'produto simples'}).`;
@@ -124,7 +127,7 @@ export function descreverCandidato(candidato: CandidatoAAnuncio): string {
   if (candidato.compatibilidadesPublicaveis === 0) faltas.push('sem modelo publicável');
 
   if (faltas.length === 0) {
-    return `${candidato.titulo} — ${String(candidato.compatibilidadesPublicaveis)} modelo(s) publicável(is)`;
+    return `${candidato.titulo} — ${contagem(candidato.compatibilidadesPublicaveis, 'modelo publicável', 'modelos publicáveis')}`;
   }
   return `${candidato.titulo} — ${faltas.join(', ')}`;
 }

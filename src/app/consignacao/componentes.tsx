@@ -8,6 +8,7 @@
 import type { ItemDaConferencia, QuadroDeConferencia } from '@/dominio/consignacao/conferencia';
 import type { Fechamento } from '@/dominio/consignacao/fechamento';
 import { formatarBRL } from '@/lib/dinheiro';
+import { contagem } from '@/lib/texto';
 import { cadastrarConsignacao, registrarConferencia } from './acoes';
 import {
   desdeAUltimaEmTexto,
@@ -75,7 +76,7 @@ function CartaoDoItem({ item }: { readonly item: ItemDaConferencia }) {
             {item.tituloDoProduto ?? 'produto sem título no catálogo'}
           </h3>
           <p className={estilo.itemSub}>
-            {item.parceiroNome} · {item.qtdDisponivel} unidade(s) no sistema ·{' '}
+            {item.parceiroNome} · {contagem(item.qtdDisponivel, 'unidade', 'unidades')} no sistema ·{' '}
             {desdeAUltimaEmTexto(item.diasDesde)}
           </p>
         </div>
@@ -133,8 +134,8 @@ export function FechamentoDoMes({ fechamento }: { readonly fechamento: Fechament
         <ul className={estilo.lista}>
           {fechamento.porParceiro.map((p) => (
             <li key={p.parceiroNome}>
-              <strong>{p.parceiroNome}</strong>: {formatarBRL(p.aRepassar)} · {p.unidades}{' '}
-              unidade(s)
+              <strong>{p.parceiroNome}</strong>: {formatarBRL(p.aRepassar)} ·{' '}
+              {contagem(p.unidades, 'unidade', 'unidades')}
               {p.pendencias.length > 0 && (
                 <ul className={estilo.pendencias}>
                   {p.pendencias.map((pend) => (

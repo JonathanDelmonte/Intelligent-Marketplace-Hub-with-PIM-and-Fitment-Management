@@ -123,6 +123,13 @@ describe('medir', () => {
   });
 });
 
+describe('o resumo conjuga com o número', () => {
+  it('um número faltando é "falta", e dois são "faltam"', () => {
+    expect(avaliar({ volumeMes: null }).resumo).toContain('falta 1 número');
+    expect(avaliar({ volumeMes: null, ticketMedio: null }).resumo).toContain('faltam 2 números');
+  });
+});
+
 describe('critérios configuráveis', () => {
   it('afrouxar o corte muda o veredito, sem mexer na medida', () => {
     const medidas = { ...BOM, markupBp: 20_000 };

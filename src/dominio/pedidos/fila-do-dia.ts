@@ -20,6 +20,8 @@
  * do prazo é o problema: não se sabe se está atrasado. Esconder no fim da lista
  * seria transformar dado faltando em pedido esquecido.
  */
+import { contagem } from '@/lib/texto';
+
 export const FUSO_PADRAO = 'America/Sao_Paulo';
 
 export const URGENCIAS = ['sem_prazo', 'atrasado', 'hoje', 'amanha', 'depois'] as const;
@@ -158,13 +160,13 @@ export function resumoDaFila(fila: FilaDoDia): string {
   if (fila.itens.length === 0) {
     return fila.jaPostados === 0
       ? 'Nenhum pedido para postar.'
-      : `Tudo postado: ${String(fila.jaPostados)} pedido(s).`;
+      : `Tudo postado: ${contagem(fila.jaPostados, 'pedido', 'pedidos')}.`;
   }
   if (fila.porUrgencia.atrasado > 0) {
-    return `${String(fila.porUrgencia.atrasado)} atrasado(s) e ${String(fila.porUrgencia.hoje)} para hoje. Comece pelos atrasados.`;
+    return `${contagem(fila.porUrgencia.atrasado, 'atrasado', 'atrasados')} e ${String(fila.porUrgencia.hoje)} para hoje. Comece pelos atrasados.`;
   }
   if (paraAgora === 0) {
-    return `Nada vence hoje. ${String(fila.itens.length)} pedido(s) na fila.`;
+    return `Nada vence hoje. ${contagem(fila.itens.length, 'pedido', 'pedidos')} na fila.`;
   }
   return `${String(paraAgora)} para postar hoje, de ${String(fila.itens.length)} na fila.`;
 }

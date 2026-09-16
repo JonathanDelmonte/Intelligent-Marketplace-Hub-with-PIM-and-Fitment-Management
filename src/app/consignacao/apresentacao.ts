@@ -11,6 +11,7 @@ import {
   type QuadroDeConferencia,
 } from '@/dominio/consignacao/conferencia';
 import type { Fechamento } from '@/dominio/consignacao/fechamento';
+import { contagem } from '@/lib/texto';
 import { formatarBRL } from '@/lib/dinheiro';
 
 export type Tom = 'alerta' | 'atencao' | 'neutro';
@@ -54,7 +55,7 @@ export function resumoDoQuadro(quadro: QuadroDeConferencia): string {
   }
 
   if (quadro.unidadesEmRisco === 0) {
-    return `Conferência em dia. ${String(quadro.itens.length)} item(ns) em consignação.`;
+    return `Conferência em dia. ${contagem(quadro.itens.length, 'item', 'itens')} em consignação.`;
   }
 
   const parceiros = quadro.parceirosEmRisco;
@@ -63,7 +64,8 @@ export function resumoDoQuadro(quadro: QuadroDeConferencia): string {
       ? `em ${parceiros[0] ?? ''}`
       : `em ${String(parceiros.length)} parceiros`;
 
-  return `${String(quadro.unidadesEmRisco)} unidade(s) anunciada(s) sem conferência ${onde}. Se vender o que já saiu no balcão, é cancelamento — e cancelamento pesa na conta.`;
+  const unidades = contagem(quadro.unidadesEmRisco, 'unidade anunciada', 'unidades anunciadas');
+  return `${unidades} sem conferência ${onde}. Se vender o que já saiu no balcão, é cancelamento — e cancelamento pesa na conta.`;
 }
 
 /** O fechamento em uma linha, dizendo se dá para pagar sem conversa. */
@@ -72,12 +74,12 @@ export function resumoDoFechamento(fechamento: Fechamento): string {
     return 'Nenhuma venda de item consignado neste período.';
   }
 
-  const base = `${formatarBRL(fechamento.totalARepassar)} a repassar, ${String(fechamento.unidades)} unidade(s).`;
+  const base = `${formatarBRL(fechamento.totalARepassar)} a repassar, ${contagem(fechamento.unidades, 'unidade', 'unidades')}.`;
 
   if (fechamento.completo) return `${base} Sem pendência: dá para pagar.`;
 
   const pendentes = fechamento.porParceiro.filter((p) => !p.completo).length;
-  return `${base} ${String(pendentes)} parceiro(s) com item sem preço de repasse combinado — o total ainda vai subir.`;
+  return `${base} ${contagem(pendentes, 'parceiro', 'parceiros')} com item sem preço de repasse combinado — o total ainda vai subir.`;
 }
 
 /** O mês do fechamento como as pessoas o escrevem: `setembro de 2026`. */

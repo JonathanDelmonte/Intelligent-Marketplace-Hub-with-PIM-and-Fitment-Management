@@ -19,6 +19,7 @@
  */
 import { FUSO_PADRAO } from '@/dominio/pedidos/fila-do-dia';
 import { centavos, formatarBRL, type Centavos } from '@/lib/dinheiro';
+import { contagem } from '@/lib/texto';
 
 export interface ItemConsignado {
   /** Como a peça é chamada na conversa. */
@@ -124,11 +125,13 @@ export function pedidoDeConferencia(params: ParametrosDoPedidoDeConferencia): st
   const desdeQuando =
     params.diasDesdeAUltima === null
       ? 'Ainda não conferimos esse estoque nenhuma vez.'
-      : `A última conferência foi há ${params.diasDesdeAUltima} dia(s).`;
+      : params.diasDesdeAUltima === 0
+        ? 'A última conferência foi hoje.'
+        : `A última conferência foi há ${contagem(params.diasDesdeAUltima, 'dia', 'dias')}.`;
 
   const lista = params.itens.map(
     (i) =>
-      `- ${i.descricao}${i.codigo !== null && i.codigo !== undefined && i.codigo.trim() !== '' ? ` (código ${i.codigo})` : ''}: tenho ${i.qtdNoSistema} anotado(s)`,
+      `- ${i.descricao}${i.codigo !== null && i.codigo !== undefined && i.codigo.trim() !== '' ? ` (código ${i.codigo})` : ''}: tenho ${contagem(i.qtdNoSistema, 'anotado', 'anotados')}`,
   );
 
   return [

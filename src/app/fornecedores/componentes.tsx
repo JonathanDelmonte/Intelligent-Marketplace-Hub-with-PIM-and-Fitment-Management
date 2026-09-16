@@ -9,6 +9,7 @@
 import type { FornecedorGravado } from '@/dominio/fornecedores/repositorio';
 import { mensagemDePrimeiroContato } from '@/dominio/fornecedores/contato';
 import { CANAIS, ORIGENS } from '@/dominio/fornecedores/repositorio';
+import { contagem } from '@/lib/texto';
 import { cadastrarFornecedor, responderPerguntas } from './acoes';
 import {
   etiquetaDoVeredito,
@@ -217,7 +218,8 @@ export function CartaoDoFornecedor({
       {fornecedor.triagem.pendentes.length > 0 && (
         <details className={estilo.detalhe}>
           <summary>
-            Mensagem de primeiro contato ({String(fornecedor.triagem.pendentes.length)} pergunta(s))
+            Mensagem de primeiro contato (
+            {contagem(fornecedor.triagem.pendentes.length, 'pergunta', 'perguntas')})
           </summary>
           <ul className={estilo.motivos}>
             {perguntasEmTexto(fornecedor.triagem.pendentes).map((p) => (

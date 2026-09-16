@@ -14,6 +14,7 @@ import type { GrupoDeEventos, Evento } from '@/dominio/monitor/eventos';
 import type { AvaliacaoDaQueda, VereditoDeQueda } from '@/dominio/monitor/queda';
 import { centavos, formatarBRL } from '@/lib/dinheiro';
 import { IDIOMA } from '../ui/tempo';
+import { contagem } from '@/lib/texto';
 
 export const ROTULO_DA_SEVERIDADE: Readonly<Record<Severidade, string>> = {
   vermelho: 'não pode esperar',
@@ -222,7 +223,7 @@ export function descreverAviso(
     case 'lido':
       return {
         tom: 'ok',
-        titulo: `${String(n)} ${n === 1 ? 'mudança marcada como lida' : 'mudanças marcadas como lidas'}`,
+        titulo: contagem(n, 'mudança marcada como lida', 'mudanças marcadas como lidas'),
         corpo: 'Sai da fila e continua gravada. O histórico de preço não muda.',
       };
     case 'nada_para_ler':

@@ -23,6 +23,7 @@
  * tarefa; `false` vira ressalva ou descarte, que é decisão.
  */
 import type { Centavos } from '@/lib/dinheiro';
+import { contagem } from '@/lib/texto';
 
 /** As cinco respostas, cada uma podendo estar em branco. */
 export interface RespostasDoFornecedor {
@@ -158,7 +159,10 @@ export function triarFornecedor(
   if (pendentes.length > 0) {
     return {
       veredito: 'perguntar',
-      motivos: [...motivos, `Faltam ${String(pendentes.length)} resposta(s) das cinco perguntas.`],
+      motivos: [
+        ...motivos,
+        `${pendentes.length === 1 ? 'Falta' : 'Faltam'} ${contagem(pendentes.length, 'resposta', 'respostas')} das cinco perguntas.`,
+      ],
       pendentes,
       descarteAutomatico: false,
     };

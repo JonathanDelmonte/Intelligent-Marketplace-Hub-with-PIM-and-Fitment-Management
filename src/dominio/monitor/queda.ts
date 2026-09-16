@@ -23,6 +23,7 @@
  */
 import { centavos, proporcaoEmPontosBase, type Centavos, type PontosBase } from '@/lib/dinheiro';
 import { diaNoFuso, FUSO_PADRAO } from '@/dominio/pedidos/fila-do-dia';
+import { contagem } from '@/lib/texto';
 
 /** Janela de referência, em dias. É o número da especificação. */
 export const JANELA_DE_REFERENCIA_DIAS = 90;
@@ -134,7 +135,7 @@ export function avaliarQueda(
       descontoBp: null,
       observacoes: naJanela.length,
       valePublicar: false,
-      mensagem: `Só ${String(naJanela.length)} observação(ões) de preço em ${String(janela)} dias. Sem ${String(OBSERVACOES_MINIMAS)} não há mediana que sirva de referência — e "não sei se está barato" é diferente de "não está barato".`,
+      mensagem: `Só ${contagem(naJanela.length, 'observação', 'observações')} de preço em ${String(janela)} dias. Sem ${String(OBSERVACOES_MINIMAS)} não há mediana que sirva de referência — e "não sei se está barato" é diferente de "não está barato".`,
     };
   }
 
@@ -164,7 +165,7 @@ export function avaliarQueda(
     observacoes: naJanela.length,
     valePublicar,
     mensagem: valePublicar
-      ? `Queda real contra a mediana de ${String(naJanela.length)} observação(ões) em ${String(janela)} dias.`
+      ? `Queda real contra a mediana de ${contagem(naJanela.length, 'observação', 'observações')} em ${String(janela)} dias.`
       : `Caiu, mas pouco para o corte de publicação. Grupo que publica desconto pequeno é grupo que os membros silenciam.`,
   };
 }
