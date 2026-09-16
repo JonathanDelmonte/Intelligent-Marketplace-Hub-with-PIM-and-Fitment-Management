@@ -150,6 +150,9 @@ const esquemaDaFicha = z.object({
   altura: numeroOuNulo,
   devolucaoPct: numeroOuNulo,
   marca: z.string().trim().max(80),
+  voltagem: z.string().trim().max(60),
+  medida: z.string().trim().max(120),
+  quantidade: numeroOuNulo,
 });
 
 export async function salvarFicha(dados: FormData): Promise<void> {
@@ -161,6 +164,9 @@ export async function salvarFicha(dados: FormData): Promise<void> {
     altura: dados.get('altura') ?? '',
     devolucaoPct: dados.get('devolucao') ?? '',
     marca: dados.get('marca') ?? '',
+    voltagem: dados.get('voltagem') ?? '',
+    medida: dados.get('medida') ?? '',
+    quantidade: dados.get('quantidade') ?? '',
   });
 
   if (!lido.success) {
@@ -177,6 +183,15 @@ export async function salvarFicha(dados: FormData): Promise<void> {
   const todosOsLados = lados.every((l) => l !== null);
   if (algumLado && !todosOsLados) redirect(paraProduto(lido.data.id, 'ficha_invalida'));
 
+  // Quantidade é contagem, e "2,5 peças na caixa" é digitação errada. Arredondar em
+  // silêncio gravaria 2 ou 3 sem ninguém saber qual — num campo que decide devolução.
+  // A recusa é aqui, e não só no repositório, para a pessoa voltar ao produto com o
+  // aviso em vez de cair na lista.
+  const quantidade = lido.data.quantidade;
+  if (quantidade !== null && (!Number.isInteger(quantidade) || quantidade <= 0)) {
+    redirect(paraProduto(lido.data.id, 'ficha_invalida'));
+  }
+
   let salvou = false;
   try {
     const { repo, perfil } = await repositorio();
@@ -191,6 +206,9 @@ export async function salvarFicha(dados: FormData): Promise<void> {
       taxaDevolucaoEsperadaBp:
         lido.data.devolucaoPct === null ? null : Math.round(lido.data.devolucaoPct * 100),
       marca: lido.data.marca === '' ? null : lido.data.marca,
+      voltagem: lido.data.voltagem === '' ? null : lido.data.voltagem,
+      medida: lido.data.medida === '' ? null : lido.data.medida,
+      quantidadeEmbalagem: quantidade,
     });
   } catch (erro) {
     log.aviso('catalogo.ficha_recusada', { erro });

@@ -295,6 +295,54 @@ export function FormularioDaFicha({ sku }: { readonly sku: SkuGravado }) {
         </span>
       </fieldset>
 
+      <fieldset className={estilo.medidas}>
+        <legend className={estilo.legenda}>O que o comprador confere antes de comprar</legend>
+
+        <label className={estilo.campo}>
+          Voltagem
+          <input
+            className={estilo.entrada}
+            defaultValue={sku.voltagem ?? ''}
+            maxLength={60}
+            name="voltagem"
+            placeholder="Bivolt"
+            type="text"
+          />
+        </label>
+
+        <label className={estilo.campoLargo}>
+          Medida que decide se encaixa
+          <input
+            className={estilo.entrada}
+            defaultValue={sku.medida ?? ''}
+            maxLength={120}
+            name="medida"
+            placeholder="Rosca 1/2 polegada"
+            type="text"
+          />
+          <span className={estilo.ajuda}>
+            A medida da peça, com a unidade — não a da caixa, que é o quadro acima.
+          </span>
+        </label>
+
+        <label className={estilo.campo}>
+          Peças na embalagem
+          <input
+            className={estilo.entrada}
+            defaultValue={sku.quantidadeEmbalagem ?? ''}
+            inputMode="numeric"
+            name="quantidade"
+            placeholder="2"
+            type="text"
+          />
+        </label>
+
+        <span className={estilo.ajudaDoQuadro}>
+          Voltagem trocada, medida que não encaixa e quantidade diferente da esperada voltam — o
+          checklist do anúncio cobra os três no nível de um anúncio que não sai.
+        </span>
+      </fieldset>
+
       <div className={estilo.acao}>
         <button className={estilo.botao} type="submit">
           Salvar ficha

@@ -306,7 +306,7 @@ export function descreverAviso(codigo: string | undefined): Aviso | null {
         tom: 'erro',
         titulo: 'Número que não fecha.',
         corpo:
-          'Peso em gramas e medida em milímetros são positivos, e a devolução fica entre 0 e 100%. Nada foi salvo.',
+          'Peso em gramas e medida em milímetros são positivos, peças na embalagem é número inteiro, e a devolução fica entre 0 e 100%. Nada foi salvo.',
       };
     case 'falha':
       return { tom: 'erro', titulo: 'Não deu.', corpo: 'Nada foi salvo. O erro está no log.' };

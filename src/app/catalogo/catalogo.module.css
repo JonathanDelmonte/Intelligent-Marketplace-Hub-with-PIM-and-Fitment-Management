@@ -337,6 +337,20 @@
   padding: 0 0.25rem;
 }
 
+/*
+ * Ajuda do quadro inteiro, e não de um campo.
+ *
+ * Linha própria, e é o `max-width` que a garante: o flex quebra a linha pelo tamanho
+ * hipotético do item, que o `max-width` da `.ajuda` reduzia o bastante para caber ao
+ * lado do último campo — e aí a frase parecia ser dele, não dos três. Frase curta em
+ * troca, porque agora ela ocupa a largura do quadro.
+ */
+.ajudaDoQuadro {
+  composes: ajuda;
+  flex-basis: 100%;
+  max-width: none;
+}
+
 .campoMiudo {
   display: flex;
   flex-direction: column;

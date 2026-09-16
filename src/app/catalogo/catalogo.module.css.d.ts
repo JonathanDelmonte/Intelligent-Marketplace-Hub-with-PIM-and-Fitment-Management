@@ -6,6 +6,7 @@
 declare const estilo: {
   readonly acao: string;
   readonly ajuda: string;
+  readonly ajudaDoQuadro: string;
   readonly aviso: string;
   readonly avisoAtencao: string;
   readonly avisoCorpo: string;

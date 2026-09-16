@@ -284,4 +284,13 @@ describe('descreverAviso', () => {
   it('custo inválido separa zero de ausente', () => {
     expect(descreverAviso('custo_invalido')?.corpo).toContain('não informado');
   });
+
+  it('ficha recusada nomeia os três números que ela confere', () => {
+    // Um aviso para três conferências diferentes só serve se disser as três: peso,
+    // dimensão e quantidade inteira caem no mesmo código.
+    const corpo = descreverAviso('ficha_invalida')?.corpo ?? '';
+    expect(corpo).toContain('gramas');
+    expect(corpo).toContain('milímetros');
+    expect(corpo).toContain('inteiro');
+  });
 });
