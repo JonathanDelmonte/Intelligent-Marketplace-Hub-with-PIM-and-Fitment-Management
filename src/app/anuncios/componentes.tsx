@@ -27,15 +27,10 @@ import {
 } from './apresentacao';
 import { salvarCategoria } from './acoes';
 import { CAMINHO, CAMINHO_DO_ARQUIVO, QUANTIDADE_PADRAO } from './constantes';
+import { ROTULO_DA_PLATAFORMA } from '../ui/rotulos';
 import estilo from './anuncios.module.css';
 
 /** Rótulo de cada plataforma. Nome de plataforma não é marca do sistema (ADR 0003). */
-const ROTULO_DA_PLATAFORMA: Readonly<Record<Plataforma, string>> = {
-  ml: 'Mercado Livre',
-  shopee: 'Shopee',
-  amazon: 'Amazon',
-};
-
 export function AvisoDaAcao({ aviso }: { readonly aviso: Aviso }) {
   const classe =
     aviso.tom === 'erro'

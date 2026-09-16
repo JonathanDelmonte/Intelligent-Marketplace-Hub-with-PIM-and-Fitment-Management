@@ -8,6 +8,7 @@
 import type { Desempenho, DecisaoDePublicacao } from '@/dominio/afiliados/publicacao';
 import { OFERTAS_POR_DIA } from '@/dominio/afiliados/publicacao';
 import type { Plataforma } from '@/dominio/precificacao/tipos';
+import { ROTULO_DA_PLATAFORMA } from '../ui/rotulos';
 import { PLATAFORMAS } from '@/dominio/precificacao/tipos';
 import {
   centavos,
@@ -19,11 +20,7 @@ import {
   type PontosBase,
 } from '@/lib/dinheiro';
 
-export const ROTULO_DA_PLATAFORMA: Readonly<Record<Plataforma, string>> = {
-  ml: 'Mercado Livre',
-  shopee: 'Shopee',
-  amazon: 'Amazon',
-};
+export { ROTULO_DA_PLATAFORMA };
 
 /** Qual variável de ambiente carrega a tag de cada plataforma. */
 export const VARIAVEL_DA_TAG: Readonly<Record<Plataforma, string>> = {
