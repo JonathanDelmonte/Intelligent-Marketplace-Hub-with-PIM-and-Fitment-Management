@@ -17,10 +17,14 @@
  * informação — nenhum dos dois estaria errado, e nenhum dos dois estaria completo.
  */
 import { and, desc, eq, sql } from 'drizzle-orm';
+import { z } from 'zod';
 import type { Banco } from '@/infra/banco/cliente';
 import { dossie } from '@/infra/banco/schema';
 import { centavos } from '@/lib/dinheiro';
+import { ferramentaDaFamilia } from './abertura';
 import { resumirDossie, type DossieParaGravar, type ResumoDoDossie } from './dossie';
+import { itemDaFamilia, type ItemDaFronteira } from './fronteira';
+import { FAMILIAS_DE_HIPOTESE, FERRAMENTAS } from './hipoteses';
 
 export interface DossieGravado extends DossieParaGravar {
   readonly id: string;
@@ -74,10 +78,12 @@ export class RepositorioDeDossies {
       hipoteses: [...paraGravar.hipoteses],
       fronteira: [...paraGravar.fronteira],
       achados: [...paraGravar.achados],
+      investigados: [...paraGravar.investigados],
       orcamentoCentavos: paraGravar.orcamentoCentavos,
       gastoCentavos: paraGravar.gastoCentavos,
       orcamentoPassos: paraGravar.orcamentoPassos,
       passosGastos: paraGravar.passosGastos,
+      passosSemAchado: paraGravar.passosSemAchado,
       motivoParada: paraGravar.motivoParada,
       recomendacao: paraGravar.recomendacao,
       atualizadoEm: new Date(),
@@ -151,6 +157,56 @@ export class RepositorioDeDossies {
 }
 
 /**
+ * Item de fronteira como ele pode estar gravado.
+ *
+ * Linha gravada antes da fronteira completa tem só `{alvo, familia}`. `jsonb` é
+ * fronteira externa como qualquer outra (convenções, seção 4), então a leitura valida
+ * e **repara** em vez de confiar no `$type`: o valor base de cada família mora no
+ * domínio, e duplicá-lo numa migração de `UPDATE ... jsonb` seria a constante em dois
+ * lugares — que é como as duas versões dela divergem.
+ */
+const esquemaDoItemGravado = z.object({
+  alvo: z.string(),
+  familia: z.enum(FAMILIAS_DE_HIPOTESE),
+  id: z.string().min(1).optional(),
+  valorEsperado: z.number().int().min(0).max(100).optional(),
+  custoEmPassos: z.number().int().positive().optional(),
+  ferramenta: z.enum(FERRAMENTAS).optional(),
+});
+
+/**
+ * Completa o que falta num item gravado no formato antigo.
+ *
+ * O id vira o nome da família, que é o que `abrirAlvo` usa, então um item reparado casa
+ * com o `investigados` gravado — e é também o que faz `rerotearFronteira` reconhecê-lo
+ * como item de abertura. A ferramenta fica a primeira declarada da família: a rota
+ * original foi perdida, e quem a refaz é o reencaminhamento, no motor, que sabe o que
+ * existe hoje.
+ */
+function repararItem(bruto: unknown): ItemDaFronteira {
+  const lido = esquemaDoItemGravado.safeParse(bruto);
+
+  // Item que nem alvo e família tem não é reparável, e descartar em silêncio esconderia
+  // dossiê corrompido. Lançar aqui é o certo: a leitura é de uma linha que o sistema
+  // gravou, e formato irreconhecível é defeito, não estado previsto.
+  if (!lido.success) {
+    throw new Error(`item de fronteira gravado em formato irreconhecível: ${lido.error.message}`);
+  }
+
+  const base = itemDaFamilia({
+    id: lido.data.id ?? lido.data.familia,
+    familia: lido.data.familia,
+    alvo: lido.data.alvo,
+    ferramenta: lido.data.ferramenta ?? ferramentaDaFamilia(lido.data.familia, []),
+    ...(lido.data.custoEmPassos === undefined ? {} : { custoEmPassos: lido.data.custoEmPassos }),
+  });
+
+  return lido.data.valorEsperado === undefined
+    ? base
+    : { ...base, valorEsperado: lido.data.valorEsperado };
+}
+
+/**
  * A linha como o Drizzle a devolve.
  *
  * Os `jsonb` já vêm tipados pelo schema (`$type`), então não há `as` em lugar nenhum
@@ -162,12 +218,14 @@ function paraDossie(linha: LinhaDeDossie): DossieGravado {
   const parcial: DossieParaGravar = {
     alvo: linha.alvo,
     hipoteses: linha.hipoteses,
-    fronteira: linha.fronteira,
+    fronteira: linha.fronteira.map(repararItem),
     achados: linha.achados,
+    investigados: linha.investigados,
     orcamentoCentavos: centavos(linha.orcamentoCentavos),
     gastoCentavos: centavos(linha.gastoCentavos),
     orcamentoPassos: linha.orcamentoPassos,
     passosGastos: linha.passosGastos,
+    passosSemAchado: linha.passosSemAchado,
     motivoParada: linha.motivoParada,
     recomendacao: linha.recomendacao,
   };

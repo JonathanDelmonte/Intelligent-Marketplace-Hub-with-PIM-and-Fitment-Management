@@ -5,6 +5,8 @@ import {
   OrcamentoDaBusca,
   OrcamentoDoDossieInvalido,
   achadosSemOrigem,
+  estadoDaBusca,
+  fronteiraRestante,
   paraGravar,
   resumirDossie,
 } from './dossie';
@@ -94,8 +96,10 @@ describe('paraGravar', () => {
     expect(d.orcamentoPassos).toBe(20);
   });
 
-  it('a fronteira gravada é só o que ficou para investigar', () => {
-    // Quem lê o dossiê quer saber o que sobrou, não o histórico da fila.
+  it('a fronteira gravada é a inteira, e o que ficou é derivado', () => {
+    // Guardar só o que sobrou perdia peso, custo e ferramenta de cada item, e com
+    // isso uma execução retomada escolhia outro caminho. Quem lê a tela quer o que
+    // ficou, e isso é `fronteiraRestante`.
     const d = paraGravar({
       alvo: 'x',
       estado: estado({
@@ -122,7 +126,38 @@ describe('paraGravar', () => {
       orcamento: orcamento(),
     });
 
-    expect(d.fronteira).toEqual([{ alvo: 'buscar distribuidor', familia: 'quem_distribui' }]);
+    expect(d.fronteira.map((i) => i.id)).toEqual(['feito', 'pendente']);
+    expect(d.investigados).toEqual(['feito']);
+    expect(fronteiraRestante(d).map((i) => i.id)).toEqual(['pendente']);
+    // Ferramenta e peso continuam gravados: é o que faz retomar não mudar o caminho.
+    expect(fronteiraRestante(d)[0]?.ferramenta).toBe('busca_web');
+    expect(fronteiraRestante(d)[0]?.valorEsperado).toBe(90);
+  });
+
+  it('o estado volta inteiro, para retomar de onde parou', () => {
+    const inicial = estado({
+      fronteira: [
+        {
+          id: 'pendente',
+          familia: 'quem_distribui',
+          alvo: 'buscar distribuidor',
+          valorEsperado: 90,
+          custoEmPassos: 2,
+          ferramenta: 'busca_web',
+        },
+      ],
+      investigados: ['feito'],
+      passosGastos: 5,
+      passosSemAchado: 2,
+    });
+
+    const voltou = estadoDaBusca(
+      paraGravar({ alvo: 'x', estado: inicial, orcamento: orcamento() }),
+    );
+
+    // O contador de saturação é o que mais importa aqui: perdê-lo custa três passos
+    // de investigação já sabidamente infrutífera a cada retomada.
+    expect(voltou).toEqual(inicial);
   });
 });
 
@@ -219,6 +254,26 @@ describe('resumirDossie', () => {
     expect(r.mensagem).toContain('1 hipótese continua em aberto.');
     expect(r.mensagem).not.toContain('dá para continuar');
     expect(r.mensagem).toContain('não traria mais nada');
+  });
+
+  it('fronteira vazia não convida a continuar: o que falta é ferramenta', () => {
+    // A frase "dá para continuar de onde parou" saía ao lado de "aumentar o teto não
+    // resolve; ligar uma ferramenta resolve" — e um dossiê com oito achados parecia
+    // dizer as duas coisas ao mesmo tempo.
+    const r = resumirDossie(
+      paraGravar({
+        alvo: 'x',
+        estado: estado({
+          achados: [achado('a1')],
+          hipoteses: [hipotese('h1', 'aberta'), hipotese('h2', 'aberta')],
+          passosGastos: 2,
+        }),
+        orcamento: orcamento(),
+        motivoParada: 'fronteira_vazia',
+      }),
+    );
+    expect(r.mensagem).toContain('2 hipóteses continuam em aberto, esperando ferramenta.');
+    expect(r.mensagem).not.toContain('dá para continuar');
   });
 
   it('parada por teto diz que continuar não recomeça', () => {

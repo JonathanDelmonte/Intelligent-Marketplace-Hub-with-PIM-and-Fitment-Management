@@ -233,7 +233,6 @@ export function aplicarInvestigacao(
   item: ItemDaFronteira,
   resultado: ResultadoDaInvestigacao,
 ): EstadoDaBusca {
-  const houveAchado = resultado.achados.length > 0;
   const confirmadas = new Set(resultado.confirmadas ?? []);
   const descartadas = new Set(resultado.descartadas ?? []);
 
@@ -250,13 +249,21 @@ export function aplicarInvestigacao(
   const idsNaFronteira = new Set(estado.fronteira.map((i) => i.id));
   const novosDaFronteira = (resultado.fronteira ?? []).filter((i) => !idsNaFronteira.has(i.id));
 
+  // Achado também não duplica, e pelo motivo que o executor trouxe: um passo que
+  // falhou no meio é repetido pela fila, e com id determinístico o mesmo achado
+  // voltaria duas vezes — inflando a contagem que a tela mostra como resultado.
+  const idsDeAchado = new Set(estado.achados.map((a) => a.id));
+  const achadosNovos = resultado.achados.filter((a) => !idsDeAchado.has(a.id));
+
   return {
     hipoteses,
     fronteira: [...estado.fronteira, ...novosDaFronteira],
-    achados: [...estado.achados, ...resultado.achados],
+    achados: [...estado.achados, ...achadosNovos],
     investigados: [...estado.investigados, item.id],
     passosGastos: estado.passosGastos + Math.max(CUSTO_MINIMO, item.custoEmPassos),
-    passosSemAchado: houveAchado ? 0 : estado.passosSemAchado + 1,
+    // Só achado **novo** zera a saturação: um passo que devolveu o que já se sabia
+    // não é progresso, e é justamente disso que a contagem de saturação trata.
+    passosSemAchado: achadosNovos.length > 0 ? 0 : estado.passosSemAchado + 1,
   };
 }
 

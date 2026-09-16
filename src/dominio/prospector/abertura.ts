@@ -59,7 +59,7 @@ const ENUNCIADO: Readonly<Record<FamiliaDeHipotese, (alvo: string) => string>> =
  * `base_local`, e gravar `busca_web` nela faria a fronteira recusar um item que dava
  * para investigar aqui dentro.
  */
-function ferramentaDaFamilia(
+export function ferramentaDaFamilia(
   familia: FamiliaDeHipotese,
   disponiveis: readonly Ferramenta[],
 ): Ferramenta {
@@ -72,6 +72,39 @@ function ferramentaDaFamilia(
     throw new Error(`família de hipótese sem ferramenta declarada: ${familia}`);
   }
   return escolhida;
+}
+
+/**
+ * Reencaminha a fronteira para ferramenta disponível.
+ *
+ * Um item guarda a ferramenta com que foi encaminhado, e `escolherDaFronteira` filtra
+ * por ela. Só que a **família** declara várias: `em_que_mais_serve` aceita busca na web,
+ * leitura de página e base local. Um item encaminhado ontem para busca na web ficaria
+ * parado para sempre num ambiente onde só a base local existe — e foi o que aconteceu
+ * com dossiê gravado antes de haver executor.
+ *
+ * Reencaminha **só o item de abertura**, que é o que tem `id` igual ao nome da família.
+ * Item ramificado tem rota própria: um alvo que é URL precisa de leitor de página, e
+ * trocar para busca na web seria buscar o endereço que já está na mão.
+ *
+ * Item já investigado não é tocado: o dossiê registra por onde a investigação passou.
+ */
+export function rerotearFronteira(
+  estado: EstadoDaBusca,
+  disponiveis: readonly Ferramenta[],
+): EstadoDaBusca {
+  const tem = new Set(disponiveis);
+  const jaFoi = new Set(estado.investigados);
+
+  return {
+    ...estado,
+    fronteira: estado.fronteira.map((item) => {
+      if (jaFoi.has(item.id) || item.id !== item.familia || tem.has(item.ferramenta)) return item;
+
+      const escolhida = ferramentaDaFamilia(item.familia, disponiveis);
+      return escolhida === item.ferramenta ? item : { ...item, ferramenta: escolhida };
+    }),
+  };
 }
 
 /**

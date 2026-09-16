@@ -16,19 +16,12 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 import { auditoria, centavos, id, plataformaEnum, procedencia, severidadeEnum } from './comum';
-import type { Achado, Hipotese, MotivoDeParada } from '@/dominio/prospector/fronteira';
-import type { FamiliaDeHipotese } from '@/dominio/prospector/hipoteses';
-
-/**
- * Um item de fronteira **como fica gravado**: só o que interessa a quem lê o dossiê.
- *
- * Peso e custo são da máquina de busca e não ajudam a ler o resultado, então não
- * entram — ver `paraGravar` em `dominio/prospector/dossie.ts`.
- */
-export interface ItemDeFronteiraGravado {
-  readonly alvo: string;
-  readonly familia: FamiliaDeHipotese;
-}
+import type {
+  Achado,
+  Hipotese,
+  ItemDaFronteira,
+  MotivoDeParada,
+} from '@/dominio/prospector/fronteira';
 
 /**
  * Resultado de uma avaliação de nicho (M7).
@@ -95,13 +88,26 @@ export const dossie = pgTable(
      * ele ajudaria. O tipo mora no schema, e quem lê recebe pronto.
      */
     hipoteses: jsonb('hipoteses').$type<Hipotese[]>().notNull().default([]),
-    fronteira: jsonb('fronteira').$type<ItemDeFronteiraGravado[]>().notNull().default([]),
+    /**
+     * A fronteira inteira, com peso, custo e ferramenta.
+     *
+     * Guardava só `{alvo, familia}`, e o executor mostrou o custo disso: sem
+     * `ferramenta` não dá para saber se o item roda hoje, e sem peso e custo a ordem
+     * da fila se perde — ou seja, retomar mudava o caminho da investigação. Linha
+     * gravada no formato antigo é reparada na leitura (ver `repositorio.ts`), e não
+     * por migração, porque o valor base de cada família mora no domínio.
+     */
+    fronteira: jsonb('fronteira').$type<ItemDaFronteira[]>().notNull().default([]),
     achados: jsonb('achados').$type<Achado[]>().notNull().default([]),
+    /** Ids já investigados. Sem eles, retomar re-investiga e paga o passo duas vezes. */
+    investigados: jsonb('investigados').$type<string[]>().notNull().default([]),
     /** Orçamento por execução, obrigatório. Agente sem teto não roda (ADR 0005). */
     orcamentoCentavos: centavos('orcamento_centavos').notNull(),
     gastoCentavos: centavos('gasto_centavos').notNull().default(0),
     orcamentoPassos: integer('orcamento_passos').notNull(),
     passosGastos: integer('passos_gastos').notNull().default(0),
+    /** Investigações seguidas sem achado novo. É daqui que sai a parada por saturação. */
+    passosSemAchado: integer('passos_sem_achado').notNull().default(0),
     /** Por que parou, ou nulo se em andamento. Ver `MOTIVOS_DE_PARADA` no domínio. */
     motivoParada: text('motivo_parada').$type<MotivoDeParada>(),
     recomendacao: text('recomendacao'),

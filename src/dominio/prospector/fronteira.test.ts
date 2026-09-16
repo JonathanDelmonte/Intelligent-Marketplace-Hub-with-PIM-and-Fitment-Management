@@ -286,6 +286,47 @@ describe('aplicarInvestigacao', () => {
   });
 });
 
+describe('aplicarInvestigacao, achado repetido', () => {
+  const item = itemDaFamilia({
+    id: 'i1',
+    familia: 'quem_fabrica',
+    alvo: 'x',
+    ferramenta: 'busca_web',
+  });
+
+  const achado = (id: string): Achado => ({
+    id,
+    familia: 'quem_fabrica',
+    oQue: 'algo',
+    origemUrl: 'https://f.invalid/1',
+    achadoEm: '2026-09-16T00:00:00.000Z',
+  });
+
+  it('não duplica achado de id igual', () => {
+    // Id determinístico é o certo — é o que faz um passo repetido pela fila não
+    // duplicar o achado. Então quem deduplica é isto.
+    const comUm = aplicarInvestigacao(ESTADO_INICIAL, item, { achados: [achado('a1')] });
+    const depois = aplicarInvestigacao(
+      comUm,
+      { ...item, id: 'i2' },
+      {
+        achados: [achado('a1'), achado('a2')],
+      },
+    );
+
+    expect(depois.achados.map((a) => a.id)).toEqual(['a1', 'a2']);
+  });
+
+  it('achado só repetido não zera a saturação', () => {
+    // Repetir o que já se sabia não é progresso, e é disso que a saturação trata.
+    const comUm = aplicarInvestigacao(ESTADO_INICIAL, item, { achados: [achado('a1')] });
+    expect(comUm.passosSemAchado).toBe(0);
+
+    const depois = aplicarInvestigacao(comUm, { ...item, id: 'i2' }, { achados: [achado('a1')] });
+    expect(depois.passosSemAchado).toBe(1);
+  });
+});
+
 describe('itemDaFamilia', () => {
   it('sai com o valor base da família', () => {
     const i = itemDaFamilia({

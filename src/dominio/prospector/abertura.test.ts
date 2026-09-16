@@ -1,9 +1,65 @@
 import { describe, expect, it } from 'vitest';
-import { abrirAlvo } from './abertura';
+import { abrirAlvo, rerotearFronteira } from './abertura';
 import { OrcamentoDaBusca, paraGravar, resumirDossie } from './dossie';
-import { proximoPasso, valorPorCusto } from './fronteira';
+import { itemDaFamilia, proximoPasso, valorPorCusto } from './fronteira';
+import type { EstadoDaBusca } from './fronteira';
 import { FAMILIAS_DE_HIPOTESE } from './hipoteses';
 import { reaisParaCentavos } from '@/lib/dinheiro';
+
+describe('rerotearFronteira', () => {
+  it('leva o item de abertura para a ferramenta que existe hoje', () => {
+    // Dossiê aberto quando a base local não existia tem item apontando para busca na
+    // web, e ele ficaria parado para sempre — foi o que aconteceu com dossiê gravado
+    // antes de haver executor.
+    const aberto = abrirAlvo('refil PA21G', []);
+    expect(aberto.fronteira.find((i) => i.familia === 'em_que_mais_serve')?.ferramenta).toBe(
+      'busca_web',
+    );
+
+    const rerroteado = rerotearFronteira(aberto, ['base_local']);
+    expect(rerroteado.fronteira.find((i) => i.familia === 'em_que_mais_serve')?.ferramenta).toBe(
+      'base_local',
+    );
+  });
+
+  it('família que não declara a ferramenta disponível fica como está', () => {
+    const rerroteado = rerotearFronteira(abrirAlvo('refil', []), ['base_local']);
+    expect(rerroteado.fronteira.find((i) => i.familia === 'onde_e_mais_barato')?.ferramenta).toBe(
+      'busca_web',
+    );
+  });
+
+  it('item ramificado tem rota própria, e não é mexido', () => {
+    // Alvo que é URL precisa de leitor de página; trocar para busca na web seria buscar
+    // o endereço que já está na mão.
+    const base = abrirAlvo('refil', ['base_local']);
+    const comRamo: EstadoDaBusca = {
+      ...base,
+      fronteira: [
+        ...base.fronteira,
+        itemDaFamilia({
+          id: 'ramo-1',
+          familia: 'em_que_mais_serve',
+          alvo: 'https://loja.invalid/ficha',
+          ferramenta: 'ler_pagina',
+        }),
+      ],
+    };
+
+    const rerroteado = rerotearFronteira(comRamo, ['base_local']);
+    expect(rerroteado.fronteira.find((i) => i.id === 'ramo-1')?.ferramenta).toBe('ler_pagina');
+  });
+
+  it('item já investigado não é reescrito, porque o dossiê registra por onde passou', () => {
+    const base = abrirAlvo('refil', []);
+    const comInvestigado: EstadoDaBusca = { ...base, investigados: ['em_que_mais_serve'] };
+    const rerroteado = rerotearFronteira(comInvestigado, ['base_local']);
+
+    expect(rerroteado.fronteira.find((i) => i.familia === 'em_que_mais_serve')?.ferramenta).toBe(
+      'busca_web',
+    );
+  });
+});
 
 describe('abrirAlvo', () => {
   it('levanta uma hipótese por família, todas abertas', () => {

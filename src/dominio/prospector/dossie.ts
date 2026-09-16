@@ -26,7 +26,7 @@
  */
 import { centavos, type Centavos } from '@/lib/dinheiro';
 import { contagem } from '@/lib/texto';
-import type { Achado, EstadoDaBusca, Hipotese, MotivoDeParada } from './fronteira';
+import type { Achado, EstadoDaBusca, Hipotese, ItemDaFronteira, MotivoDeParada } from './fronteira';
 import type { FamiliaDeHipotese } from './hipoteses';
 
 export class OrcamentoDoDossieInvalido extends Error {
@@ -100,12 +100,28 @@ export interface ConcorrenteVisto {
 export interface DossieParaGravar {
   readonly alvo: string;
   readonly hipoteses: readonly Hipotese[];
-  readonly fronteira: readonly { readonly alvo: string; readonly familia: FamiliaDeHipotese }[];
+  /**
+   * A fronteira **inteira**, com peso, custo e ferramenta de cada item.
+   *
+   * Guardava só `{alvo, familia}` — o que interessa a quem lê — e o efeito apareceu
+   * ao escrever o executor: sem `ferramenta` não dá para saber se o item pode ser
+   * investigado hoje, e sem `valorEsperado` e `custoEmPassos` a ordem da fila se
+   * perde. Uma execução retomada escolheria outro caminho, e o dossiê promete ser
+   * retomável desde o schema da fase 1.
+   *
+   * Quem lê a tela quer o que **ficou**: é `fronteiraRestante`, derivada com
+   * `investigados`.
+   */
+  readonly fronteira: readonly ItemDaFronteira[];
   readonly achados: readonly Achado[];
+  /** Ids já investigados. Sem eles, retomar re-investiga e paga duas vezes. */
+  readonly investigados: readonly string[];
   readonly orcamentoCentavos: Centavos;
   readonly gastoCentavos: Centavos;
   readonly orcamentoPassos: number;
   readonly passosGastos: number;
+  /** Investigações seguidas sem achado novo. É daqui que sai a parada por saturação. */
+  readonly passosSemAchado: number;
   readonly motivoParada: MotivoDeParada | null;
   readonly recomendacao: string | null;
 }
@@ -133,18 +149,47 @@ export function paraGravar(params: ParametrosDoDossie): DossieParaGravar {
   return {
     alvo: params.alvo,
     hipoteses: estado.hipoteses,
-    // Da fronteira só o que interessa a quem lê: o que **ficou** para investigar. Os
-    // pesos e custos são da máquina, e não ajudam a ler o dossiê.
-    fronteira: estado.fronteira
-      .filter((i) => !estado.investigados.includes(i.id))
-      .map((i) => ({ alvo: i.alvo, familia: i.familia })),
+    fronteira: estado.fronteira,
     achados: estado.achados,
+    investigados: estado.investigados,
     orcamentoCentavos: orcamento.limiteCentavos,
     gastoCentavos: orcamento.gasto,
     orcamentoPassos: orcamento.limitePassos,
     passosGastos: estado.passosGastos,
+    passosSemAchado: estado.passosSemAchado,
     motivoParada: params.motivoParada ?? null,
     recomendacao: params.recomendacao ?? null,
+  };
+}
+
+/**
+ * O que ficou para investigar.
+ *
+ * É a leitura que a tela faz da fronteira, e existe como função porque a fronteira
+ * gravada passou a ser a inteira: filtrar no JSX faria cada leitor decidir por conta
+ * própria o que "ficou" significa.
+ */
+export function fronteiraRestante(dossie: DossieParaGravar): readonly ItemDaFronteira[] {
+  const jaFoi = new Set(dossie.investigados);
+  return dossie.fronteira.filter((i) => !jaFoi.has(i.id));
+}
+
+/**
+ * O estado da busca de volta, para retomar de onde parou.
+ *
+ * O inverso de `paraGravar`, e o que faz a promessa do schema ("execução interrompida
+ * retomável") ser verdade em vez de intenção. Retomar não recomeça: os investigados
+ * continuam investigados, o contador de saturação continua onde estava, e os passos
+ * gastos contam contra o teto.
+ */
+export function estadoDaBusca(dossie: DossieParaGravar): EstadoDaBusca {
+  return {
+    hipoteses: dossie.hipoteses,
+    fronteira: dossie.fronteira,
+    achados: dossie.achados,
+    investigados: dossie.investigados,
+    passosGastos: dossie.passosGastos,
+    passosSemAchado: dossie.passosSemAchado,
   };
 }
 
@@ -195,6 +240,29 @@ export function resumirDossie(dossie: DossieParaGravar): ResumoDoDossie {
   };
 }
 
+/**
+ * A frase das hipóteses em aberto, conforme o que interrompeu.
+ *
+ * Continuar resolve teto. Não resolve saturação — investigar mais do mesmo não acha o
+ * que três passos não acharam — e não resolve fronteira vazia, onde o que falta é
+ * ferramenta e não orçamento.
+ */
+function clausulaDeAberta(abertas: number, motivo: MotivoDeParada | null): string {
+  const quantas = contagem(abertas, 'hipótese continua em aberto', 'hipóteses continuam em aberto');
+
+  switch (motivo) {
+    case 'orcamento_passos':
+    case 'orcamento_reais':
+    case null:
+      return `${contagem(abertas, 'hipótese em aberto', 'hipóteses em aberto')} — dá para continuar de onde parou.`;
+    case 'fronteira_vazia':
+      return `${quantas}, esperando ferramenta.`;
+    case 'saturacao':
+    case 'concluido':
+      return `${quantas}.`;
+  }
+}
+
 function mensagemDoDossie(dossie: DossieParaGravar, abertas: number, semOrigem: number): string {
   const partes: string[] = [];
   const passos = contagem(dossie.passosGastos, 'passo', 'passos');
@@ -215,15 +283,12 @@ function mensagemDoDossie(dossie: DossieParaGravar, abertas: number, semOrigem: 
   }
 
   if (abertas > 0) {
-    // "Dá para continuar" não vale quando saturou, e a frase saía junto: o dossiê
-    // dizia "dá para continuar de onde parou" e, na frase seguinte, "aumentar o teto
-    // não traria mais nada". Duas afirmações opostas no mesmo parágrafo, e apareceram
-    // lado a lado na primeira vez que a tela mostrou a mensagem inteira.
-    partes.push(
-      dossie.motivoParada === 'saturacao'
-        ? `${contagem(abertas, 'hipótese continua em aberto', 'hipóteses continuam em aberto')}.`
-        : `${contagem(abertas, 'hipótese em aberto', 'hipóteses em aberto')} — dá para continuar de onde parou.`,
-    );
+    // "Dá para continuar de onde parou" só vale quando o que interrompeu foi o **teto**.
+    // Saía em todo dossiê com hipótese aberta, e produziu duas contradições que só
+    // apareceram quando a tela passou a mostrar a mensagem inteira: ao lado de "parou
+    // por saturação: aumentar o teto não traria mais nada", e ao lado de "aumentar o
+    // teto não resolve; ligar uma ferramenta resolve".
+    partes.push(clausulaDeAberta(abertas, dossie.motivoParada));
   }
 
   if (dossie.motivoParada === 'orcamento_passos' || dossie.motivoParada === 'orcamento_reais') {

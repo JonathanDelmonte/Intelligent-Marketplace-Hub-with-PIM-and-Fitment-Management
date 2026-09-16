@@ -5,6 +5,7 @@
  * dossiê em vez de criar um segundo, que o resumo é recalculado na leitura, e que a
  * fila de "vale continuar" não oferece dossiê que saturou.
  */
+import { sql } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   abrirBancoDeTeste,
@@ -69,6 +70,30 @@ describe.skipIf(!temBancoDeTeste())('RepositorioDeDossies', () => {
 
     const lido = await repo.porAlvo('correia de maquina de lavar');
     expect(lido?.alvo).toBe('Correia de Máquina de Lavar');
+  });
+
+  it('item gravado no formato antigo é reparado na leitura', async () => {
+    // A fronteira passou a ser gravada inteira — com peso, custo e ferramenta — porque
+    // sem isso retomar mudava o caminho. Linha gravada antes disso tem só alvo e
+    // família, e é completada aqui em vez de por migração: o valor base de cada família
+    // mora no domínio, e duplicá-lo num `UPDATE ... jsonb` seria a constante em dois
+    // lugares.
+    await conexao.db.execute(sql`
+      insert into dossie (alvo, alvo_chave, hipoteses, fronteira, achados,
+                          orcamento_centavos, orcamento_passos)
+      values ('Antigo PA21G', 'antigo pa21g', '[]'::jsonb,
+              '[{"alvo":"Antigo PA21G","familia":"quem_distribui"}]'::jsonb,
+              '[]'::jsonb, 500, 20)
+    `);
+
+    const lido = await repo.porAlvo('Antigo PA21G');
+    const item = lido?.fronteira[0];
+
+    expect(item?.id).toBe('quem_distribui');
+    expect(item?.valorEsperado).toBe(90);
+    expect(item?.custoEmPassos).toBe(1);
+    // A rota original foi perdida; quem a refaz é o reencaminhamento, no motor.
+    expect(item?.ferramenta).toBe('busca_web');
   });
 
   it('a chave única impede dois dossiês do mesmo alvo, e não só a verificação de leitura', async () => {
