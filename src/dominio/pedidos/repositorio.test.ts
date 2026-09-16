@@ -8,7 +8,7 @@
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { perfilId, type PerfilId } from '@/dominio/catalogo/sku';
-import { perfilVendedor, sku } from '@/infra/banco/schema';
+import { pedido, perfilVendedor, sku } from '@/infra/banco/schema';
 import {
   abrirBancoDeTeste,
   limparTabelas,
@@ -182,6 +182,79 @@ describe.skipIf(!temBancoDeTeste())('RepositorioDePedidos', () => {
     it('ignora pedido sem repasse informado, porque não há o que conferir', async () => {
       await repo.registrar(perfil, capturado({ repasseLiquido: null }));
       expect(await repo.divergenciasDeRepasse(perfil)).toHaveLength(0);
+    });
+
+    it('marcar como conferido tira da lista, e é o que faz a lista encolher', async () => {
+      // Sem isto a consulta filtrava por uma coluna que ninguém escrevia: divergência
+      // investigada no extrato voltava na tela para sempre.
+      const r = await repo.registrar(perfil, capturado({ repasseLiquido: reaisParaCentavos(58) }));
+      expect(await repo.divergenciasDeRepasse(perfil)).toHaveLength(1);
+
+      expect(await repo.marcarRepasseConferido(perfil, r.pedido.id, AGORA)).toBe(true);
+      expect(await repo.divergenciasDeRepasse(perfil)).toHaveLength(0);
+    });
+
+    it('conferir não apaga a diferença: ela continua verdade sobre o pedido', async () => {
+      const r = await repo.registrar(perfil, capturado({ repasseLiquido: reaisParaCentavos(58) }));
+      await repo.marcarRepasseConferido(perfil, r.pedido.id, AGORA);
+
+      const linhas = await conexao.db
+        .select({
+          repasse: pedido.repasseLiquido,
+          conferido: pedido.repasseConferidoEm,
+        })
+        .from(pedido)
+        .where(eq(pedido.id, r.pedido.id));
+
+      expect(linhas[0]?.repasse).toBe(reaisParaCentavos(58));
+      expect(linhas[0]?.conferido).toBeInstanceOf(Date);
+    });
+
+    it('desfazer devolve a divergência à lista', async () => {
+      // Botão de mão única sobre dinheiro é o tipo de coisa que se descobre na hora
+      // errada, então a marca tem volta — mesma regra de `desligarProdutoExterno`.
+      const r = await repo.registrar(perfil, capturado({ repasseLiquido: reaisParaCentavos(58) }));
+      await repo.marcarRepasseConferido(perfil, r.pedido.id, AGORA);
+      expect(await repo.divergenciasDeRepasse(perfil)).toHaveLength(0);
+
+      expect(await repo.marcarRepasseConferido(perfil, r.pedido.id, null)).toBe(true);
+      expect(await repo.divergenciasDeRepasse(perfil)).toHaveLength(1);
+      expect(await repo.repassesConferidos(perfil)).toHaveLength(0);
+    });
+
+    it('a lista de conferidas traz o que saiu, com a data de quando', async () => {
+      const r = await repo.registrar(perfil, capturado({ repasseLiquido: reaisParaCentavos(58) }));
+      expect(await repo.repassesConferidos(perfil)).toHaveLength(0);
+
+      await repo.marcarRepasseConferido(perfil, r.pedido.id, AGORA);
+      const conferidas = await repo.repassesConferidos(perfil);
+      expect(conferidas).toHaveLength(1);
+      expect(conferidas[0]?.idExterno).toBe('MLB-1');
+      expect(conferidas[0]?.conferidoEm.toISOString()).toBe(AGORA.toISOString());
+      expect(conferidas[0]?.repasseInformado).toBe(reaisParaCentavos(58));
+    });
+
+    it('conferida de outro perfil não aparece na lista deste', async () => {
+      const r = await repo.registrar(perfil, capturado({ repasseLiquido: reaisParaCentavos(58) }));
+      await repo.marcarRepasseConferido(perfil, r.pedido.id, AGORA);
+
+      const outros = await conexao.db
+        .insert(perfilVendedor)
+        .values({ slug: 'outro-conferidas', nome: 'Outro', regime: 'cpf' })
+        .returning({ id: perfilVendedor.id });
+      expect(await repo.repassesConferidos(perfilId(outros[0]?.id ?? ''))).toHaveLength(0);
+    });
+
+    it('não confere repasse de pedido de outro perfil', async () => {
+      const r = await repo.registrar(perfil, capturado({ repasseLiquido: reaisParaCentavos(58) }));
+      const outros = await conexao.db
+        .insert(perfilVendedor)
+        .values({ slug: 'outro-repasse', nome: 'Outro', regime: 'cpf' })
+        .returning({ id: perfilVendedor.id });
+      const outro = perfilId(outros[0]?.id ?? '');
+
+      expect(await repo.marcarRepasseConferido(outro, r.pedido.id, AGORA)).toBe(false);
+      expect(await repo.divergenciasDeRepasse(perfil)).toHaveLength(1);
     });
   });
 });

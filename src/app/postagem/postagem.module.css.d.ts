@@ -9,6 +9,7 @@ declare const estilo: {
   readonly avisoCorpo: string;
   readonly avisoErro: string;
   readonly avisoTitulo: string;
+  readonly botaoConferido: string;
   readonly botaoSim: string;
   readonly cabecalho: string;
   readonly campo: string;
@@ -16,7 +17,9 @@ declare const estilo: {
   readonly cartaoNota: string;
   readonly cartaoNumero: string;
   readonly cartaoRotulo: string;
+  readonly conferidas: string;
   readonly dica: string;
+  readonly divergencia: string;
   readonly divergencias: string;
   readonly entrada: string;
   readonly etiqueta: string;

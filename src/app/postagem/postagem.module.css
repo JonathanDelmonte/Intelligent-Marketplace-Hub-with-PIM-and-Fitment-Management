@@ -146,6 +146,49 @@
   padding-left: 1.125rem;
 }
 
+/*
+ * A linha da divergência, com o botão de conferir ao lado do número.
+ *
+ * `flex-wrap` porque no telefone o botão desce, e `gap` em duas medidas para a
+ * quebra não colar o botão no texto da linha de cima.
+ */
+.divergencia {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  justify-content: space-between;
+}
+
+/*
+ * Botão discreto: conferir é registro, não decisão de dinheiro.
+ *
+ * O `botaoSim` verde ao lado de cada linha daria a esta lista o peso visual da fila
+ * de postagem, que é a tela mais usada — e a lista de diferenças é a de olhar de vez
+ * em quando.
+ */
+/*
+ * A lista do que já foi conferido, recolhida.
+ *
+ * `details` fechado por padrão: o que alguém já olhou não disputa atenção com o que
+ * não foi, e a lista existe para desfazer um clique errado, não para ser lida.
+ */
+.conferidas {
+  color: var(--cor-texto-fraco);
+  font-size: 0.875rem;
+  margin-top: 0.75rem;
+}
+
+.conferidas > summary {
+  cursor: pointer;
+}
+
+.botaoConferido {
+  composes: botaoSecundario from '../ui/comum.module.css';
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
 .vazio {
   composes: vazio from '../ui/comum.module.css';
 }

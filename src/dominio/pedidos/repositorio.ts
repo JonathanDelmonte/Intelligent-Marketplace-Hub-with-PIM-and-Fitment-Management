@@ -232,12 +232,89 @@ export class RepositorioDePedidos {
   }
 
   /**
+   * Marca que o repasse deste pedido já foi conferido no extrato.
+   *
+   * Existe porque `divergenciasDeRepasse` filtra por `repasse_conferido_em is null` e
+   * **nada escrevia essa coluna**: a divergência que você investigou no extrato da
+   * plataforma voltava na tela para sempre. Lista que só cresce é lista que ninguém
+   * lê — e é o mesmo estrago que o piso de 3% do monitor existe para evitar, por
+   * outra porta.
+   *
+   * Não apaga e não corrige nada: a divergência continua sendo verdade sobre o
+   * pedido, e recalculável. O que a data diz é que **uma pessoa já olhou**.
+   *
+   * `null` desfaz, e o parâmetro existe por isso: um clique errado aqui tira um número
+   * de dinheiro de vista, e a revisibilidade é a mesma regra de
+   * `desligarProdutoExterno` — decisão humana sobre dinheiro se desfaz por construção,
+   * não por restauração de backup.
+   */
+  async marcarRepasseConferido(
+    perfil: PerfilId,
+    pedidoId: string,
+    quando: Date | null,
+  ): Promise<boolean> {
+    const alterados = await this.db
+      .update(pedido)
+      .set({ repasseConferidoEm: quando, atualizadoEm: new Date() })
+      .where(and(eq(pedido.id, pedidoId), eq(pedido.perfilId, perfil)))
+      .returning({ id: pedido.id });
+    return alterados.length > 0;
+  }
+
+  /**
+   * Divergências que alguém já conferiu, da mais recente para a mais antiga.
+   *
+   * Existe para o conferido poder voltar: sem esta leitura, "conferi" seria botão de
+   * mão única sobre dinheiro. Fica em lista separada e recolhida na tela — o que já foi
+   * olhado não disputa atenção com o que não foi.
+   */
+  async repassesConferidos(
+    perfil: PerfilId,
+    limite = 20,
+  ): Promise<
+    readonly {
+      readonly id: string;
+      readonly idExterno: string;
+      readonly conferidoEm: Date;
+      readonly repasseInformado: Centavos;
+    }[]
+  > {
+    const linhas = await this.db
+      .select({
+        id: pedido.id,
+        idExterno: pedido.idExterno,
+        conferidoEm: pedido.repasseConferidoEm,
+        repasseLiquido: pedido.repasseLiquido,
+      })
+      .from(pedido)
+      .where(and(eq(pedido.perfilId, perfil), isNotNull(pedido.repasseConferidoEm)))
+      .orderBy(desc(pedido.repasseConferidoEm))
+      .limit(limite);
+
+    return linhas.flatMap((l) =>
+      l.conferidoEm === null
+        ? []
+        : [
+            {
+              id: l.id,
+              idExterno: l.idExterno,
+              conferidoEm: l.conferidoEm,
+              repasseInformado: centavos(l.repasseLiquido ?? 0),
+            },
+          ],
+    );
+  }
+
+  /**
    * Pedidos cuja conferência de repasse aponta diferença.
    *
    * A conta é reconstruída aqui, e não lida de uma coluna, porque a divergência é
    * derivada: bruto menos as taxas informadas contra o repasse informado. Gravar o
    * resultado seria guardar o que se sabe recalcular — e ficaria velho na primeira
    * correção de taxa.
+   *
+   * Fora da lista fica o que já foi conferido (`repasse_conferido_em`), e é o que
+   * permite a seção ser lida: sem isso ela cresce a cada importação e nunca encolhe.
    */
   async divergenciasDeRepasse(
     perfil: PerfilId,

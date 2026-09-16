@@ -101,3 +101,19 @@ describe('descreverAviso', () => {
     expect(descreverAviso('nao_encontrado')?.corpo).toContain('outra aba');
   });
 });
+
+describe('aviso de repasse conferido', () => {
+  it('diz que a linha saiu da lista e que o pedido não mudou', () => {
+    // A frase precisa dizer as duas: conferir tira da lista, e não corrige nada.
+    const aviso = descreverAviso('repasse_conferido');
+    expect(aviso?.tom).toBe('ok');
+    expect(aviso?.corpo).toContain('saiu da lista');
+    expect(aviso?.corpo).toContain('já olhou');
+  });
+
+  it('desfazer tem aviso próprio, dizendo para onde a linha voltou', () => {
+    const aviso = descreverAviso('repasse_de_volta');
+    expect(aviso?.tom).toBe('ok');
+    expect(aviso?.corpo).toContain('voltou');
+  });
+});

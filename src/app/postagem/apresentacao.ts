@@ -73,7 +73,13 @@ export function avisoDeConsignacao(unidadesEmRisco: number): string | null {
   return `${unidades} em consignação ${verbo} sem conferência. Confira antes de vender o que talvez já tenha saído no balcão do parceiro.`;
 }
 
-export const CODIGOS_DE_AVISO = ['postado', 'nao_encontrado', 'falha'] as const;
+export const CODIGOS_DE_AVISO = [
+  'postado',
+  'repasse_conferido',
+  'repasse_de_volta',
+  'nao_encontrado',
+  'falha',
+] as const;
 export type CodigoDeAviso = (typeof CODIGOS_DE_AVISO)[number];
 
 export interface Aviso {
@@ -92,6 +98,19 @@ export function descreverAviso(codigo: string | undefined): Aviso | null {
         tom: 'ok',
         titulo: 'Postagem confirmada',
         corpo: 'O pedido saiu da fila. O rastreio fica gravado no pedido.',
+      };
+    case 'repasse_conferido':
+      return {
+        tom: 'ok',
+        titulo: 'Repasse conferido',
+        corpo:
+          'A linha saiu da lista de diferenças. O pedido não mudou: a diferença continua registrada e recalculável — o que ficou gravado é que você já olhou.',
+      };
+    case 'repasse_de_volta':
+      return {
+        tom: 'ok',
+        titulo: 'Diferença de volta à lista',
+        corpo: 'A marca de conferido saiu. A linha voltou para o que está esperando você olhar.',
       };
     case 'nao_encontrado':
       return {

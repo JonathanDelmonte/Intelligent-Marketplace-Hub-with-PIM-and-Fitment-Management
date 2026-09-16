@@ -9,7 +9,9 @@ import type { FilaDoDia, ItemDaFila } from '@/dominio/pedidos/fila-do-dia';
 import type { Centavos } from '@/lib/dinheiro';
 import { formatarBRL } from '@/lib/dinheiro';
 import { CAMINHO as CAMINHO_DE_CONSIGNACAO } from '@/app/consignacao/constantes';
-import { confirmarPostagem } from './acoes';
+import { contagem } from '@/lib/texto';
+import { IDIOMA } from '../ui/tempo';
+import { confirmarPostagem, desfazerConferenciaDeRepasse, marcarRepasseConferido } from './acoes';
 import {
   divergenciaEmTexto,
   rotuloDaUrgencia,
@@ -149,16 +151,64 @@ export interface DivergenciaParaTela {
   readonly repasseInformado: Centavos;
 }
 
+export interface ConferidaParaTela {
+  readonly id: string;
+  readonly idExterno: string;
+  readonly conferidoEm: Date;
+  readonly repasseInformado: Centavos;
+}
+
+/**
+ * O que já foi conferido, recolhido e com volta.
+ *
+ * Recolhido porque o que alguém já olhou não disputa atenção com o que não foi; com
+ * volta porque a marca esconde um número de dinheiro, e botão de mão única sobre
+ * dinheiro é o tipo de coisa que se descobre na hora errada.
+ */
+export function Conferidas({ conferidas }: { readonly conferidas: readonly ConferidaParaTela[] }) {
+  if (conferidas.length === 0) return null;
+
+  return (
+    <details className={estilo.conferidas}>
+      <summary>
+        {contagem(conferidas.length, 'diferença já conferida', 'diferenças já conferidas')}
+      </summary>
+      <ul className={estilo.divergencias}>
+        {conferidas.map((c) => (
+          <li className={estilo.divergencia} key={c.id}>
+            <span>
+              <strong>{c.idExterno}</strong> · conferida em{' '}
+              {c.conferidoEm.toLocaleDateString(IDIOMA)} (informado{' '}
+              {formatarBRL(c.repasseInformado)})
+            </span>
+            <form action={desfazerConferenciaDeRepasse}>
+              <input name="pedidoId" type="hidden" value={c.id} />
+              <button className={estilo.botaoConferido} type="submit">
+                Voltar para a lista
+              </button>
+            </form>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
 export function Divergencias({
   divergencias,
+  conferidas,
 }: {
   readonly divergencias: readonly DivergenciaParaTela[];
+  readonly conferidas: readonly ConferidaParaTela[];
 }) {
   if (divergencias.length === 0) {
     return (
-      <p className={estilo.vazio}>
-        Nenhuma diferença entre o que a plataforma informou e o que as taxas explicam.
-      </p>
+      <>
+        <p className={estilo.vazio}>
+          Nenhuma diferença entre o que a plataforma informou e o que as taxas explicam.
+        </p>
+        <Conferidas conferidas={conferidas} />
+      </>
     );
   }
 
@@ -170,12 +220,26 @@ export function Divergencias({
       </p>
       <ul className={estilo.divergencias}>
         {divergencias.map((d) => (
-          <li key={d.id}>
-            <strong>{d.idExterno}</strong> · {d.data.toLocaleDateString('pt-BR')} ·{' '}
-            {divergenciaEmTexto(d.divergencia)} (informado {formatarBRL(d.repasseInformado)})
+          <li className={estilo.divergencia} key={d.id}>
+            <span>
+              <strong>{d.idExterno}</strong> · {d.data.toLocaleDateString(IDIOMA)} ·{' '}
+              {divergenciaEmTexto(d.divergencia)} (informado {formatarBRL(d.repasseInformado)})
+            </span>
+            {/*
+              Sem este botão a lista só cresce: a consulta esconde o que já foi
+              conferido, e nada escrevia a data. Divergência investigada voltava
+              para sempre, e lista que só cresce ninguém lê.
+            */}
+            <form action={marcarRepasseConferido}>
+              <input name="pedidoId" type="hidden" value={d.id} />
+              <button className={estilo.botaoConferido} type="submit">
+                Conferi no extrato
+              </button>
+            </form>
           </li>
         ))}
       </ul>
+      <Conferidas conferidas={conferidas} />
     </>
   );
 }

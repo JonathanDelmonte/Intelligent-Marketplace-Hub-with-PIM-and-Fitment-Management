@@ -19,7 +19,7 @@ import { banco } from '@/infra/banco/cliente';
 import { RepositorioDeConsignacao } from '@/dominio/consignacao/repositorio';
 import { avisoDeConsignacao, descreverAviso } from './apresentacao';
 import { AvisoDaAcao, AvisoDeConsignacao, Divergencias, Fila, Painel } from './componentes';
-import { LIMITE_DA_FILA, LIMITE_DE_DIVERGENCIAS } from './constantes';
+import { LIMITE_DA_FILA, LIMITE_DE_CONFERIDAS, LIMITE_DE_DIVERGENCIAS } from './constantes';
 import estilo from './postagem.module.css';
 
 export const metadata: Metadata = { title: 'Postagem' };
@@ -42,9 +42,10 @@ export default async function PaginaDePostagem({
   // do painel não fecha com a lista.
   const agora = new Date();
 
-  const [fila, divergencias, consignacao] = await Promise.all([
+  const [fila, divergencias, conferidas, consignacao] = await Promise.all([
     repo.filaDoDia(perfil.id, agora, LIMITE_DA_FILA),
     repo.divergenciasDeRepasse(perfil.id, LIMITE_DE_DIVERGENCIAS),
+    repo.repassesConferidos(perfil.id, LIMITE_DE_CONFERIDAS),
     new RepositorioDeConsignacao(db).quadroDeConferencia(perfil.id, { agora }),
   ]);
 
@@ -79,7 +80,7 @@ export default async function PaginaDePostagem({
         <h2 className={estilo.secaoTitulo} id="repasse-titulo">
           Conferência de repasse
         </h2>
-        <Divergencias divergencias={divergencias} />
+        <Divergencias conferidas={conferidas} divergencias={divergencias} />
       </section>
     </main>
   );
