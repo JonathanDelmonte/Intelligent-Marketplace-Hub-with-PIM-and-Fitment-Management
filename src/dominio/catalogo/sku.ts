@@ -89,6 +89,9 @@ export const esquemaNovoSku = z.object({
   cst: z.string().trim().nullable().default(null),
   cclasstrib: z.string().trim().nullable().default(null),
   categoriaRegulada: z.string().trim().nullable().default(null),
+  voltagem: z.string().trim().max(60).nullable().default(null),
+  medida: z.string().trim().max(120).nullable().default(null),
+  quantidadeEmbalagem: z.number().int().positive().nullable().default(null),
   custoAtual: z.number().int().nonnegative().nullable().default(null),
   tipo: z.enum(TIPOS_SKU).default('revenda'),
   taxaDevolucaoEsperadaBp: z.number().int().min(0).max(10_000).nullable().default(null),
@@ -120,6 +123,17 @@ export interface SkuGravado {
   readonly custoAtualizadoEm: Date | null;
   readonly pesoG: number | null;
   readonly dimMm: Dimensoes | null;
+  /**
+   * Voltagem, medida funcional e quantas peças vêm na embalagem.
+   *
+   * As três são cobradas pelo checklist de atributos no nível `devolucao` (M9 — 8.3), e
+   * até a migração 0010 nenhuma tinha coluna: o checklist cobrava o que ninguém tinha
+   * onde preencher. `medida` é a medida que decide se a peça encaixa — não é `dimMm`,
+   * que é a caixa e serve ao frete.
+   */
+  readonly voltagem: string | null;
+  readonly medida: string | null;
+  readonly quantidadeEmbalagem: number | null;
   /** Taxa de devolução esperada, em pontos-base. Entra como custo no M8. */
   readonly taxaDevolucaoEsperadaBp: number | null;
   readonly categoriaMl: string | null;
@@ -295,9 +309,10 @@ export class RepositorioDeSku {
   /**
    * Atualiza os campos da ficha que a margem usa.
    *
-   * Um método e não quatro porque quem preenche preenche de uma vez, olhando a peça na
-   * mão: peso na balança, medida na régua. Campo ausente do objeto **não é tocado** —
-   * é o que separa "não informei agora" de "apaguei o que tinha".
+   * Um método e não sete porque quem preenche preenche de uma vez, olhando a peça na
+   * mão: peso na balança, medida na régua, voltagem na etiqueta, quantidade na caixa.
+   * Campo ausente do objeto **não é tocado** — é o que separa "não informei agora" de
+   * "apaguei o que tinha".
    *
    * Não mexe em custo: custo tem `atualizarCusto`, que grava a data. Juntar os dois
    * faria um salvamento de peso reescrever a data do custo, e a data do custo é o que
@@ -311,9 +326,22 @@ export class RepositorioDeSku {
     readonly taxaDevolucaoEsperadaBp?: number | null;
     readonly marca?: string | null;
     readonly categoriaMl?: string | null;
+    readonly voltagem?: string | null;
+    readonly medida?: string | null;
+    readonly quantidadeEmbalagem?: number | null;
   }): Promise<boolean> {
     if (params.pesoG !== undefined && params.pesoG !== null && params.pesoG <= 0) {
       throw new CatalogoError('peso precisa ser positivo');
+    }
+    if (
+      params.quantidadeEmbalagem !== undefined &&
+      params.quantidadeEmbalagem !== null &&
+      (!Number.isInteger(params.quantidadeEmbalagem) || params.quantidadeEmbalagem <= 0)
+    ) {
+      // Zero é recusado e não virou `null` de propósito: "vem zero unidade" não é um
+      // cadastro possível, e aceitar como "não informado" esconderia o erro de digitação
+      // num campo que decide devolução.
+      throw new CatalogoError('quantidade da embalagem precisa ser inteiro positivo');
     }
     if (
       params.taxaDevolucaoEsperadaBp !== undefined &&
@@ -337,6 +365,11 @@ export class RepositorioDeSku {
         : { taxaDevolucaoEsperadaBp: params.taxaDevolucaoEsperadaBp }),
       ...(params.marca === undefined ? {} : { marca: params.marca }),
       ...(params.categoriaMl === undefined ? {} : { categoriaMl: params.categoriaMl }),
+      ...(params.voltagem === undefined ? {} : { voltagem: params.voltagem }),
+      ...(params.medida === undefined ? {} : { medida: params.medida }),
+      ...(params.quantidadeEmbalagem === undefined
+        ? {}
+        : { quantidadeEmbalagem: params.quantidadeEmbalagem }),
     };
 
     // Nada a mudar não é erro e não é escrita: um formulário enviado sem alteração
@@ -449,6 +482,9 @@ interface LinhaDeSku {
   custoAtualizadoEm: Date | null;
   pesoG: number | null;
   dimMm: Dimensoes | null;
+  voltagem: string | null;
+  medida: string | null;
+  quantidadeEmbalagem: number | null;
   taxaDevolucaoEsperadaBp: number | null;
   categoriaMl: string | null;
   tipo: string | null;
@@ -470,6 +506,9 @@ function paraSku(linha: LinhaDeSku): SkuGravado {
     custoAtualizadoEm: linha.custoAtualizadoEm,
     pesoG: linha.pesoG,
     dimMm: linha.dimMm,
+    voltagem: linha.voltagem,
+    medida: linha.medida,
+    quantidadeEmbalagem: linha.quantidadeEmbalagem,
     taxaDevolucaoEsperadaBp: linha.taxaDevolucaoEsperadaBp,
     categoriaMl: linha.categoriaMl,
     tipo: tipo.success ? tipo.data : 'revenda',

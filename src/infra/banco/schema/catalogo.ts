@@ -46,6 +46,21 @@ export const sku = pgTable(
     /** Dimensões em milímetros: `{ comprimento, largura, altura }`. */
     dimMm: jsonb('dim_mm').$type<{ comprimento: number; largura: number; altura: number }>(),
 
+    // As três abaixo são cobradas pelo checklist de atributos no nível `devolucao`
+    // (M9 — 8.3) e não tinham onde ser preenchidas: o checklist apontava um problema
+    // sem caminho de conserto. `quantidade_embalagem` vinha só do registro extraído
+    // das ocorrências, o que fazia dela palpite de LLM num campo que decide devolução.
+    //
+    // Texto livre nas duas primeiras, de propósito. Voltagem tem quatro respostas
+    // certas na prática — 110 V, 220 V, bivolt, e "dois modelos, um de cada" — e um
+    // enum de dois valores forçaria a errar no bivolt. Medida é a medida **funcional**
+    // da peça, a que decide se encaixa, e a unidade é parte da resposta: "1/2
+    // polegada" e "52 mm de diâmetro" estão as duas certas. Não é `dim_mm`, que é a
+    // caixa e serve ao frete.
+    voltagem: text('voltagem'),
+    medida: text('medida'),
+    quantidadeEmbalagem: integer('quantidade_embalagem'),
+
     // Fiscal. `cst` e `cClassTrib` passam a ser obrigatórios: NF-e de MEI e
     // Simples sem os grupos de IBS/CBS começa a ser rejeitada em 04/01/2027.
     // Fazer esse cadastro com 20 SKUs é uma tarde; com 200 é uma semana perdida.

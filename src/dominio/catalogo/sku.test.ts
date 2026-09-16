@@ -266,6 +266,39 @@ describe.skipIf(!temBancoDeTeste())('RepositorioDeSku (contra Postgres real)', (
       ).rejects.toThrow(/dimensão/);
     });
 
+    it('grava voltagem, medida e quantidade da embalagem', async () => {
+      // Os três atributos que o checklist de anúncio cobra no nível `devolucao` e que
+      // até a migração 0010 não tinham onde ser preenchidos.
+      const id = await skuNovo();
+      expect(
+        await repo.atualizarFicha({
+          perfil: perfilA,
+          skuId: id,
+          voltagem: 'Bivolt',
+          medida: 'Rosca 1/2 polegada',
+          quantidadeEmbalagem: 2,
+        }),
+      ).toBe(true);
+
+      const lido = await repo.buscarPorId(perfilA, id);
+      expect(lido?.voltagem).toBe('Bivolt');
+      expect(lido?.medida).toBe('Rosca 1/2 polegada');
+      expect(lido?.quantidadeEmbalagem).toBe(2);
+    });
+
+    it('recusa quantidade de embalagem que não é inteiro positivo', async () => {
+      // Zero não vira "não informado": aceitar esconderia erro de digitação num campo
+      // que decide devolução.
+      const id = await skuNovo();
+      await expect(
+        repo.atualizarFicha({ perfil: perfilA, skuId: id, quantidadeEmbalagem: 0 }),
+      ).rejects.toThrow(/quantidade/);
+      await expect(
+        repo.atualizarFicha({ perfil: perfilA, skuId: id, quantidadeEmbalagem: 2.5 }),
+      ).rejects.toThrow(/quantidade/);
+      expect((await repo.buscarPorId(perfilA, id))?.quantidadeEmbalagem).toBeNull();
+    });
+
     it('não atualiza ficha de SKU de outro perfil', async () => {
       const id = await skuNovo();
       expect(await repo.atualizarFicha({ perfil: perfilB, skuId: id, pesoG: 999 })).toBe(false);
