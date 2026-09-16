@@ -724,6 +724,7 @@ Não é fase da especificação: é o que o dono pediu para depois das fases, e 
 | C.14 | Uma forma de conjugar plural, sem "(s)" em nenhuma frase de tela          | ✅   |
 | C.15 | Seletor de produto e download na ficha de compatibilidade                 | ✅   |
 | C.16 | Diferença de repasse pode ser dada por conferida, com volta               | ✅   |
+| C.17 | Desenho novo: casca com lateral agrupada e tela inicial por gravidade     | 🚧   |
 
 **Entrega:** o sistema para de falar o nome das próprias tabelas, a navegação diz
 onde você está, e a tela inicial responde "o que eu faço agora" em vez de listar
@@ -821,6 +822,27 @@ quando alguém usa a tela duas vezes.
 Conferir tem volta, e isso não é comodidade: a marca esconde um número que a plataforma
 não explicou, e um clique errado esconderia uma taxa não prevista sem deixar rastro na
 tela. Mesma regra de `desligarProdutoExterno`.
+
+**A C.17 está 🚧 de propósito: é o piloto do desenho novo.** O dono pediu o front-end
+inteiro refeito, juntando a organização do painel de vendedor da Shopee com a do Mercado
+Livre num desenho próprio, e pediu uma tela primeiro para avaliar. O piloto é a casca
+inteira mais a tela inicial; as outras catorze telas continuam funcionando dentro da
+casca nova, sem alteração.
+
+O que veio de cada referência, e o que foi recusado, está no cabeçalho de
+`casca.module.css` e de `inicio.module.css`. O resumo: a lateral agrupada é da Shopee, a
+anatomia do cartão e as pílulas com contagem são do Mercado Livre, e o que é próprio é
+**gravidade como princípio de layout** — cartão urgente com régua e tinta, zerado
+recolhido numa linha. Recusados: o bloco de oito contadores iguais (sete zeros no dia
+comum) e a faixa chapada na cor da marca (que aqui vem de configuração e pode ser
+qualquer uma).
+
+Três armadilhas de layout apareceram no caminho, e estão no diário de 16/09 — a mais
+instrutiva é que o medidor de rolagem horizontal que eu vinha usando dá falso positivo,
+e a medida honesta é a largura do print de página inteira.
+
+**O que falta para fechar a C.17:** o dono aprovar o desenho, e as catorze telas restantes
+serem migradas para ele.
 
 O que continua aberto e é decisão do dono: se os rótulos novos são os que ele usa
 falando. Trocar é uma linha em `src/app/navegacao.ts`.

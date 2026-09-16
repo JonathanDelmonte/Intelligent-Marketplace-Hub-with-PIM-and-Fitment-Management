@@ -26,6 +26,71 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-16 — O desenho novo, e três armadilhas de layout no caminho
+
+Piloto do front-end novo: casca com lateral agrupada e tela inicial organizada por
+gravidade. O que veio de cada referência e o que foi recusado está no cabeçalho de
+`inicio.module.css` e de `casca.module.css` — aqui ficam as armadilhas.
+
+### 🐛 `max-width` no flex ignora `flex-basis: 100%` — terceira vez
+
+O cabeçalho da tela tinha título, hora e resumo num `flex-wrap`, com `flex-basis: 100%`
+no resumo para ele cair na linha de baixo. Não caiu: o flex decide a quebra pelo tamanho
+**hipotético** do item, que é o `flex-basis` limitado pelo `min/max-width` — e o
+`max-width: var(--medida-texto)` do resumo o reduzia o bastante para caber ao lado do
+título.
+
+É a terceira aparição da mesma armadilha em um dia: a primeira foi a ajuda do quadro de
+atributos no catálogo, a segunda a frase de ajuda do seletor de ficha. Nas duas primeiras
+resolvi com `max-width: none`; aqui, com dois contêineres — uma linha para título e hora,
+o parágrafo fora dela. Dois contêineres é a solução que não depende de adivinhar o
+tamanho hipotético, e devia ter sido a primeira das três.
+
+### 🐛 Faixa rolável horizontal na lateral estourava a página
+
+No telefone a lateral com quinze portas titutadas ocupava 430px de uma tela de 844px.
+Troquei por uma faixa rolável horizontal — e a página ganhou rolagem horizontal: o `nav`
+media 390px, `scrollWidth` 1552, e o documento 1251px.
+
+`min-width: 0` na faixa, `min-width: 0` na coluna de grid, `overflow-x: clip` no `html` e
+no `body`: nenhum conteve. Desisti da forma e troquei a solução — título do grupo **na
+mesma linha** das portas dele, quatro linhas em vez de oito, sem eixo X para estourar.
+Menos bonito que a faixa rolável; correto.
+
+Fica anotado como regra: **scroller horizontal dentro de coluna de grid é para evitar.**
+As pílulas de momento, que rolam dentro do `main`, funcionam — a diferença é o `main` ter
+`min-width: 0` herdado da coluna de conteúdo, e não ser ele mesmo a coluna.
+
+### 🐛 O medidor de rolagem horizontal que eu usei o dia todo dá falso positivo
+
+`document.documentElement.scrollWidth > window.innerWidth` conta o conteúdo de scrollers
+internos, e `window.scrollTo(500, 0)` não é limitado em Chromium headless: as duas
+medidas dizem "estourou" numa página que não estoura.
+
+A medida honesta é a **largura do print de página inteira**: 780px numa janela de 390
+significa que não estoura; 2502px significa que estoura. No meio da investigação eu
+cheguei a concluir que era falso positivo e estava errado — o print provou o estouro. Foi
+o print que decidiu as duas vezes, e é o que vale.
+
+### 🔀 A lateral tornou o índice de telas redundante
+
+O índice com descrição de cada tela nasceu quando a navegação era uma barra de pílulas
+curtas, e a descrição não existia em nenhum outro lugar. Com a lateral agrupada, o índice
+passou a repetir os mesmos quinze nomes nos mesmos quatro grupos, logo abaixo deles.
+
+Recolhido em `details` fechado, porque o que ele ainda tem de próprio — a descrição —
+ensina, e quem está aprendendo abre. A página caiu de 2768px para 1900px de altura em
+1440px de largura.
+
+### 🧹 Duas camadas para a lateral pintar até o fim
+
+`position: sticky` com `height: 100dvh` pinta a lateral só até a altura da janela, e o
+resto da coluna fica com a cor do corpo — numa página de 2700px isso é um corte
+horizontal atravessando a lateral no meio. Agora a coluna pinta o fundo e a lateral
+**dentro** dela é que é grudada.
+
+---
+
 ## 2026-09-16 — Uma coluna que a consulta lia e ninguém escrevia
 
 Terceiro caso do mesmo tipo em um dia. A lista de diferenças de repasse em `/postagem`
