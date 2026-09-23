@@ -1,0 +1,9 @@
+# Arquivo de lote do Windows precisa de CRLF, e é o git que decide a quebra de
+# linha na hora do checkout.
+#
+# Com LF, o cmd.exe erra rótulo de `goto` e parte linha no meio em arquivo com mais de
+# 512 bytes — defeito que só aparece no Windows de quem clicou, nunca no CI, que roda
+# em Linux. Declarar aqui faz o checkout sair em CRLF em qualquer máquina,
+# independente do `core.autocrlf` de cada um.
+*.bat text eol=crlf
+*.cmd text eol=crlf
