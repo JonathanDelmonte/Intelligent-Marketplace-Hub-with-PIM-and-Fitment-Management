@@ -26,6 +26,91 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-23 — O atalho abria e fechava sem fazer nada
+
+Relato do dono, no primeiro clique no Windows: "abre o terminal e fecha e não acontece
+nada". Nenhuma mensagem, nenhum arquivo — o pior tipo de defeito para consertar de longe.
+
+### 🐛 Acento dentro de bloco `if` depois de `chcp 65001`
+
+A causa provável estava no próprio `.bat`. A primeira versão fazia `chcp 65001`, para os
+acentos saírem certos, e logo depois um bloco `if errorlevel 1 ( ... )` com cinco linhas
+de `echo` acentuadas. O `cmd.exe` lê o bloco inteiro antes de avaliar a condição, e com a
+página de código em UTF-8 ele tem um defeito conhecido na leitura de arquivo de lote com
+caractere de vários bytes — morre ali, **com o Node instalado ou não**, antes da linha que
+chama o lançador.
+
+A entrada abaixo listava "acento sem `chcp` vira lixo" como motivo para pôr a lógica em
+Node, e o remédio escolhido para o acento foi o que derrubou o arquivo. Agora o `.bat` é
+só ASCII, sem `chcp`, sem bloco e sem rótulo. Todo texto com acento é escrito pelo Node,
+que no console do Windows escreve em UTF-16 e não depende da página de código.
+
+### 🔀 A janela sempre espera uma tecla
+
+O defeito de desenho que transformou um erro num mistério: a janela só pausava quando o
+Node devolvia erro, então a morte do próprio `cmd` fechava tudo sem uma linha na tela.
+Agora o `pause` é incondicional. O custo é o segundo clique, que só abre o navegador,
+deixar uma janela esperando tecla — aceito, porque janela que fecha sozinha foi o que
+tornou este defeito invisível.
+
+### 🔀 Tudo o que aparece na janela vai para `Atalhos/iniciar.log`
+
+O atalho roda numa máquina que quem mantém o sistema não vê, e "o que apareceu na tela?"
+não tem resposta depois que a janela fecha. O registro é refeito a cada clique, com data,
+versão do Node, sistema e pasta no cabeçalho. A saída de cada programa chamado — `npm ci`,
+montagem, migração — é repassada linha a linha em vez de herdar o terminal, que é como ela
+entra no arquivo. A URL do banco nunca é impressa, e foi conferido nos registros dos
+testes que a senha não aparece.
+
+### 🐛 Três defeitos de primeiro clique que o teste em Linux não mostrava
+
+- **Node antigo recebia um SyntaxError, e não a frase do passo 1.** Com
+  `import { parseEnv }`, um Node sem `parseEnv` falha na ligação do módulo, antes da
+  primeira linha rodar — a verificação de versão, escrita justamente para esse caso, nunca
+  chegava a rodar. O import do módulo inteiro (`import * as util`) não tem esse problema.
+- **`.env` com BOM escondia a primeira variável.** O Bloco de Notas salva "UTF-8 com BOM",
+  e `process.loadEnvFile` **não remove o BOM**: a primeira chave ganha um caractere
+  invisível no nome, e o sistema diz que falta a `DATABASE_URL` com ela escrita ali. A
+  leitura agora tira o BOM, avisa, e usa `util.parseEnv`.
+- **`PORT` no `.env` era ignorada.** A porta era lida ao carregar o script, antes do
+  `.env` — e a mensagem de porta ocupada mandava justamente trocar `PORT` no `.env`.
+
+E um de desenho: a falha com servidor e fila já de pé (servidor que não responde em dois
+minutos) saía sem derrubá-los, e a porta ficava presa para o próximo clique. `falhar`
+agora sai por `encerrar`.
+
+### 🐛 Projeto baixado como ZIP não instalava
+
+O `prepare` do `package.json` rodava `git config core.hooksPath .githooks` direto, e fora
+de um clone isso sai com erro: `fatal: not in a git directory`, saída 128, reproduzido. O
+`npm ci` falhava junto, e o atalho parava nas dependências. O lançador já previa o ZIP —
+sem git, usa a montagem que existe —, mas o `prepare` não. `scripts/instalar-hooks.mjs`
+liga os hooks quando há clone e git, e só avisa quando não há.
+
+### 🔀 Servidor em `127.0.0.1`, e não em todas as interfaces
+
+Sem login (pendência 3.3), escutar em todas as interfaces deixava o sistema aberto para
+qualquer aparelho da rede, e fazia o Firewall do Windows perguntar no primeiro arranque se
+o Node pode receber conexão — uma janela que ninguém sabe responder. O lançador também
+pergunta "já estou rodando?" em `127.0.0.1`, e não em `localhost`, que no Windows resolve
+primeiro para o IPv6, onde o servidor não está.
+
+### 🧹 O `engines` dizia 22.0, e os scripts do npm pedem 22.9
+
+`db:migrate`, `db:seed` e `poller` usam `--env-file-if-exists`, que só existe a partir do
+Node 22.9 — conferido na documentação do Node. O `engines` passou a dizer 22.9. O lançador
+não usa a flag, porque os filhos herdam o ambiente dele, e continua pedindo só o 22.
+
+### ❓ Continua sem teste no Windows
+
+Testado em Linux: `.env` com BOM, `PORT=3001` no `.env` com `npm ci` de verdade no
+caminho, porta inválida, porta ocupada, segundo clique (0,17 s) e desligamento sem
+processo sobrando. O `.bat` só roda no Windows, e a causa acima é **a provável, não a
+confirmada** — não houve Windows onde reproduzir. O que mudou é que, se falhar de novo, a
+janela fica aberta e o registro existe: o próximo relato vem com a mensagem.
+
+---
+
 ## 2026-09-23 — Um clique para subir tudo, e o que o lançador decide sozinho
 
 O dono pediu um `.bat` que subisse tudo no `localhost` a cada clique. Ficou

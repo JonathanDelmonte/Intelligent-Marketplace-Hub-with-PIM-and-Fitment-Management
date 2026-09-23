@@ -339,6 +339,17 @@ altera custo, margem, pedido e fornecedor**. Hospedar exige, antes, uma de duas 
   controle de acesso), em que só aparelho autorizado alcança o sistema. Zero código, e o
   sistema continua rodando no computador de casa.
 
+**Decisão do dono, em 23/09: senha agora, não.** Mais adiante, um sistema de
+autenticação com **tela de login e de cadastro**. Até lá o sistema roda só no próprio
+computador, e isso já está garantido: o lançador sobe o servidor em `127.0.0.1`, que
+nenhum outro aparelho da rede alcança.
+
+Uma pergunta a responder junto, quando chegar a hora: _cadastro_ encosta no CLAUDE.md,
+3.4, que manda não construir convite de usuário, papéis nem onboarding. Login de quem
+opera o perfil cabe na regra como está; cadastro aberto, em que qualquer pessoa cria a
+própria conta com os próprios dados, é multi-tenant. Se for esse o caso, a regra muda por
+decisão do dono, escrita lá — e não por um formulário que apareceu na tela.
+
 **E há um motivo concreto para hospedar, que também não estava escrito:** a tela de bipar
 na loja usa a câmera, e navegador só libera câmera em `https` ou em `localhost`. O celular
 abrindo o computador pela rede de casa (`http://192.168.x.x:3000`) **não** tem câmera. Na

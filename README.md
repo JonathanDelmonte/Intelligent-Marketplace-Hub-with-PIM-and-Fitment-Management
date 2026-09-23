@@ -85,20 +85,33 @@ dependências quando elas mudaram, aplica as migrações, monta a versão de uso
 código mudou, sobe o servidor e a fila, e abre `http://localhost:3000` quando o servidor
 responde.
 
+- **Antes do primeiro clique:** o [Node.js](https://nodejs.org) (versão LTS). E um banco:
+  o Docker Desktop instalado **ou** a URL do banco na nuvem (Neon). Sem Docker, deixe o
+  primeiro clique criar o `.env`, troque nele a linha `DATABASE_URL` pela URL do Neon e
+  clique de novo — o `.env` não vem no clone, porque guarda senha.
 - **Primeira vez:** alguns minutos. **Depois:** cerca de três segundos.
 - **Clicar de novo com tudo rodando** só abre o navegador.
 - **Fechar a janela preta** desliga o servidor e a fila juntos.
+- **A janela sempre espera uma tecla no fim**, e nunca fecha sozinha. Se algo der errado,
+  a mensagem fica na tela — e tudo o que apareceu nela fica também em
+  `Atalhos/iniciar.log`, refeito a cada clique. É o arquivo para mandar a quem mantém o
+  sistema. A URL do banco nunca entra nele, só host e porta.
+- **Só neste computador:** o servidor escuta em `127.0.0.1`. Celular e outros aparelhos
+  da rede não alcançam o sistema, de propósito, porque ainda não há login (pendência 3.3).
+- **Outra porta:** `PORT=3001` no `.env`, se a 3000 estiver ocupada.
 - **Depois de um `git pull`:** só clicar. Migração, dependência e montagem se resolvem
   sozinhas — não é mais preciso lembrar do `db:migrate`.
 
 Para ter na área de trabalho: botão direito no `Iniciar.bat` → *Enviar para* → *Área de
-trabalho (criar atalho)*. Fora do Windows, o mesmo lançador é `node scripts/iniciar.mjs`.
+trabalho (criar atalho)*. Copiar o próprio `.bat` para a área de trabalho não funciona: ele
+acha o projeto pela pasta onde está. Fora do Windows, o mesmo lançador é
+`node scripts/iniciar.mjs`.
 
 A lógica mora em `scripts/iniciar.mjs`, e o porquê de cada decisão está no cabeçalho dele.
 
 ### Passo a passo, sem o atalho
 
-Requisitos: Node 22+ e Postgres 16+ **com `pgvector`** (o projeto roda em 18).
+Requisitos: Node 22.9+ e Postgres 16+ **com `pgvector`** (o projeto roda em 18).
 
 A extensão é o único requisito que dá trabalho — no Windows ela não vem no
 instalador oficial do Postgres. Por isso há um `compose.yaml` com a **mesma imagem
