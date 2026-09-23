@@ -39,11 +39,22 @@ function argumento(nome) {
  * ao servidor como parâmetro de startup — onde o Postgres derruba a conexão com
  * `unrecognized configuration parameter "channel_binding"`. Medido. Tirar aqui é o
  * que impede a armadilha de chegar ao `.env`.
+ *
+ * A conexão também tira (`urlParaODriver`, em `src/infra/banco/url.ts`), para a URL
+ * colada à mão no `.env`; este script não pode importar TypeScript porque roda antes do
+ * `npm install`, e por isso a regra está repetida aqui, igual. Por nome de parâmetro, e
+ * não por expressão regular: a versão anterior levava o `?` junto quando o parâmetro
+ * vinha primeiro, e o resto da consulta virava parte do nome do banco.
  */
 function limparUrl(bruta) {
   const url = bruta.trim();
-  if (!url.includes('channel_binding')) return { url, removeu: false };
-  return { url: url.replace(/[?&]channel_binding=[^&]*/g, ''), removeu: true };
+  const interrogacao = url.indexOf('?');
+  if (interrogacao === -1) return { url, removeu: false };
+  const parametros = url.slice(interrogacao + 1).split('&');
+  const mantidos = parametros.filter((parametro) => parametro.split('=')[0] !== 'channel_binding');
+  if (mantidos.length === parametros.length) return { url, removeu: false };
+  const base = url.slice(0, interrogacao);
+  return { url: mantidos.length === 0 ? base : `${base}?${mantidos.join('&')}`, removeu: true };
 }
 
 /**

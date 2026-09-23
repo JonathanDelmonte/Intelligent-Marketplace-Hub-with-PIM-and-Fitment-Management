@@ -9,6 +9,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { lerAmbiente } from '@/config/ambiente';
 import * as schema from './schema';
+import { urlParaODriver } from './url';
 
 /**
  * Configuração de tipos do driver, em ponto único.
@@ -23,12 +24,17 @@ import * as schema from './schema';
  */
 export const TIPOS_DO_DRIVER = { bigint: postgres.BigInt } as const;
 
-/** Abre uma conexão com a configuração canônica. */
+/**
+ * Abre uma conexão com a configuração canônica.
+ *
+ * A URL passa por `urlParaODriver`, que tira o `channel_binding` da string do painel do
+ * Neon: o driver o repassaria ao servidor, e a conexão cairia.
+ */
 export function criarBancoCom(
   url: string,
   opcoes: { readonly max?: number; readonly silenciarAvisos?: boolean } = {},
 ) {
-  const conexao = postgres(url, {
+  const conexao = postgres(urlParaODriver(url), {
     max: opcoes.max ?? 10,
     types: TIPOS_DO_DRIVER,
     ...(opcoes.silenciarAvisos === true ? { onnotice: () => undefined } : {}),
