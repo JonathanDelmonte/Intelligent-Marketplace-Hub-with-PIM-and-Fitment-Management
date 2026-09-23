@@ -101,6 +101,24 @@ primeiro para o IPv6, onde o servidor não está.
 Node 22.9 — conferido na documentação do Node. O `engines` passou a dizer 22.9. O lançador
 não usa a flag, porque os filhos herdam o ambiente dele, e continua pedindo só o 22.
 
+### 🐛 A URL do painel do Neon, colada à mão, derrubava a migração
+
+Achado ao escrever a instrução para o dono: "sem Docker, troque a `DATABASE_URL` do `.env`
+pela URL do Neon". O painel do Neon entrega a string com `channel_binding=require`, e o
+`postgres.js` manda ao servidor, como parâmetro de inicialização, todo parâmetro da URL
+que ele não conhece (`parseOptions`, 3.4.9). O Postgres recusa:
+`unrecognized configuration parameter "channel_binding"`. Reproduzido com a migração de
+verdade contra o banco local — falha com a URL como vem do painel, passa com a correção.
+
+O `preparar:env` já tirava o parâmetro, mas só da URL que passa por ele, e o caminho do
+atalho é colar no `.env`. Agora `criarBancoCom`, por onde toda conexão passa, tira também
+(`urlParaODriver`). E a limpeza do `preparar:env` tinha defeito próprio: a expressão
+regular levava o `?` junto quando o parâmetro vinha primeiro, e
+`banco?channel_binding=require&sslmode=require` virava `banco&sslmode=require` — o
+`sslmode` passava a fazer parte do nome do banco. As duas limpezas agora são por nome de
+parâmetro, com a mesma regra, repetida porque o `preparar:env` roda antes do
+`npm install` e não pode importar TypeScript.
+
 ### ❓ Continua sem teste no Windows
 
 Testado em Linux: `.env` com BOM, `PORT=3001` no `.env` com `npm ci` de verdade no
