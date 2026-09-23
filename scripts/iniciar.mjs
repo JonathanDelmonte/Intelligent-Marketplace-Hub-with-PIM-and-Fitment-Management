@@ -34,10 +34,17 @@
  *
  * ## Clicar de novo com tudo rodando só abre o navegador
  *
- * Antes de qualquer passo pesado, o script pergunta à porta se o sistema já está ali —
- * e confere que é **este** sistema, pelo `application-name` que o layout escreve no
- * `<head>`. Porta ocupada por outro programa é erro com nome, não navegador aberto na
- * coisa errada.
+ * Antes de qualquer passo pesado, o script procura o sistema na porta preferida e nas
+ * seguintes — e confere que é **este** sistema, pelo `application-name` que o layout
+ * escreve no `<head>`, e não outro programa na mesma porta.
+ *
+ * ## Porta ocupada: a próxima livre
+ *
+ * Pedido do dono, que roda mais de um projeto ao mesmo tempo, e a 3000 é a porta padrão
+ * de meio mundo de servidor de desenvolvimento. Com a preferida ocupada (`PORT` do
+ * `.env`, ou 3000), o sistema sobe na primeira livre das dezenove seguintes, e a janela
+ * diz qual. Por isso o segundo clique procura na faixa inteira: procurar só na preferida,
+ * que pode ter vagado desde então, subiria um segundo sistema ao lado do primeiro.
  *
  * ## O que ele faz sozinho, e por isso ninguém mais precisa lembrar
  *
@@ -63,7 +70,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { createConnection } from 'node:net';
+import { createConnection, createServer } from 'node:net';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 // O módulo inteiro, e não `{ parseEnv }`: import com nome que o Node não tem é erro
@@ -79,6 +86,9 @@ const EH_WINDOWS = process.platform === 'win32';
 const INTERFACE = '127.0.0.1';
 const PASSOS = 7;
 const NODE_MINIMO = 22;
+
+/** Quantas portas tentar, a partir da preferida, antes de desistir. */
+const PORTAS_A_TENTAR = 20;
 
 /** Marca, dentro de `.next`, de qual commit gerou a versão de uso que está lá. */
 const MARCA_DO_BUILD = join('.next', 'commit-do-build.txt');
@@ -285,7 +295,8 @@ function carregarEnv() {
 }
 
 /**
- * A porta do sistema: `PORT` do `.env` (ou do ambiente), e 3000 sem ela.
+ * A porta preferida: `PORT` do `.env` (ou do ambiente), e 3000 sem ela. Ocupada, o
+ * sistema usa a próxima livre — ver `varrerPortas`.
  *
  * Lida **depois** do `.env`, e isso já foi defeito: a primeira versão lia a porta ao
  * carregar o script, antes do `.env` existir para ele — e a mensagem de porta ocupada
@@ -346,6 +357,66 @@ async function quemResponde(porta, nomeDoSistema) {
   const achado = /<meta name="application-name" content="([^"]*)"/.exec(html);
   if (achado === null) return 'outro';
   return nomeDoSistema === undefined || achado[1] === nomeDoSistema ? 'nosso' : 'outro';
+}
+
+function enderecoDa(porta) {
+  return `http://localhost:${String(porta)}`;
+}
+
+/**
+ * Dá para escutar nesta porta? Pergunta abrindo e fechando um servidor nela.
+ *
+ * É a única resposta definitiva: porta reservada pelo Windows (Hyper-V e WSL reservam
+ * faixas inteiras) não tem ninguém atendendo, e mesmo assim não aceita servidor.
+ */
+function consigoEscutar(porta) {
+  return new Promise((resolver) => {
+    const servidor = createServer();
+    servidor.once('error', () => resolver(false));
+    servidor.listen(porta, INTERFACE, () => servidor.close(() => resolver(true)));
+  });
+}
+
+/**
+ * O que há numa porta: `nosso` (este sistema), `outro` (qualquer outro programa) ou
+ * `livre`. Três perguntas, cada uma pegando o que a anterior deixa passar:
+ *
+ * 1. Alguém atende em `127.0.0.1`? Então é nosso ou de outro, pelo `<head>` — e quem
+ *    atende sem falar HTTP é de outro.
+ * 2. Alguém atende em `::1`? O navegador abre `localhost`, que no Windows tenta o IPv6
+ *    primeiro, e servidor de desenvolvimento que escuta em `localhost` costuma ficar só
+ *    ali. Subir nessa porta levaria o navegador ao outro projeto, e não a este.
+ * 3. Dá para escutar nela? Ver `consigoEscutar`.
+ */
+async function estadoDaPorta(porta, nomeDoSistema) {
+  if (await portaAberta(INTERFACE, porta, 1500)) {
+    return (await quemResponde(porta, nomeDoSistema)) === 'nosso' ? 'nosso' : 'outro';
+  }
+  if (await portaAberta('::1', porta, 1500)) return 'outro';
+  return (await consigoEscutar(porta)) ? 'livre' : 'outro';
+}
+
+/**
+ * A porta preferida e as seguintes, cada uma com o seu estado, em ordem.
+ *
+ * Todas de uma vez: porta livre responde em milissegundos (conexão recusada), e só
+ * programa que aceita conexão e fica mudo gasta o tempo-limite — uma vez, e não uma por
+ * porta.
+ */
+async function varrerPortas(preferida, nomeDoSistema) {
+  const portas = [];
+  for (let porta = preferida; porta < preferida + PORTAS_A_TENTAR && porta <= 65535; porta += 1) {
+    portas.push(porta);
+  }
+  const estados = await Promise.all(portas.map((porta) => estadoDaPorta(porta, nomeDoSistema)));
+  return portas.map((porta, indice) => ({ porta, estado: estados[indice] }));
+}
+
+function abrirOQueJaRoda(porta) {
+  const endereco = enderecoDa(porta);
+  escrever('');
+  escrever(`  O sistema já está rodando em outra janela. Abrindo ${endereco} no navegador.`);
+  abrirNavegador(endereco);
 }
 
 // ─── Banco ──────────────────────────────────────────────────────────────────
@@ -591,24 +662,18 @@ async function principal() {
   carregarEnv();
   aviso('Lida.');
 
-  const porta = lerPorta();
-  const endereco = `http://localhost:${String(porta)}`;
+  const preferida = lerPorta();
   const nomeDoSistema = process.env['BANCADA_NOME_SISTEMA'];
-  if (nomeDoSistema !== undefined) process.title = `${nomeDoSistema} — ${endereco}`;
+  if (nomeDoSistema !== undefined) process.title = nomeDoSistema;
 
-  // Antes de qualquer passo pesado: se já está rodando, só abre o navegador.
-  const quem = await quemResponde(porta, nomeDoSistema);
-  if (quem === 'nosso') {
-    escrever('');
-    escrever(`  O sistema já está rodando em outra janela. Abrindo ${endereco} no navegador.`);
-    abrirNavegador(endereco);
+  // Antes de qualquer passo pesado: se já está rodando — na preferida ou numa das
+  // seguintes —, só abre o navegador.
+  const jaRodando = (await varrerPortas(preferida, nomeDoSistema)).find(
+    (item) => item.estado === 'nosso',
+  );
+  if (jaRodando !== undefined) {
+    abrirOQueJaRoda(jaRodando.porta);
     return;
-  }
-  if (quem === 'outro') {
-    falhar(
-      `A porta ${String(porta)} está ocupada por outro programa.`,
-      'Feche o programa que está usando essa porta, ou escolha outra com a variável PORT no .env.',
-    );
   }
 
   passo(3, 'Conferindo o banco de dados...');
@@ -651,6 +716,35 @@ async function principal() {
   }
 
   passo(7, 'Subindo o servidor e a fila...');
+  // A porta é escolhida aqui, e não no passo 2: entre um e outro podem passar minutos
+  // de instalação e montagem, tempo de sobra para outro programa ocupar a porta.
+  const varredura = await varrerPortas(preferida, nomeDoSistema);
+  const subiuEmOutraJanela = varredura.find((item) => item.estado === 'nosso');
+  if (subiuEmOutraJanela !== undefined) {
+    abrirOQueJaRoda(subiuEmOutraJanela.porta);
+    return;
+  }
+  const livre = varredura.find((item) => item.estado === 'livre');
+  if (livre === undefined) {
+    const ultima = preferida + varredura.length - 1;
+    falhar(
+      `As portas de ${String(preferida)} a ${String(ultima)} estão todas ocupadas por outros programas.`,
+      'Feche algum deles, ou comece de outra porta com a variável PORT no .env (por exemplo, PORT=4000).',
+    );
+  }
+  const porta = livre.porta;
+  if (porta === preferida + 1) {
+    aviso(
+      `A porta ${String(preferida)} está ocupada por outro programa. Usando a ${String(porta)}.`,
+    );
+  } else if (porta > preferida) {
+    aviso(
+      `As portas de ${String(preferida)} a ${String(porta - 1)} estão ocupadas por outros programas. Usando a ${String(porta)}.`,
+    );
+  }
+  const endereco = enderecoDa(porta);
+  if (nomeDoSistema !== undefined) process.title = `${nomeDoSistema} — ${endereco}`;
+
   const servidor = iniciarFilho('[servidor]', [
     join('node_modules', 'next', 'dist', 'bin', 'next'),
     'start',
