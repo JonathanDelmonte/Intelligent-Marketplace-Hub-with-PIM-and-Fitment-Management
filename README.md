@@ -98,7 +98,10 @@ responde.
   sistema. A URL do banco nunca entra nele, só host e porta.
 - **Só neste computador:** o servidor escuta em `127.0.0.1`. Celular e outros aparelhos
   da rede não alcançam o sistema, de propósito, porque ainda não há login (pendência 3.3).
-- **Outra porta:** `PORT=3001` no `.env`, se a 3000 estiver ocupada.
+- **Porta ocupada:** se outro programa estiver na 3000, o sistema sobe na próxima livre
+  (3001, 3002…) e a janela diz qual. Quem roda vários projetos pode fixar uma porta só
+  deste com `PORT=3100` no `.env`: o navegador guarda dados por endereço, e porta fixa é
+  endereço fixo.
 - **Depois de um `git pull`:** só clicar. Migração, dependência e montagem se resolvem
   sozinhas — não é mais preciso lembrar do `db:migrate`.
 

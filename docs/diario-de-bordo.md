@@ -26,6 +26,78 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-23 — Porta ocupada: o atalho usa a próxima livre
+
+O primeiro registro que chegou do Windows do dono (Node 24.15, win32 x64) parou no passo
+2: "A porta 3000 está ocupada por outro programa". O dono roda mais de um projeto ao mesmo
+tempo e pediu que o atalho tente outra porta sozinho.
+
+O mesmo registro traz a boa notícia que faltava na entrada abaixo: **o `.bat` novo
+funcionou no Windows.** A janela ficou aberta, o lançador rodou, e o arquivo chegou com a
+mensagem — exatamente o que a reescrita prometia.
+
+### 🔀 A preferida e as dezenove seguintes
+
+Com a preferida ocupada (`PORT` do `.env`, ou 3000), o sistema sobe na primeira livre das
+dezenove seguintes, e a janela diz qual. Vinte portas ocupadas é erro com nome, pedindo
+outra faixa pelo `PORT`.
+
+### 🔀 O segundo clique procura na faixa inteira
+
+A armadilha que o pedido esconde: o sistema sobe na 3001 porque a 3000 está com outro
+projeto; o outro projeto fecha; o segundo clique pergunta só na 3000, acha livre, e sobe
+**um segundo sistema** ao lado do primeiro. Por isso a procura do "já está rodando" varre
+a faixa inteira — e foi testado exatamente nessa ordem.
+
+### 🔀 Três perguntas por porta, porque "livre" não é "ninguém respondeu HTTP"
+
+1. **Conexão em `127.0.0.1`.** Quem atende é nosso ou de outro, pelo `<head>`; quem atende
+   e não fala HTTP é de outro.
+2. **Conexão em `::1`.** O navegador abre `localhost`, que no Windows tenta o IPv6
+   primeiro, e servidor de desenvolvimento que escuta em `localhost` costuma ficar só ali.
+   Subir na mesma porta levaria o navegador ao outro projeto, e não a este.
+3. **Abrir e fechar um servidor na porta.** Porta reservada pelo Windows (Hyper-V e WSL
+   reservam faixas inteiras) ou presa sem ninguém atendendo recusa conexão e, mesmo
+   assim, não aceita servidor. Sem esta pergunta, o `next start` cairia com `EADDRINUSE`.
+
+As vinte portas são perguntadas em paralelo: porta livre responde em milissegundos, e só
+programa que aceita conexão e fica mudo gasta o tempo-limite — uma vez, e não uma por
+porta.
+
+### 🔀 A porta é escolhida no passo 7, e não no 2
+
+No passo 2 a varredura só procura o sistema já rodando. A escolha fica para logo antes de
+subir o servidor, porque entre um passo e outro podem passar minutos de instalação e
+montagem — tempo de sobra para outro programa ocupar a porta escolhida cedo demais.
+
+### ⚠️ Porta que muda é endereço que muda
+
+O navegador guarda dados por endereço, e a porta faz parte dele. A fila de leituras sem
+rede do leitor fica no IndexedDB: o que ficou nela sem sincronizar com o sistema na 3001
+não aparece quando ele sobe na 3000. Não se perde — reaparece quando o endereço volta —,
+mas some da vista. No computador é raro, porque com o sistema de pé a fila descarrega na
+hora. Para quem roda vários projetos, a saída é fixar uma porta só deste no `.env`, e o
+README diz isso.
+
+### ❓ Testado em Linux; o IPv6 não
+
+Sete cenários: outro programa HTTP na 3000 (sobe na 3001, com aviso); segundo clique com
+a 3000 ocupada (acha na 3001, 0,33 s); segundo clique com a 3000 já vaga (acha na 3001 e
+não sobe outro, 0,23 s); programa mudo na 3000; porta presa sem ninguém atendendo, na
+4000 (pula para a 4001 pela terceira pergunta); as vinte ocupadas (erro com nome, código
+1); e nada ocupado (3000, sem aviso). A segunda pergunta não foi exercitada: este
+contêiner não tem IPv6.
+
+### 🐛 Armadilha de teste: `$!` depois de `a && b &`
+
+`cd pasta && nohup python3 -m http.server 3000 &` põe **a lista inteira** em segundo
+plano, num subshell, e o `$!` é o PID do subshell — matá-lo deixa o Python de pé,
+atendendo na porta. O teste "a 3000 vagou" rodou com a 3000 ainda ocupada até isso
+aparecer. O processo a derrubar se acha pelo comando no `ps`, e não pelo `$!` de uma
+lista.
+
+---
+
 ## 2026-09-23 — O atalho abria e fechava sem fazer nada
 
 Relato do dono, no primeiro clique no Windows: "abre o terminal e fecha e não acontece
