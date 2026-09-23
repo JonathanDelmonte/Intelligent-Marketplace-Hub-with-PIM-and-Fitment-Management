@@ -327,6 +327,27 @@ Railway, Render) custa menos trabalho que serverless, porque o poller roda como
 processo e o armazenamento continua sendo disco. Serverless exige o object storage
 acima e o poller por cron. Nenhum dos dois é grande; o primeiro é menor.
 
+**O que trava antes de tudo, e esta seção não dizia: não há login.** O sistema é
+multi-perfil e não multi-tenant (CLAUDE.md, 3.4), e por isso nunca teve autenticação —
+em `localhost` isso é correto. Num endereço público, **qualquer pessoa com a URL vê e
+altera custo, margem, pedido e fornecedor**. Hospedar exige, antes, uma de duas coisas:
+
+- **Uma senha na porta do sistema:** uma senha no `.env` e uma verificação que roda antes
+  de toda rota. Pequeno — uma sessão de trabalho —, e é o caminho se a ideia é abrir do
+  celular em qualquer lugar.
+- **Não ter endereço público:** túnel privado (Tailscale, ou Cloudflare Tunnel com
+  controle de acesso), em que só aparelho autorizado alcança o sistema. Zero código, e o
+  sistema continua rodando no computador de casa.
+
+**E há um motivo concreto para hospedar, que também não estava escrito:** a tela de bipar
+na loja usa a câmera, e navegador só libera câmera em `https` ou em `localhost`. O celular
+abrindo o computador pela rede de casa (`http://192.168.x.x:3000`) **não** tem câmera. Na
+loja, com o celular, a tela só funciona com o sistema num endereço `https` — hospedado ou
+por túnel.
+
+**Para rodar no próprio computador**, `Atalhos/Iniciar.bat` sobe tudo com um clique desde
+23/09 — ver o README.
+
 ---
 
 ### 3.4 Três das cinco fontes de evidência de compatibilidade

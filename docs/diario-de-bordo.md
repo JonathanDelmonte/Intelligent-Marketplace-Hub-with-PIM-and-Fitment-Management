@@ -26,6 +26,73 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-23 — Um clique para subir tudo, e o que o lançador decide sozinho
+
+O dono pediu um `.bat` que subisse tudo no `localhost` a cada clique. Ficou
+`Atalhos/Iniciar.bat`, com dez linhas úteis, chamando `scripts/iniciar.mjs`, que faz o
+trabalho.
+
+### 🔀 A lógica em Node, e não em batch
+
+Batch quebra por detalhe invisível: quebra de linha LF faz `goto` errar o rótulo, acento
+sem `chcp 65001` vira lixo, e um `)` dentro de `echo` num bloco `if (...)` fecha o bloco no
+meio. O `.bat` ficou só com o que não dá para fazer em Node — conferir que o Node existe
+— e é gravado **sem BOM e em CRLF**, com `.gitattributes` garantindo CRLF no checkout de
+qualquer máquina, porque o CI roda em Linux e nunca veria o defeito.
+
+O `.mjs` roda **sem dependência nenhuma**: ele roda antes do `npm install`, que é uma das
+coisas que ele faz. Por isso não é `.ts` — `tsx` é dependência de desenvolvimento.
+
+### 🔀 Versão de uso, e não de desenvolvimento
+
+`next start`, montado por `next build` só quando o commit mudou. O `next dev` compila cada
+tela na primeira visita — medimos 34 segundos para abrir um produto —, e para quem só
+quer usar o sistema isso é defeito. Resultado medido: **3,4 segundos do clique ao "Pronto"**
+no uso diário.
+
+### 🔀 Migração a cada arranque
+
+`db:migrate` e `db:seed` são idempotentes e rodam em segundos, então rodam sempre. É o fim
+de "depois do `git pull`, rode `db:migrate`" — a instrução que eu mais repeti neste
+projeto, e a mais fácil de esquecer.
+
+### 🐛 A primeira versão reinstalava dependência sem precisar
+
+Comparava o **horário** do `package-lock.json` com o da instalação. O git dá ao arquivo o
+horário do checkout, e checkout sem mudança de dependência também conta — o teste de
+primeiro arranque gastou 31 segundos de `npm ci` a troco de nada. Agora compara o
+**conteúdo** (sha256 gravado em `node_modules/lockfile-instalado.txt`), que é o que
+realmente importa.
+
+### 🐛 `pgrep -f` e `pkill -f` casam com a linha de comando de quem procura
+
+Duas vezes no mesmo teste: `pgrep -f "node scripts/iniciar.mjs"` achou o **meu próprio
+shell**, cuja linha de comando continha o texto procurado, e o `kill` derrubou o shell em
+vez do lançador. Depois `pkill -f "http.server 3000"` repetiu a dose.
+
+O agravante: o lançador troca o próprio título (`process.title`, para a janela do Windows
+mostrar o nome do sistema), e no Linux isso **reescreve a linha de comando** — então o
+lançador nem aparece na busca pelo nome do script. O `next start` faz o mesmo e vira
+`next-server (v16.3.5)`. Achar processo por título, e nunca por texto que também está no
+comando de quem procura.
+
+### ❓ O que não deu para testar daqui
+
+Sete cenários passaram em Linux: primeiro arranque do zero, segundo clique com tudo
+rodando (0,16 s, só abre o navegador), desligamento derrubando servidor e fila juntos,
+arranque diário, porta ocupada por outro programa, e banco local desligado sem Docker.
+**O `.bat` em si, a abertura automática do Docker Desktop e o `explorer.exe` abrindo o
+navegador só existem no Windows**, e não foram executados. Os bytes do `.bat` foram
+conferidos (sem BOM, CRLF em todas as linhas); o comportamento, não.
+
+### ⚠️ Hospedar exige login antes
+
+Anotado na pendência 3.3, que listava o que falta para sair do laptop e esquecia o mais
+grave: **não há autenticação**. Em `localhost` é correto; num endereço público, quem tiver
+a URL vê e altera custo, margem e pedido.
+
+---
+
 ## 2026-09-16 — O desenho novo, e três armadilhas de layout no caminho
 
 Piloto do front-end novo: casca com lateral agrupada e tela inicial organizada por

@@ -77,6 +77,27 @@ que é a única parte insubstituível do sistema.
 
 ## Começar
 
+### No Windows, com um clique
+
+Clique duas vezes em **`Atalhos/Iniciar.bat`**. Ele confere o Node, cria o `.env` se não
+existir, sobe o banco do Docker se o `.env` apontar para o banco local, instala as
+dependências quando elas mudaram, aplica as migrações, monta a versão de uso quando o
+código mudou, sobe o servidor e a fila, e abre `http://localhost:3000` quando o servidor
+responde.
+
+- **Primeira vez:** alguns minutos. **Depois:** cerca de três segundos.
+- **Clicar de novo com tudo rodando** só abre o navegador.
+- **Fechar a janela preta** desliga o servidor e a fila juntos.
+- **Depois de um `git pull`:** só clicar. Migração, dependência e montagem se resolvem
+  sozinhas — não é mais preciso lembrar do `db:migrate`.
+
+Para ter na área de trabalho: botão direito no `Iniciar.bat` → *Enviar para* → *Área de
+trabalho (criar atalho)*. Fora do Windows, o mesmo lançador é `node scripts/iniciar.mjs`.
+
+A lógica mora em `scripts/iniciar.mjs`, e o porquê de cada decisão está no cabeçalho dele.
+
+### Passo a passo, sem o atalho
+
 Requisitos: Node 22+ e Postgres 16+ **com `pgvector`** (o projeto roda em 18).
 
 A extensão é o único requisito que dá trabalho — no Windows ela não vem no
