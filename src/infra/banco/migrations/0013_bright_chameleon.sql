@@ -1,0 +1,1 @@
+ALTER TABLE "perfil_vendedor" ADD COLUMN "aberto_em" date;

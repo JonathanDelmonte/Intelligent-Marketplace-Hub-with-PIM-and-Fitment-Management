@@ -9,6 +9,7 @@
  */
 import {
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -38,6 +39,22 @@ export const perfilVendedor = pgTable(
     cnpjOuCpf: text('cnpj_ou_cpf'),
     regime: regimeFiscalEnum('regime').notNull(),
     inscricaoEstadual: text('inscricao_estadual'),
+    /**
+     * Estado, em sigla (SP, MG…). Decide a SEFAZ da nota e as restrições do emissor de
+     * cada plataforma. Preenchido na tela "Meu negócio".
+     */
+    uf: text('uf'),
+    /**
+     * Até quando vale o certificado digital A1 da empresa; `null` é "não tem". Só a data:
+     * o certificado em si é segredo e não mora nesta tabela.
+     */
+    certificadoValidoAte: date('certificado_valido_ate', { mode: 'date' }),
+    /**
+     * Quando o CNPJ abriu. No ano da abertura o teto do MEI é proporcional aos meses de
+     * atividade, contando o mês de abertura inteiro — e sem esta data o controle de teto
+     * daria o teto cheio a quem abriu em outubro.
+     */
+    abertoEm: date('aberto_em', { mode: 'date' }),
     /** Teto anual do regime, em centavos. R$ 81.000 no MEI. */
     tetoAnual: centavos('teto_anual'),
     /** Configuração do emissor de NF-e integrado. Não se reescreve emissor. */
