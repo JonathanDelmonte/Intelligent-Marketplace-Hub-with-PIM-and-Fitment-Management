@@ -59,7 +59,7 @@ export default async function PaginaFiscal({
     return Array.isArray(valor) ? valor[0] : valor;
   };
 
-  const aviso = descreverAviso(um('r'));
+  const aviso = descreverAviso(um('r'), um('motivo'));
 
   // A sugestão vem da URL e vale só para o item classificado. Pré-preencher o campo
   // de outro produto com o NCM de um produto diferente seria a pior coisa que esta

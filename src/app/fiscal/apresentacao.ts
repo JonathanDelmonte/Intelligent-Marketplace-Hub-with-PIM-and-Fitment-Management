@@ -123,6 +123,7 @@ export const CODIGOS_DE_AVISO = [
   'sem_chave',
   'sem_texto',
   'nao_encontrado',
+  'sugestao_falhou',
   'falha',
 ] as const;
 export type CodigoDeAviso = (typeof CODIGOS_DE_AVISO)[number];
@@ -133,7 +134,18 @@ export interface Aviso {
   readonly corpo: string;
 }
 
-export function descreverAviso(codigo: string | undefined): Aviso | null {
+/** Quanto do motivo da falha a tela mostra. O bastante para agir; o log guarda o resto. */
+const MOTIVO_NA_TELA = 300;
+
+/**
+ * O aviso de uma ação, pelo código que ela deixou na URL.
+ *
+ * `motivo` só vale para `sugestao_falhou`: é a frase que o chamador do LLM escreveu —
+ * "o OpenRouter recusou a chave", "sem crédito" —, e é a única coisa que diz o que
+ * fazer. Sem ela, a tela diria "não deu" e mandaria procurar no log, que é onde quem usa
+ * o sistema não vai.
+ */
+export function descreverAviso(codigo: string | undefined, motivo?: string): Aviso | null {
   if (codigo === undefined) return null;
   if (!(CODIGOS_DE_AVISO as readonly string[]).includes(codigo)) return null;
 
@@ -164,8 +176,19 @@ export function descreverAviso(codigo: string | undefined): Aviso | null {
         tom: 'atencao',
         titulo: 'Ninguém sugeriu',
         corpo:
-          'Não há chave de LLM configurada, então a sugestão de NCM não roda. Isso não trava nada: o campo continua preenchível à mão, e o cadastro fica pronto do mesmo jeito.',
+          'Não há chave de IA configurada (a linha LLM_API_KEY do .env), então a sugestão de NCM não roda. Isso não trava nada: o campo continua preenchível à mão, e o cadastro fica pronto do mesmo jeito.',
       };
+    case 'sugestao_falhou': {
+      const porque = motivo?.trim().slice(0, MOTIVO_NA_TELA);
+      return {
+        tom: 'erro',
+        titulo: 'A IA não sugeriu',
+        corpo:
+          porque === undefined || porque === ''
+            ? 'A chamada falhou e nada foi alterado. O campo continua preenchível à mão.'
+            : `Motivo: ${porque} Nada foi alterado, e o campo continua preenchível à mão.`,
+      };
+    }
     case 'sem_texto':
       return {
         tom: 'atencao',

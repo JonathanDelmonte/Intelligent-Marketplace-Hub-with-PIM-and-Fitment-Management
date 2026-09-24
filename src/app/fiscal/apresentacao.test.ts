@@ -185,4 +185,25 @@ describe('avisos e rótulos', () => {
     expect(aviso?.corpo).toContain('oito dígitos');
     expect(aviso?.corpo).toContain('Nada foi gravado');
   });
+
+  it('falha da sugestão mostra o motivo, que é o que diz o que fazer', () => {
+    const aviso = descreverAviso(
+      'sugestao_falhou',
+      'o OpenRouter recusou a chave (401). Confira a linha LLM_API_KEY do .env.',
+    );
+    expect(aviso?.tom).toBe('erro');
+    expect(aviso?.corpo).toContain('LLM_API_KEY');
+    // E não é confundida com falha de gravação, que era o aviso usado antes.
+    expect(aviso?.titulo).not.toContain('gravar');
+  });
+
+  it('falha da sugestão sem motivo ainda diz que o campo segue editável', () => {
+    expect(descreverAviso('sugestao_falhou')?.corpo).toContain('preenchível à mão');
+    expect(descreverAviso('sugestao_falhou', '   ')?.corpo).not.toContain('Motivo');
+  });
+
+  it('o motivo é cortado: a URL não pode virar um parágrafo na tela', () => {
+    const corpo = descreverAviso('sugestao_falhou', 'x'.repeat(2_000))?.corpo ?? '';
+    expect(corpo.length).toBeLessThan(450);
+  });
 });

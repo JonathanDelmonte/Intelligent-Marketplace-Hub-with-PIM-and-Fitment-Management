@@ -15,11 +15,12 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { lerAmbiente } from '@/config/ambiente';
-import { sugerirClassificacao } from '@/dominio/fiscal/classificador';
+import { sugerirClassificacao, type ResultadoDaSugestao } from '@/dominio/fiscal/classificador';
 import { CAMPOS_FISCAIS, lerCodigoFiscal, type CampoFiscal } from '@/dominio/fiscal/codigos';
 import { RepositorioFiscal, type CodigosParaGravar } from '@/dominio/fiscal/repositorio';
 import { carregarPerfil } from '@/dominio/perfil';
 import { banco } from '@/infra/banco/cliente';
+import { OrcamentoEstourado } from '@/infra/llm';
 import { llmDoAmbiente } from '@/infra/llm/ambiente';
 import { criarRegistrador, nivelDoAmbiente } from '@/infra/log';
 import { ZERO, lerReaisDigitados } from '@/lib/dinheiro';
@@ -33,6 +34,13 @@ const log = criarRegistrador({
 
 function paraOnde(codigo: CodigoDeAviso): string {
   return `${CAMINHO}?r=${codigo}`;
+}
+
+/** A falha da sugestão, com o motivo — que é a única coisa que diz o que fazer. */
+function paraFalhaDeSugestao(motivo: string | undefined): string {
+  const busca = new URLSearchParams({ r: 'sugestao_falhou' satisfies CodigoDeAviso });
+  if (motivo !== undefined) busca.set('motivo', motivo);
+  return `${CAMINHO}?${busca.toString()}`;
 }
 
 function texto(valor: FormDataEntryValue | null): string {
@@ -100,29 +108,37 @@ export async function sugerirCodigos(dados: FormData): Promise<void> {
   const skuId = esquemaDeId.safeParse(dados.get('skuId'));
   if (!skuId.success) redirect(paraOnde('nao_encontrado'));
 
-  let resultado: Awaited<ReturnType<typeof sugerirClassificacao>>;
+  // `null` é produto fora do perfil. O `redirect` desse caso fica **fora** do `try`: ele
+  // funciona lançando, e dentro do `try` o `catch` o engolia e mandava para a falha.
+  let resultado: ResultadoDaSugestao | null;
   try {
     const db = banco();
     const perfil = await carregarPerfil(db, lerAmbiente().BANCADA_PERFIL_PADRAO);
-    const repo = new RepositorioFiscal(db);
-    const produto = await repo.paraClassificar(perfil.id, skuId.data);
-    if (produto === null) redirect(paraOnde('nao_encontrado'));
-
-    const { servico, modeloFiscal } = llmDoAmbiente(db);
-    resultado = await sugerirClassificacao(produto, {
-      llm: servico,
-      modelo: modeloFiscal,
-    });
+    const produto = await new RepositorioFiscal(db).paraClassificar(perfil.id, skuId.data);
+    if (produto === null) {
+      resultado = null;
+    } else {
+      const { servico, modeloFiscal } = llmDoAmbiente(db);
+      resultado = await sugerirClassificacao(produto, { llm: servico, modelo: modeloFiscal });
+    }
   } catch (erro) {
-    // `OrcamentoEstourado` também cai aqui: para a tela, "não deu" é a mesma coisa, e
-    // o log guarda qual foi.
+    // `OrcamentoEstourado` é o único motivo daqui que vale mostrar; o resto é falha de
+    // banco ou de código, e a tela não tem o que dizer sobre ela além de "não deu".
     log.erro('fiscal.sugestao_falhou', { skuId: skuId.data, erro });
-    redirect(paraOnde('falha'));
+    redirect(
+      paraFalhaDeSugestao(
+        erro instanceof OrcamentoEstourado ? 'o teto de gasto desta execução acabou.' : undefined,
+      ),
+    );
   }
 
+  if (resultado === null) redirect(paraOnde('nao_encontrado'));
   if (resultado.tipo === 'sem_chave') redirect(paraOnde('sem_chave'));
   if (resultado.tipo === 'nada_a_classificar') redirect(paraOnde('sem_texto'));
-  if (resultado.tipo === 'falhou') redirect(paraOnde('falha'));
+  if (resultado.tipo === 'falhou') {
+    log.aviso('fiscal.sugestao_falhou', { skuId: skuId.data, motivo: resultado.motivo });
+    redirect(paraFalhaDeSugestao(resultado.motivo));
+  }
 
   // A sugestão viaja na URL, e não em estado de servidor, pelo mesmo motivo da tela
   // de anúncio: o que a tela mostra fica reproduzível e o botão de voltar funciona.
