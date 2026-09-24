@@ -167,6 +167,55 @@ describe.skipIf(!temBancoDeTeste())('ColetorDeCompatibilidade', () => {
   const cadastrarAparelho = (modelo: string, marca = 'Electrolux') =>
     repo.garantirAparelho({ tipo: 'purificador de agua', marca, modelo, fonte: 'manual' });
 
+  describe('fonte de fora (6.10, 6.11)', () => {
+    const AGORA = new Date('2026-09-24T12:00:00Z');
+    const REFIL = 'Refil Electrolux EF-ELX-21';
+
+    it('manual que cita o produto publica sozinho, e propaga para o irmão', async () => {
+      const pa21g = await cadastrarAparelho('PA21G');
+      const pa21b = await cadastrarAparelho('PA21B');
+      const r = await coletor.coletarDaFonte({
+        skuId,
+        tituloDoProduto: REFIL,
+        tipo: 'manual_fabricante',
+        texto: 'Manual do purificador Electrolux PA21G\nUse somente o refil EF-ELX-21.',
+        url: null,
+        origem: 'manual-pa21g.pdf',
+        agora: AGORA,
+      });
+
+      expect(r).toMatchObject({ comForca: 1, paraConferir: 0, produtoTemCodigo: true });
+      const linhas = await repo.doSku(skuId);
+      const doManual = linhas.find((l) => l.aparelhoId === pa21g.id);
+      expect(doManual?.confiancaBp).toBeGreaterThanOrEqual(LIMIAR_PUBLICACAO_BP);
+      expect(doManual?.evidencias[0]?.trecho).toBe(
+        'manual-pa21g.pdf: Manual do purificador Electrolux PA21G',
+      );
+      // O irmão de família ganha inferência, que propõe e não publica.
+      const irmao = linhas.find((l) => l.aparelhoId === pa21b.id);
+      expect(irmao?.evidencias[0]?.tipo).toBe('inferencia_familia');
+      expect(irmao?.confiancaBp ?? 0).toBeLessThan(LIMIAR_PUBLICACAO_BP);
+    });
+
+    it('página que não cita o produto fica abaixo do corte, para conferir', async () => {
+      const pa21g = await cadastrarAparelho('PA21G');
+      const r = await coletor.coletarDaFonte({
+        skuId,
+        tituloDoProduto: REFIL,
+        tipo: 'pagina_oficial',
+        texto: 'Purificador Electrolux PA21G — conheça',
+        url: 'https://fabricante.invalid/pa21g',
+        origem: null,
+        agora: AGORA,
+      });
+
+      expect(r).toMatchObject({ comForca: 0, paraConferir: 1 });
+      const linha = (await repo.doSku(skuId)).find((l) => l.aparelhoId === pa21g.id);
+      expect(linha?.confiancaBp ?? 0).toBeLessThan(LIMIAR_PUBLICACAO_BP);
+      expect(linha?.evidencias[0]?.url).toBe('https://fabricante.invalid/pa21g');
+    });
+  });
+
   it('grava aparelho com família derivada da gramática', async () => {
     const a = await cadastrarAparelho('PA21G');
     expect(a.familia).toBe('electrolux:pa21');

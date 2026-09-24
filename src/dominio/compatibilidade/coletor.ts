@@ -29,18 +29,14 @@
  * registrado, aparece na fila com o título citado, e uma pessoa confirma em um
  * clique — aí vira `humano`, que vale tudo.
  */
-import {
-  codigosDeModelo,
-  normalizarCodigoDeModelo,
-  normalizarMarca,
-  normalizarTexto,
-} from '@/dominio/identidade/canonico';
 import { lerRegistro } from '@/dominio/identidade/registro';
 import type { Fonte } from '@/dominio/procedencia';
 import type { Banco } from '@/infra/banco/cliente';
 import { produtoExterno } from '@/infra/banco/schema';
 import { eq } from 'drizzle-orm';
+import { casarAnuncio, indexarPorCodigo } from './casamento';
 import { ehInferida, forcaDaEvidencia, type Evidencia, type TipoDeEvidencia } from './evidencia';
+import { evidenciaDoAchado, lerFonte, type TipoDeFonte } from './fonte';
 import { inferirCompatibilidade, type AfirmacaoConhecida } from './inferencia';
 import { resolverCompatibilidade } from './resolucao';
 import {
@@ -49,101 +45,17 @@ import {
   type RepositorioDeCompatibilidade,
 } from './repositorio';
 
-/** Aparelho reduzido ao que o casamento precisa. */
-export interface AparelhoIndexado {
-  readonly id: string;
-  readonly codigo: string;
-  readonly marca: string;
-}
-
-export type IndiceDeAparelhos = ReadonlyMap<string, readonly AparelhoIndexado[]>;
-
-/**
- * Indexa aparelhos pelo código de modelo normalizado.
- *
- * Aparelho cujo modelo não tem forma de código fica fora: casar `Purificador
- * Master` por texto livre casaria com qualquer anúncio que tivesse a palavra, e
- * compatibilidade errada aqui custa devolução.
- */
-export function indexarPorCodigo(
-  aparelhos: readonly Pick<AparelhoGravado, 'id' | 'marca' | 'modelo'>[],
-): IndiceDeAparelhos {
-  const indice = new Map<string, AparelhoIndexado[]>();
-  for (const a of aparelhos) {
-    const codigo = normalizarCodigoDeModelo(a.modelo);
-    if (codigo === null) continue;
-    const entrada: AparelhoIndexado = { id: a.id, codigo, marca: normalizarMarca(a.marca) };
-    const atual = indice.get(codigo);
-    if (atual === undefined) indice.set(codigo, [entrada]);
-    else atual.push(entrada);
-  }
-  return indice;
-}
-
-export interface AchadoNoAnuncio {
-  readonly aparelhoId: string;
-  readonly codigo: string;
-  /** `true` quando veio do registro extraído, não do título. */
-  readonly doRegistro: boolean;
-}
-
-export interface CasamentoDoAnuncio {
-  readonly achados: readonly AchadoNoAnuncio[];
-  /** Códigos que existem em mais de uma marca e o anúncio não desambiguou. */
-  readonly ambiguos: readonly string[];
-  /** Todos os códigos que o anúncio cita, casados ou não. Para a tela explicar. */
-  readonly codigos: readonly string[];
-}
-
-export interface EntradaDoCasamento {
-  readonly titulo: string;
-  /** `modelosCompativeis` do registro extraído, quando a extração já rodou. */
-  readonly modelosCompativeis?: readonly string[];
-  readonly indice: IndiceDeAparelhos;
-}
-
-/**
- * Casa os códigos citados por um anúncio contra os aparelhos cadastrados.
- *
- * Quando o mesmo código existe em duas marcas, exige que o anúncio nomeie a marca.
- * Duas marcas podem usar `XP21A` para aparelhos diferentes, e escolher uma no
- * escuro seria inventar compatibilidade — então fica registrado como ambíguo e
- * ninguém decide por palpite.
- */
-export function casarAnuncio(entrada: EntradaDoCasamento): CasamentoDoAnuncio {
-  const doTitulo = new Set(codigosDeModelo(entrada.titulo));
-  const doRegistro = new Set<string>();
-  for (const m of entrada.modelosCompativeis ?? []) {
-    const c = normalizarCodigoDeModelo(m);
-    if (c !== null) doRegistro.add(c);
-  }
-
-  const tituloNormalizado = normalizarTexto(entrada.titulo);
-  const achados: AchadoNoAnuncio[] = [];
-  const ambiguos: string[] = [];
-  const codigos = [...new Set([...doTitulo, ...doRegistro])].sort();
-
-  for (const codigo of codigos) {
-    const candidatos = entrada.indice.get(codigo);
-    if (candidatos === undefined || candidatos.length === 0) continue;
-
-    const marcas = new Set(candidatos.map((c) => c.marca));
-    let escolhidos = candidatos;
-    if (marcas.size > 1) {
-      escolhidos = candidatos.filter((c) => tituloNormalizado.includes(c.marca));
-      if (new Set(escolhidos.map((c) => c.marca)).size !== 1) {
-        ambiguos.push(codigo);
-        continue;
-      }
-    }
-
-    for (const c of escolhidos) {
-      achados.push({ aparelhoId: c.id, codigo, doRegistro: !doTitulo.has(codigo) });
-    }
-  }
-
-  return { achados, ambiguos, codigos };
-}
+// O casamento mora em `casamento.ts`, que a leitura de fonte também usa; o coletor o
+// reexporta para quem já o importava daqui.
+export {
+  casarAnuncio,
+  indexarPorCodigo,
+  type AchadoNoAnuncio,
+  type AparelhoIndexado,
+  type CasamentoDoAnuncio,
+  type EntradaDoCasamento,
+  type IndiceDeAparelhos,
+} from './casamento';
 
 /**
  * Tipo de evidência que um anúncio capturado produz, pela procedência.
@@ -174,6 +86,20 @@ const SEM_COLETA: ResultadoDaColeta = {
   inconsistencias: 0,
   ambiguos: [],
 };
+
+/** O que uma fonte de fora rendeu: para o aviso dizer exatamente o que aconteceu. */
+export interface ResultadoDaFonte {
+  /** Aparelhos que entraram com a força do tipo. */
+  readonly comForca: number;
+  /** Aparelhos que entraram abaixo do corte, para conferir: a fonte não cita o produto. */
+  readonly paraConferir: number;
+  /** Citados longe do produto no catálogo ou no fórum: ficaram de fora. */
+  readonly longeDoProduto: number;
+  readonly ambiguos: readonly string[];
+  /** O produto tem código próprio no título? Sem ele, a fonte não o reconhece. */
+  readonly produtoTemCodigo: boolean;
+  readonly inferencias: number;
+}
 
 export class ColetorDeCompatibilidade {
   constructor(
@@ -250,6 +176,57 @@ export class ColetorDeCompatibilidade {
       inferencias: propagado.inferencias,
       inconsistencias: propagado.inconsistencias,
       ambiguos: [...ambiguos].sort(),
+    };
+  }
+
+  /**
+   * Lê uma fonte de fora — manual, página oficial, catálogo, fórum — para um produto, e
+   * grava o que ela diz. As regras de força estão em `fonte.ts`; aqui é só gravar e
+   * propagar por família, como a coleta dos anúncios faz.
+   */
+  async coletarDaFonte(params: {
+    readonly skuId: string;
+    readonly tituloDoProduto: string;
+    readonly tipo: TipoDeFonte;
+    readonly texto: string;
+    readonly url: string | null;
+    /** Nome do arquivo enviado, quando não há endereço. */
+    readonly origem: string | null;
+    readonly agora: Date;
+  }): Promise<ResultadoDaFonte> {
+    const todos = await this.repo.aparelhos();
+    const leitura = lerFonte({
+      texto: params.texto,
+      tipo: params.tipo,
+      tituloDoProduto: params.tituloDoProduto,
+      indice: indexarPorCodigo(todos),
+    });
+
+    for (const achado of leitura.achados) {
+      await this.repo.registrarEvidencia({
+        skuId: params.skuId,
+        aparelhoId: achado.aparelhoId,
+        evidencia: evidenciaDoAchado({
+          achado,
+          tipo: params.tipo,
+          url: params.url,
+          origem: params.origem,
+          em: params.agora,
+        }),
+      });
+    }
+    const propagado =
+      leitura.achados.length === 0
+        ? { inferencias: 0 }
+        : await this.propagarPorFamilia(params.skuId, todos);
+
+    return {
+      comForca: leitura.achados.filter((a) => a.citaOProduto).length,
+      paraConferir: leitura.achados.filter((a) => !a.citaOProduto).length,
+      longeDoProduto: leitura.longeDoProduto,
+      ambiguos: leitura.ambiguos,
+      produtoTemCodigo: leitura.codigosDoProduto.length > 0,
+      inferencias: propagado.inferencias,
     };
   }
 

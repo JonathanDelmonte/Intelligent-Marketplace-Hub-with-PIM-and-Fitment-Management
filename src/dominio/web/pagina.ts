@@ -63,6 +63,37 @@ export function textoVisivel(html: string, limite = 200_000): string {
   ).slice(0, limite);
 }
 
+/**
+ * O texto visível **em linhas**: cada parágrafo, item de lista, linha de tabela e título
+ * numa linha própria. `textoVisivel` junta tudo numa linha só, e isso basta para casar;
+ * quem precisa saber o que está perto do quê — o catálogo que diz qual refil serve em
+ * qual aparelho — precisa da linha.
+ */
+export function linhasVisiveis(html: string, limite = 200_000): string {
+  const semCodigo = html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ');
+  const comQuebras = semCodigo
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(
+      /<\/(title|p|div|li|tr|h[1-6]|dt|dd|section|article|header|footer|blockquote|pre)>/gi,
+      '\n',
+    )
+    .replace(/<\/(td|th)>/gi, ' | ');
+  return decodificarEntidades(comQuebras.replace(/<[^>]*>/g, ' '))
+    .split('\n')
+    .map((linha) =>
+      linha
+        .replace(/\s+/g, ' ')
+        .replace(/(\s*\|\s*)+$/, '')
+        .trim(),
+    )
+    .filter((linha) => linha !== '')
+    .join('\n')
+    .slice(0, limite);
+}
+
 // ─── Dado estruturado ───────────────────────────────────────────────────────
 
 export interface OfertaDaPagina {
