@@ -15,8 +15,32 @@ import {
   type ConexaoDeTeste,
 } from '@/infra/banco/teste';
 import { centavos, reaisParaCentavos } from '@/lib/dinheiro';
+import type { Conferencia } from './conferencia';
 import { AUMENTO_QUE_AVISA_BP, FornecedorInvalido, RepositorioDeFornecedores } from './repositorio';
 import { CRITERIO_PADRAO } from './triagem';
+
+/** Uma conferência pronta, com ou sem a loja própria achada. */
+function conferencia(params: { readonly em: Date; readonly loja: boolean }): Conferencia {
+  return {
+    em: params.em.toISOString(),
+    cadastro: { tipo: 'sem_documento' },
+    vitrine: {
+      buscadoComo: 'Acme Distribuidora',
+      conferidas: params.loja ? ['ml'] : ['ml', 'shopee', 'amazon'],
+      lojas: params.loja
+        ? [
+            {
+              plataforma: 'ml',
+              titulo: 'Acme Distribuidora | Mercado Livre',
+              url: 'https://www.mercadolivre.com.br/loja/acme-distribuidora',
+            },
+          ]
+        : [],
+      indicios: [],
+      falha: null,
+    },
+  };
+}
 
 const TABELAS = [
   'fornecedor_preco_historico',
@@ -117,6 +141,74 @@ describe.skipIf(!temBancoDeTeste())('RepositorioDeFornecedores', () => {
 
   it('porId devolve nulo para quem não existe', async () => {
     expect(await repo.porId('00000000-0000-4000-8000-000000000000')).toBeNull();
+  });
+
+  describe('conferência de CNPJ e vitrine (7.3)', () => {
+    const AGORA = new Date('2026-09-24T12:00:00Z');
+
+    it('loja própria achada responde "vende direto" que estava em branco, e descarta', async () => {
+      const f = await criar();
+      const r = await repo.registrarConferencia(f.id, conferencia({ em: AGORA, loja: true }));
+
+      expect(r?.respondeu).toBe(true);
+      expect(r?.fornecedor).toMatchObject({
+        vendeDiretoMarketplace: true,
+        vendeDiretoFonte: 'm0_link',
+        vendeDiretoVerificadoEm: AGORA,
+      });
+      expect(r?.fornecedor.triagem.veredito).toBe('descartar');
+      expect(r?.fornecedor.conferencia?.vitrine.lojas).toHaveLength(1);
+    });
+
+    it('resposta dada à mão não é trocada; a conferência fica gravada ao lado', async () => {
+      const f = await criar();
+      await repo.responder(f.id, { vendeDiretoMarketplace: false });
+      const r = await repo.registrarConferencia(f.id, conferencia({ em: AGORA, loja: true }));
+
+      expect(r?.respondeu).toBe(false);
+      expect(r?.fornecedor).toMatchObject({
+        vendeDiretoMarketplace: false,
+        vendeDiretoFonte: 'manual',
+      });
+      expect(r?.fornecedor.conferencia?.vitrine.lojas).toHaveLength(1);
+    });
+
+    it('não achar loja não responde "não": a pergunta continua em aberto', async () => {
+      const f = await criar();
+      const r = await repo.registrarConferencia(f.id, conferencia({ em: AGORA, loja: false }));
+      expect(r?.respondeu).toBe(false);
+      expect(r?.fornecedor.vendeDiretoMarketplace).toBeNull();
+      expect(r?.fornecedor.conferencia?.em).toBe(AGORA.toISOString());
+    });
+
+    it('para conferir: o nunca conferido primeiro, e nem quem já foi descartado à mão', async () => {
+      const conferido = await repo.criar({ nome: 'Conferido', fonte: 'manual' });
+      const vencido = await repo.criar({ nome: 'Vencido', fonte: 'manual' });
+      const descartado = await repo.criar({ nome: 'Descartado', fonte: 'manual' });
+      const novo = await repo.criar({ nome: 'Novo', fonte: 'manual' });
+
+      await repo.registrarConferencia(conferido.id, conferencia({ em: AGORA, loja: false }));
+      await repo.registrarConferencia(
+        vencido.id,
+        conferencia({ em: new Date('2026-05-01T12:00:00Z'), loja: false }),
+      );
+      await repo.responder(descartado.id, { vendeDiretoMarketplace: true });
+
+      const fila = await repo.paraConferir(AGORA, 10);
+      expect(fila.map((f) => f.nome)).toEqual(['Novo', 'Vencido']);
+      expect((await repo.paraConferir(AGORA))[0]?.id).toBe(novo.id);
+    });
+
+    it('apagar a resposta à mão apaga também de quem ela era', async () => {
+      const f = await criar();
+      await repo.responder(f.id, { vendeDiretoMarketplace: true });
+      const apagado = await repo.responder(f.id, { vendeDiretoMarketplace: null });
+      expect(apagado).toMatchObject({
+        vendeDiretoMarketplace: null,
+        vendeDiretoFonte: null,
+        vendeDiretoVerificadoEm: null,
+      });
+    });
   });
 
   describe('preço', () => {

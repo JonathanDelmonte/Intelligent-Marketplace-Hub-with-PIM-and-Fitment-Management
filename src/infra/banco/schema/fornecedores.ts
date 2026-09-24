@@ -9,6 +9,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   smallint,
@@ -20,6 +21,7 @@ import {
   auditoria,
   canalContatoEnum,
   centavos,
+  fonteEnum,
   id,
   origemFornecedorEnum,
   procedencia,
@@ -54,8 +56,23 @@ export const fornecedor = pgTable(
      * tem que lembrar disso pelo operador.
      */
     vendeDiretoMarketplace: boolean('vende_direto_marketplace'),
-    /** Quando a verificação automática por nome e CNPJ rodou pela última vez. */
+    /**
+     * Quando a resposta de `vende_direto_marketplace` foi dada: à mão, ou pela conferência
+     * automática por nome e CNPJ (7.3) que achou a loja. A resposta envelhece.
+     */
     vendeDiretoVerificadoEm: timestamp('vende_direto_verificado_em', { withTimezone: true }),
+    /**
+     * De onde veio a resposta: `manual` é pessoa que perguntou ou olhou, e a conferência
+     * automática nunca a troca (CLAUDE.md, 3.3); `m0_link` é a conferência, que achou a
+     * loja pela busca.
+     */
+    vendeDiretoFonte: fonteEnum('vende_direto_fonte'),
+    /**
+     * A última conferência de CNPJ e vitrine (7.3): o que a Receita disse, e as lojas e
+     * indícios que a busca achou, com os links. Lida de volta com Zod
+     * (`dominio/fornecedores/conferencia`).
+     */
+    conferencia: jsonb('conferencia'),
 
     origem: origemFornecedorEnum('origem'),
     /** 0 a 5, alimentado por atraso real dos pedidos, não por impressão. */

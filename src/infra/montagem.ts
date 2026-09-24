@@ -21,6 +21,12 @@ import {
   ExecutorDeCompatibilidade,
   tarefaDeCompatibilidade,
 } from '@/dominio/compatibilidade/tarefa';
+import { conferirFornecedor } from '@/dominio/fornecedores/conferencia';
+import { RepositorioDeFornecedores } from '@/dominio/fornecedores/repositorio';
+import {
+  ExecutorDeConferencia,
+  tarefaDeConferencia,
+} from '@/dominio/fornecedores/tarefa-de-conferencia';
 import { GeradorDeEmbeddings } from '@/dominio/identidade/embedding';
 import { ExtratorDeRegistros } from '@/dominio/identidade/extracao';
 import { tarefaDeIdentidade } from '@/dominio/identidade/tarefa';
@@ -97,6 +103,8 @@ export interface Nucleo {
   /** Consome a fila de importação de pedido (M10). */
   readonly executorDePedidos: ExecutorDePedidos;
   readonly pedidos: RepositorioDePedidos;
+  /** Confere CNPJ e vitrine de fornecedor, um por vez (M5, 7.3). Parada sem rede. */
+  readonly executorDeConferencia: ExecutorDeConferencia;
   /** Consome a fila de investigação de alvo (M6). */
   readonly executorDoProspector: ExecutorDoProspector;
   /** O laço da investigação. A tela lê dele quais ferramentas existem. */
@@ -106,10 +114,10 @@ export interface Nucleo {
 
 /** Nome da tarefa composta, no log. */
 export const NOME_DA_TAREFA_COMPLETA =
-  'ingestao+extracao+embedding+identidade+compatibilidade+pedidos+prospector';
+  'ingestao+extracao+embedding+identidade+compatibilidade+pedidos+conferencia+prospector';
 
 /**
- * A tarefa que o sistema roda, com as três filas na ordem de prioridade.
+ * A tarefa que o sistema roda, com as filas e as tarefas em lote na ordem de prioridade.
  *
  * Existe aqui, e não no script do poller, porque **duas pontas a executam**: o
  * processo do poller e o botão "Processar agora" da tela de jobs. Enquanto o botão
@@ -132,6 +140,8 @@ export function tarefaCompleta(
     tarefaDeIdentidade(nucleo.executorDeIdentidade, registrador),
     tarefaDeCompatibilidade(nucleo.executorDeCompatibilidade, registrador),
     tarefaDePedidos(nucleo.executorDePedidos, registrador),
+    // Um fornecedor por vez, espaçado: o buscador gratuito recusa quem pergunta demais.
+    tarefaDeConferencia(nucleo.executorDeConferencia, registrador),
     // O prospector é o último da ordem de propósito: é o único que gasta dinheiro por
     // passo, e fila de dado novo não deve esperar investigação.
     tarefaDoProspector(nucleo.executorDoProspector, registrador),
@@ -249,6 +259,14 @@ export function montarNucleoCom(
     resolverPerfil,
   );
 
+  // A conferência de fornecedor sai para a internet — Receita e buscador —, então sem
+  // rede ela fica parada, e a suíte não bate em serviço de terceiro.
+  const rede = opcoes.rede;
+  const executorDeConferencia = new ExecutorDeConferencia(
+    new RepositorioDeFornecedores(db),
+    rede === undefined ? null : (f) => conferirFornecedor(f, { buscador: rede, receita: rede }),
+  );
+
   // O prospector recebe os investigadores da instalação — hoje só o de base local, que
   // é o único que roda sem rede e sem chave. Acrescentar ferramenta é acrescentar uma
   // linha em `prospector/registro.ts`, e a tela passa a mostrá-la como disponível sem
@@ -274,6 +292,7 @@ export function montarNucleoCom(
     compatibilidade,
     executorDePedidos,
     pedidos,
+    executorDeConferencia,
     executorDoProspector,
     prospector,
     dossies,

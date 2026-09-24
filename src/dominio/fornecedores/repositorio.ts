@@ -13,10 +13,16 @@
  */
 import { and, desc, eq, sql } from 'drizzle-orm';
 import type { PerfilId } from '@/dominio/catalogo/sku';
-import type { Fonte } from '@/dominio/procedencia';
+import { decidirEscrita, type Fonte } from '@/dominio/procedencia';
 import { centavos, type Centavos } from '@/lib/dinheiro';
 import type { Banco } from '@/infra/banco/cliente';
 import { fornecedor, fornecedorPrecoHistorico, fornecedorSku, sku } from '@/infra/banco/schema';
+import {
+  achouLojaPropria,
+  lerConferencia,
+  precisaDeConferencia,
+  type Conferencia,
+} from './conferencia';
 import { triarFornecedor, type CriterioDeTriagem, type Triagem } from './triagem';
 
 export const CANAIS = ['whatsapp', 'email', 'telefone'] as const;
@@ -62,6 +68,12 @@ export interface FornecedorGravado {
   readonly pedidoMinimoReais: Centavos | null;
   readonly pedidoMinimoUn: number | null;
   readonly vendeDiretoMarketplace: boolean | null;
+  /** Quando a resposta de "vende direto" foi dada. */
+  readonly vendeDiretoVerificadoEm: Date | null;
+  /** `manual` é quem perguntou; `m0_link`, a conferência que achou a loja. */
+  readonly vendeDiretoFonte: Fonte | null;
+  /** A última conferência de CNPJ e vitrine, com os links (7.3). */
+  readonly conferencia: Conferencia | null;
   /** Recalculada a cada leitura, nunca gravada. */
   readonly triagem: Triagem;
 }
@@ -93,6 +105,9 @@ interface LinhaDeFornecedor {
   readonly pedidoMinimoReais: number | null;
   readonly pedidoMinimoUn: number | null;
   readonly vendeDiretoMarketplace: boolean | null;
+  readonly vendeDiretoVerificadoEm: Date | null;
+  readonly vendeDiretoFonte: Fonte | null;
+  readonly conferencia: unknown;
 }
 
 /** Dinheiro que vem do banco passa pelo construtor, não por conversão de tipo. */
@@ -157,6 +172,9 @@ export class RepositorioDeFornecedores {
       pedidoMinimoReais: fornecedor.pedidoMinimoReais,
       pedidoMinimoUn: fornecedor.pedidoMinimoUn,
       vendeDiretoMarketplace: fornecedor.vendeDiretoMarketplace,
+      vendeDiretoVerificadoEm: fornecedor.vendeDiretoVerificadoEm,
+      vendeDiretoFonte: fornecedor.vendeDiretoFonte,
+      conferencia: fornecedor.conferencia,
     };
   }
 
@@ -164,6 +182,9 @@ export class RepositorioDeFornecedores {
     return {
       ...linha,
       pedidoMinimoReais: dinheiroDoBanco(linha.pedidoMinimoReais),
+      // jsonb é dado de outra versão do código também: forma que não se reconhece vira
+      // "sem conferência", e a próxima conferência grava por cima.
+      conferencia: lerConferencia(linha.conferencia),
       triagem: this.triar(linha),
     };
   }
@@ -219,7 +240,10 @@ export class RepositorioDeFornecedores {
             vendeDiretoMarketplace: respostas.vendeDiretoMarketplace,
             // Registrar **quando** se soube importa: a resposta envelhece, e
             // fornecedor que não vendia na vitrine ano passado pode vender hoje.
-            vendeDiretoVerificadoEm: new Date(),
+            vendeDiretoVerificadoEm: respostas.vendeDiretoMarketplace === null ? null : new Date(),
+            // E **quem** respondeu: resposta à mão a conferência automática não troca.
+            vendeDiretoFonte:
+              respostas.vendeDiretoMarketplace === null ? null : ('manual' as const),
           }),
     };
 
@@ -233,6 +257,77 @@ export class RepositorioDeFornecedores {
 
     const linha = alterados[0];
     return linha === undefined ? null : this.montar(linha);
+  }
+
+  /**
+   * Grava uma conferência de CNPJ e vitrine (7.3), e responde "vende direto" quando ela
+   * achou a loja própria.
+   *
+   * A resposta passa pela regra de procedência (CLAUDE.md, 3.3): pergunta em branco
+   * recebe o "sim"; resposta dada à mão fica como está, e a conferência fica gravada ao
+   * lado, com os links, para a pessoa olhar. Não achar loja não escreve nada na resposta —
+   * busca não prova ausência.
+   */
+  async registrarConferencia(
+    id: string,
+    conferencia: Conferencia,
+  ): Promise<{ readonly fornecedor: FornecedorGravado; readonly respondeu: boolean } | null> {
+    const atual = await this.porId(id);
+    if (atual === null) return null;
+
+    const em = new Date(conferencia.em);
+    const decisao = achouLojaPropria(conferencia)
+      ? decidirEscrita({
+          existente:
+            atual.vendeDiretoMarketplace === null
+              ? null
+              : {
+                  valor: atual.vendeDiretoMarketplace,
+                  procedencia: {
+                    // Resposta de antes desta coluna existir foi dada à mão.
+                    fonte: atual.vendeDiretoFonte ?? 'manual',
+                    coletadoEm: atual.vendeDiretoVerificadoEm ?? new Date(0),
+                  },
+                },
+          novo: { valor: true, procedencia: { fonte: 'm0_link', coletadoEm: em } },
+        })
+      : null;
+    const respondeu = decisao?.tipo === 'escrever';
+
+    const alterados = await this.db
+      .update(fornecedor)
+      .set({
+        conferencia,
+        ...(respondeu
+          ? {
+              vendeDiretoMarketplace: true,
+              vendeDiretoFonte: 'm0_link' as const,
+              vendeDiretoVerificadoEm: em,
+            }
+          : {}),
+        atualizadoEm: new Date(),
+      })
+      .where(eq(fornecedor.id, id))
+      .returning(this.colunas());
+
+    const linha = alterados[0];
+    return linha === undefined ? null : { fornecedor: this.montar(linha), respondeu };
+  }
+
+  /**
+   * Quem precisa de conferência automática agora, o nunca conferido primeiro.
+   *
+   * Lê a base inteira e filtra com a regra pura: fornecedor é base pequena — dezenas,
+   * poucas centenas —, e a regra de idade da conferência mora num lugar só.
+   */
+  async paraConferir(agora: Date, limite = 1): Promise<readonly FornecedorGravado[]> {
+    const todos = await this.listar(1_000);
+    const idade = (f: FornecedorGravado) =>
+      f.conferencia === null ? 0 : new Date(f.conferencia.em).getTime();
+    return todos
+      .filter((f) => precisaDeConferencia(f, agora))
+      .sort((a, b) => idade(a) - idade(b))
+      .slice(0, limite);
   }
 
   async porId(id: string): Promise<FornecedorGravado | null> {

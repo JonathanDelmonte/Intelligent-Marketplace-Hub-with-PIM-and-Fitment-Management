@@ -109,7 +109,7 @@ describe.skipIf(!temBancoDeTeste())('tarefa completa', () => {
     expect(jobs.every((j) => j.status === 'concluido')).toBe(true);
   });
 
-  it('a composição declara as cinco filas, na ordem de prioridade', () => {
+  it('a composição declara as tarefas, na ordem de prioridade', () => {
     // A ordem é a da prioridade, e o prospector é o último de propósito: é o único que
     // gasta dinheiro por passo, e fila de dado novo não espera investigação.
     const nucleo = montarNucleoCom(
@@ -119,7 +119,7 @@ describe.skipIf(!temBancoDeTeste())('tarefa completa', () => {
     );
     expect(tarefaCompleta(nucleo).nome).toBe(NOME_DA_TAREFA_COMPLETA);
     expect(NOME_DA_TAREFA_COMPLETA).toBe(
-      'ingestao+extracao+embedding+identidade+compatibilidade+pedidos+prospector',
+      'ingestao+extracao+embedding+identidade+compatibilidade+pedidos+conferencia+prospector',
     );
   });
 
