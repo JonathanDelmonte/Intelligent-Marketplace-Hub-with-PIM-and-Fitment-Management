@@ -168,6 +168,25 @@ export function lerReaisDigitados(texto: string | null | undefined): Centavos | 
   }
 }
 
+/** Até três dígitos inteiros e duas casas: o bastante para 100,00, e nada além. */
+const PERCENTUAL_DIGITADO = /^\d{1,3}(?:[.,]\d{1,2})?$/;
+
+/**
+ * Lê um percentual digitado por uma pessoa — `6`, `6,5`, `15,53%` — e devolve
+ * pontos-base. `null` quando não dá para ler.
+ *
+ * Mesma disciplina de `lerReaisDigitados`: vazio é nulo e não zero, forma ambígua é
+ * recusada, e mais de duas casas também, porque ponto-base é a precisão que o sistema
+ * guarda. Acima de 100% é recusado: alíquota de 150% é dedo errado, não alíquota.
+ */
+export function lerPercentualDigitado(texto: string | null | undefined): PontosBase | null {
+  const limpo = (texto ?? '').replace(/%/g, '').replace(/\s/g, '');
+  if (limpo === '' || !PERCENTUAL_DIGITADO.test(limpo)) return null;
+
+  const bp = percentualParaPontosBase(Number(limpo.replace(',', '.')));
+  return bp > 10_000 ? null : bp;
+}
+
 /** Converte para reais. Só usar na borda de apresentação. */
 export function centavosParaReais(valor: Centavos): number {
   return valor / 100;

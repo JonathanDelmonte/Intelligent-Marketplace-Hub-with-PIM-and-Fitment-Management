@@ -8,6 +8,7 @@ import {
   centavosParaReais,
   formatarBRL,
   formatarPontosBase,
+  lerPercentualDigitado,
   lerReaisDigitados,
   maior,
   menor,
@@ -287,6 +288,30 @@ describe('ratearPorPesos', () => {
     expect(() => ratearPorPesos(centavos(100), [])).toThrow(ValorMonetarioInvalido);
     expect(() => ratearPorPesos(centavos(100), [1, -1])).toThrow(ValorMonetarioInvalido);
     expect(() => ratearPorPesos(centavos(100), [1, Number.NaN])).toThrow(ValorMonetarioInvalido);
+  });
+});
+
+describe('lerPercentualDigitado', () => {
+  it('aceita o que a pessoa digita, com ou sem o sinal', () => {
+    expect(lerPercentualDigitado('6')).toBe(pontosBase(600));
+    expect(lerPercentualDigitado('6,5')).toBe(pontosBase(650));
+    expect(lerPercentualDigitado('15.53')).toBe(pontosBase(1553));
+    expect(lerPercentualDigitado(' 4,5 % ')).toBe(pontosBase(450));
+    expect(lerPercentualDigitado('100')).toBe(pontosBase(10_000));
+  });
+
+  it('vazio é nulo, não zero', () => {
+    expect(lerPercentualDigitado('')).toBeNull();
+    expect(lerPercentualDigitado(' % ')).toBeNull();
+    expect(lerPercentualDigitado(undefined)).toBeNull();
+  });
+
+  it('recusa mais de duas casas, forma ambígua e acima de 100%', () => {
+    expect(lerPercentualDigitado('6,555')).toBeNull();
+    expect(lerPercentualDigitado('6,5,5')).toBeNull();
+    expect(lerPercentualDigitado('-6')).toBeNull();
+    expect(lerPercentualDigitado('150')).toBeNull();
+    expect(lerPercentualDigitado('1000')).toBeNull();
   });
 });
 
