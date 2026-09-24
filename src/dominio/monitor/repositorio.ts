@@ -74,9 +74,20 @@ export class RepositorioDoMonitor {
    * que ela não tem, e inventar texto para ele seria pior que não mostrar.
    */
   async naoLidos(limite = 100): Promise<readonly Evento[]> {
+    return (await this.naoLidosComLeitura(limite)).map((l) => l.evento);
+  }
+
+  /**
+   * Os não lidos, cada um com a leitura por IA gravada nele (11.1) — o texto como está
+   * na coluna, que `leitura.ts` interpreta.
+   */
+  async naoLidosComLeitura(
+    limite = 100,
+  ): Promise<readonly { readonly evento: Evento; readonly leitura: string | null }[]> {
     const linhas = await this.db
       .select({
         id: monitorEvento.id,
+        leituraIa: monitorEvento.leituraIa,
         tipo: monitorEvento.tipoMudanca,
         entidadeTipo: monitorEvento.entidadeTipo,
         entidadeId: monitorEvento.entidadeId,
@@ -94,7 +105,7 @@ export class RepositorioDoMonitor {
       .orderBy(desc(monitorEvento.detectadoEm))
       .limit(limite);
 
-    return linhas.flatMap((l): Evento[] => {
+    return linhas.flatMap((l): { evento: Evento; leitura: string | null }[] => {
       if (!ehTipoDeMudanca(l.tipo)) return [];
       const antes = Number(l.valorAntes);
       const depois = Number(l.valorDepois);
@@ -102,23 +113,72 @@ export class RepositorioDoMonitor {
 
       return [
         {
-          id: l.id,
-          tipo: l.tipo,
-          sobre: l.vendedor ?? l.plataformaOuSite ?? l.titulo ?? 'origem não informada',
-          entidadeTipo: l.entidadeTipo,
-          entidadeId: l.entidadeId,
-          valorAntes: l.valorAntes,
-          valorDepois: l.valorDepois,
-          severidade: l.severidade,
-          detectadoEm: l.detectadoEm,
-          // Recalculado na leitura pelo mesmo motivo de sempre: é derivado dos dois
-          // valores, e guardar derivado é guardar duas verdades.
-          variacaoBp: temNumeros
-            ? proporcaoEmPontosBase(centavos(Math.abs(depois - antes)), centavos(antes), 'baixo')
-            : null,
+          evento: {
+            id: l.id,
+            tipo: l.tipo,
+            sobre: l.vendedor ?? l.plataformaOuSite ?? l.titulo ?? 'origem não informada',
+            entidadeTipo: l.entidadeTipo,
+            entidadeId: l.entidadeId,
+            valorAntes: l.valorAntes,
+            valorDepois: l.valorDepois,
+            severidade: l.severidade,
+            detectadoEm: l.detectadoEm,
+            // Recalculado na leitura pelo mesmo motivo de sempre: é derivado dos dois
+            // valores, e guardar derivado é guardar duas verdades.
+            variacaoBp: temNumeros
+              ? proporcaoEmPontosBase(centavos(Math.abs(depois - antes)), centavos(antes), 'baixo')
+              : null,
+          },
+          leitura: l.leituraIa,
         },
       ];
     });
+  }
+
+  /** Grava a mesma leitura em todos os eventos de um grupo. Devolve quantos mudaram. */
+  async gravarLeitura(ids: readonly string[], leitura: string): Promise<number> {
+    if (ids.length === 0) return 0;
+    const alterados = await this.db
+      .update(monitorEvento)
+      .set({ leituraIa: leitura, atualizadoEm: new Date() })
+      .where(inArray(monitorEvento.id, [...ids]))
+      .returning({ id: monitorEvento.id });
+    return alterados.length;
+  }
+
+  /**
+   * A série de preço recente de cada produto externo, do mais antigo para o mais novo:
+   * o que a leitura por IA precisa para dizer se a queda é tendência ou soluço.
+   */
+  async seriesDePreco(
+    ids: readonly string[],
+    desde: Date,
+    pontos: number,
+  ): Promise<ReadonlyMap<string, readonly PrecoObservado[]>> {
+    if (ids.length === 0) return new Map();
+    const linhas = await this.db
+      .select({
+        id: precoHistorico.produtoExternoId,
+        preco: precoHistorico.preco,
+        em: precoHistorico.coletadoEm,
+      })
+      .from(precoHistorico)
+      .where(
+        and(
+          inArray(precoHistorico.produtoExternoId, [...ids]),
+          gte(precoHistorico.coletadoEm, desde),
+        ),
+      )
+      .orderBy(desc(precoHistorico.coletadoEm));
+
+    const series = new Map<string, PrecoObservado[]>();
+    for (const l of linhas) {
+      const serie = series.get(l.id) ?? [];
+      if (serie.length >= pontos) continue;
+      serie.push({ preco: centavos(l.preco), em: l.em });
+      series.set(l.id, serie);
+    }
+    return new Map([...series].map(([id, serie]) => [id, [...serie].reverse()]));
   }
 
   /** Marca eventos como lidos. Devolve quantos mudaram. */

@@ -42,7 +42,12 @@ import { ExecutorDeIdentidade } from '@/dominio/identidade/tarefa';
 import { ResolvedorDeIdentidade } from '@/dominio/identidade/resolucao';
 import { Orquestrador } from '@/dominio/ingestao/orquestrador';
 import { IngestorDeProdutoExterno } from '@/dominio/ingestao/produto-externo';
+import { LeitorDoMonitor } from '@/dominio/monitor/leitura';
 import { RepositorioDoMonitor } from '@/dominio/monitor/repositorio';
+import {
+  ExecutorDeLeituraDoMonitor,
+  tarefaDeLeituraDoMonitor,
+} from '@/dominio/monitor/tarefa-de-leitura';
 import { MotorDoProspector } from '@/dominio/prospector/motor';
 import type { OpcoesDaRede } from '@/infra/web/rede';
 import { investigadoresDaInstalacao } from '@/dominio/prospector/registro';
@@ -103,6 +108,8 @@ export interface Nucleo {
   /** Consome a fila de importação de pedido (M10). */
   readonly executorDePedidos: ExecutorDePedidos;
   readonly pedidos: RepositorioDePedidos;
+  /** Lê os grupos do monitor por IA, em lote (M15, 11.1). Parada sem chave. */
+  readonly executorDeLeituraDoMonitor: ExecutorDeLeituraDoMonitor;
   /** Confere CNPJ e vitrine de fornecedor, um por vez (M5, 7.3). Parada sem rede. */
   readonly executorDeConferencia: ExecutorDeConferencia;
   /** Consome a fila de investigação de alvo (M6). */
@@ -114,7 +121,7 @@ export interface Nucleo {
 
 /** Nome da tarefa composta, no log. */
 export const NOME_DA_TAREFA_COMPLETA =
-  'ingestao+extracao+embedding+identidade+compatibilidade+pedidos+conferencia+prospector';
+  'ingestao+extracao+embedding+identidade+compatibilidade+pedidos+monitor+conferencia+prospector';
 
 /**
  * A tarefa que o sistema roda, com as filas e as tarefas em lote na ordem de prioridade.
@@ -140,6 +147,9 @@ export function tarefaCompleta(
     tarefaDeIdentidade(nucleo.executorDeIdentidade, registrador),
     tarefaDeCompatibilidade(nucleo.executorDeCompatibilidade, registrador),
     tarefaDePedidos(nucleo.executorDePedidos, registrador),
+    // Depois das filas de dado: divide a mesma cota gratuita, e dado novo vale mais que a
+    // hipótese sobre dado velho.
+    tarefaDeLeituraDoMonitor(nucleo.executorDeLeituraDoMonitor, registrador),
     // Um fornecedor por vez, espaçado: o buscador gratuito recusa quem pergunta demais.
     tarefaDeConferencia(nucleo.executorDeConferencia, registrador),
     // O prospector é o último da ordem de propósito: é o único que gasta dinheiro por
@@ -259,6 +269,16 @@ export function montarNucleoCom(
     resolverPerfil,
   );
 
+  const executorDeLeituraDoMonitor = new ExecutorDeLeituraDoMonitor(() => {
+    const llm = opcoes.llmDeJob?.();
+    return llm === undefined
+      ? undefined
+      : new LeitorDoMonitor(new RepositorioDoMonitor(db), {
+          llm: llm.servico,
+          modelo: llm.modeloDeJulgamento,
+        });
+  });
+
   // A conferência de fornecedor sai para a internet — Receita e buscador —, então sem
   // rede ela fica parada, e a suíte não bate em serviço de terceiro.
   const rede = opcoes.rede;
@@ -292,6 +312,7 @@ export function montarNucleoCom(
     compatibilidade,
     executorDePedidos,
     pedidos,
+    executorDeLeituraDoMonitor,
     executorDeConferencia,
     executorDoProspector,
     prospector,
