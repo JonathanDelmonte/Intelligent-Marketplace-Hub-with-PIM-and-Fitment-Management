@@ -243,6 +243,18 @@ describe.skipIf(!temBancoDeTeste())('RepositorioFiscal', () => {
     expect(depois.situacao).toBe('perto');
   });
 
+  it('CNPJ aberto no ano tem o teto proporcional, contando o mês de abertura', async () => {
+    // Aberto em julho: seis doze avos de R$ 81.000. Sem a data, a tela daria o teto
+    // cheio a quem só teve meio ano de CNPJ.
+    await conexao.db
+      .update(perfilVendedor)
+      .set({ abertoEm: new Date('2026-07-20T12:00:00Z') })
+      .where(eq(perfilVendedor.id, perfil));
+
+    expect((await repo.teto(perfil, 2026, SETEMBRO)).teto).toBe(reaisParaCentavos(40_500));
+    expect((await repo.teto(perfil, 2027, SETEMBRO)).teto).toBe(reaisParaCentavos(81_000));
+  });
+
   it('teto zerado no perfil não vira teto zero por acidente', async () => {
     // `teto_anual` nulo significa "usa o padrão", não "o teto é zero".
     const teto = await repo.teto(perfil, 2026, SETEMBRO);

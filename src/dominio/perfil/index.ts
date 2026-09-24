@@ -25,6 +25,7 @@ import { esquemaMarcaVisual, type MarcaVisual } from '@/config/marca';
 import type { ContextoDoVendedor, RegimeFiscal } from '@/dominio/precificacao/tipos';
 import { centavos } from '@/lib/dinheiro';
 import { pontosBase } from '@/lib/dinheiro';
+import { RepositorioDoNegocio, inicioDaJanelaDoMes } from './negocio';
 
 /**
  * `essencial-emporium` → `Essencial Emporium`.
@@ -77,22 +78,29 @@ export class PerfilNaoEncontrado extends Error {
  *   fica de fora, e o M8 avisa que não pode ratear o DAS. Zero seria pior que
  *   ausente, porque zero é uma afirmação — "não pago DAS" — e ausente é a
  *   verdade: "não sei quanto".
- * - **`unidadesPrevistasNoMes` não existe na tabela** e não é inventado aqui. Sem
- *   ele o M8 não rateia o DAS por unidade e diz isso. Virá do M10, quando houver
- *   histórico de pedido para contar.
+ * - **`unidadesPrevistasNoMes` não existe na tabela** e não é inventado aqui: vem da
+ *   contagem de unidades nos pedidos importados dos últimos 30 dias, e só entra quando
+ *   essa contagem é passada e é maior que zero. Sem ele o M8 não rateia o DAS por
+ *   unidade e diz isso — zero pedidos importados não é "vendo zero por mês", é "não sei".
  */
 export function contextoDoVendedorDe(params: {
   readonly regime: RegimeFiscal;
   readonly dasMensal: number | null;
   readonly aliquotaSimplesBp: number | null;
+  /** Unidades vendidas nos últimos 30 dias, quando contadas. */
+  readonly unidadesNoMes?: number | null;
 }): ContextoDoVendedor {
   const temCnpj = params.regime !== 'cpf';
+  const unidades = params.unidadesNoMes ?? null;
 
   return {
     regimeFiscal: params.regime,
     temCnpj,
     ...(params.regime === 'mei' && params.dasMensal !== null
-      ? { dasMensal: centavos(params.dasMensal) }
+      ? {
+          dasMensal: centavos(params.dasMensal),
+          ...(unidades !== null && unidades > 0 ? { unidadesPrevistasNoMes: unidades } : {}),
+        }
       : {}),
     ...(params.regime === 'simples' && params.aliquotaSimplesBp !== null
       ? { aliquotaSimples: pontosBase(params.aliquotaSimplesBp) }
@@ -100,8 +108,17 @@ export function contextoDoVendedorDe(params: {
   };
 }
 
-/** Carrega o perfil pelo slug. Lança quando não existe, com o que fazer. */
-export async function carregarPerfil(db: Banco, slug: string): Promise<PerfilAtivo> {
+/**
+ * Carrega o perfil pelo slug. Lança quando não existe, com o que fazer.
+ *
+ * `agora` marca a janela de 30 dias das unidades vendidas; é parâmetro para o teste
+ * poder fixá-la.
+ */
+export async function carregarPerfil(
+  db: Banco,
+  slug: string,
+  agora: Date = new Date(),
+): Promise<PerfilAtivo> {
   const linhas = await db
     .select({
       id: perfilVendedor.id,
@@ -120,6 +137,16 @@ export async function carregarPerfil(db: Banco, slug: string): Promise<PerfilAti
   const linha = linhas[0];
   if (linha === undefined) throw new PerfilNaoEncontrado(slug);
 
+  // Só o MEI com DAS rateia por unidade, então só nele a contagem roda — as outras
+  // telas carregam o perfil sem pagar uma consulta a mais.
+  const unidadesNoMes =
+    linha.regime === 'mei' && linha.dasMensal !== null
+      ? await new RepositorioDoNegocio(db).unidadesVendidas(
+          perfilId(linha.id),
+          inicioDaJanelaDoMes(agora),
+        )
+      : null;
+
   // Leitura tolerante do jsonb de marca: perfil com tema gravado em formato
   // antigo não pode impedir o sistema de abrir. Sem tema, cai no padrão do CSS.
   const visual = esquemaMarcaVisual.safeParse(linha.marcaVisual);
@@ -134,6 +161,7 @@ export async function carregarPerfil(db: Banco, slug: string): Promise<PerfilAti
       regime: linha.regime,
       dasMensal: linha.dasMensal,
       aliquotaSimplesBp: linha.aliquotaSimplesBp,
+      unidadesNoMes,
     }),
   };
 }

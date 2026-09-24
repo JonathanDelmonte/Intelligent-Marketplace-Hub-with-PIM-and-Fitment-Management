@@ -31,7 +31,7 @@ import { centavos, type Centavos } from '@/lib/dinheiro';
 import type { ProdutoParaClassificar } from './classificador';
 import { OBRIGATORIOS_EM_2027, estadoFiscal, type CampoFiscal, type EstadoFiscal } from './codigos';
 import { avaliarRegulacao, type AvaliacaoDeRegulacao } from './regulada';
-import { avaliarTeto, type AvaliacaoDoTeto } from './teto';
+import { avaliarTeto, mesDeAberturaNoAno, type AvaliacaoDoTeto } from './teto';
 
 export interface SkuFiscal {
   readonly id: string;
@@ -285,7 +285,7 @@ export class RepositorioFiscal {
       .limit(1);
 
     const [perfis] = await this.db
-      .select({ tetoAnual: perfilVendedor.tetoAnual })
+      .select({ tetoAnual: perfilVendedor.tetoAnual, abertoEm: perfilVendedor.abertoEm })
       .from(perfilVendedor)
       .where(eq(perfilVendedor.id, perfil))
       .limit(1);
@@ -295,6 +295,7 @@ export class RepositorioFiscal {
         receitaBruta: centavos(linha?.receitaBruta ?? 0),
         receitaExterna: centavos(linha?.receitaExterna ?? 0),
         tetoAnual: perfis?.tetoAnual === null ? null : centavos(perfis?.tetoAnual ?? 0),
+        mesDeAbertura: mesDeAberturaNoAno(perfis?.abertoEm ?? null, ano),
       },
       agora === undefined ? {} : { agora },
     );

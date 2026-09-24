@@ -7,6 +7,7 @@ import {
   TETO_MEI_ANUAL,
   avaliarTeto,
   mesNoFuso,
+  mesDeAberturaNoAno,
   tetoProporcional,
   type EntradaDoTeto,
 } from './teto';
@@ -55,6 +56,22 @@ describe('tetoProporcional', () => {
 
   it('mês fora da faixa devolve zero em vez de número absurdo', () => {
     expect(tetoProporcional(TETO_MEI_ANUAL, 13)).toBe(0);
+  });
+});
+
+describe('mesDeAberturaNoAno', () => {
+  it('conta o mês só no ano em que o CNPJ abriu', () => {
+    const abertura = new Date('2027-03-20T12:00:00Z');
+    expect(mesDeAberturaNoAno(abertura, 2027)).toBe(3);
+    expect(mesDeAberturaNoAno(abertura, 2028)).toBeNull();
+  });
+
+  it('antes de abrir não é teto zero: é ano sem teto de MEI a controlar', () => {
+    expect(mesDeAberturaNoAno(new Date('2027-03-20T12:00:00Z'), 2026)).toBeNull();
+  });
+
+  it('sem data, teto cheio', () => {
+    expect(mesDeAberturaNoAno(null, 2027)).toBeNull();
   });
 });
 

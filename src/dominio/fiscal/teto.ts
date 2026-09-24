@@ -95,6 +95,20 @@ export function tetoProporcional(teto: Centavos, mesDeAbertura: number | null): 
   return centavos(Math.trunc((teto * meses) / 12));
 }
 
+/**
+ * O mês de abertura que o teto do ano usa: o da data de abertura do CNPJ, **se** ele abriu
+ * no ano avaliado. Em qualquer outro ano, `null` — o teto cheio.
+ *
+ * CNPJ de ano anterior tem o ano inteiro de atividade. E data de abertura depois do ano
+ * avaliado também dá `null`, e não mês 13 (teto zero): nesse ano não havia CNPJ, então
+ * não havia teto de MEI a controlar, e um "teto estourado" na tela seria alarme falso.
+ */
+export function mesDeAberturaNoAno(abertoEm: Date | null, ano: number): number | null {
+  if (abertoEm === null) return null;
+  const [anoDaAbertura, mes] = abertoEm.toISOString().slice(0, 10).split('-').map(Number);
+  return anoDaAbertura === ano && mes !== undefined ? mes : null;
+}
+
 function situacaoDe(usadoBp: number): SituacaoDoTeto {
   if (usadoBp >= 10_000) return 'estourou';
   if (usadoBp >= AVISO_VERMELHO_BP) return 'perto';

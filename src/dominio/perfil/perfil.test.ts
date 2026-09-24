@@ -6,7 +6,7 @@
  * zero. Zero é uma afirmação; ausente é a verdade.
  */
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { perfilVendedor } from '@/infra/banco/schema';
+import { pedido, perfilVendedor } from '@/infra/banco/schema';
 import {
   abrirBancoDeTeste,
   limparTabelas,
@@ -57,9 +57,44 @@ describe('tradução para o contexto do M8', () => {
     expect('dasMensal' in contexto).toBe(false);
   });
 
+  it('MEI leva as unidades vendidas no mês, que o M8 usa para ratear o DAS', () => {
+    expect(
+      contextoDoVendedorDe({
+        regime: 'mei',
+        dasMensal: 7500,
+        aliquotaSimplesBp: null,
+        unidadesNoMes: 40,
+      }),
+    ).toEqual({ regimeFiscal: 'mei', temCnpj: true, dasMensal: 7500, unidadesPrevistasNoMes: 40 });
+  });
+
+  it('zero unidades contadas é "não sei", e fica de fora', () => {
+    // Nenhum pedido importado não quer dizer que não se vende nada. Com zero o M8
+    // ratearia sobre nada; ausente, ele avisa que falta a previsão.
+    const contexto = contextoDoVendedorDe({
+      regime: 'mei',
+      dasMensal: 7500,
+      aliquotaSimplesBp: null,
+      unidadesNoMes: 0,
+    });
+    expect('unidadesPrevistasNoMes' in contexto).toBe(false);
+  });
+
+  it('unidades só entram no MEI com DAS: é o único regime que rateia', () => {
+    for (const regime of ['cpf', 'simples'] as const) {
+      const contexto = contextoDoVendedorDe({
+        regime,
+        dasMensal: 7500,
+        aliquotaSimplesBp: 600,
+        unidadesNoMes: 40,
+      });
+      expect('unidadesPrevistasNoMes' in contexto, regime).toBe(false);
+    }
+  });
+
   it('nunca inventa unidades previstas no mês', () => {
-    // Não existe na tabela, e virá do M10 quando houver histórico de pedido.
-    // Inventar faria o M8 ratear o DAS sobre um número imaginário.
+    // Não existe na tabela: vem da contagem dos pedidos importados, e só quando ela é
+    // passada. Inventar faria o M8 ratear o DAS sobre um número imaginário.
     for (const regime of ['cpf', 'mei', 'simples'] as const) {
       const contexto = contextoDoVendedorDe({ regime, dasMensal: 7500, aliquotaSimplesBp: 600 });
       expect('unidadesPrevistasNoMes' in contexto, regime).toBe(false);
@@ -72,7 +107,7 @@ describe.skipIf(!temBancoDeTeste())('carregamento do perfil', () => {
 
   beforeEach(async () => {
     conexao ??= abrirBancoDeTeste();
-    await limparTabelas(conexao.db, ['perfil_vendedor']);
+    await limparTabelas(conexao.db, ['pedido', 'perfil_vendedor']);
   });
 
   afterAll(async () => {
@@ -96,6 +131,38 @@ describe.skipIf(!temBancoDeTeste())('carregamento do perfil', () => {
       temCnpj: true,
       dasMensal: 7500,
     });
+  });
+
+  it('MEI com DAS carrega as unidades vendidas nos últimos 30 dias', async () => {
+    const [linha] = await conexao.db
+      .insert(perfilVendedor)
+      .values({ slug: 'mei-com-venda', nome: 'Com venda', regime: 'mei', dasMensal: 7500 })
+      .returning({ id: perfilVendedor.id });
+    const dono = linha?.id ?? '';
+    const venda = (id: string, dia: string, qtd: number) => ({
+      perfilId: dono,
+      plataforma: 'ml' as const,
+      idExterno: id,
+      data: new Date(`${dia}T12:00:00Z`),
+      qtd,
+      precoBruto: 5000,
+      fonte: 'm1_planilha' as const,
+    });
+    await conexao.db
+      .insert(pedido)
+      .values([
+        venda('A', '2026-09-10', 2),
+        venda('B', '2026-09-20', 3),
+        venda('C', '2026-07-01', 10),
+      ]);
+
+    const perfil = await carregarPerfil(
+      conexao.db,
+      'mei-com-venda',
+      new Date('2026-09-24T15:00:00Z'),
+    );
+    // Duas peças e três peças na janela; as dez de julho ficam de fora.
+    expect(perfil.contextoDoVendedor.unidadesPrevistasNoMes).toBe(5);
   });
 
   it('slug que não existe lança dizendo o que fazer', async () => {
