@@ -11,7 +11,8 @@ o que fazer no próximo fim de semana.
 
 Organizado por **quem destrava**, não por módulo: é o eixo que muda a ação.
 
-Atualizado em 2026-09-24.
+Atualizado em 2026-09-24, no fim do dia — depois de fechadas todas as lacunas de
+funcionalidade que não dependem de API de plataforma nem de emissor de nota.
 
 ---
 
@@ -19,42 +20,36 @@ Atualizado em 2026-09-24.
 
 Nada aqui é problema de código. São decisões, contas e chaves.
 
-**O roadmap não tem mais nenhum item em ⬜.** As nove entregas que estavam assim passaram
-a 🔒 porque nenhuma delas pode começar neste ambiente, e "não começou" sugeria que era
-questão de tempo. As causas são as desta seção mais a rede (1.6) — e o que está em 🚧 é
-entrega cujo miolo está pronto e testado, esperando só a chamada externa.
+**O roadmap não tem item em ⬜, e o que sobra em 🔒 depende de fora.** API de plataforma
+(1.2), emissor de nota (1.5) e a base de GTIN do leitor (1.3) — três decisões do dono, as
+três adiadas por ele. O que está em 🚧 tem o código pronto e testado, e espera o primeiro uso
+de verdade: a chave de IA rodando (1.1) e uma exportação real de cada painel (2.1).
 
-### 1.1 Chave de LLM — o provedor está ligado, falta colar a chave
+### 1.1 Chave de IA — colada, com modelos gratuitos
 
-**Mudou em 24/09.** O dono criou uma chave no OpenRouter, e o provedor existe: com
-`LLM_API_KEY` preenchida no `.env`, o sistema fala com o OpenRouter
-(`src/infra/llm/openrouter.ts`), com um modelo padrão por finalidade — Sonnet 5 para
-julgamento e fiscal, Haiku 4.5 para extração, `text-embedding-3-small` para embedding — e
-cada um trocável por uma linha no `.env`. A chave é do dono e vive só no `.env` da máquina
-dele; nada no repositório a conhece.
+**Mudou duas vezes em 24/09.** O dono criou a chave no OpenRouter e colou no `.env` da
+máquina dele (ela vive só lá; nada no repositório a conhece). E decidiu: **só modelo
+gratuito** por enquanto — regra que virou a seção 3.7 do CLAUDE.md. O padrão de toda
+finalidade de texto é o roteador `openrouter/free`, que escolhe a cada pedido um modelo
+gratuito disponível; o de embedding é `liquid/lfm-2.5-embedding-350m:free`. Trocar por um
+modelo escolhido, inclusive pago, é uma linha no `.env`.
 
-**O que acende quando a chave entra:** a sugestão de NCM/CEST da tela Fiscal (9.1) e o
-julgamento de par na resolução de identidade (5.4), que a fila passa a chamar com orçamento
-novo a cada job. Se a chamada falha — chave recusada, conta sem crédito, modelo com nome
-errado —, a tela Fiscal diz o motivo em vez de "não deu".
+**O que falta do dono, uma vez só:** liberar os modelos gratuitos em
+openrouter.ai/settings/privacy — sem isso o OpenRouter recusa os gratuitos —, dar `git pull`
+e reabrir o atalho.
 
-**O que continua parado mesmo com a chave, porque falta código e não chave:** a extração de
-registro estruturado (5.1) e a geração de embedding (5.2), os extratores de ingestão 3.2 a
-3.6, a leitura do monitor (11.1) e o raciocínio do prospector (M6). O assento está pronto
-para todos; falta, em cada um, o lugar que chama. **A 5.1 é a próxima:** sem ela, planilha
-sem EAN e catálogo de distribuidor não ligam a nada (ver 3.2).
+**O que acende com a chave, sozinho, pelo processador da fila:** a leitura de marca, peça e
+aparelho dos títulos (5.1, 20 títulos por pedido), o vetor de cada produto (5.2, 50 por
+pedido), o julgamento de "mesmo produto" (5.4, 10 pares por pedido), a sugestão de NCM/CEST
+na tela Fiscal (9.1), a hipótese do monitor (11.1, 8 grupos por pedido) e a leitura de
+imagem de tabela (3.6). Tudo em lote porque a cota do gratuito é de 20 pedidos por minuto e
+50 por dia — 1.000 por dia depois de uma compra única de US$ 10 em créditos. Cota esgotada é
+teto: o trabalho para e continua quando ela volta, sem perder o que já leu.
 
-**Não verificado contra o OpenRouter de verdade:** a política de rede deste ambiente
-bloqueia o site. O pedido foi conferido com o `fetch` real contra um servidor local que
-imita a API, e o formato do custo (`usage.cost`, em dólar, em toda resposta) contra a
-documentação do OpenRouter. A primeira chamada com a chave do dono é o teste que falta.
-
-**O que não depende dela, e por isso está pronto e testado:** o contrato do registro
-extraído com a regra de `null` em vez de invenção, a forma canônica, o reconhecedor de
-código de fabricante, o casamento por GTIN e por marca com código de peça, a busca de
-vizinhos por `pgvector` (5.3, exercitada com vetor sintético), o roteamento por limiar, a
-fila de revisão com tela, o exemplo few-shot equilibrado (5.6), o cache por conteúdo (5.7)
-e o registro de custo com teto de orçamento.
+**Não verificado contra o OpenRouter de verdade:** a rede deste ambiente recusa o site. O
+pedido foi conferido contra um servidor local que imita a API e contra a documentação; se o
+roteador gratuito não aceitar imagem, a revisão da imagem diz isso e aponta
+`LLM_MODELO_VISAO`. A primeira execução na máquina do dono é o teste que falta.
 
 **O que não dá para calibrar sem uso:** `DISTANCIA_MAXIMA_PADRAO = 0.35` (o corte de
 vizinhança), `VIZINHOS_PADRAO = 20` e o mapeamento `CONFIANCA_POR_CERTEZA`
@@ -64,11 +59,10 @@ houver base com embedding de verdade. `par_identidade.distancia_bp` guarda a dis
 cada par decidido — é com algumas centenas dessas linhas que o corte sai de palpite para
 medida.
 
-**Quanto custa:** a disciplina do ADR 0005 exige teto de orçamento por execução. O padrão
-está em `LLM_ORCAMENTO_PADRAO_CENTAVOS=500`, R$ 5 por execução. O OpenRouter cobra em
-dólar, e o custo de cada chamada vira centavos de real por `LLM_COTACAO_DOLAR_CENTAVOS=600`
-— cotação configurada acima da corrente, para o erro ser gastar menos que o teto, e
-arredondada para cima por chamada.
+**Quanto custa:** nada, com os gratuitos. O teto por execução continua valendo
+(`LLM_ORCAMENTO_PADRAO_CENTAVOS=500`), e conta chamadas mesmo quando o modelo é gratuito —
+agente sem teto não roda (ADR 0005). Se um dia entrar modelo pago, o custo em dólar vira
+centavos de real por `LLM_COTACAO_DOLAR_CENTAVOS=600`, cotação acima da corrente.
 
 ### 1.2 APIs das plataformas — adiado pelo dono
 
@@ -130,7 +124,7 @@ dono.
 
 ---
 
-### 1.5 Emissor de NF-e — trava a 9.5 (🔒), com as opções levantadas
+### 1.5 Emissor de NF-e — adiado pelo dono (9.5 🔒), com as opções levantadas
 
 A especificação é explícita: "integrar emissor existente, **não escrever**. Começar pelo
 emissor gratuito da SEFAZ do estado."
@@ -170,30 +164,27 @@ gratuito do Sebrae enquanto forem poucas. Quando Shopee e Amazon pesarem, passar
 que emite sozinho nas três. Nos três casos o sistema faz a parte difícil — NCM, CST e
 cClassTrib certos por produto —, e a 9.5 vira mandar esse cadastro ao emissor escolhido.
 
-**O que falta do dono para fechar:** o estado (UF), quantas vendas por mês em cada
-plataforma, e se já há certificado A1 e inscrição estadual.
+**Decisão do dono, em 24/09: depois.** Ainda não há CNPJ, nota fiscal nem produto real — é
+tudo teste —, e a emissão fica para quando houver. O que a decisão do emissor pedia (estado,
+vendas por mês, certificado, inscrição) passou a ser informado em **Meu negócio**, e não no
+chat; a tela Fiscal mostra o emissor recomendado com esses dados, gratuito primeiro, e se
+refaz quando um dado muda. A 9.5 continua 🔒 até o dono decidir emitir.
 
-### 1.6 Rede de saída — trava a 10.4 (🔒) e o prospector com ferramenta de web
+### 1.6 Rede de saída — resolvida no código; só este ambiente continua sem
 
-A política de rede do ambiente remoto libera registries de pacote e as APIs da
-Anthropic, e recusa o resto: `curl https://pncp.gov.br/...` volta
-`CONNECT tunnel failed, response 403`.
+O que estava parado por falta de rede **foi escrito em 24/09**, todo com serviço gratuito e
+sem chave: o buscador (DuckDuckGo em HTML), o leitor de página, a consulta de CNPJ
+(BrasilAPI) e as compras públicas (PNCP, 10.4); a leitura de link de anúncio, de lista, de
+catálogo e de PDF (3.2 a 3.5); o manual, a página oficial, o catálogo e o fórum como fontes
+de compatibilidade (6.10, 6.11); e a conferência de fornecedor por CNPJ e vitrine (7.3). A
+saída para a rede é uma só (`infra/web/rede.ts`), com tempo limite, teto de tamanho e nada de
+endereço da rede local.
 
-**O que fica parado:** a consulta ao PNCP (10.4), os extratores de anúncio e de listagem
-(3.2 e 3.3), o manual do fabricante e a página oficial como fontes de evidência (6.10), o
-fórum e o catálogo de distribuidor (6.11), a verificação de fornecedor por nome e CNPJ
-(7.3), e — quando o executor do prospector existir — as famílias de hipótese que
-dependem de `busca_web` e `ler_pagina`, que são cinco das sete.
-
-**O que não depende dela, e por isso está pronto:** a máquina de fronteira inteira, o
-dossiê, o orçamento, a estatística de preço de referência do PNCP e o casamento de
-descrição. O loop já sabe **pular** item cuja ferramenta não está disponível, em vez de
-gastar passo para descobrir no meio — então um prospector rodando só com `base_local`
-funciona, com menos famílias.
-
-**A conclusão errada a evitar:** não é que o PNCP não sirva. Ele serve, e o código para
-usá-lo está escrito e testado contra respostas sintéticas. O que falta é sair para a
-rede.
+Na máquina do dono a rede funciona. O que fica sem rede é **este** ambiente de
+desenvolvimento, que recusa os quatro serviços (`CONNECT tunnel failed, response 403`) — por
+isso cada um foi testado com o formato de resposta conferido contra a documentação e contra
+o código de quem já os consome, e a primeira execução de verdade é na máquina do dono (ver
+2.4).
 
 ---
 
@@ -239,29 +230,42 @@ veredito sai `sem_dado`, que é correto e inútil.
 
 **O que destrava:** a 2.1. As duas se resolvem com a mesma meia hora.
 
+### 2.4 Os serviços de fora nunca foram chamados de verdade
+
+DuckDuckGo, BrasilAPI, PNCP e OpenRouter foram alcançados só por dublê, com o formato de
+resposta conferido contra documentação e contra quem já os consome — a rede daqui recusa os
+quatro. O que pode surpreender na primeira execução: a página de resultado do buscador mudar
+de marcação (os resultados viriam vazios, e a conferência de fornecedor diria "nada achado"
+sempre), o roteador gratuito não aceitar imagem, ou o endereço de loja de um marketplace ter
+outra forma (ver o diário, 7.3). Cada caso cai num caminho previsto — revisão com o motivo,
+ou "procurei e não achei" —, e nenhum derruba o resto.
+
+**O que destrava:** usar. Um fornecedor conferido, um alvo investigado no garimpo e um print
+de tabela enviado, na máquina do dono, dizem se os formatos batem.
+
 ---
 
 ## 3. O que falta, por fase
 
-A tabela desta seção estava parada numa foto antiga — dizia que as fases 5 a 12 não tinham
-sido construídas, com a maior parte delas pronta. Refeita em 24/09 a partir do estado de cada
-entrega no roadmap: o que falta em cada fase, e o que trava. O que tem trava aponta para a
-seção 1 ou 2; o resto é código por escrever.
+Refeita no fim de 24/09, depois de fechadas todas as lacunas de funcionalidade que não
+dependem de fora. O que sobra em cada fase, e o que trava.
 
 | Fase | O que falta | Trava |
 | --- | --- | --- |
 | 2 | Sonda de capacidades batendo em endpoint (2.5); OAuth (2.6b) | APIs adiadas pelo dono (1.2) |
-| 3 | Extratores de anúncio, listagem, catálogo, PDF e imagem (3.2 a 3.6); colunas confirmadas das planilhas (3.7) | Rede (1.6), a extração por LLM, e uma exportação de cada painel (2.1) |
+| 3 | Colunas confirmadas das planilhas (3.7) | Uma exportação de cada painel (2.1) |
 | 4 | Base pública de GTIN com NCM (4.4) | Leitor por último, por decisão (1.3) |
-| 5 | Extração por LLM (5.1) e geração de embedding (5.2) | Código — é o próximo passo com a chave (1.1) |
-| 6 | Manual, página oficial, fórum e distribuidor como fontes de evidência (6.10, 6.11) | Rede (1.6) |
-| 7 | Verificação de fornecedor por nome e CNPJ (7.3); confiabilidade por atraso real (7.5) | Rede (1.6); pedidos com data prometida e real |
+| 5 | Calibrar os cortes de vizinhança e de confiança | Uso com a chave (1.1) |
 | 8 | Etiqueta e envio ao fornecedor no dropship (8.8) | API do ML (1.2) |
-| 9 | Emissor de NF-e (9.5) | Decisão do dono (1.5) |
-| 10 | Cinco das sete ferramentas do garimpo, entre elas o PNCP (10.4) | Rede (1.6) e LLM (1.1) |
-| 11 | Leitura do monitor por LLM (11.1); envio da resposta ao comprador (11.3) | Código com a chave; API do ML |
+| 9 | Emissor de NF-e (9.5) | Adiado pelo dono (1.5) |
+| 10 | Visão no garimpo | O garimpo não tem de onde receber imagem |
+| 11 | Envio da resposta ao comprador (11.3) | API do ML (1.2) |
 | 12 | Adaptadores de Shopee e Amazon por API | Adiado pelo dono (1.2) |
 | Casa | Desenho novo nas outras catorze telas (C.17) | Retorno do dono sobre o piloto |
+
+As fases 6 e 7 não têm mais nada. **Toda funcionalidade que não depende de API de
+plataforma nem de emissor de nota está construída** — o que o dono pediu antes de mexer na
+interface.
 
 ### 3.1 Telas que não existem
 
@@ -303,26 +307,17 @@ sem interface —, e o que ele mostra é que **tela não é acabamento**: ligar 
 achou quatro defeitos em uma tarde, incluindo um campo de margem que pedia 0,25% quando
 se digitava 25.
 
-### 3.2 O grafo cresce sozinho, mas a via mais valiosa dele espera extração
+### 3.2 O grafo cresce sozinho — e, com a chave, pela via mais valiosa
 
 A resolução tem tipo de job, a ingestão enfileira uma por ocorrência gravada, e o poller
-consome as duas filas — ingestão primeiro, identidade depois. Verificado rodando:
-planilha do Mercado Livre, `npm run poller --uma-vez`, três ocorrências, três jobs
-consumidos, duas do mesmo GTIN ligadas.
+consome as filas na ordem de prioridade. A via determinística mais valiosa do M3 — a que
+liga `PA21G` do anúncio a `EF-ELX-21` do distribuidor pela chave `marca|modelo` — precisava
+de marca e código lidos do título, e isso é a extração por IA (5.1), que existe desde 24/09:
+vinte títulos por pedido, com o que já tem marca e modelo resolvido antes, sem pedir.
 
-**O que esse teste de verdade mostrou, e nenhum teste unitário mostraria:** as três
-ocorrências ficaram com forma canônica **vazia** e chave de agrupamento **nula**. O
-importador de planilha copia colunas; extrair `{tipo, marca, modelo}` de um título é
-trabalho do extrator por LLM (3.2 da fase 3, sem chave).
-
-Ou seja: a via determinística mais valiosa do M3 — a que liga `PA21G` do anúncio a
-`EF-ELX-21` do distribuidor — está construída, testada e **sem dado para morder** até
-existir extração. O GTIN cobre o resto, e é por isso que ele é a primeira via e não a
-segunda. Planilha do ML traz EAN; catálogo de distribuidor em PDF não traz nada disso, e
-é justamente ele que precisa da extração.
-
-**Consequência prática para quem usa hoje:** importar planilha com EAN já agrupa. Importar
-catálogo sem EAN acumula ocorrência que não liga a nada até a chave de LLM entrar.
+**Consequência prática:** importar planilha com EAN agrupa na hora; catálogo sem EAN agrupa
+quando a extração passa por ele — sozinha, com a chave, e parando quando a cota do dia
+acaba. A tela de juntar iguais diz quantas ofertas esperam essa leitura.
 
 ### 3.3 O que falta para hospedar fora da máquina
 
@@ -400,23 +395,18 @@ por túnel.
 
 ---
 
-### 3.4 Três das cinco fontes de evidência de compatibilidade
+### 3.4 As cinco fontes de evidência de compatibilidade — feito
 
-A especificação lista cinco fontes para M4: manual do fabricante, página oficial,
-descrição de concorrente, fórum e catálogo de distribuidor. **Duas estão
-construídas** — anúncio de concorrente (automática, a partir do que a ingestão já
-capturou) e entrada manual, que cobre o caso de quem tem o manual na mão.
+**Fechada em 24/09.** Das cinco fontes que a especificação lista para M4, duas existiam —
+anúncio de concorrente, automático, e decisão na tela. As outras três (manual do
+fabricante, página oficial, e fórum ou catálogo de distribuidor) entraram juntas, pelo
+formulário "Trazer de um manual, página, catálogo ou fórum" na ficha de cada produto: PDF,
+link ou texto colado.
 
-As três que faltam são todas o mesmo trabalho: buscar, baixar e ler página ou PDF.
-É literalmente o prospector da fase 10, e construir meio prospector aqui seria
-construí-lo duas vezes. A base já aceita as cinco fontes, com força graduada e
-teto por tipo, então quando a coleta existir é só chamar `registrarEvidencia` com
-o tipo certo — nada de schema muda.
-
-**Consequência prática hoje:** a confiança sobe por concorrente, e três
-concorrentes concordando publicam (0,80, a âncora da especificação). Um manual de
-fabricante publicaria sozinho, e é o caminho mais rápido para uma ficha completa —
-mas ele entra à mão, uma linha por vez.
+A regra que decide a força está no diário: a fonte precisa citar o código do produto. Manual
+e página oficial que citam publicam sozinhos — é o caminho mais rápido para uma ficha
+completa —; os que não citam vão para a fila com o trecho. Catálogo e fórum só contam o
+aparelho que está na seção do produto.
 
 ### 3.5 Seletor de ficha e exportação — feito
 
@@ -484,35 +474,18 @@ Fiscal — ganhou tela em 24/09 (ver 3.1).
 
 ---
 
-### 3.8 As fases 10 e 11 têm tela, e o prospector tem uma ferramenta
+### 3.8 As fases 10 e 11 têm tela, e o garimpo tem cinco ferramentas
 
 **Fechado para a fase 11.** As três telas existem: `/monitor` (o que mudou, agrupado por
-vendedor e semana, e o que vale publicar hoje), `/perguntas` (dúvida repetida e o que
-acrescentar na descrição) e `/afiliados` (fila espaçada, teto do dia e o que o grupo
-deu). O envio ao grupo continua manual, e é de propósito: canal é decisão do dono, e a
-tela registra a hora da publicação porque é dela que sai o intervalo até a próxima.
+vendedor e semana — com a hipótese da IA embaixo da leitura por regra desde 24/09 —, e o
+que vale publicar hoje), `/perguntas` (dúvida repetida e o que acrescentar na descrição) e
+`/afiliados` (fila espaçada, teto do dia e o que o grupo deu). O envio ao grupo continua
+manual, e é de propósito: canal é decisão do dono.
 
-**Ligar a tela achou o que o teste não achava.** O monitor não tinha quem escrevesse
-nele — `monitor_evento` existia desde a fase 0 e a ingestão detectava mudança de preço
-sem registrar, então as regras liam tabela vazia para sempre. A de perguntas exigiu
-tabela nova, porque a conta de repetição precisa de histórico. A de afiliados achou três
-frases de domínio com `(s)` de plural, uma delas errada. Está tudo no diário de 15/09.
-
-**A fase 10 também tem tela**, `/garimpo`: ferramenta por ferramenta o que dá para
-investigar hoje, os dossiês com gasto contra teto e motivo de parada, e abrir um alvo com
-o teto declarado antes de começar.
-
-**O executor existe desde 16/09.** "Investigar" enfileira, o poller roda o laço, e o
-dossiê aparece com os achados. A ferramenta que roda é a **base local**, que mineira as
-ocorrências já coletadas e responde duas das sete perguntas — "em que mais serve" e "que
-outras peças" —, cada achado com a URL do anúncio de onde veio, custo zero.
-
-**O que falta são as outras cinco ferramentas.** Buscador, leitor de página e consulta de
-CNPJ precisam ser escritos e precisam de rede de saída (ver 3.3); o sensor de PNCP é 🔒
-porque a política daqui recusa `pncp.gov.br`; e a visão precisa de chave de LLM **e** de
-um caminho de imagem que o prospector não tem. Então duas das sete perguntas dão para
-investigar, e a tela diz ferramenta por ferramenta o que falta — com o nome do que
-alguém tem de escrever, em vez de um "indisponível" que manda a pessoa procurar.
+**A fase 10 tem tela e cinco das seis ferramentas**, todas gratuitas: base local,
+buscador, leitor de página, consulta de CNPJ e PNCP. Com elas as sete perguntas do garimpo
+dão para investigar. Falta a visão, porque o garimpo não tem de onde receber imagem — a
+leitura de imagem que existe é a da ingestão (3.6), para tabela de fornecedor.
 
 Registrar um investigador é uma linha em `prospector/registro.ts`. Os dossiês que já
 estão na fila são reencaminhados para a ferramenta nova na retomada, sem migração de
@@ -540,15 +513,6 @@ frete e portanto a margem.
 **Mitigação:** a tela mostra as três presunções abaixo do veredito.
 **Sai quando:** o SKU tiver peso cadastrado (existe coluna) e houver histórico de
 pedido para medir devolução real (M10).
-
-### 4.3 `unidadesPrevistasNoMes` ausente, e o M8 avisa
-
-O rateio do DAS do MEI por unidade precisa saber quantas unidades se vende por mês.
-A coluna não existe, e o valor **não é presumido** — fica ausente, e o M8 emite
-`das_sem_unidades_previstas`.
-
-**Consequência:** todo cálculo de margem de MEI carrega esse aviso.
-**Sai quando:** M10 der histórico de pedido para contar.
 
 ### 4.4 Teto de upload de 8 MB contra 32 MB do armazenamento
 
@@ -636,6 +600,24 @@ cadastrados logo abaixo do formulário, então a duplicata é visível na hora.
 **Quando deixa de servir:** no primeiro cadastro em volume — importação de catálogo
 de distribuidor, por exemplo — ou no dia em que houver uma segunda pessoa
 cadastrando.
+
+### 4.10 Feriado conta como dia útil na confiabilidade do fornecedor
+
+A nota de confiabilidade (7.5) mede o atraso contra o prazo prometido em dias úteis, e não
+há calendário de feriados no sistema: feriado conta como dia útil. O erro é a favor do
+fornecedor — um pedido postado no dia seguinte a um feriado conta como um dia a menos de
+atraso do que foi.
+
+**Sai quando:** a nota de algum fornecedor ficar na fronteira de um corte por causa de
+feriado — aí um calendário nacional simples resolve.
+
+### 4.11 A coluna `fornecedor.confiabilidade` sem uso
+
+A confiabilidade é medida na leitura, por perfil, porque pedido é do perfil e fornecedor é
+compartilhado; uma nota gravada no fornecedor misturaria os perfis. A coluna antiga saiu do
+tipo do repositório e ficou na tabela, para não exigir migração.
+
+**Sai quando:** a próxima migração que mexer em `fornecedor` pode apagá-la junto.
 
 ---
 

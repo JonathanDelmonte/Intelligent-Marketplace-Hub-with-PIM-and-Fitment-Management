@@ -288,6 +288,96 @@ inteira, e o botão desce para baixo dela.
 
 ---
 
+## 2026-09-24 — Tudo gratuito e em lote: dados do negócio, IA, garimpo e ingestão
+
+O dono decidiu três coisas no mesmo recado: **só modelo gratuito** por enquanto (opção paga
+entra depois, como opção — virou a seção 3.7 do CLAUDE.md); a nota fiscal fica para depois,
+porque ainda não há CNPJ, nota nem produto real; e os dados do negócio — estado, vendas do
+mês — ele informa **no aplicativo**, e não no chat. Pediu também as lacunas de
+funcionalidade fechadas antes de mexer na interface. Esta seção junta o que saiu disso até a
+conferência de fornecedor, que tem seção própria acima.
+
+### 🔀 O padrão é o roteador `openrouter/free`, e não um modelo gratuito com nome
+
+A lista de modelos gratuitos do OpenRouter muda sem aviso — os gratuitos de Llama, Qwen e
+DeepSeek saíram do catálogo em 2026 —, e um nome fixo no código seria um sistema que para de
+funcionar sozinho. O roteador escolhe, a cada pedido, um gratuito disponível, e o `llm_call`
+grava qual respondeu. Para embedding não há roteador: o padrão é
+`liquid/lfm-2.5-embedding-350m:free`, de 1024 dimensões, completado com zeros até as 1536 do
+índice — o que não muda a distância de cosseno, e o teste confere. A cota do gratuito (20
+pedidos por minuto, 50 por dia; 1.000 por dia depois de uma compra única de US$ 10) é teto:
+cota esgotada para a execução até a hora que o provedor diz, e pedido recusado também conta.
+O gratuito exige liberar os modelos gratuitos em openrouter.ai/settings/privacy.
+
+### 🔀 Os dados do negócio moram em "Meu negócio"
+
+Estado, regime, CNPJ ou CPF, data de abertura, inscrição estadual e certificado digital, com
+o CNPJ conferido pelo dígito (inclusive o alfanumérico de 2026). O volume de vendas não é
+perguntado: sai dos pedidos importados, dos últimos 30 dias. Com isso o teto do MEI passou a
+ser proporcional ao mês de abertura, o DAS passou a ser rateado pelas unidades vendidas de
+verdade, e o emissor de nota recomendado sai do que o sistema já sabe — gratuito primeiro:
+emissor do Sebrae, o integrado do Mercado Livre para venda lá, e o hub pago só acima de 30
+notas por mês fora do Mercado Livre, e mesmo assim com o caminho gratuito dito junto.
+
+### 🔀 Em lote: 20 títulos, 10 pares e 50 textos por pedido
+
+Com 50 pedidos por dia, um pedido por produto não passa de 50 produtos. A extração de
+registro manda 20 títulos por pedido; o julgamento de "mesmo produto", 10 pares; o embedding,
+50 textos. O determinístico vem antes — título que já tem marca e modelo não é perguntado,
+título igual a um já lido copia a leitura, texto que já tem vetor no mesmo modelo é copiado.
+Resposta que não serve para o lote inteiro faz o próximo ter a metade do tamanho.
+
+### 🐛 A nova tentativa perguntava a mesma coisa, e o cache devolvia a mesma resposta ruim
+
+Resposta fora do formato é gravada e vira cache — é o que explica a conta. O efeito
+colateral apareceu no teste da extração: o item que voltava sem leitura era perguntado de
+novo sozinho, com a mesma entrada, e recebia do cache a mesma resposta vazia, para sempre. O
+número da tentativa entra na pergunta a partir da segunda. Virou regra de todo pedido em lote
+depois disso — o monitor e a imagem de tabela fazem igual.
+
+### 🐛 O embedding saía um pedido por produto
+
+O teste de ponta a ponta pegou: a forma canônica, de onde o vetor sai, era calculada no job
+de identidade de cada produto, e o gerador só via um produto pronto por vez. O gerador agora
+calcula as formas canônicas que faltam antes de selecionar o lote — de graça, sem IA.
+
+### 🐛 O `next build` recusou o que o `tsc` aceitou
+
+O PDF de teste era `Uint8Array` genérico, e os tipos do Next não aceitam isso como corpo de
+`Response`; o `tsc` do projeto aceitava. Declarar `Uint8Array<ArrayBuffer>` resolveu. Lição:
+mudança de tipo em borda com o Next pede `npm run build` antes do push, e não só o `check`.
+
+### 🔀 As ferramentas do garimpo são gratuitas e sem chave
+
+Buscador (a versão HTML do DuckDuckGo), leitor de página (dado estruturado primeiro, texto
+depois, sem IA), consulta de CNPJ (BrasilAPI) e compras públicas (PNCP). A saída para a rede é
+uma só (`infra/web/rede.ts`): tempo limite, teto de tamanho, só http e https, e nada de
+endereço da rede local — o leitor abre endereço escrito por terceiros, e uma página
+apontando para o roteador não pode passar.
+
+### ❓ Nenhum dos quatro serviços foi alcançado daqui
+
+A rede deste ambiente recusa o DuckDuckGo, a BrasilAPI, o PNCP e o OpenRouter (403 do
+proxy). O formato de cada resposta foi conferido contra a documentação pública e contra o
+código de quem já consome cada serviço, e os testes usam `fetch` falso com esse formato. A
+primeira execução de verdade é na máquina do dono.
+
+### 🔀 A ingestão lê link, lista, texto colado e PDF — sem IA
+
+Link de anúncio ou de catálogo vira produto pelo dado estruturado da página (JSON-LD), com a
+marca da loja como origem forte; sem dado estruturado, só o título, e sem preço — preço lido
+do texto pegaria a parcela antes do preço à vista. Página de lista vira um job por anúncio.
+Tabela colada e PDF viram um produto por linha com preço ou com código de peça **próprio**: a
+primeira versão juntava palavras vizinhas e transformava "à vista ou 30 dias" em produto.
+
+### 🧹 Um commit intermediário não compila sozinho
+
+O `304fc60` moveu `rede.ts` para `infra/web/` e a montagem só passou a apontar para o caminho
+novo no commit seguinte, `3e3e3b7`. O `main` sempre compilou no push, mas um `git bisect` que
+pare no `304fc60` precisa pulá-lo (`git bisect skip`).
+
+---
+
 ## 2026-09-24 — A IA ligada pelo OpenRouter, e as lacunas do produto
 
 O dono criou uma chave no OpenRouter e pediu para ser avisado de quando colar. Pediu também

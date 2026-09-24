@@ -12,25 +12,26 @@ a 4 existem para que cada noite de código tenha contrapartida em venda possíve
 Legenda de estado: ✅ pronto · 🚧 em andamento · ⬜ não começou · 🔒 bloqueado por
 dependência externa.
 
-**Não há mais nada em ⬜, e isso é informação e não conquista.** As nove entregas que estavam marcadas como "não começou" passaram a 🔒
-porque nenhuma delas **pode** começar neste ambiente — e "não começou" sugeria que era
-questão de tempo. São três causas, todas já descritas em
-[pendências](./pendencias.md):
+**Estado em 24/09/2026, fim do dia: toda funcionalidade que não depende de API de
+plataforma nem de emissor de nota está construída.** Era o que o dono pediu antes de mexer
+na interface. O que sobra em 🔒 depende de fora, e as três causas são decisões do dono,
+todas adiadas por ele — ver [pendências](./pendencias.md):
 
-- **Chave de LLM** (1.1): 3.4 e 3.6 dependem dela por definição — catálogo de
-  distribuidor e visão sobre print de tabela.
-- **Rede de saída** (1.6): 3.2, 3.3, 6.10, 6.11 e 7.3 precisam buscar página, PDF e
-  CNPJ. A política de rede daqui libera registries de pacote e as APIs da Anthropic, e
-  recusa o resto.
-- **App no Mercado Livre** (1.2): a 2.6b é o fluxo de OAuth, e não há app para o qual
-  fazer OAuth.
+- **API das plataformas** (1.2): a sonda de capacidades (2.5), o OAuth (2.6b), a etiqueta
+  do dropship (8.8), o envio da resposta ao comprador (11.3) e a fase 12.
+- **Emissor de NF-e** (1.5): a 9.5. Ainda não há CNPJ, nota nem produto real.
+- **Base de GTIN com NCM** (1.3): a 4.4, junto com o leitor, que fica por último.
 
-A 3.5 (PDF de tabela de preços) é a única com nuance: um leitor de PDF **daria** para
-escrever e testar contra um PDF sintético. Ficou 🔒 de propósito — o problema real dela
-é a variedade de layout de tabela de fornecedor, e um extrator calibrado contra um PDF
-que eu mesmo gerei testaria a minha suposição, não o mundo. É o erro que
-`ingestao/planilha/mapeamento.ts` evita ao relatar coluna não reconhecida, e ali há
-feedback; aqui não haveria.
+O que está em 🚧 tem o código pronto e testado, e espera dado do mundo: os nomes de coluna
+de uma exportação real de cada painel (3.7).
+
+**Um critério mudou, e fica escrito.** Até aqui, entrega que dependia de serviço de fora —
+a IA, o buscador, a Receita, o PNCP — ficava em 🚧 enquanto a chamada não existisse, porque
+"o que está pronto é tudo menos a chamada". Em 24/09 as chamadas passaram a existir, todas
+gratuitas, e essas entregas foram para ✅. O que continua não verificado é a **primeira
+execução** contra cada serviço, porque a rede deste ambiente recusa todos eles: cada um foi
+testado com dublê no formato da documentação, e a primeira execução de verdade, na máquina
+do dono, está na pendência 2.4.
 
 Este arquivo diz **o que falta construir**, em ordem de utilidade. Para saber **o
 que está travado e por quem** — chave de LLM, app no Mercado Livre, exportação
@@ -127,11 +128,11 @@ a `bloqueado`, com o status HTTP na mão.
 | #    | Entrega                                                               | Estado |
 | ---- | --------------------------------------------------------------------- | ------ |
 | 3.1  | Classificador de entrada (URL, xlsx, csv, pdf, imagem, texto)         | ✅     |
-| 3.2  | Extrator de HTML de anúncio — seletores por plataforma + fallback LLM | 🔒     |
-| 3.3  | Extrator de listagem/categoria com paginação                          | 🔒     |
-| 3.4  | Extrator de catálogo de distribuidor (LLM obrigatório)                | 🔒     |
-| 3.5  | Extrator de PDF de tabela de preços                                   | 🔒     |
-| 3.6  | Extrator de imagem de tabela (print de WhatsApp) — visão              | 🔒     |
+| 3.2  | Extrator de HTML de anúncio — seletores por plataforma + fallback LLM | ✅     |
+| 3.3  | Extrator de listagem/categoria com paginação                          | ✅     |
+| 3.4  | Extrator de catálogo de distribuidor (LLM obrigatório)                | ✅     |
+| 3.5  | Extrator de PDF de tabela de preços                                   | ✅     |
+| 3.6  | Extrator de imagem de tabela (print de WhatsApp) — visão              | ✅     |
 | 3.7  | Importadores de planilha de exportação das três plataformas           | 🚧     |
 | 3.8  | Fila `job` idempotente e retomável + contagem por status              | ✅     |
 | 3.11 | Orquestrador e executor: entrada → fila → extração → `produto_externo` | ✅     |
@@ -152,9 +153,17 @@ completo, **ligado de ponta a ponta**, **rodando sozinho** e testado contra
 Postgres e sistema de arquivos reais: a entrada chega pela tela ou por código, é
 classificada, guardada por hash, enfileirada, consumida pelo **poller** sem
 ninguém pedir, importada, e grava `produto_externo` — e daí um SKU é criado
-ligando as ocorrências. **Os extratores (3.2 a 3.6) não começaram**, e é neles que
-o LLM entra — não há chave de LLM configurada, e escrever extrator sem poder
-rodá-lo contra página de verdade produziria código que parece funcionar.
+ligando as ocorrências.
+
+**Os extratores (3.2 a 3.6) fecharam em 24/09**, e quase todos sem IA. Link de anúncio e
+de catálogo viram produto pelo dado estruturado da página (JSON-LD), com a marca da loja
+como origem forte; sem ele, só o título, e sem preço inventado. Página de lista vira um job
+por anúncio. Tabela colada e PDF viram um produto por linha com preço ou código de peça
+próprio. A imagem de tabela (3.6) é a única que usa IA — um modelo gratuito com visão só
+transcreve o texto do print, e a transcrição passa pela mesma leitura de linhas. Separar
+marca, peça e aparelho de um título é da extração em lote (5.1), que roda depois, sobre o
+que entrou. A "paginação" da 3.3 é o que a lista declara: até 50 anúncios por página
+colada.
 
 **Como rodar.** `npm run poller` mantém o laço; `npm run poller:uma-vez` drena a
 fila e sai, o que serve para cron. Em contêiner ou supervisor, chamar
@@ -247,10 +256,10 @@ o que comparar. As duas fases se completam, e é por isso que esta vem depois.
 
 | #   | Entrega                                                                  | Estado |
 | --- | ------------------------------------------------------------------------ | ------ |
-| 5.1 | Extração de registro estruturado por LLM, com `null` em vez de invenção  | 🚧     |
-| 5.2 | Forma canônica + embedding (`tipo + marca + modelo normalizado`)         | 🚧     |
+| 5.1 | Extração de registro estruturado por LLM, com `null` em vez de invenção  | ✅     |
+| 5.2 | Forma canônica + embedding (`tipo + marca + modelo normalizado`)         | ✅     |
 | 5.3 | Busca de vizinhos por `pgvector`                                         | ✅     |
-| 5.4 | Julgamento binário por LLM com justificativa                             | 🚧     |
+| 5.4 | Julgamento binário por LLM com justificativa                             | ✅     |
 | 5.5 | Agrupamento automático acima do limiar; fila de revisão na zona cinzenta | ✅     |
 | 5.6 | Decisão humana vira exemplo few-shot para as chamadas seguintes          | ✅     |
 | 5.7 | Cache por conteúdo — resolver o mesmo produto uma única vez              | ✅     |
@@ -278,17 +287,18 @@ O que fica na fila de revisão, com o motivo escrito: o par que só julgamento r
 Sem chave, ele aparece em `/juntar-iguais` dizendo "sem chave de LLM, então ninguém
 julgou" — o sistema sabe que não sabe, e quem olha entende por quê.
 
-**O que as três linhas 🚧 esperam.** Não é código: é `LLM_API_KEY`. O contrato do
-registro extraído existe e aplica a regra de `null` em vez de invenção; a forma
-canônica existe e é determinística; o julgamento tem contrato, cache, teto de
-orçamento e roteamento por limiar, tudo exercitado por um chamador falso. Falta a
-chamada. Ligar é implementar `Chamador` e apontar `LLM_MODELO_JULGAMENTO` — ver
-`src/infra/llm/`.
+**As três linhas que esperavam a IA fecharam em 24/09, gratuitas e em lote.** A extração
+de registro (5.1) lê marca, peça e aparelho de 20 títulos por pedido; o embedding (5.2) gera
+o vetor de 50 formas canônicas por pedido; o julgamento (5.4) decide 10 pares por pedido.
+O determinístico vem antes — título que já tem marca e modelo não é perguntado, título igual
+copia a leitura, texto com vetor no mesmo modelo é copiado —, porque a cota gratuita é de 50
+pedidos por dia. Cota esgotada é teto: para e continua quando ela volta. O modelo padrão é o
+roteador gratuito `openrouter/free`; o de embedding tem 1024 dimensões, completadas com
+zeros até as 1536 do índice, o que não muda a distância de cosseno.
 
-**A 5.3 está ✅ e a 5.2 não, e a diferença é honesta:** gerar embedding custa chamada
-de API; **buscar** é operação do banco. A busca inteira — ordenação por distância,
-corte, exclusão do próprio produto, separação por modelo — é exercitada com vetor
-sintético contra `pgvector` de verdade. O que falta na 5.2 é só o vetor.
+**Os cortes continuam sendo escolha, não medida:** distância de vizinhança, número de
+vizinhos e a confiança por certeza (ver pendência 1.1). Calibrá-los pede algumas centenas de
+pares decididos com a base real.
 
 **A 5.7 desvia da especificação de propósito.** A especificação diz "cache por
 `hash_conteudo`". O cache é pela **pergunta** — o par de formas canônicas e atributos
@@ -324,10 +334,11 @@ esgotaria o teto na primeira hora e nunca mais deixaria nada rodar. Teto estoura
 **adia** o job em vez de falhar, e devolve a tentativa — o job progrediu, e par avaliado
 não volta para avaliação.
 
-**O limite honesto disso**, que só apareceu rodando de verdade: o importador de planilha
-não extrai marca nem modelo, então a via de marca com código de peça não tem dado para
-morder até existir o extrator por LLM (3.2). Planilha com EAN já agrupa; catálogo sem EAN
-acumula ocorrência que não liga a nada. Ver [pendências](./pendencias.md), 3.2.
+**O limite que só apareceu rodando de verdade**, e que fechou em 24/09: o importador de
+planilha não extrai marca nem modelo, então a via de marca com código de peça ficou sem dado
+para morder até existir a extração por IA (5.1). Com ela, catálogo sem EAN passa a agrupar
+também — sozinho, com a chave, e parando quando a cota do dia acaba. Ver
+[pendências](./pendencias.md), 3.2.
 
 ---
 
@@ -338,7 +349,7 @@ acumula ocorrência que não liga a nada. Ver [pendências](./pendencias.md), 3.
 
 | #    | Entrega                                                                     | Estado |
 | ---- | --------------------------------------------------------------------------- | ------ |
-| 6.1  | Coleta de evidência — anúncio capturado e entrada manual                    | 🚧     |
+| 6.1  | Coleta de evidência — anúncio capturado e entrada manual                    | ✅     |
 | 6.2  | Gramáticas de nomenclatura por marca — parser determinístico e auditável    | ✅     |
 | 6.3  | Inferência de família a partir da gramática                                 | ✅     |
 | 6.4  | Resolução de conflito por restrição, com inconsistência sinalizada          | ✅     |
@@ -347,11 +358,14 @@ acumula ocorrência que não liga a nada. Ver [pendências](./pendencias.md), 3.
 | 6.7  | Saída dupla: ficha do anúncio e resposta ao comprador na tela                | ✅     |
 | 6.8  | Coleta como tarefa de fila, ligada à resolução de identidade                | ✅     |
 | 6.9  | Tela de compatibilidade: fila de conferência, ficha e cadastro de aparelho  | ✅     |
-| 6.10 | Manual do fabricante em PDF e página oficial como fontes de coleta          | 🔒     |
-| 6.11 | Fórum e catálogo de distribuidor como fontes de coleta                      | 🔒     |
+| 6.10 | Manual do fabricante em PDF e página oficial como fontes de coleta          | ✅     |
+| 6.11 | Fórum e catálogo de distribuidor como fontes de coleta                      | ✅     |
 
 **Entrega:** vender sem disputar centavo. É o que ninguém no mercado brasileiro
 faz bem, e é a razão de construir em vez de assinar.
+
+**A 6.1 fechou com a extração (5.1):** o anúncio capturado já dava evidência pelo título,
+e agora dá também pelos modelos compatíveis que a extração lê dele.
 
 **O que está pronto e o que não está.** O caminho de evidência que já funciona é o
 que não custa nada: todo anúncio que a ingestão capturou tem título, título de peça
@@ -359,10 +373,13 @@ de reposição cita os modelos em que a peça serve, e casar isso com os aparelh
 cadastrados é comparação de texto normalizado — sem LLM e sem API. Mais a entrada
 manual, que é o caminho de quem tem o manual na mão.
 
-As três fontes que faltam (6.10 e 6.11) são todas "buscar e ler página", e são o
-mesmo trabalho do prospector da fase 10 — PDF de manual, página de fabricante,
-fórum, catálogo. Fazer aqui seria construir meio prospector duas vezes; ficam para
-depois, e a base já aceita as cinco fontes com força graduada.
+**As três fontes que faltavam (6.10 e 6.11) fecharam em 24/09**, pelo formulário "Trazer
+de um manual, página, catálogo ou fórum" na ficha de cada produto: PDF, link ou texto colado.
+Sem IA — o mesmo casamento de código de aparelho do título de anúncio. A regra que decide a
+força: a fonte precisa citar o código do produto. Manual e página oficial que citam publicam
+sozinhos; os que não citam vão para a fila com o trecho. Catálogo e fórum só contam o
+aparelho que está na seção do produto — a linha vizinha de uma tabela é outra peça, e foi o
+teste que mostrou isso.
 
 A cadeia fecha sozinha a partir de uma decisão humana: planilha → ocorrência →
 identidade → **você confirma o produto** → compatibilidade coletada e inferida. Só o
@@ -376,9 +393,9 @@ identidade → **você confirma o produto** → compatibilidade coletada e infer
 | --- | ----------------------------------------------------------------- | ------ |
 | 7.1 | Triagem pelas cinco perguntas — função pura com teste             | ✅     |
 | 7.2 | `vende_direto_marketplace = true` → descarte automático com aviso | ✅     |
-| 7.3 | Verificação automática desse campo por nome e CNPJ (M0)           | 🔒     |
+| 7.3 | Verificação automática desse campo por nome e CNPJ (M0)           | ✅     |
 | 7.4 | Histórico de preço por SKU e fornecedor (aumento silencioso)      | ✅     |
-| 7.5 | Score de confiabilidade alimentado por atraso real                | 🔒     |
+| 7.5 | Score de confiabilidade alimentado por atraso real                | ✅     |
 | 7.6 | Gerador do primeiro contato com as cinco perguntas preenchidas    | ✅     |
 | 7.7 | M7: cortes numéricos configuráveis, aplicados em subcategoria     | ✅     |
 | 7.8 | Repositório e tela de fornecedor                                  | ✅     |
@@ -399,15 +416,20 @@ todos configuráveis, e o corte de markup e de ticket importados do módulo de
 margem em vez de repetidos: a especificação diz que "a tela de preço também usa",
 e dois números iguais em dois arquivos divergem na primeira mudança.
 
-**O que falta, e por quê.** 7.3 — verificar por nome e CNPJ se o fornecedor tem
-loja própria — é busca em página, o mesmo trabalho das fontes de evidência que
-ficaram para a fase 10, e fica com elas. O campo continua respondível à mão, e é
-ele que descarta.
+**7.3 e 7.5 fecharam em 24/09.** A conferência de fornecedor olha o CNPJ na Receita (pela
+BrasilAPI, gratuita) e procura loja com o nome dele no Mercado Livre, na Shopee e na Amazon
+(pelo buscador gratuito, com `site:`), sozinha pelo poller — um por vez, devagar — e por
+botão no cartão. Loja própria com o nome inteiro responde "vende direto" com sim, que é o
+descarte, com o link para conferir; não achar **não** responde "não", porque busca não prova
+ausência; e resposta dada à mão nunca é trocada — a resposta agora diz de quem é.
 
-7.5 está **bloqueado por dependência**, não adiado: confiabilidade "alimentada por
-atraso real" exige pedido com data prometida e data real, e isso é a fase 8 (M10).
-Um score calculado sobre impressão seria pior que nenhum — daria ao palpite a
-aparência de medição, que é o oposto do que o resto do sistema faz.
+A confiabilidade (7.5) deixou de estar bloqueada quando os dois dados passaram a existir:
+data da venda, pela planilha, e data da postagem, pelo "postado" da tela de postagem. A
+referência de prazo é o da plataforma quando o pedido tem, e senão o que o próprio
+fornecedor prometeu — a planilha de vendas não traz o prazo, e medir só contra ele deixaria
+a nota vazia para sempre. Só conta pedido de produto que um fornecedor só atende, e a nota
+sai com cinco pedidos medidos. É calculada na leitura, por perfil: pedido é do perfil, e uma
+nota gravada no fornecedor compartilhado misturaria os perfis.
 
 ---
 
@@ -522,7 +544,7 @@ curto para a devolução que a fase 6 existe para evitar.
 
 | #   | Entrega                                                               | Estado |
 | --- | --------------------------------------------------------------------- | ------ |
-| 9.1 | Classificador de NCM/CEST com alternativas justificadas e confirmação | 🚧     |
+| 9.1 | Classificador de NCM/CEST com alternativas justificadas e confirmação | ✅     |
 | 9.2 | CST e cClassTrib por SKU (rejeição de NF-e em 04/01/2027)             | ✅     |
 | 9.3 | Controle de teto do MEI com projeção; avisos em 70% e 85%             | ✅     |
 | 9.4 | Painel de prazos (01/01/2027, 04/01/2027)                             | ✅     |
@@ -532,12 +554,13 @@ curto para a devolução que a fase 6 existe para evitar.
 **Por que tem prazo:** esse cadastro com 20 SKUs é uma tarde; com 200 no meio da
 operação é uma semana perdida em janeiro.
 
-**A 9.1 está ligada ao OpenRouter desde 24/09 (5.12)**, e continua 🚧 até a primeira
-sugestão de verdade, que depende de o dono colar a chave no `.env`. As opções de emissor
-para a 9.5 estão na [pendência 1.5](./pendencias.md).
+**A 9.1 fechou com a IA gratuita (5.12).** A primeira sugestão com a chave do dono é a
+primeira execução de verdade (pendência 2.4). A 9.5 foi adiada pelo dono: ainda não há CNPJ,
+nota nem produto real. O emissor recomendado já sai na tela Fiscal, com os dados de "Meu
+negócio" — as opções estão na [pendência 1.5](./pendencias.md).
 
-**A fase 9 fechou o que dá para fechar sem chave de LLM e sem emissor de NF-e.**
-Quatro entregas ✅, a 9.1 em 🚧 pelo mesmo motivo das de M3, e a 9.5 🔒. O prazo de
+**A fase 9 fechou tudo menos a emissão.** Cinco entregas ✅ e a 9.5 🔒, por decisão do
+dono. O prazo de
 janeiro deixou de ser uma data no papel: há tela que
 mostra quantos dias faltam, o que acontece na data, e o que fazer antes — com a base
 legal de cada prazo, para ser conferível.
@@ -564,16 +587,10 @@ como está na tabela oficial.
 categoria regulada é cancelado, e a hora de saber é antes de publicar. A marcação no
 SKU vence a detecção por palavra, sempre: é onde a pessoa decidiu.
 
-**A 9.1 está 🚧 e não ✅, pelo mesmo critério das entregas de M3.** O classificador
-existe, valida a resposta, ordena candidatos por certeza, descarta código fora de
-forma e é cacheado por conteúdo — e **não produz sugestão nenhuma hoje**, porque não
-há provedor de LLM. Marcar ✅ diria que a entrega funciona, e ela não funciona: o que
-está pronto é tudo menos a chamada.
-
-Sem chave, a tela diz "ninguém sugeriu" e explica que isso não trava nada — o campo
-continua preenchível à mão e o cadastro fica pronto do mesmo jeito. Ligar a chave é
-implementar `Chamador` em `infra/llm/ambiente.ts`, que é o único arquivo que precisa
-saber disso.
+**A 9.1 passou de 🚧 a ✅ em 24/09**, pelo critério escrito no topo deste arquivo: o
+classificador valida a resposta, ordena candidatos por certeza, descarta código fora de forma,
+é cacheado por conteúdo, e agora tem a chamada — ao roteador gratuito. Sem chave, a tela diz
+"ninguém sugeriu" e explica que isso não trava nada: o campo continua preenchível à mão.
 
 ---
 
@@ -587,7 +604,7 @@ saber disso.
 | 10.1 | Loop de fronteira: hipóteses, fronteira, achados                           | ✅     |
 | 10.2 | Seleção por valor esperado por custo                                       | ✅     |
 | 10.3 | Famílias de hipótese (fabricante, distribuidor, custo, compatibilidade, …) | ✅     |
-| 10.4 | Sensor de demanda pública via PNCP                                         | 🔒     |
+| 10.4 | Sensor de demanda pública via PNCP                                         | ✅     |
 | 10.5 | **Orçamento obrigatório por execução** (passos e reais)                    | ✅     |
 | 10.6 | Critério de parada por saturação                                           | ✅     |
 | 10.7 | Dossiê auditável, com URL de origem em cada item                           | ✅     |
@@ -600,12 +617,12 @@ serve" (código citado no mesmo anúncio) e "que outras peças" (anúncio do mes
 com peça diferente). Cada achado com a URL de onde veio. Custo: zero, porque é consulta
 local; o que limita é o teto de passos.
 
-**O que falta são as outras cinco ferramentas, e uma delas é 🔒.** A 10.4 espera rede (a
-política deste ambiente recusa `pncp.gov.br` com `CONNECT` 403); buscador, leitor de
-página e consulta de CNPJ esperam ser escritos, e a visão espera chave de LLM **e** um
-caminho de imagem que o prospector não tem. Registrar um investigador é uma linha em
-`prospector/registro.ts`, e a tela passa a mostrar a ferramenta como disponível sem mais
-nada — inclusive destravando dossiê que já estava na fila.
+**As outras ferramentas entraram em 24/09, todas gratuitas e sem chave:** o buscador (a
+versão HTML do DuckDuckGo), o leitor de página (dado estruturado primeiro, texto depois, sem
+IA), a consulta de CNPJ (BrasilAPI) e o sensor do PNCP (10.4), que busca os editais e traz
+os itens com o valor homologado para a referência de preço. Com elas as sete perguntas dão
+para investigar. Falta a visão, porque o garimpo não tem de onde receber imagem. A saída para
+a rede é uma só, com tempo limite, teto de tamanho e nada de endereço da rede local.
 
 **Escrever o executor mostrou que o dossiê não era retomável**, apesar de a tabela
 existir para isso desde a fase 1: a fronteira era gravada sem ferramenta, peso nem
@@ -661,26 +678,20 @@ mesmo alvo duas vezes continua o dossiê em vez de criar um segundo.
 
 | #    | Entrega                                                             | Estado |
 | ---- | ------------------------------------------------------------------- | ------ |
-| 11.1 | Monitor com leitura, hipótese, recomendação e severidade            | 🚧     |
+| 11.1 | Monitor com leitura, hipótese, recomendação e severidade            | ✅     |
 | 11.2 | Agrupamento de eventos relacionados antes de avisar                 | ✅     |
 | 11.3 | M16: resposta a pergunta de comprador a partir de M4, como rascunho | 🚧     |
 | 11.4 | M16: detector de pergunta recorrente                                | ✅     |
 | 11.5 | M13: detector de queda real de preço contra mediana de 90 dias      | ✅     |
 | 11.6 | M13: link de afiliado, fila de publicação espaçada, rastreio        | ✅     |
 
-**Quatro fechadas; 11.1 e 11.3 em 🚧 pela metade que depende de fora.** Em 11.1 a
-detecção, a severidade e o agrupamento estão prontos — falta a **leitura** por LLM, que
-é a hipótese em linguagem natural. Em 11.3 o rascunho existe desde a fase 6
-(`responder()` monta a resposta a partir da ficha de M4, com as fontes); falta o
-**envio**, que depende da API do ML e que a especificação já dizia para deixar manual
-no começo.
-
-**O agrupamento é o que separa alerta de inteligência, e é determinístico.** "Mesmo
-alvo, mesma semana" é regra, não opinião — e a combinação conhecida ganha leitura
-própria: preço caindo **e** estoque subindo na mesma semana não é queima de estoque,
-porque queima de estoque não vem com reposição. É fornecedor novo, e aí o piso do nicho
-baixou de forma permanente. É exatamente o exemplo com que a especificação define M15, e
-ele sai sem LLM.
+**Cinco fechadas; a 11.3 em 🚧 pela metade que depende de fora.** A leitura da 11.1 — a
+hipótese e a recomendação em linguagem natural — entrou em 24/09: cada grupo de eventos vai
+à IA gratuita com a série de preço do alvo e a leitura por regra, oito grupos por pedido, e a
+hipótese aparece embaixo da leitura por regra, marcada como hipótese. Evento novo num grupo
+já lido faz o grupo ser lido de novo, com ele. Em 11.3 o rascunho existe desde a fase 6
+(`responder()` monta a resposta a partir da ficha de M4, com as fontes); falta o **envio**,
+que depende da API do ML e que a especificação já dizia para deixar manual no começo.
 
 **A mudança pequena não é evento.** Abaixo de 3% é oscilação de arredondamento e frete
 embutido; avisar dela treina a pessoa a ignorar o painel. E queda de concorrente é mais

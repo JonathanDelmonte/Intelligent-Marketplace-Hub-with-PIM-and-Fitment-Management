@@ -93,8 +93,13 @@ responde.
   O sistema lê o `.env` ao subir, então feche a janela e clique de novo depois de colar. Os
   modelos são gratuitos, e para eles responderem a conta precisa liberar os modelos
   gratuitos em openrouter.ai/settings/privacy. Cota: 50 pedidos por dia (1.000 depois de
-  uma compra única de US$ 10); esgotada, o trabalho espera ela voltar. Sem chave nada
-  quebra: o que depende de IA diz "ninguém sugeriu".
+  uma compra única de US$ 10); esgotada, o trabalho espera ela voltar. Com a chave, o
+  processador da fila lê sozinho marca e peça dos títulos, junta produtos iguais, sugere
+  NCM, escreve a hipótese do monitor de preço e lê print de tabela de fornecedor — tudo em
+  lote, para caber na cota. Sem chave nada quebra: o que depende de IA diz "ninguém
+  sugeriu".
+- **Internet, sem chave nenhuma:** ler link colado, o garimpo (buscador, páginas, CNPJ e
+  compras públicas) e a conferência de fornecedor usam serviços gratuitos e abertos.
 - **Primeira vez:** alguns minutos. **Depois:** cerca de três segundos.
 - **Clicar de novo com tudo rodando** só abre o navegador.
 - **Fechar a janela preta** desliga o servidor e a fila juntos.
@@ -329,6 +334,11 @@ A armadilha que essa ordem evita: construir o prospector e o painel bonito
 primeiro, e a venda depois. O risco real do projeto não é o sistema ficar ruim; é
 ficar pronto sem nada vendido. Estado de cada fase no
 [roadmap](./docs/roadmap.md).
+
+**Em 24/09/2026, toda funcionalidade que não depende de API de plataforma nem de emissor
+de NF-e está construída**, tudo funcionando de graça. O que falta depende de decisões
+adiadas pelo dono — API das plataformas, emissão de nota e a base de GTIN do leitor — e
+está nas [pendências](./docs/pendencias.md).
 
 ## Fora de escopo, permanentemente
 
