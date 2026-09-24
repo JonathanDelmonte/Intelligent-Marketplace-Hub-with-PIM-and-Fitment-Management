@@ -16,13 +16,14 @@
  *    no construtor, não por convenção.
  *
  * A outra metade do desenho é que **não haver chave é estado normal**, não erro de
- * configuração: hoje não há chave, e o sistema inteiro precisa continuar rodando —
- * o que não pode é fingir que rodou. `ChamadorAusente` é a implementação honesta
- * disso, e quem chama trata `sem_chave` como caminho previsto.
+ * configuração: sem chave, o sistema inteiro precisa continuar rodando — o que não
+ * pode é fingir que rodou. `ChamadorAusente` é a implementação honesta disso, e quem
+ * chama trata `sem_chave` como caminho previsto. Com chave, o provedor é o OpenRouter
+ * (`openrouter.ts`), escolhido em `ambiente.ts` e em nenhum outro lugar.
  */
 import { createHash } from 'node:crypto';
 import { and, eq, gte, isNotNull, isNull, sql } from 'drizzle-orm';
-import type { z } from 'zod';
+import { z } from 'zod';
 import type { Banco } from '@/infra/banco/cliente';
 import { llmCall } from '@/infra/banco/schema';
 
@@ -46,6 +47,17 @@ export type Proposito = (typeof PROPOSITOS)[number];
 export interface PedidoAoModelo {
   readonly proposito: Proposito;
   readonly modelo: string;
+  /** O que o modelo deve fazer, em texto. Vem do módulo de domínio, junto do schema. */
+  readonly instrucoes: string;
+  /**
+   * O formato da resposta, em JSON Schema, derivado do schema Zod que a valida.
+   *
+   * Vai ao provedor como parte das instruções, e não como parâmetro de "saída
+   * estruturada": esse parâmetro tem suporte diferente em cada modelo e recusa parte
+   * das restrições que os schemas daqui usam. A validação de verdade continua sendo o
+   * Zod, na volta.
+   */
+  readonly formato: unknown;
   /** A pergunta: o que determina a resposta e define o cache. */
   readonly entrada: unknown;
   /** Contexto enviado junto, fora do hash. Exemplo few-shot mora aqui. */
@@ -191,6 +203,18 @@ export function hashDeEntrada(entrada: unknown): string {
   return createHash('sha256').update(serializarEstavel(entrada), 'utf8').digest('hex');
 }
 
+/**
+ * O JSON Schema que diz ao modelo o formato da resposta.
+ *
+ * Do lado da **entrada** do schema (`io: 'input'`), porque é o que o modelo escreve e
+ * o Zod lê: campo com valor padrão é opcional para quem escreve. O que o JSON Schema
+ * não representa vira "qualquer coisa" em vez de derrubar a chamada — a validação que
+ * decide continua sendo o Zod.
+ */
+export function formatoDaResposta(esquema: z.ZodType): unknown {
+  return z.toJSONSchema(esquema, { io: 'input', unrepresentable: 'any' });
+}
+
 export type ResultadoDoPedido<T> =
   | { readonly tipo: 'ok'; readonly valor: T; readonly deCache: boolean }
   | {
@@ -205,6 +229,15 @@ export type ResultadoDoPedido<T> =
 export interface ParametrosDoPedido<T> {
   readonly proposito: Proposito;
   readonly modelo: string;
+  /**
+   * O que o modelo deve fazer, em texto — mora no módulo de domínio, ao lado do schema.
+   *
+   * **Fora do hash**, como o contexto, e pelo mesmo motivo: é a forma de perguntar, e
+   * não a pergunta. Melhorar o texto das instruções não pode custar perguntar de novo
+   * tudo o que já foi perguntado — resolver identidade é caro e se faz uma vez. Vai
+   * gravado em `llm_call.entrada`, para a chamada continuar reproduzível.
+   */
+  readonly instrucoes: string;
   /** A pergunta. **É isto que vai para o hash de cache.** */
   readonly entrada: unknown;
   /**
@@ -258,12 +291,23 @@ export class ServicoDeLlm {
     // já foi paga não deve ser recusada por falta de orçamento.
     this.orcamento.exigirFolga();
 
+    // Forma uniforme do que vai para `llm_call.entrada`: `pergunta` é o que foi
+    // hasheado, `contexto` e `instrucoes` são o resto do que o modelo viu. Quem audita a
+    // conta consegue reproduzir a chamada.
+    const entradaGravada = {
+      pergunta: params.entrada,
+      contexto: params.contexto ?? null,
+      instrucoes: params.instrucoes,
+    };
+
     const comecou = Date.now();
     let resposta: RespostaDoModelo;
     try {
       resposta = await this.chamador.chamar({
         proposito: params.proposito,
         modelo: params.modelo,
+        instrucoes: params.instrucoes,
+        formato: formatoDaResposta(params.esquema),
         entrada: params.entrada,
         ...(params.contexto === undefined ? {} : { contexto: params.contexto }),
       });
@@ -280,7 +324,7 @@ export class ServicoDeLlm {
         proposito: params.proposito,
         modelo: params.modelo,
         hashEntrada,
-        entrada: { pergunta: params.entrada, contexto: params.contexto ?? null },
+        entrada: entradaGravada,
         saida: null,
         erro: mensagem,
         latenciaMs: Date.now() - comecou,
@@ -295,9 +339,7 @@ export class ServicoDeLlm {
       proposito: params.proposito,
       modelo: params.modelo,
       hashEntrada,
-      // Forma uniforme: `pergunta` é o que foi hasheado, `contexto` é o resto do
-      // que o modelo viu. Quem audita a conta consegue reproduzir a chamada.
-      entrada: { pergunta: params.entrada, contexto: params.contexto ?? null },
+      entrada: entradaGravada,
       saida: resposta.saida,
       erro: null,
       latenciaMs: Date.now() - comecou,

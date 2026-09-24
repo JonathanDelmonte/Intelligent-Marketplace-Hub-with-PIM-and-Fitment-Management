@@ -40,7 +40,8 @@ const esquemaAmbiente = z.object({
   BANCADA_PAPEL: z.enum(PAPEIS).default('interno'),
   BANCADA_PERFIL_PADRAO: z.string().min(1),
 
-  // LLM — ver ADR 0005.
+  // LLM — ver ADR 0005. A chave é do OpenRouter; modelo vazio usa o padrão de
+  // `infra/llm/ambiente.ts`.
   LLM_API_KEY: z.string().optional(),
   LLM_MODELO_EXTRACAO: z.string().optional(),
   LLM_MODELO_JULGAMENTO: z.string().optional(),
@@ -63,6 +64,16 @@ const esquemaAmbiente = z.object({
   AFILIADO_TAG_SHOPEE: z.string().optional(),
   AFILIADO_TAG_AMAZON: z.string().optional(),
   LLM_ORCAMENTO_PADRAO_CENTAVOS: z.coerce.number().int().positive().default(500),
+
+  /**
+   * Quantos centavos de real vale um dólar, para converter o custo que o OpenRouter
+   * informa (em dólar) e compará-lo com o teto de orçamento (em real).
+   *
+   * Cotação configurada, e não consultada: o teto precisa funcionar sem rede de
+   * terceiro. O padrão fica acima da cotação corrente de propósito — o erro de uma
+   * cotação velha deve ser gastar menos do que o teto, e não mais.
+   */
+  LLM_COTACAO_DOLAR_CENTAVOS: z.coerce.number().int().positive().default(600),
 
   /**
    * Onde o armazenamento de conteúdo guarda o original de cada entrada.

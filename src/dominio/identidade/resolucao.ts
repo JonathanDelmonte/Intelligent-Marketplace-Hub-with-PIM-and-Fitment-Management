@@ -80,6 +80,29 @@ export const esquemaJulgamentoDeIdentidade = z.object({
 
 export type JulgamentoDeIdentidade = z.infer<typeof esquemaJulgamentoDeIdentidade>;
 
+/**
+ * O que o modelo deve fazer.
+ *
+ * O critério é o da especificação, e ela dá o exemplo que mais importa: "Refil Filtro
+ * Purificador Electrolux PA21G PA26G PE11B Original", "Elemento Filtrante Acquaclean
+ * p/ purificador Electrolux" e o código de distribuidor "EF-ELX-21" são **o mesmo
+ * produto**. Por isso as instruções mandam ignorar palavra de busca do título
+ * ("original" incluída) e decidir pela peça — e por isso as decisões humanas entram
+ * como exemplo: o critério fino é do dono do negócio, e se aprende com a fila.
+ */
+export const INSTRUCOES_DE_IDENTIDADE = `Você decide se dois registros descrevem o mesmo produto físico: a mesma peça, com o mesmo encaixe e a mesma função, vendida na mesma quantidade — de forma que, para o comprador, tanto faz levar um ou o outro.
+
+Os registros foram extraídos de anúncios de marketplace e de listas de fornecedor. Campos podem estar vazios (null), e o mesmo produto costuma aparecer com nomes, códigos e grafias diferentes: título de marketplace carrega palavra de busca ("original", "premium", "promoção", listas de modelos), e fornecedor usa código interno próprio. "riqueza" diz quantos campos de cada lado estão preenchidos.
+
+Como decidir:
+- O que decide é a peça: tipo, modelo da peça, aparelhos em que serve, medida e material. Palavra de busca no título não é atributo.
+- EAN igual é sinal forte de mesmo produto. EAN diferente pesa contra, mas não decide sozinho: o mesmo item é revendido com códigos diferentes.
+- Quantidade diferente na embalagem (uma unidade contra kit com duas) é produto diferente.
+- Atributo que distingue — medida, voltagem, material, aparelho que só um dos lados atende — é produto diferente.
+- Se o contexto trouxer exemplos de decisões anteriores, siga o mesmo critério: são decisões do dono do negócio.
+- Faltando informação para decidir, responda o mais provável com certeza "baixa": o par vai para revisão humana.
+- Na justificativa, cite em uma ou duas frases o atributo que decidiu.`;
+
 /** Quantos candidatos considerar por produto, somando todas as vias. */
 export const MAX_CANDIDATOS = 30;
 
@@ -361,6 +384,7 @@ export class ResolvedorDeIdentidade {
     const resultado = await servico.pedir({
       proposito: PROPOSITO_JULGAMENTO,
       modelo,
+      instrucoes: INSTRUCOES_DE_IDENTIDADE,
       entrada: perguntaDeIdentidade(base, outro),
       contexto: { exemplos: params.exemplos },
       esquema: esquemaJulgamentoDeIdentidade,

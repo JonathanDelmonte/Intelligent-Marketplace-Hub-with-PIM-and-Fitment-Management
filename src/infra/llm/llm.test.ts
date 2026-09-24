@@ -117,6 +117,7 @@ describe.skipIf(!temBancoDeTeste())('ServicoDeLlm', () => {
   const pedido = (entrada: unknown) => ({
     proposito: 'julgamento_identidade' as const,
     modelo: 'modelo-de-teste',
+    instrucoes: 'decida se são o mesmo produto',
     entrada,
     esquema: esquemaSaida,
   });
@@ -147,7 +148,11 @@ describe.skipIf(!temBancoDeTeste())('ServicoDeLlm', () => {
     const [linha] = await conexao.db.select().from(llmCall);
     expect(linha).toBeDefined();
     expect(linha?.proposito).toBe('julgamento_identidade');
-    expect(linha?.entrada).toEqual({ pergunta: { a: 'x' }, contexto: null });
+    expect(linha?.entrada).toEqual({
+      pergunta: { a: 'x' },
+      contexto: null,
+      instrucoes: 'decida se são o mesmo produto',
+    });
     expect(linha?.custoCentavos).toBe(2);
     expect(linha?.tokensEntrada).toBe(120);
     expect(linha?.latenciaMs).toBeGreaterThanOrEqual(0);
@@ -288,13 +293,42 @@ describe.skipIf(!temBancoDeTeste())('ServicoDeLlm', () => {
     expect(chamador.chamadas).toHaveLength(1);
     expect(segunda.tipo).toBe('ok');
     const [linha] = await conexao.db.select().from(llmCall);
-    expect(linha?.entrada).toEqual({ pergunta: { a: 1 }, contexto: { exemplos: ['um'] } });
+    expect(linha?.entrada).toEqual({
+      pergunta: { a: 1 },
+      contexto: { exemplos: ['um'] },
+      instrucoes: 'decida se são o mesmo produto',
+    });
   });
 
   it('o contexto chega ao chamador', async () => {
     const chamador = new ChamadorFalso(boa);
     await servico(chamador).pedir({ ...pedido({ a: 1 }), contexto: { exemplos: [] } });
     expect(chamador.chamadas[0]?.contexto).toEqual({ exemplos: [] });
+  });
+
+  it('as instruções e o formato da resposta chegam ao chamador', async () => {
+    const chamador = new ChamadorFalso(boa);
+    await servico(chamador).pedir(pedido({ a: 1 }));
+
+    const [enviado] = chamador.chamadas;
+    expect(enviado?.instrucoes).toBe('decida se são o mesmo produto');
+    // O formato é o JSON Schema do mesmo Zod que valida a volta: os dois não divergem.
+    expect(enviado?.formato).toMatchObject({
+      type: 'object',
+      properties: { mesmoProduto: { type: 'boolean' }, justificativa: { type: 'string' } },
+      required: ['mesmoProduto', 'justificativa'],
+    });
+  });
+
+  it('instruções ficam fora do hash: melhorar o texto não paga a pergunta de novo', async () => {
+    const chamador = new ChamadorFalso(boa);
+    const s = servico(chamador);
+
+    await s.pedir(pedido({ a: 1 }));
+    const segunda = await s.pedir({ ...pedido({ a: 1 }), instrucoes: 'texto melhorado' });
+
+    expect(chamador.chamadas).toHaveLength(1);
+    expect(segunda).toMatchObject({ tipo: 'ok', deCache: true });
   });
 
   it('gastoPorProposito soma por finalidade', async () => {

@@ -42,7 +42,23 @@ import { ArmazenamentoDeConteudo } from './armazenamento/conteudo';
 import { banco, type Banco } from './banco/cliente';
 import { Fila } from './fila/fila';
 import { tarefasEmOrdem, type Tarefa } from './fila/poller';
+import type { ServicoDeLlm } from './llm';
+import { llmDoAmbiente } from './llm/ambiente';
 import { registradorSilencioso, type Registrador } from './log';
+
+/**
+ * O LLM de um job de identidade: serviço com orçamento novo e o modelo de julgamento.
+ *
+ * `undefined` quando não há chave — e o resolvedor decide tudo o que dá para decidir
+ * sem julgamento, deixando o resto na fila de revisão com o motivo escrito.
+ */
+export type LlmDeJob = () =>
+  { readonly servico: ServicoDeLlm; readonly modeloDeJulgamento: string } | undefined;
+
+export interface OpcoesDaMontagem {
+  /** Ausente em teste: o grafo monta sem LLM, que é o caminho que não depende de rede. */
+  readonly llmDeJob?: LlmDeJob | undefined;
+}
 
 export interface Nucleo {
   readonly db: Banco;
@@ -120,6 +136,7 @@ export function montarNucleoCom(
   db: Banco,
   diretorioDeConteudo: string,
   resolverPerfil: ResolverPerfil,
+  opcoes: OpcoesDaMontagem = {},
 ): Nucleo {
   const fila = new Fila(db);
   const armazenamento = new ArmazenamentoDeConteudo(diretorioDeConteudo);
@@ -140,13 +157,19 @@ export function montarNucleoCom(
    * na primeira hora e nunca mais deixaria nada rodar: "teto por execução" do ADR
    * 0005 viraria "teto por vida do processo", que não é teto nenhum.
    *
-   * Hoje nasce sem serviço de LLM, porque não há chave. O resolvedor trata isso como
-   * caminho previsto e decide tudo que é decidível sem julgamento.
+   * O LLM vem de fora (`opcoes.llmDeJob`), porque esta função não lê ambiente. Sem ele —
+   * sem chave, ou em teste —, o resolvedor trata a ausência como caminho previsto e
+   * decide tudo que é decidível sem julgamento.
    */
-  const executorDeIdentidade = new ExecutorDeIdentidade(
-    fila,
-    (jobId) => new ResolvedorDeIdentidade(db, { jobId }),
-  );
+  const executorDeIdentidade = new ExecutorDeIdentidade(fila, (jobId) => {
+    const llm = opcoes.llmDeJob?.();
+    return new ResolvedorDeIdentidade(db, {
+      jobId,
+      ...(llm === undefined
+        ? {}
+        : { llm: llm.servico, modeloDeJulgamento: llm.modeloDeJulgamento }),
+    });
+  });
 
   // Sem LLM e sem orçamento: a coleta de compatibilidade é comparação de texto
   // normalizado contra os aparelhos cadastrados, então uma instância só serve para
@@ -216,8 +239,21 @@ export function montarNucleoCom(
 export function montarNucleo(): Nucleo {
   const ambiente = lerAmbiente();
   const db = banco();
-  return montarNucleoCom(db, ambiente.ARMAZENAMENTO_DIR, async () => {
-    const perfil = await carregarPerfil(db, ambiente.BANCADA_PERFIL_PADRAO);
-    return perfil.id;
-  });
+  return montarNucleoCom(
+    db,
+    ambiente.ARMAZENAMENTO_DIR,
+    async () => {
+      const perfil = await carregarPerfil(db, ambiente.BANCADA_PERFIL_PADRAO);
+      return perfil.id;
+    },
+    {
+      // Por job, e não uma vez aqui: cada chamada monta um orçamento novo.
+      llmDeJob: () => {
+        const llm = llmDoAmbiente(db);
+        return llm.temChave
+          ? { servico: llm.servico, modeloDeJulgamento: llm.modelos.julgamento }
+          : undefined;
+      },
+    },
+  );
 }

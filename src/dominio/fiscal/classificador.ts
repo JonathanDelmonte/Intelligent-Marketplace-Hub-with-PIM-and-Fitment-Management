@@ -43,6 +43,24 @@ export const PROPOSITO_FISCAL: Proposito = 'fiscal';
 export const CANDIDATOS_NA_TELA = 3;
 
 /**
+ * O que o modelo deve fazer.
+ *
+ * Mora aqui, ao lado do schema, porque as duas coisas mudam juntas. As regras são as
+ * que a revisão de trinta segundos precisa: posição da NCM citada na justificativa,
+ * certeza rebaixada quando falta dado, e nada de CEST inventado — CEST existe só para
+ * segmento com substituição tributária, e um CEST errado na nota é pior que nenhum.
+ */
+export const INSTRUCOES_FISCAIS = `Você classifica produtos para nota fiscal eletrônica no Brasil. Recebe os dados de um produto vendido em marketplace — título, tipo, marca, descrição e modelos de aparelho em que ele serve — e sugere o código NCM (8 dígitos, conforme a TIPI vigente) e, quando houver, o CEST.
+
+Regras:
+- Sugira de 1 a 3 candidatos, do mais provável ao menos provável. Mais de um só quando houver dúvida real — por exemplo, quando o texto não deixa claro se é peça ou aparelho completo.
+- NCM com os 8 dígitos, sem pontos.
+- CEST (7 dígitos, sem pontos) só quando o produto estiver em segmento sujeito a substituição tributária e o código corresponder a esse NCM. Caso contrário, cest = null. Não invente CEST.
+- Na justificativa, diga em uma ou duas frases a posição da NCM em que o produto se encaixa e por quê — por exemplo, "parte de aparelho de uso doméstico, e não o aparelho completo".
+- Use só o que os dados dizem. Não invente material, voltagem ou uso; quando faltar informação decisiva, diga na justificativa o que falta.
+- Certeza: "alta" só quando o texto não deixa dúvida; "media" quando o código é o mais provável, mas depende de um detalhe não informado; "baixa" quando é palpite.`;
+
+/**
  * Certeza declarada pelo modelo, e a confiança que cada nível vale.
  *
  * Números escolhidos e não medidos, como os de M3 — e pelo mesmo motivo: não há base
@@ -169,6 +187,7 @@ export async function sugerirClassificacao(
     resultado = await llm.pedir({
       proposito: PROPOSITO_FISCAL,
       modelo,
+      instrucoes: INSTRUCOES_FISCAIS,
       entrada: perguntaDeClassificacao(produto),
       esquema: esquemaSugestaoFiscal,
       ...(opcoes.jobId === undefined ? {} : { jobId: opcoes.jobId }),
