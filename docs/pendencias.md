@@ -12,7 +12,8 @@ o que fazer no próximo fim de semana.
 Organizado por **quem destrava**, não por módulo: é o eixo que muda a ação.
 
 Atualizado em 2026-09-24, no fim do dia — depois de fechadas todas as lacunas de
-funcionalidade que não dependem de API de plataforma nem de emissor de nota.
+funcionalidade que não dependem de API de plataforma nem de emissor de nota, e da
+navegação por loja (ADR 0009, seção 3.9).
 
 ---
 
@@ -261,7 +262,9 @@ dependem de fora. O que sobra em cada fase, e o que trava.
 | 10 | Visão no garimpo | O garimpo não tem de onde receber imagem |
 | 11 | Envio da resposta ao comprador (11.3) | API do ML (1.2) |
 | 12 | Adaptadores de Shopee e Amazon por API | Adiado pelo dono (1.2) |
-| Casa | Desenho novo nas outras catorze telas (C.17) | Retorno do dono sobre o piloto |
+| Casa | Desenho novo nas telas que ainda têm o antigo (C.17) | Nada: direção aprovada com a navegação por loja |
+| Casa | Conectar pela aba Conexão da loja (OAuth, 2.6b) | APIs adiadas pelo dono (1.2) |
+| Casa | Lojas novas: Shein, AliExpress, Magalu, TikTok Shop | Comissão conferida e uma exportação real de cada painel (3.9) |
 
 As fases 6 e 7 não têm mais nada. **Toda funcionalidade que não depende de API de
 plataforma nem de emissor de nota está construída** — o que o dono pediu antes de mexer na
@@ -269,10 +272,12 @@ interface.
 
 ### 3.1 Telas que não existem
 
-Há quinze telas: início, `/catalogo` (com detalhe por produto), `/importar` (com
+Há dezenove telas: a visão geral, `/assistente`, `/lojas` (adicionar loja) e a área de
+cada loja (`/lojas/<loja>`), `/catalogo` (com detalhe por produto), `/importar` (com
 detalhe por job), `/leitor`, `/juntar-iguais`, `/compatibilidade`, `/fornecedores`,
 `/postagem`, `/consignacao`, `/anuncios`, `/fiscal`, `/monitor`, `/perguntas`,
-`/afiliados` e `/garimpo`.
+`/afiliados`, `/garimpo` e `/negocio`. Um teste exige `page.tsx` para cada porta da
+barra, desde 24/09.
 
 **O catálogo e a precificação passaram a ter tela em 16/09**, e com isso a frase que
 esta pendência carregava desde a fase 1 — "usar o M8 hoje exige escrever código" — deixou
@@ -444,6 +449,7 @@ dono pediu. O que foi entregue:
   botão faz.
 - **A barra agrupa as treze portas** em quatro momentos de trabalho — hoje, catálogo,
   oportunidade, fornecedor e obrigação — e marca a tela aberta, com `aria-current`.
+  Substituída em 24/09 pela navegação por loja (ADR 0009, ver 3.9).
 - **A tela inicial mostra estado**, e não nove cartões iguais: seis números
   ordenados por urgência, com degradação honesta quando uma leitura falha.
 
@@ -492,6 +498,47 @@ estão na fila são reencaminhados para a ferramenta nova na retomada, sem migra
 dado.
 
 ---
+
+### 3.9 Navegação por loja (ADR 0009) — feita, e o que ficou de fora
+
+Pedido do dono em 24/09, aprovado no mesmo dia. O que foi entregue:
+
+- **A barra se divide por loja.** No topo, "Importar arquivo", Visão geral, Assistente IA e
+  Postar hoje; depois Minhas lojas — cada uma com o estado (conectada, por planilha até tal
+  dia, sem dados) e a contagem do que postar —, e o que serve a todas em Produtos,
+  Oportunidades, Fornecimento e Empresa.
+- **A área de cada loja**, uma tela para todas: painel dos últimos 30 dias contra os 30
+  anteriores, gráfico por dia, mais vendidos, pedidos, anúncios, perguntas, repasse e
+  conexão. Pedidos, perguntas e planilha importados de dentro da área já sabem de qual loja
+  são.
+- **A visão geral** soma as lojas, com um cartão por loja e a fatia de cada uma.
+- **O assistente** responde em português com número do sistema, nunca da IA: perguntas
+  prontas sem cota, regra antes da IA, e a resposta diz como entendeu e o que falta nos
+  números.
+- **"Publicar em"** na ficha do produto, no anúncio montado e em cada dossiê do garimpo.
+- **Juntar iguais mora no catálogo**, com a contagem de pares esperando decisão; o repasse
+  mora na aba de cada loja, e "Postar hoje" mostra quanto espera em cada uma.
+
+O que ficou de fora, e por quê:
+
+- **Conectar é porta com estado.** A aba Conexão diz como cada loja conecta e o que ela
+  libera; a autorização por OAuth é a 2.6b, que espera a decisão sobre as APIs (1.2). Até
+  lá, a loja funciona pela planilha, e a tela diz isso em vez de mostrar botão que falha.
+- **Lojas novas precisam de dado, não de tela.** Shein, AliExpress, Magalu e TikTok Shop
+  aparecem "a caminho". Cada uma entra com a tabela de comissão conferida, as colunas de uma
+  exportação real do painel, o limite de título e o formato do arquivo de importação — com
+  isso ela ganha área, painel, visão geral e assistente sem tela nova.
+- **A aba Anúncios mostra prontidão, não anúncios publicados.** Nada grava na tabela
+  `anuncio` (o caminho de publicação é o arquivo de importação); vira lista de anúncios
+  quando alguma fonte passar a escrever nela.
+- **"Repasse informado", e não "a receber".** A planilha de pedidos não traz data de
+  pagamento.
+- **O assistente sabe uma lista fechada:** faturamento, pedidos, ticket médio, margem, mais
+  vendidos, o que postar e repasse divergente; hoje, ontem, 7, 30 ou 90 dias, este mês e o
+  mês passado. Pergunta fora dela recebe "ainda não sei", com a lista. Cada métrica nova é
+  uma entrega pequena — a consulta, a regra e a frase —, e a tradução pela IA gratuita ainda
+  não foi exercida contra o provedor (2.4).
+- **Perguntas coladas antes das áreas ficam sem loja**, na lista geral.
 
 ## 4. Dívida consciente, com o custo anotado
 

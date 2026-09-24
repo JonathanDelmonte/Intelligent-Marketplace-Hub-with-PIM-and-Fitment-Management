@@ -742,6 +742,11 @@ Não é fase da especificação: é o que o dono pediu para depois das fases, e 
 | C.16 | Diferença de repasse pode ser dada por conferida, com volta               | ✅   |
 | C.17 | Desenho novo: casca com lateral agrupada e tela inicial por gravidade     | 🚧   |
 | C.18 | Desativar e reativar produto; dados fiscais a partir do produto           | ✅   |
+| C.19 | Navegação por loja: barra por loja e o que serve a todas uma vez (ADR 0009) | ✅   |
+| C.20 | Área de cada loja: painel, pedidos, anúncios, perguntas, repasse e conexão | ✅   |
+| C.21 | Visão geral somando as lojas, com a fatia de cada uma                      | ✅   |
+| C.22 | Assistente IA: pergunta em português, número calculado pelo sistema        | ✅   |
+| C.23 | "Publicar em": da ficha, do anúncio e do garimpo para cada loja            | ✅   |
 
 **Entrega:** o sistema para de falar o nome das próprias tabelas, a navegação diz
 onde você está, e a tela inicial responde "o que eu faço agora" em vez de listar
@@ -858,8 +863,19 @@ Três armadilhas de layout apareceram no caminho, e estão no diário de 16/09 �
 instrutiva é que o medidor de rolagem horizontal que eu vinha usando dá falso positivo,
 e a medida honesta é a largura do print de página inteira.
 
-**O que falta para fechar a C.17:** o dono aprovar o desenho, e as catorze telas restantes
-serem migradas para ele.
+**O que falta para fechar a C.17:** as telas que ainda têm o desenho antigo serem migradas.
+A direção foi aprovada em 24/09 junto com a navegação por loja (C.19 a C.23, ADR 0009): a
+casca é a barra nova, escura e dividida por loja, e a tela inicial virou a visão geral. A
+área da loja, o assistente e a visão geral já nasceram no desenho novo.
+
+**C.19 a C.23 são a navegação por loja.** O dono pediu cada loja com a área e o painel dela,
+conectar fácil, uma IA geral e a separação entre o que é de uma loja e o que serve a todas.
+O que pertence a uma loja — pedidos, repasse, perguntas, anúncios, conexão, faturamento —
+mora na área dela, uma tela só para todas; o que serve a todas aparece uma vez e, quando
+precisa de loja, pergunta em qual ("Publicar em"). O assistente não inventa número: a IA
+só traduz a pergunta numa consulta fechada, e quem soma é o código, com as leituras do
+painel. O que ficou de fora — OAuth (2.6b), lojas novas, a aba Anúncios mostrando
+prontidão — está nas [pendências, 3.9](./pendencias.md).
 
 O que continua aberto e é decisão do dono: se os rótulos novos são os que ele usa
 falando. Trocar é uma linha em `src/app/navegacao.ts`.

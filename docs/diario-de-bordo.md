@@ -26,6 +26,150 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-24 — Navegação por loja (ADR 0009)
+
+O dono pediu a navegação reorganizada: cada loja com a área e o painel dela, conectar fácil,
+uma IA geral para perguntas como "qual foi meu faturamento na Shopee", e a separação entre o
+que é de uma loja e o que serve a todas. A proposta foi aprovada com "pode prosseguir, se algo
+nao ficar bom nos mudamos depois", e virou o ADR 0009 e uma série de commits pequenos: a barra
+nova, a área de cada loja, a visão geral somando as lojas, o assistente e o "Publicar em".
+
+### 🔀 Uma tela para todas as lojas, e nada nela pergunta qual loja é
+
+A área da loja é `/lojas/[plataforma]`, uma rota só. O filtro dos dados é a coluna
+`plataforma` do pedido, e o que muda de uma loja para outra — como conecta, o que oferece —
+vem das capacidades do adaptador. É o que faz loja nova ser entrega de dado (comissão, colunas
+da planilha, formato do arquivo), e não tela nova.
+
+### 🐛 A contagem da barra ficava velha
+
+O layout raiz do App Router não renderiza de novo em navegação dentro do app: a contagem de
+"Postar hoje" na barra era a do primeiro carregamento, e confirmar uma postagem não a mudava.
+A barra virou componente de cliente que lê `GET /barra` a cada troca de caminho, com
+`AbortController` para a resposta velha não sobrescrever a nova.
+
+### 🐛 Três armadilhas do Postgres nas somas por loja
+
+- **`group by` pela expressão com parâmetro é recusado.** O fuso entra como parâmetro em
+  `to_char(data at time zone $1, ...)`, e no `group by` a mesma expressão ganha `$2`: para o
+  Postgres são expressões diferentes. A consulta agrupa por `1`, a primeira coluna.
+- **`Date` dentro de `sql` cru é recusado pelo driver.** As janelas usam os operadores
+  tipados (`gte`, `lt`), que convertem o valor.
+- **Soma de `bigint` chega como texto.** Um conversor só (`somaEmCentavos`), com `Number` e
+  `centavos`, em vez de dez conversões espalhadas.
+
+### 🐛 "\s" dentro do `sql` do Drizzle chega ao Postgres como "s"
+
+O `sql` do Drizzle é template do JavaScript, e `\s` numa template string vira `s`. A busca de
+produto por nome trocava letras "s" por espaço em vez de juntar espaços, e só o teste pegou —
+o nome com espaço duplo não era achado. A expressão usa `[[:space:]]`, que não tem barra.
+Procurei o mesmo erro no resto do código: nenhuma outra consulta tinha barra dentro do `sql`.
+
+### 🐛 "o que a Mercado Livre pagou"
+
+A área da loja é uma tela para todas, e as frases tinham artigo fixo. O gênero é do nome, que
+é dado do mundo: `aLoja`, `daLoja` e `naLoja` em `ui/rotulos.ts` escrevem "o Mercado Livre",
+"da Shopee", "na Amazon".
+
+### 🔀 O painel é de dias inteiros no fuso do vendedor, e a margem só sobre o que tem custo
+
+"Últimos 30 dias" são os 30 dias do calendário até hoje, e não "agora menos 720 horas": com a
+conta em horas o primeiro dia entraria pela metade, e o gráfico por dia não fecharia com o
+total. A margem é a soma das margens conhecidas sobre o faturamento dos mesmos pedidos, e o
+painel diz quantos ficaram de fora por falta de custo — dividir pelo faturamento inteiro
+contaria pedido sem custo como margem zero.
+
+### ⚠️ A tabela `anuncio` não é escrita por nada
+
+A aba Anúncios da loja ia listar os anúncios publicados, e nada no sistema grava em `anuncio`:
+publicar é gerar arquivo de importação (ADR 0002), e a API das lojas está adiada. A aba mostra,
+no lugar, a prontidão de cada produto do catálogo para aquela loja — o que falta (custo, código
+de barras, onde serve) e os atalhos para o preço e a montagem. Vira lista de anúncios quando
+alguma fonte passar a escrever na tabela.
+
+### 🔀 "A receber" virou "Repasse informado"
+
+O painel da loja teria "a receber", e a planilha de pedidos não traz data de pagamento — sem
+ela, "a receber" seria a soma de tudo que a loja disse que vai repassar, desde sempre. O
+número que existe é o repasse informado na janela, e o rótulo diz isso.
+
+### ⚠️ O conjunto de lojas continua fechado
+
+`PLATAFORMAS` é o enum do banco e aparece em uns quarenta `Record<Plataforma, …>`, e isso é de
+propósito: loja nova sem tabela de comissão daria margem errada com cara de certa. Shein,
+AliExpress, Magalu e TikTok Shop aparecem em "Adicionar loja" como "a caminho", com o que
+falta a cada uma — comissão conferida, as colunas de uma exportação real, limite de título e o
+formato do arquivo de importação.
+
+### 🔀 Pergunta colada antes das áreas fica sem loja
+
+`pergunta_recebida` ganhou `plataforma`, nula. As perguntas coladas antes da navegação por loja
+não têm como saber de onde vieram, e seguem na lista geral em vez de serem distribuídas por
+palpite. Colar dentro da área de uma loja grava a loja; colar em `/perguntas` pergunta qual,
+com "não sei dizer" como resposta válida.
+
+### 🔀 O assistente: a IA traduz, e o código responde
+
+A pergunta vira consulta de uma lista fechada — métrica, lojas, período, por loja — e quem soma
+é o código, com as mesmas leituras do painel: o assistente não tem como discordar do cartão ao
+lado. Três portas, na ordem do custo: a pergunta pronta, que já vem montada e nunca gasta cota;
+a regra, que lê palavras; e a IA gratuita, só quando a regra não entendeu. A resposta mostra
+"entendi assim", porque número certo para a pergunta errada é o erro que ninguém percebe.
+
+A pergunta fica na URL (formulário GET): recarregar amanhã responde com os números de amanhã.
+Vai normalizada para o cache — "Quanto vendi?" e "quanto vendi" custam uma chamada —, e a loja
+da área de onde se pergunta fica fora do hash, aplicada depois, como na regra.
+
+### 🔀 A regra erra para o lado de não entender
+
+Métrica que ela não reconhece passa a vez para a IA, em vez de chutar. A ordem das palavras
+decide os casos que enganam: "qual loja vendeu mais" é faturamento por loja, e não produto
+campeão; "quantos pedidos atrasados" é a fila; "como estão as vendas" é o resumo, e "como está
+a margem" é a margem.
+
+### ❓ A tradução pela IA gratuita não foi exercida daqui
+
+A rede deste ambiente recusa o OpenRouter. Testado com modelo falso contra o banco de teste:
+tradução com padrão onde o modelo calou, cache pela pergunta normalizada, "fora do alcance",
+sem chave e cota esgotada. E o período é lista fechada: "últimos 15 dias" responde os 30 dias,
+com as datas à vista no "entendi assim".
+
+### 🔀 "Publicar em" não copia preço de uma loja para outra
+
+A ficha do produto ganhou uma linha por loja, e o anúncio montado oferece as outras. O preço
+simulado vai junto só para a loja simulada: a comissão muda, e o preço que dá margem numa não é
+o que dá na outra. Nas outras, o preço fica em branco — é o passo que falta, não erro.
+
+### 🔀 O "Publicar em" do garimpo abre o cadastro, em vez de cadastrar
+
+O nome do produto não se edita depois de criado, e o alvo de uma investigação nem sempre é o
+nome que se quer no catálogo para sempre. O link abre o formulário de produto novo com o alvo
+preenchido e a loja guardada; o produto criado abre no simulador daquela loja. Se o nome já
+existe no catálogo, a tela leva ao que existe (`buscarPorTitulo`), em vez de deixar duplicar.
+
+### 🔀 O repasse saiu de "Postar hoje"
+
+A conferência de repasse mora na aba Repasse de cada loja, onde o extrato conferido é o
+daquela loja. "Postar hoje" mostra quanto espera conferência em cada uma, com o atalho — quem
+posta o dia continua vendo que tem repasse diferente.
+
+### 🐛 Três coisas que só a tela mostrou
+
+- **Chave repetida na lista da resposta.** Dois pedidos do mesmo produto na fila eram duas
+  linhas com o mesmo rótulo; a posição entrou na chave.
+- **Loja sem pedido aparecia como "R$ 0,00" na comparação.** Zero é "não vendeu", e ela ainda
+  não tem dado: mostra traço, com "nenhum pedido importado ainda".
+- **"Por planilha" duas vezes no cabeçalho da loja.** A frase do estado repetia o nome do
+  estado; ficou só o complemento.
+
+### 🧹 Um teste para a barra não apontar para tela que não existe
+
+A barra nova ficou alguns dias, só local, com o Assistente IA listado antes da tela existir —
+e por isso nada foi publicado até ele existir. Um teste agora exige `page.tsx` para cada porta,
+cada "também" e a área das lojas: link para rota sem página é 404 com cara de funcionalidade.
+
+---
+
 ## 2026-09-24 — Imagem de tabela lida pela IA (3.6)
 
 O print da tabela do fornecedor no WhatsApp — o caso comum de verdade, pelo próprio

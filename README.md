@@ -225,6 +225,11 @@ vírgula, como vem de verdade.
    preencha `MLB1234` no campo que aparece ao lado do item e o link surge, junto com
    a instrução de onde subir o arquivo naquela plataforma.
 
+Com pedidos importados — a planilha de pedidos do painel da loja, pelo botão "Importar
+planilha" da área dela —, a barra passa a mostrar cada loja com a data até onde os números
+vão, a área da loja ganha o painel dos últimos 30 dias, e o **Assistente IA** responde
+perguntas como "quanto vendi no Mercado Livre este mês?" dizendo como entendeu a pergunta.
+
 Os passos 3 e 5 são as fases 5 e 6 em duas telas: a ingestão enfileirou a
 resolução, o poller consumiu, o grafo de identidade cresceu sem ninguém pedir, e a
 ficha de compatibilidade se montou a partir dos títulos que já estavam no banco —
@@ -339,6 +344,12 @@ ficar pronto sem nada vendido. Estado de cada fase no
 de NF-e está construída**, tudo funcionando de graça. O que falta depende de decisões
 adiadas pelo dono — API das plataformas, emissão de nota e a base de GTIN do leitor — e
 está nas [pendências](./docs/pendencias.md).
+
+No mesmo dia a navegação passou a ser **por loja**
+([ADR 0009](./docs/adr/0009-navegacao-por-loja.md)): cada loja tem a área dela, com o
+painel, os pedidos, as perguntas e o repasse só dela; a visão geral soma as lojas; e o
+assistente responde "qual foi meu faturamento na Shopee?" com a conta do sistema — a IA,
+quando entra, só entende a pergunta.
 
 ## Fora de escopo, permanentemente
 
