@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import type { VereditoDeTriagem } from '@/dominio/fornecedores/triagem';
 import { PERGUNTAS, VEREDITOS_DE_TRIAGEM } from '@/dominio/fornecedores/triagem';
 import { reaisParaCentavos } from '@/lib/dinheiro';
+import type { Conferencia } from '@/dominio/fornecedores/conferencia';
 import {
   CODIGOS_DE_AVISO,
+  conferenciaNaTela,
   descreverAviso,
+  documentoEmTexto,
   estadoDaBase,
   etiquetaDoVeredito,
   pedidoMinimoEmTexto,
@@ -12,6 +15,7 @@ import {
   prazoEmTexto,
   respostaEmTexto,
   tomDoVeredito,
+  vitrineEmTexto,
 } from './apresentacao';
 
 const contagem = (campos: Partial<Record<VereditoDeTriagem, number>> = {}) => ({
@@ -123,5 +127,94 @@ describe('estadoDaBase', () => {
 
   it('não reclama quando só há descartados e ressalvas', () => {
     expect(estadoDaBase(contagem({ descartar: 2, ressalva: 1 }))).toBeNull();
+  });
+});
+
+describe('documentoEmTexto', () => {
+  it('pontua o que confere, e diz quando não confere', () => {
+    expect(documentoEmTexto(null)).toBe('sem CNPJ');
+    expect(documentoEmTexto('11222333000181')).toBe('CNPJ 11.222.333/0001-81');
+    expect(documentoEmTexto('52998224725')).toBe('CPF 529.982.247-25');
+    // Gravado antes da conferência do dígito: aparece, marcado.
+    expect(documentoEmTexto('11.222.333/0001-82')).toBe('CNPJ 11.222.333/0001-82 (não confere)');
+  });
+});
+
+describe('vitrineEmTexto', () => {
+  it('o "sim" da conferência manda olhar o link; o da pessoa é só "sim"', () => {
+    expect(vitrineEmTexto(true, 'manual')).toBe('sim');
+    expect(vitrineEmTexto(true, 'm0_link')).toBe('sim, pela conferência (link abaixo)');
+    expect(vitrineEmTexto(null, null)).toBe('não perguntei');
+  });
+});
+
+describe('conferenciaNaTela', () => {
+  const base: Conferencia = {
+    em: '2026-09-24T12:00:00.000Z',
+    cadastro: {
+      tipo: 'encontrado',
+      frase: 'ACME LTDA, CNPJ 11.222.333/0001-81, ativo.',
+      ativo: true,
+      atacadista: true,
+      fabricante: false,
+      nome: 'ACME',
+      fonte: 'https://brasilapi.com.br/api/cnpj/v1/11222333000181',
+    },
+    vitrine: {
+      buscadoComo: 'Acme',
+      conferidas: ['ml', 'shopee', 'amazon'],
+      lojas: [],
+      indicios: [],
+      falha: null,
+    },
+  };
+
+  it('nada achado é tom ok, e diz que não achar não prova nada', () => {
+    const tela = conferenciaNaTela(base);
+    expect(tela.tom).toBe('ok');
+    expect(tela.quando).toBe('24/09/2026');
+    expect(tela.vitrine).toContain('Não achar não prova');
+  });
+
+  it('loja própria é alerta, com o link e o nome da vitrine', () => {
+    const tela = conferenciaNaTela({
+      ...base,
+      vitrine: {
+        ...base.vitrine,
+        conferidas: ['ml'],
+        lojas: [
+          { plataforma: 'ml', titulo: 'Acme', url: 'https://www.mercadolivre.com.br/loja/acme' },
+        ],
+      },
+    });
+    expect(tela.tom).toBe('alerta');
+    expect(tela.lojas).toEqual([
+      { rotulo: 'Mercado Livre: Acme', url: 'https://www.mercadolivre.com.br/loja/acme' },
+    ]);
+  });
+
+  it('CNPJ baixado preocupa mesmo sem loja achada', () => {
+    const tela = conferenciaNaTela({
+      ...base,
+      cadastro: {
+        tipo: 'encontrado',
+        frase: 'ACME: situação baixada.',
+        ativo: false,
+        atacadista: false,
+        fabricante: false,
+        nome: 'ACME',
+        fonte: 'https://brasilapi.com.br/api/cnpj/v1/11222333000181',
+      },
+    });
+    expect(tela).toMatchObject({ tom: 'alerta', cadastroPreocupa: true });
+  });
+
+  it('busca que parou diz onde conferiu e por quê', () => {
+    const tela = conferenciaNaTela({
+      ...base,
+      vitrine: { ...base.vitrine, conferidas: ['ml'], falha: 'o buscador pediu uma pausa.' },
+    });
+    expect(tela.vitrine).toContain('Conferido só em Mercado Livre');
+    expect(tela.vitrine).toContain('pediu uma pausa');
   });
 });

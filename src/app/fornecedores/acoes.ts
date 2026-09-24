@@ -1,7 +1,7 @@
 /**
  * Ações da tela de fornecedores.
  *
- * Duas: cadastrar e responder. Nenhuma faz trabalho de domínio — traduzem
+ * Três: cadastrar, responder e conferir. Nenhuma faz trabalho de domínio — traduzem
  * formulário em chamada e voltam.
  *
  * `redirect()` do Next sinaliza por exceção (`NEXT_REDIRECT`), então **nenhum
@@ -12,6 +12,8 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
+import { lerDocumento } from '@/dominio/documento';
+import { conferirFornecedor, vitrineConcluida } from '@/dominio/fornecedores/conferencia';
 import {
   CANAIS,
   ORIGENS,
@@ -88,11 +90,17 @@ export async function cadastrarFornecedor(dados: FormData): Promise<void> {
   const nome = texto(dados.get('nome'));
   if (nome === '') redirect(paraOnde('sem_nome'));
 
+  // O documento é gravado só com os caracteres, depois de conferido: com pontuação ou
+  // sem, é o mesmo CNPJ, e é assim que a Receita o consulta. Dígito que não confere não
+  // entra — seria o CNPJ de ninguém, e a conferência diria isso só depois.
+  const documento = lerDocumento(texto(dados.get('cnpj')));
+  if (documento.tipo === 'invalido') redirect(paraOnde('documento_invalido'));
+
   try {
     const repo = new RepositorioDeFornecedores(banco());
     await repo.criar({
       nome,
-      cnpj: ouNulo(dados.get('cnpj')),
+      cnpj: documento.tipo === 'ok' ? documento.documento.valor : null,
       site: ouNulo(dados.get('site')),
       contato: ouNulo(dados.get('contato')),
       canal: opcaoValida(esquemaCanal, dados.get('canal')),
@@ -144,6 +152,44 @@ export async function responderPerguntas(dados: FormData): Promise<void> {
     if (atualizado === null) destino = 'nao_encontrado';
   } catch (erro) {
     log.erro('fornecedor.resposta_falhou', { id, erro });
+    redirect(paraOnde('falha'));
+  }
+
+  revalidatePath(CAMINHO);
+  redirect(paraOnde(destino));
+}
+
+/**
+ * Confere CNPJ e vitrine agora, sem esperar a conferência automática.
+ *
+ * Três buscas e uma consulta: leva alguns segundos, e a tela espera. Recusa do buscador
+ * ou da Receita não é falha da ação — o que deu para conferir fica gravado, e o aviso diz
+ * que a conferência automática completa o resto.
+ */
+export async function conferirAgora(dados: FormData): Promise<void> {
+  const id = texto(dados.get('id'));
+  if (id === '') redirect(paraOnde('falha'));
+
+  let destino: CodigoDeAviso;
+  try {
+    const repo = new RepositorioDeFornecedores(banco());
+    const fornecedor = await repo.porId(id);
+    if (fornecedor === null) {
+      destino = 'nao_encontrado';
+    } else {
+      const conferencia = await conferirFornecedor(fornecedor);
+      const gravado = await repo.registrarConferencia(id, conferencia);
+      destino =
+        gravado === null
+          ? 'nao_encontrado'
+          : gravado.respondeu
+            ? 'conferido_loja'
+            : vitrineConcluida(conferencia) && conferencia.cadastro.tipo !== 'falhou'
+              ? 'conferido'
+              : 'conferido_incompleto';
+    }
+  } catch (erro) {
+    log.erro('fornecedor.conferencia_falhou', { id, erro });
     redirect(paraOnde('falha'));
   }
 

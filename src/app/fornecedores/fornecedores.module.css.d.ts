@@ -17,9 +17,12 @@ declare const estilo: {
   readonly cartaoNota: string;
   readonly cartaoNumero: string;
   readonly cartaoRotulo: string;
+  readonly conferencia: string;
+  readonly conferenciaAlerta: string;
   readonly detalhe: string;
   readonly dica: string;
   readonly entrada: string;
+  readonly enderecos: string;
   readonly etiqueta: string;
   readonly etiquetaAlerta: string;
   readonly etiquetaAtencao: string;

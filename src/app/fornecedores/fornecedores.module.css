@@ -142,6 +142,9 @@
 
 .campos {
   display: grid;
+  /* O formulário comum é uma linha que quebra; a grade de campos ocupa a linha inteira,
+     e o botão desce para baixo dela em vez de se espremer ao lado. */
+  flex: 1 1 100%;
   gap: 0.75rem;
   grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
   margin-bottom: 0.875rem;
@@ -176,4 +179,23 @@
 
 .vazio {
   composes: vazio from '../ui/comum.module.css';
+}
+
+.conferencia {
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0;
+}
+
+.conferenciaAlerta {
+  color: var(--cor-erro);
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0;
+}
+
+.enderecos {
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0.75rem;
+  overflow-wrap: anywhere;
+  padding-left: 1.125rem;
 }

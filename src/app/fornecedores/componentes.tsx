@@ -10,15 +10,19 @@ import type { FornecedorGravado } from '@/dominio/fornecedores/repositorio';
 import { mensagemDePrimeiroContato } from '@/dominio/fornecedores/contato';
 import { CANAIS, ORIGENS } from '@/dominio/fornecedores/repositorio';
 import { contagem } from '@/lib/texto';
-import { cadastrarFornecedor, responderPerguntas } from './acoes';
+import { cadastrarFornecedor, conferirAgora, responderPerguntas } from './acoes';
 import {
+  conferenciaNaTela,
+  documentoEmTexto,
   etiquetaDoVeredito,
   pedidoMinimoEmTexto,
   perguntasEmTexto,
   prazoEmTexto,
   respostaEmTexto,
   tomDoVeredito,
+  vitrineEmTexto,
   type Aviso,
+  type LinkDaConferencia,
 } from './apresentacao';
 import estilo from './fornecedores.module.css';
 
@@ -89,6 +93,66 @@ function TresEstados({
   );
 }
 
+function Enderecos({ links }: { readonly links: readonly LinkDaConferencia[] }) {
+  return (
+    <ul className={estilo.enderecos}>
+      {links.map((l) => (
+        <li key={l.url}>
+          <a href={l.url} rel="noopener noreferrer" target="_blank">
+            {l.rotulo}
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * A conferência de CNPJ e vitrine (7.3): o que a Receita disse, o que a busca achou, e o
+ * botão que confere agora. Aberta quando achou algo que descarta ou preocupa.
+ */
+function ConferenciaDoFornecedor({ fornecedor }: { readonly fornecedor: FornecedorGravado }) {
+  const tela = fornecedor.conferencia === null ? null : conferenciaNaTela(fornecedor.conferencia);
+  return (
+    <details className={estilo.detalhe} open={tela?.tom === 'alerta'}>
+      <summary>
+        {tela === null
+          ? 'CNPJ e vitrine: ainda não conferidos'
+          : `CNPJ e vitrine: conferidos em ${tela.quando}`}
+      </summary>
+      {tela === null ? (
+        <p className={estilo.dica}>
+          A conferência olha o CNPJ na Receita e procura loja com esse nome no Mercado Livre, na
+          Shopee e na Amazon. Ela roda sozinha, um fornecedor por vez; o botão confere agora.
+        </p>
+      ) : (
+        <>
+          <p className={tela.cadastroPreocupa ? estilo.conferenciaAlerta : estilo.conferencia}>
+            {tela.cadastro}
+          </p>
+          <p className={tela.lojas.length > 0 ? estilo.conferenciaAlerta : estilo.conferencia}>
+            {tela.vitrine}
+          </p>
+          {tela.lojas.length > 0 && <Enderecos links={tela.lojas} />}
+          {tela.lojas.length > 0 && tela.indicios.length > 0 && (
+            <p className={estilo.conferencia}>Também citam o nome, sem ser loja própria certa:</p>
+          )}
+          {tela.indicios.length > 0 && <Enderecos links={tela.indicios} />}
+        </>
+      )}
+      <form action={conferirAgora} className={estilo.formulario}>
+        <input name="id" type="hidden" value={fornecedor.id} />
+        <button className={estilo.botao} type="submit">
+          Conferir CNPJ e vitrine agora
+        </button>
+        <p className={estilo.dica}>
+          Leva alguns segundos: são três buscas e uma consulta, todas gratuitas.
+        </p>
+      </form>
+    </details>
+  );
+}
+
 export function CartaoDoFornecedor({
   fornecedor,
   vendedor,
@@ -117,7 +181,7 @@ export function CartaoDoFornecedor({
         <div>
           <h3 className={estilo.itemTitulo}>{fornecedor.nome}</h3>
           <p className={estilo.itemSub}>
-            {fornecedor.cnpj === null ? 'sem CNPJ' : `CNPJ ${fornecedor.cnpj}`}
+            {documentoEmTexto(fornecedor.cnpj)}
             {fornecedor.contato === null ? '' : ` · ${fornecedor.contato}`}
           </p>
         </div>
@@ -149,9 +213,11 @@ export function CartaoDoFornecedor({
         </div>
         <div>
           <dt>Vende na mesma vitrine</dt>
-          <dd>{respostaEmTexto(fornecedor.vendeDiretoMarketplace)}</dd>
+          <dd>{vitrineEmTexto(fornecedor.vendeDiretoMarketplace, fornecedor.vendeDiretoFonte)}</dd>
         </div>
       </dl>
+
+      <ConferenciaDoFornecedor fornecedor={fornecedor} />
 
       <details className={estilo.detalhe}>
         <summary>Responder as perguntas</summary>

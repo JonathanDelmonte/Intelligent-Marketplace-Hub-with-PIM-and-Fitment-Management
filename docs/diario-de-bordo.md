@@ -26,6 +26,76 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-24 — A conferência de fornecedor (7.3)
+
+O fornecedor passa a ser conferido sozinho: o CNPJ na Receita, pela BrasilAPI, e uma busca
+por loja com o nome dele no Mercado Livre, na Shopee e na Amazon, pelo buscador gratuito. É
+o que a especificação chama de "verificação automática" do campo que descarta. As duas
+ferramentas saíram do garimpo para `dominio/web/` — fornecedor não deveria depender do
+prospector.
+
+### 🔀 A conferência responde "sim", e nunca "não"
+
+Loja própria achada, com o nome inteiro, responde "vende direto" quando a pergunta estava em
+branco — e isso é o descarte. Não achar nada **não** responde "não": busca não prova
+ausência, e um "não" automático aprovaria fornecedor por falta de evidência, que é o
+contrário do que o campo existe para impedir. A conferência fica gravada no fornecedor
+(`conferencia`, jsonb), com os links, e o cartão mostra o que ela achou.
+
+### 🔀 Resposta à mão não é trocada, e para isso a resposta precisa dizer de quem é
+
+Coluna nova, `vende_direto_fonte`: `manual` quando a pessoa respondeu, `m0_link` quando foi
+a conferência. Sem ela, o "sim" gravado não dizia se veio de quem perguntou ou da busca, e a
+regra de procedência (CLAUDE.md, 3.3) não tinha como ser aplicada — a gravação passa por
+`decidirEscrita`, e busca (20) não sobrescreve pessoa (100). As respostas que já existiam
+foram todas dadas à mão, e a migração as marca assim.
+
+### 🔀 Nome inteiro para responder; parte do nome é só indício
+
+"Mundo dos Filtros" não é "Filtros Brasil", e a loja da Acme no marketplace costuma se
+chamar só "Acme". A regra: forma societária (`ltda`, `me`, `eireli`…) sai sempre; palavra de
+ramo (`distribuidora`, `comércio`, `importadora`, `brasil`…) sai só para achar o núcleo.
+Responde "sim" a página de **loja** com **todas** as palavras do nome, no título ou no
+endereço — e palavra conta inteira, então "acme" não casa com "acmeflex". Loja com parte do
+nome, ou anúncio que cita o nome, é indício: fica listado para a pessoa olhar. Nome que é só
+ramo, ou com núcleo de menos de três letras ("MK"), nunca responde — casaria com a loja de
+outro.
+
+### ❓ Os endereços de loja e o `site:` do buscador não foram conferidos daqui
+
+A rede deste ambiente recusa o buscador e a BrasilAPI (403 do proxy): o botão foi testado
+de ponta a ponta no navegador, e deu o caminho de falha — "a conferência não chegou ao fim",
+com o motivo. Os padrões de página de loja (Mercado Livre `/loja/`, `/perfil/`, `/pagina/`,
+`loja.` e `perfil.`, `_CustId_`; Shopee `/<usuário>` e `/shop/<número>`; Amazon `/stores/`,
+`/shops/`, `/sp?seller=` e `/s?me=`) e o operador `site:` do DuckDuckGo vêm de conhecimento
+geral, não de teste ao vivo. Se as primeiras conferências de verdade vierem sempre vazias, é
+aqui que se olha.
+
+### 🔀 Sozinha, e devagar
+
+Tarefa do poller, depois dos pedidos e antes do garimpo: um fornecedor por vez, um minuto
+entre um e outro, dez minutos sem olhar a base quando não há o que conferir, e cinco minutos
+de espera — dobrando até uma hora — quando o buscador ou a Receita recusam. O buscador
+gratuito recusa quem pergunta demais, e pergunta recusada não é resposta. Conferência
+completa vale noventa dias (quem não vendia na vitrine pode passar a vender); incompleta é
+refeita em doze horas. Quem a pessoa já descartou à mão não é conferido de novo.
+
+### 🔀 O CNPJ do fornecedor é conferido no cadastro
+
+Dígito que não confere não entra — seria o CNPJ de ninguém, e a conferência só diria isso
+depois. O que confere é gravado só com os caracteres (`11222333000181`): com pontuação ou
+sem, é o mesmo CNPJ, e é assim que a Receita o consulta. O que já estava gravado com
+pontuação continua funcionando; o cartão mostra "(não confere)" quando for o caso.
+
+### 🐛 O formulário de cadastro de fornecedor espremia os campos numa coluna
+
+A peça comum `.formulario` é uma linha que quebra, pensada para formulário de um ou dois
+campos; a grade de seis campos virou um item encolhido ao lado do botão. Achado no
+navegador, ao conferir o botão novo — não havia teste que visse. A grade agora ocupa a linha
+inteira, e o botão desce para baixo dela.
+
+---
+
 ## 2026-09-24 — A IA ligada pelo OpenRouter, e as lacunas do produto
 
 O dono criou uma chave no OpenRouter e pediu para ser avisado de quando colar. Pediu também
