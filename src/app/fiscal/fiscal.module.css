@@ -109,6 +109,10 @@
   composes: etiqueta from '../ui/comum.module.css';
 }
 
+.etiquetaOk {
+  composes: etiquetaOk from '../ui/comum.module.css';
+}
+
 .etiquetaAtencao {
   composes: etiquetaAtencao from '../ui/comum.module.css';
 }

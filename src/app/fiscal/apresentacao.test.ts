@@ -7,12 +7,14 @@ import { reaisParaCentavos } from '@/lib/dinheiro';
 import {
   CODIGOS_DE_AVISO,
   ROTULO_DA_SITUACAO,
+  ROTULO_DA_SITUACAO_DO_EMISSOR,
   descreverAviso,
   diaEmTexto,
   prazoEmTexto,
   resumoDoCadastro,
   resumoDoTeto,
   rotuloDoCampo,
+  tomDoEmissor,
   tomDoPrazo,
   tomDoTeto,
 } from './apresentacao';
@@ -38,6 +40,20 @@ const resumo = (campos: Partial<ResumoFiscal> = {}): ResumoFiscal => ({
   regulados: 0,
   regime: 'mei',
   ...campos,
+});
+
+describe('emissor', () => {
+  it('sem CNPJ é neutro: o prazo que muda isso já está no painel de prazos', () => {
+    expect(tomDoEmissor('sem_cnpj')).toBe('neutro');
+    expect(tomDoEmissor('falta_dado')).toBe('atencao');
+    expect(tomDoEmissor('pronto')).toBe('ok');
+  });
+
+  it('toda situação tem rótulo', () => {
+    for (const situacao of ['sem_cnpj', 'falta_dado', 'pronto'] as const) {
+      expect(ROTULO_DA_SITUACAO_DO_EMISSOR[situacao]).not.toBe('');
+    }
+  });
 });
 
 describe('tons', () => {

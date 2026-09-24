@@ -5,8 +5,10 @@
  * mesa, feito uma vez por item, com a tabela de NCM aberta em outra aba — então cada
  * SKU tem o formulário aberto ao lado do que falta nele, e não atrás de um clique.
  */
+import Link from 'next/link';
 import { CAMPOS_FISCAIS, PARA_QUE_SERVE, VALORES_COMUNS } from '@/dominio/fiscal/codigos';
 import type { CampoFiscal } from '@/dominio/fiscal/codigos';
+import type { RecomendacaoDeEmissor } from '@/dominio/fiscal/emissor';
 import { AREAS_REGULADAS, REGRAS } from '@/dominio/fiscal/regulada';
 import type { PrazoAvaliado } from '@/dominio/fiscal/prazos';
 import type { ResumoFiscal, SkuFiscal } from '@/dominio/fiscal/repositorio';
@@ -15,14 +17,17 @@ import type { RegimeFiscal } from '@/dominio/precificacao/tipos';
 import { gravarCodigos, informarReceitaExterna, sugerirCodigos } from './acoes';
 import {
   ROTULO_DA_SITUACAO,
+  ROTULO_DA_SITUACAO_DO_EMISSOR,
   diaEmTexto,
   prazoEmTexto,
   resumoDoTeto,
   rotuloDoCampo,
+  tomDoEmissor,
   tomDoPrazo,
   tomDoTeto,
   type Aviso,
 } from './apresentacao';
+import { CAMINHO as CAMINHO_DO_NEGOCIO } from '../negocio/constantes';
 import estilo from './fiscal.module.css';
 
 export function AvisoDaAcao({ aviso }: { readonly aviso: Aviso }) {
@@ -87,7 +92,11 @@ export function Teto({
     return (
       <p className={estilo.vazio}>
         O teto anual vale para o regime MEI. Este perfil está como {regime.toUpperCase()}, então não
-        há teto a controlar aqui — o que não quer dizer que não haja obrigação.
+        há teto a controlar aqui — o que não quer dizer que não haja obrigação. O regime se muda em{' '}
+        <Link className={estilo.link} href={CAMINHO_DO_NEGOCIO}>
+          Meu negócio
+        </Link>
+        .
       </p>
     );
   }
@@ -130,6 +139,50 @@ export function Teto({
         </button>
       </form>
     </>
+  );
+}
+
+/**
+ * O emissor de nota recomendado, com o que falta e o porquê.
+ *
+ * Tudo que decide a recomendação vem de "Meu negócio" ou dos pedidos importados, e a
+ * frase final diz isso: mudou o dado lá, a recomendação muda aqui. A emissão pelo próprio
+ * sistema fica para depois (pendência 1.5) — esta seção diz o que usar e o que falta.
+ */
+export function Emissor({ recomendacao }: { readonly recomendacao: RecomendacaoDeEmissor }) {
+  const tom = tomDoEmissor(recomendacao.situacao);
+  const classe =
+    tom === 'ok'
+      ? `${estilo.etiqueta} ${estilo.etiquetaOk}`
+      : tom === 'atencao'
+        ? `${estilo.etiqueta} ${estilo.etiquetaAtencao}`
+        : estilo.etiqueta;
+
+  return (
+    <div className={estilo.item}>
+      <div className={estilo.itemCabecalho}>
+        <h3 className={estilo.itemTitulo}>{recomendacao.titulo}</h3>
+        <span className={classe}>{ROTULO_DA_SITUACAO_DO_EMISSOR[recomendacao.situacao]}</span>
+      </div>
+      {recomendacao.falta.map((falta) => (
+        <p className={estilo.itemAcao} key={falta}>
+          {falta}
+        </p>
+      ))}
+      {recomendacao.porque.map((porque) => (
+        <p className={estilo.itemCorpo} key={porque}>
+          {porque}
+        </p>
+      ))}
+      <p className={estilo.itemFonte}>
+        Estado, regime, CNPJ, inscrição e certificado vêm de{' '}
+        <Link className={estilo.link} href={CAMINHO_DO_NEGOCIO}>
+          Meu negócio
+        </Link>
+        ; as vendas, dos pedidos importados nos últimos 30 dias. Mudou um desses, a recomendação
+        muda junto.
+      </p>
+    </div>
   );
 }
 

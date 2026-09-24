@@ -1,16 +1,19 @@
 /**
  * Tela fiscal (M12) — o que a virada de janeiro vai exigir.
  *
- * Quatro entregas numa tela, e a razão de estarem juntas é que são o mesmo trabalho
- * com o mesmo prazo: os prazos de 2027 (9.4), o teto do MEI (9.3), o cadastro de
- * NCM/CST/cClassTrib item por item (9.2) e a marcação de categoria regulada (9.6).
+ * Cinco entregas numa tela, e a razão de estarem juntas é que são o mesmo trabalho
+ * com o mesmo prazo: os prazos de 2027 (9.4), o teto do MEI (9.3), o emissor de nota
+ * recomendado, o cadastro de NCM/CST/cClassTrib item por item (9.2) e a marcação de
+ * categoria regulada (9.6).
  *
  * ## A ordem da tela é a ordem da urgência
  *
  * Prazo primeiro, porque é o que dá contexto a todo o resto — sem a data, "falta
  * cClassTrib em 12 produtos" é uma pendência sem prazo, e pendência sem prazo não é
  * feita. Depois o teto, que é o único item aqui que pode mudar o regime no meio do
- * ano. Por último o cadastro, que é o trabalho em si.
+ * ano. Depois o emissor, que é uma decisão só e um bloco curto — no fim, ficaria
+ * enterrado embaixo de duzentos cartões de produto. Por último o cadastro, que é o
+ * trabalho em si.
  *
  * ## O formulário de cada item fica aberto
  *
@@ -22,12 +25,14 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { z } from 'zod';
 import { lerAmbiente } from '@/config/ambiente';
+import { recomendarEmissor } from '@/dominio/fiscal/emissor';
 import { avaliarPrazos } from '@/dominio/fiscal/prazos';
 import { RepositorioFiscal } from '@/dominio/fiscal/repositorio';
 import { carregarPerfil } from '@/dominio/perfil';
+import { RepositorioDoNegocio, inicioDaJanelaDoMes } from '@/dominio/perfil/negocio';
 import { banco } from '@/infra/banco/cliente';
 import { descreverAviso, resumoDoCadastro } from './apresentacao';
-import { AvisoDaAcao, Cadastro, Prazos, Teto, type SugestaoNaTela } from './componentes';
+import { AvisoDaAcao, Cadastro, Emissor, Prazos, Teto, type SugestaoNaTela } from './componentes';
 import { CAMINHO as CAMINHO_DO_CATALOGO } from '../catalogo/constantes';
 import { CAMINHO } from './constantes';
 import estilo from './fiscal.module.css';
@@ -52,11 +57,23 @@ export default async function PaginaFiscal({
   const agora = new Date();
   const ano = agora.getFullYear();
 
-  const [resumo, teto] = await Promise.all([
+  const negocio = new RepositorioDoNegocio(db);
+  const [resumo, teto, dadosDoNegocio, vendasNoMes] = await Promise.all([
     repo.resumo(perfil.id),
     repo.teto(perfil.id, ano, agora),
+    negocio.ler(perfil.id),
+    negocio.vendasPorPlataforma(perfil.id, inicioDaJanelaDoMes(agora)),
   ]);
   const prazos = avaliarPrazos({ agora, regime: resumo.regime });
+  const emissor = recomendarEmissor({
+    regime: resumo.regime,
+    documento: dadosDoNegocio?.documento ?? null,
+    inscricaoEstadual: dadosDoNegocio?.inscricaoEstadual ?? null,
+    uf: dadosDoNegocio?.uf ?? null,
+    certificadoValidoAte: dadosDoNegocio?.certificadoValidoAte ?? null,
+    vendasNoMes,
+    agora,
+  });
 
   const um = (chave: string): string | undefined => {
     const valor = parametros[chave];
@@ -129,6 +146,13 @@ export default async function PaginaFiscal({
               Teto do ano
             </h2>
             <Teto ano={ano} regime={resumo.regime} teto={teto} />
+          </section>
+
+          <section aria-labelledby="emissor-titulo" className={estilo.secao} id="emissor">
+            <h2 className={estilo.secaoTitulo} id="emissor-titulo">
+              Emissor de nota fiscal
+            </h2>
+            <Emissor recomendacao={emissor} />
           </section>
 
           <section aria-labelledby="cadastro-titulo" className={estilo.secao}>

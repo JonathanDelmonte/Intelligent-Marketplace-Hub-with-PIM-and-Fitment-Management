@@ -17,6 +17,7 @@ declare const estilo: {
   readonly etiqueta: string;
   readonly etiquetaAlerta: string;
   readonly etiquetaAtencao: string;
+  readonly etiquetaOk: string;
   readonly formulario: string;
   readonly formularioMagro: string;
   readonly item: string;

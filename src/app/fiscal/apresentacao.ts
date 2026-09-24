@@ -6,6 +6,7 @@
  * isso merece teste.
  */
 import { ROTULO_DO_CAMPO, type CampoFiscal } from '@/dominio/fiscal/codigos';
+import type { RecomendacaoDeEmissor } from '@/dominio/fiscal/emissor';
 import type { PrazoAvaliado, UrgenciaDoPrazo } from '@/dominio/fiscal/prazos';
 import type { ResumoFiscal } from '@/dominio/fiscal/repositorio';
 import type { AvaliacaoDoTeto, SituacaoDoTeto } from '@/dominio/fiscal/teto';
@@ -45,6 +46,29 @@ export const ROTULO_DA_SITUACAO: Readonly<Record<SituacaoDoTeto, string>> = {
   perto: 'passou de 85%',
   estourou: 'teto estourado',
 };
+
+type SituacaoDoEmissor = RecomendacaoDeEmissor['situacao'];
+
+export const ROTULO_DA_SITUACAO_DO_EMISSOR: Readonly<Record<SituacaoDoEmissor, string>> = {
+  sem_cnpj: 'sem CNPJ',
+  falta_dado: 'falta providenciar',
+  pronto: 'pronto para emitir',
+};
+
+/**
+ * Sem CNPJ fica neutro, e não alerta: pessoa física não emite nota, e o prazo que muda
+ * isso já está no painel de prazos — alarmar duas vezes pela mesma data é ruído.
+ */
+export function tomDoEmissor(situacao: SituacaoDoEmissor): Tom | 'ok' {
+  switch (situacao) {
+    case 'sem_cnpj':
+      return 'neutro';
+    case 'falta_dado':
+      return 'atencao';
+    case 'pronto':
+      return 'ok';
+  }
+}
 
 /** O prazo em palavras de calendário, que é como a pessoa pensa. */
 export function prazoEmTexto(prazo: PrazoAvaliado): string {
