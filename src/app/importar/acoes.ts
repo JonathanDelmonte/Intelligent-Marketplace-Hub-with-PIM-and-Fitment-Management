@@ -21,6 +21,7 @@ import { redirect } from 'next/navigation';
 import { entradaDeTextoLivre } from '@/dominio/ingestao/classificador';
 import type { Entrada } from '@/dominio/ingestao/classificador';
 import { MAX_UPLOAD_BYTES } from '@/config/limites';
+import { ehPlataforma } from '@/dominio/precificacao/tipos';
 import { FilaError } from '@/infra/fila/fila';
 import { criarRegistrador, nivelDoAmbiente } from '@/infra/log';
 import { drenar, montarNucleo, tarefaCompleta } from '@/infra/montagem';
@@ -54,6 +55,9 @@ export async function enviarEntrada(dados: FormData): Promise<void> {
   // duas vezes impediria o compilador de saber que o segundo valor é o testado.
   const campoDeTexto = dados.get('texto');
   const texto = typeof campoDeTexto === 'string' ? campoDeTexto.trim() : '';
+  // A loja vem do botão de importar da área dela. Valor que não é loja é ignorado: o
+  // classificador volta a decidir pelo nome, como sempre.
+  const campoDeLoja = dados.get('loja');
 
   let entrada: Entrada;
   let conteudo: Uint8Array | undefined;
@@ -72,6 +76,7 @@ export async function enviarEntrada(dados: FormData): Promise<void> {
       // explícito, e `File.type` vem vazio quando o navegador não sabe o MIME.
       ...(arquivo.type === '' ? {} : { tipoMime: arquivo.type }),
       tamanhoBytes: arquivo.size,
+      ...(ehPlataforma(campoDeLoja) ? { loja: campoDeLoja } : {}),
     };
   } else if (texto !== '') {
     entrada = entradaDeTextoLivre(texto);

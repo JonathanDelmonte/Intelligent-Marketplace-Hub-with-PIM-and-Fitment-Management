@@ -19,6 +19,7 @@
 import { createHash } from 'node:crypto';
 import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import type { PerfilId } from '@/dominio/catalogo/sku';
+import type { Plataforma } from '@/dominio/precificacao/tipos';
 import type { Fonte } from '@/dominio/procedencia';
 import type { Banco } from '@/infra/banco/cliente';
 import { perguntaRecebida } from '@/infra/banco/schema';
@@ -29,6 +30,8 @@ export interface PerguntaParaGravar {
   readonly anuncioExterno: string;
   readonly texto: string;
   readonly recebidaEm?: Date;
+  /** A loja de onde veio. `null` quando quem colou não disse (ADR 0009). */
+  readonly plataforma?: Plataforma | null;
 }
 
 export interface ResultadoDoLote {
@@ -79,6 +82,7 @@ export class RepositorioDePerguntas {
         perguntas.map((p) => ({
           perfilId: perfil,
           anuncioExterno: p.anuncioExterno,
+          plataforma: p.plataforma ?? null,
           texto: p.texto,
           hashTexto: chaveDaPergunta(p.texto),
           fonte,
@@ -97,10 +101,18 @@ export class RepositorioDePerguntas {
    * A janela existe porque dúvida recorrente é sobre o anúncio de **hoje**: cinco
    * perguntas de voltagem há oito meses, num anúncio já corrigido, não são um buraco
    * aberto — e continuariam acusando para sempre.
+   *
+   * `plataforma` restringe às perguntas de uma loja, para a área dela. Sem ela vêm
+   * todas, inclusive as que não dizem a loja.
    */
   async recentes(
     perfil: PerfilId,
-    opcoes: { readonly dias?: number; readonly limite?: number; readonly agora?: Date } = {},
+    opcoes: {
+      readonly dias?: number;
+      readonly limite?: number;
+      readonly agora?: Date;
+      readonly plataforma?: Plataforma;
+    } = {},
   ): Promise<readonly PerguntaRecebida[]> {
     const dias = opcoes.dias ?? 90;
     const agora = opcoes.agora ?? new Date();
@@ -114,7 +126,15 @@ export class RepositorioDePerguntas {
         anuncioId: perguntaRecebida.anuncioExterno,
       })
       .from(perguntaRecebida)
-      .where(and(eq(perguntaRecebida.perfilId, perfil), gte(perguntaRecebida.recebidaEm, desde)))
+      .where(
+        and(
+          eq(perguntaRecebida.perfilId, perfil),
+          gte(perguntaRecebida.recebidaEm, desde),
+          opcoes.plataforma === undefined
+            ? undefined
+            : eq(perguntaRecebida.plataforma, opcoes.plataforma),
+        ),
+      )
       .orderBy(desc(perguntaRecebida.recebidaEm))
       .limit(opcoes.limite ?? 500);
 

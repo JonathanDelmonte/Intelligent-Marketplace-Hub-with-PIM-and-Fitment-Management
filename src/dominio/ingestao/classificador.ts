@@ -10,6 +10,7 @@
  * resolve melhor, mais barato e de forma auditável que LLM (ADR 0005). O LLM entra
  * *depois*, dentro do extrator, onde o layout é imprevisível.
  */
+import type { Plataforma } from '@/dominio/precificacao/tipos';
 
 /** O que a entrada é, e portanto qual extrator a recebe. */
 export const TIPOS_DE_ENTRADA = [
@@ -45,6 +46,12 @@ export type Entrada =
       readonly nome: string;
       readonly tipoMime?: string;
       readonly tamanhoBytes?: number;
+      /**
+       * A loja que a pessoa disse ser a origem do arquivo — o botão de importar da área
+       * de uma loja manda isto (ADR 0009). Vence a pista do nome: é informação dada, e
+       * não adivinhada.
+       */
+      readonly loja?: Plataforma;
     };
 
 export interface Classificacao {
@@ -324,6 +331,14 @@ function classificarArquivo(entrada: Extract<Entrada, { tipo: 'arquivo' }>): Cla
     (MIME_PLANILHA as readonly string[]).some((m) => mime.startsWith(m));
 
   if (ehPlanilha) {
+    if (entrada.loja !== undefined) {
+      return {
+        tipoDeEntrada: 'planilha_exportacao',
+        site: entrada.loja,
+        confiancaBp: 9000,
+        motivo: `enviada pela área da loja ${entrada.loja} — mapeamento fixo, sem LLM`,
+      };
+    }
     const pista = PISTAS_DE_EXPORTACAO.find((p) => p.padrao.test(entrada.nome));
     if (pista !== undefined) {
       return {

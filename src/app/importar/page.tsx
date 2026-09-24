@@ -14,8 +14,11 @@
  *    é o que torna um sistema de ingestão inauditável em uma semana.
  */
 import type { Metadata } from 'next';
+import Link from 'next/link';
+import { ehPlataforma } from '@/dominio/precificacao/tipos';
 import { montarNucleo } from '@/infra/montagem';
-import { LIMITE_DA_LISTA, LIMITE_DE_PROCESSAMENTO_MANUAL } from './constantes';
+import { ROTULO_DA_PLATAFORMA } from '../ui/rotulos';
+import { CAMINHO, LIMITE_DA_LISTA, LIMITE_DE_PROCESSAMENTO_MANUAL } from './constantes';
 import {
   avisoDeFilaParada,
   descreverAviso,
@@ -52,6 +55,8 @@ export default async function PaginaDeImportacao({
 }) {
   const parametros = await searchParams;
   const codigo = typeof parametros['r'] === 'string' ? parametros['r'] : undefined;
+  // Vindo do botão de importar da área de uma loja, o arquivo entra como daquela loja.
+  const loja = ehPlataforma(parametros['loja']) ? parametros['loja'] : undefined;
   const quantidade = inteiroDaUrl(
     typeof parametros['n'] === 'string' ? parametros['n'] : undefined,
   );
@@ -86,8 +91,16 @@ export default async function PaginaDeImportacao({
       <Painel contagem={contagem} prontos={prontos} />
 
       <section className={estilo.secao}>
-        <h2 className={estilo.tituloDaSecao}>Nova entrada</h2>
-        <FormularioDeEntrada />
+        <h2 className={estilo.tituloDaSecao}>
+          {loja === undefined ? 'Nova entrada' : `Planilha da loja ${ROTULO_DA_PLATAFORMA[loja]}`}
+        </h2>
+        {loja !== undefined && (
+          <p className={estilo.subtitulo}>
+            A planilha que você subir aqui entra como da loja {ROTULO_DA_PLATAFORMA[loja]}, qualquer
+            que seja o nome do arquivo. <Link href={CAMINHO}>Importar de outra origem</Link>
+          </p>
+        )}
+        <FormularioDeEntrada loja={loja} />
       </section>
 
       {emRevisao.length === 0 ? null : (

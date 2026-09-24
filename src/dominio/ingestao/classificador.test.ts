@@ -152,6 +152,23 @@ describe('arquivos', () => {
     }
   });
 
+  it('a loja dita pela área dela vence o nome do arquivo, e economiza LLM igual', () => {
+    // O botão de importar da área da Shopee manda a loja: "Relatório (3).xlsx" não diz
+    // nada, e sem a loja iria para planilha genérica — ou, pior, para revisão.
+    const c = classificar({ tipo: 'arquivo', nome: 'Relatório (3).xlsx', loja: 'shopee' });
+    expect(c.tipoDeEntrada).toBe('planilha_exportacao');
+    expect(c.site).toBe('shopee');
+    expect(exigeLlm(c.tipoDeEntrada)).toBe(false);
+
+    const errado = classificar({ tipo: 'arquivo', nome: 'amazon-report.csv', loja: 'ml' });
+    expect(errado.site).toBe('ml');
+  });
+
+  it('a loja dita não transforma PDF nem imagem em planilha', () => {
+    const c = classificar({ tipo: 'arquivo', nome: 'tabela.pdf', loja: 'shopee' });
+    expect(c.tipoDeEntrada).toBe('tabela_precos_pdf');
+  });
+
   it('planilha sem pista de plataforma é genérica e precisa de LLM', () => {
     const c = arquivo('tabela do fornecedor.xlsx');
     expect(c.tipoDeEntrada).toBe('planilha_generica');

@@ -8,6 +8,8 @@
  */
 import { REPETICOES_QUE_ACUSAM, type DuvidaRecorrente } from '@/dominio/posvenda/recorrente';
 import type { PerguntaRecebida } from '@/dominio/posvenda/recorrente';
+import { PLATAFORMAS, type Plataforma } from '@/dominio/precificacao/tipos';
+import { ROTULO_DA_PLATAFORMA } from '../ui/rotulos';
 import { formatarRelativo } from '../ui/tempo';
 import { guardarPerguntas } from './acoes';
 import { ROTULO_DO_TEMA, type Aviso } from './apresentacao';
@@ -35,10 +37,36 @@ export function AvisoDaAcao({ aviso }: { readonly aviso: Aviso }) {
  * Um anúncio por vez, e uma pergunta por linha. É o formato que sai do painel quando
  * se abre as perguntas de um anúncio e se copia a coluna — e formato que a pessoa tem
  * de montar é formato que ela não usa.
+ *
+ * Dentro da área de uma loja, a loja já está dita e o formulário volta para lá. Na tela
+ * geral, a loja é uma escolha — com "não sei dizer", porque pergunta na loja errada é
+ * pior que pergunta sem loja.
  */
-export function FormularioDeColar() {
+export function FormularioDeColar({
+  loja,
+  voltar,
+}: {
+  readonly loja?: Plataforma | undefined;
+  readonly voltar?: string | undefined;
+} = {}) {
   return (
     <form action={guardarPerguntas} className={estilo.formulario}>
+      {voltar !== undefined && <input name="voltar" type="hidden" value={voltar} />}
+      {loja === undefined ? (
+        <label className={estilo.campo}>
+          De qual loja
+          <select className={estilo.entrada} defaultValue="" name="plataforma">
+            <option value="">Não sei dizer</option>
+            {PLATAFORMAS.map((p) => (
+              <option key={p} value={p}>
+                {ROTULO_DA_PLATAFORMA[p]}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : (
+        <input name="plataforma" type="hidden" value={loja} />
+      )}
       <label className={estilo.campo}>
         De qual anúncio
         <input

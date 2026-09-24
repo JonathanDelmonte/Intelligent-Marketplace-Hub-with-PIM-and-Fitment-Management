@@ -8,6 +8,7 @@
 import Link from 'next/link';
 import { STATUS_JOB, type JobDetalhado, type StatusJob } from '@/infra/fila/fila';
 import { MAX_UPLOAD_ROTULO } from '@/config/limites';
+import type { Plataforma } from '@/dominio/precificacao/tipos';
 import { CAMINHO } from './constantes';
 import {
   COR_DO_STATUS,
@@ -94,9 +95,10 @@ export function Painel({
  * classificador, e obrigar a pessoa a escolher a aba certa antes de colar seria
  * transferir para ela um trabalho que o sistema sabe fazer.
  */
-export function FormularioDeEntrada() {
+export function FormularioDeEntrada({ loja }: { readonly loja?: Plataforma | undefined } = {}) {
   return (
     <form action={enviarEntrada} className={estilo.formulario}>
+      {loja !== undefined && <input name="loja" type="hidden" value={loja} />}
       <label htmlFor="texto" className={estilo.cartaoRotulo}>
         Cole um link, uma lista de links ou um texto
       </label>

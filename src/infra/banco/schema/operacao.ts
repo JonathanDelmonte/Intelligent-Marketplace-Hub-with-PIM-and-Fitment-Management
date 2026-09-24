@@ -97,6 +97,13 @@ export const perguntaRecebida = pgTable(
       .references(() => perfilVendedor.id, { onDelete: 'cascade' }),
     /** Identificador do anúncio na plataforma, como aparece no painel. */
     anuncioExterno: text('anuncio_externo').notNull(),
+    /**
+     * A loja de onde a pergunta veio, para a área dela (ADR 0009).
+     *
+     * Nula nas perguntas coladas antes das áreas por loja. Essas continuam na lista
+     * geral e não são atribuídas por palpite: id de anúncio não diz a loja com certeza.
+     */
+    plataforma: plataformaEnum('plataforma'),
     texto: text('texto').notNull(),
     recebidaEm: timestamp('recebida_em', { withTimezone: true }).notNull().defaultNow(),
     /** Hash do texto normalizado, para colar a mesma lista duas vezes não duplicar. */
