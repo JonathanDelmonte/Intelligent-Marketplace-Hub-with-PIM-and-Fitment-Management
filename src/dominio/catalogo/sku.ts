@@ -10,7 +10,7 @@
  * silencioso — a query funciona e devolve dado do perfil errado. Um tipo nominal
  * transforma esse bug silencioso em erro de compilação.
  */
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Centavos } from '@/lib/dinheiro';
 import type { Banco } from '@/infra/banco/cliente';
@@ -387,12 +387,37 @@ export class RepositorioDeSku {
 
   /** Desativa em vez de apagar: pedido antigo ainda precisa resolver para o SKU. */
   async desativar(perfil: PerfilId, id: string): Promise<boolean> {
+    return this.definirAtivo(perfil, id, false);
+  }
+
+  /**
+   * Desfaz a desativação.
+   *
+   * Existe porque desativar é um clique, e clique errado precisa de volta com o mesmo
+   * custo — sem ela, o produto desativado por engano só voltaria por código.
+   */
+  async reativar(perfil: PerfilId, id: string): Promise<boolean> {
+    return this.definirAtivo(perfil, id, true);
+  }
+
+  private async definirAtivo(perfil: PerfilId, id: string, ativo: boolean): Promise<boolean> {
     const atualizados = await this.db
       .update(sku)
-      .set({ ativo: false, atualizadoEm: new Date() })
+      .set({ ativo, atualizadoEm: new Date() })
       .where(and(eq(sku.perfilId, perfil), eq(sku.id, id)))
       .returning({ id: sku.id });
     return atualizados.length > 0;
+  }
+
+  /** Os desativados, o mais recente primeiro: é de onde se reativa. */
+  async desativados(perfil: PerfilId, limite = 100): Promise<readonly SkuGravado[]> {
+    const linhas = await this.db
+      .select()
+      .from(sku)
+      .where(and(eq(sku.perfilId, perfil), eq(sku.ativo, false)))
+      .orderBy(desc(sku.atualizadoEm))
+      .limit(limite);
+    return linhas.map(paraSku);
   }
 
   /** Ocorrências ligadas a um SKU: é o grafo de identidade em forma de lista. */

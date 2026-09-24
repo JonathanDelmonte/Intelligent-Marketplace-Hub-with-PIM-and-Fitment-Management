@@ -159,11 +159,17 @@ function CartaoDoSku({
   item,
   regime,
   sugestao,
+  foco,
 }: {
   readonly item: SkuFiscal;
   readonly regime: RegimeFiscal;
   readonly sugestao: SugestaoNaTela | null;
+  /** Id do produto em foco: vai nos formulários para a tela voltar focada nele. */
+  readonly foco?: string | undefined;
 }) {
+  const campoDoFoco =
+    foco === undefined ? null : <input name="produto" type="hidden" value={foco} />;
+
   const comuns = VALORES_COMUNS[regime];
   const daSugestao = sugestao !== null && sugestao.skuId === item.id;
 
@@ -194,6 +200,7 @@ function CartaoDoSku({
       */}
       <form action={sugerirCodigos}>
         <input name="skuId" type="hidden" value={item.id} />
+        {campoDoFoco}
         <button className={estilo.botaoSecundario} type="submit">
           Sugerir NCM
         </button>
@@ -207,6 +214,7 @@ function CartaoDoSku({
 
       <form action={gravarCodigos} className={estilo.formulario}>
         <input name="skuId" type="hidden" value={item.id} />
+        {campoDoFoco}
         {CAMPOS_FISCAIS.map((campo) => (
           <label className={estilo.campo} key={campo}>
             {rotuloDoCampo(campo)}
@@ -252,9 +260,11 @@ function CartaoDoSku({
 export function Cadastro({
   resumo,
   sugestao,
+  foco,
 }: {
   readonly resumo: ResumoFiscal;
   readonly sugestao: SugestaoNaTela | null;
+  readonly foco?: string | undefined;
 }) {
   if (resumo.skus.length === 0) {
     return (
@@ -267,7 +277,7 @@ export function Cadastro({
   return (
     <ul className={estilo.lista}>
       {resumo.skus.map((s) => (
-        <CartaoDoSku item={s} key={s.id} regime={resumo.regime} sugestao={sugestao} />
+        <CartaoDoSku foco={foco} item={s} key={s.id} regime={resumo.regime} sugestao={sugestao} />
       ))}
     </ul>
   );

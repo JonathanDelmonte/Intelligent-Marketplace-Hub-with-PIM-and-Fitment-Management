@@ -156,3 +156,8 @@
 .vazio {
   composes: vazio from '../ui/comum.module.css';
 }
+
+/* Os caminhos da tela focada num produto: voltar a ele, ou ver todos. */
+.link {
+  color: var(--cor-primaria);
+}

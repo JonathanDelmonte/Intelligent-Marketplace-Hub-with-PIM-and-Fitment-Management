@@ -247,6 +247,8 @@ export const CODIGOS_DE_AVISO = [
   'produto_invalido',
   'custo_invalido',
   'ficha_invalida',
+  'desativado',
+  'reativado',
   'falha',
 ] as const;
 export type CodigoDeAviso = (typeof CODIGOS_DE_AVISO)[number];
@@ -307,6 +309,21 @@ export function descreverAviso(codigo: string | undefined): Aviso | null {
         titulo: 'Número que não fecha.',
         corpo:
           'Peso em gramas e medida em milímetros são positivos, peças na embalagem é número inteiro, e a devolução fica entre 0 e 100%. Nada foi salvo.',
+      };
+    case 'desativado':
+      return {
+        tom: 'ok',
+        titulo: 'Produto desativado.',
+        // Curto de propósito: a faixa logo abaixo diz o que desativar significa, e as
+        // duas juntas repetiam a mesma frase.
+        corpo: 'Se foi engano, o botão Reativar logo abaixo desfaz.',
+      };
+    case 'reativado':
+      return {
+        tom: 'ok',
+        titulo: 'Produto de volta.',
+        corpo:
+          'Voltou ao catálogo e às outras listas com tudo o que tinha: custo, ficha e cadastro fiscal.',
       };
     case 'falha':
       return { tom: 'erro', titulo: 'Não deu.', corpo: 'Nada foi salvo. O erro está no log.' };

@@ -41,12 +41,15 @@ import {
 import {
   AvisoDaAcao,
   Decomposicao,
+  DesativarProduto,
   Faixas,
   FormularioDaFicha,
   FormularioDeCusto,
   FormularioDoSimulador,
   Ocorrencias,
   Presuncoes,
+  ProdutoDesativado,
+  ResumoFiscal,
 } from '../componentes';
 import { CAMINHO, FAIXA_PADRAO, OCORRENCIAS_NA_TELA } from '../constantes';
 
@@ -125,6 +128,7 @@ export default async function PaginaDoProduto({
       </header>
 
       {aviso !== null && <AvisoDaAcao aviso={aviso} />}
+      {!sku.ativo && <ProdutoDesativado id={sku.id} />}
 
       <section aria-labelledby="custo-titulo" className={estilo.secao}>
         <h2 className={estilo.secaoTitulo} id="custo-titulo">
@@ -176,6 +180,17 @@ export default async function PaginaDoProduto({
         <FormularioDaFicha sku={sku} />
       </section>
 
+      <section aria-labelledby="fiscal-titulo" className={estilo.secao}>
+        <h2 className={estilo.secaoTitulo} id="fiscal-titulo">
+          Fiscal
+        </h2>
+        <p className={estilo.dica}>
+          O que a nota fiscal deste produto precisa. Os três códigos passam a ser obrigatórios na
+          nota de 2027.
+        </p>
+        <ResumoFiscal sku={sku} />
+      </section>
+
       <section aria-labelledby="ocorrencias-titulo" className={estilo.secao}>
         <h2 className={estilo.secaoTitulo} id="ocorrencias-titulo">
           De onde veio
@@ -186,6 +201,20 @@ export default async function PaginaDoProduto({
         </p>
         <Ocorrencias ocorrencias={ocorrencias.slice(0, OCORRENCIAS_NA_TELA)} />
       </section>
+
+      {sku.ativo && (
+        <section aria-labelledby="desativar-titulo" className={estilo.secao}>
+          <h2 className={estilo.secaoTitulo} id="desativar-titulo">
+            Parar de vender
+          </h2>
+          <p className={estilo.dica}>
+            Desativar tira o produto do catálogo e das listas de anúncio, compatibilidade,
+            consignação e cadastro fiscal. Nada é apagado: pedidos antigos continuam ligados a ele,
+            e ele volta com um clique.
+          </p>
+          <DesativarProduto id={sku.id} />
+        </section>
+      )}
     </main>
   );
 }

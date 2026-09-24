@@ -32,22 +32,38 @@ const log = criarRegistrador({
   contexto: { origem: 'tela_fiscal' },
 });
 
-function paraOnde(codigo: CodigoDeAviso): string {
-  return `${CAMINHO}?r=${codigo}`;
+const esquemaDeId = z.string().trim().uuid();
+
+/**
+ * Para onde voltar, com o aviso — e com o foco, quando a tela estava focada num produto.
+ *
+ * O foco é como a ficha do catálogo abre esta tela ("Editar dados fiscais"). Perder o
+ * foco depois de gravar jogaria a pessoa na lista inteira, longe do produto que ela
+ * veio editar e do caminho de volta para ele.
+ */
+function paraOnde(codigo: CodigoDeAviso, foco?: string): string {
+  const busca = new URLSearchParams({ r: codigo });
+  if (foco !== undefined) busca.set('produto', foco);
+  return `${CAMINHO}?${busca.toString()}`;
 }
 
 /** A falha da sugestão, com o motivo — que é a única coisa que diz o que fazer. */
-function paraFalhaDeSugestao(motivo: string | undefined): string {
+function paraFalhaDeSugestao(motivo: string | undefined, foco?: string): string {
   const busca = new URLSearchParams({ r: 'sugestao_falhou' satisfies CodigoDeAviso });
   if (motivo !== undefined) busca.set('motivo', motivo);
+  if (foco !== undefined) busca.set('produto', foco);
   return `${CAMINHO}?${busca.toString()}`;
+}
+
+/** O produto em foco, se o formulário veio da tela focada. Id que não é uuid é ignorado. */
+function focoDo(dados: FormData): string | undefined {
+  const lido = esquemaDeId.safeParse(dados.get('produto'));
+  return lido.success ? lido.data : undefined;
 }
 
 function texto(valor: FormDataEntryValue | null): string {
   return typeof valor === 'string' ? valor.trim() : '';
 }
-
-const esquemaDeId = z.string().trim().uuid();
 
 /**
  * Grava os códigos de um SKU.
@@ -58,6 +74,7 @@ const esquemaDeId = z.string().trim().uuid();
 export async function gravarCodigos(dados: FormData): Promise<void> {
   const skuId = esquemaDeId.safeParse(dados.get('skuId'));
   if (!skuId.success) redirect(paraOnde('nao_encontrado'));
+  const foco = focoDo(dados);
 
   const codigos: CodigosParaGravar = {};
   const foraDeFormato: CampoFiscal[] = [];
@@ -76,7 +93,7 @@ export async function gravarCodigos(dados: FormData): Promise<void> {
   // metade deixaria a pessoa achando que o item está pronto.
   if (foraDeFormato.length > 0) {
     log.aviso('fiscal.formato_invalido', { campos: foraDeFormato });
-    redirect(paraOnde('formato'));
+    redirect(paraOnde('formato', foco));
   }
 
   const regulada = texto(dados.get('categoriaRegulada'));
@@ -89,11 +106,11 @@ export async function gravarCodigos(dados: FormData): Promise<void> {
     gravou = await new RepositorioFiscal(db).gravarCodigos(perfil.id, skuId.data, codigos);
   } catch (erro) {
     log.erro('fiscal.gravacao_falhou', { skuId: skuId.data, erro });
-    redirect(paraOnde('falha'));
+    redirect(paraOnde('falha', foco));
   }
 
   revalidatePath(CAMINHO);
-  redirect(paraOnde(gravou ? 'gravado' : 'nao_encontrado'));
+  redirect(paraOnde(gravou ? 'gravado' : 'nao_encontrado', foco));
 }
 
 /**
@@ -107,6 +124,7 @@ export async function gravarCodigos(dados: FormData): Promise<void> {
 export async function sugerirCodigos(dados: FormData): Promise<void> {
   const skuId = esquemaDeId.safeParse(dados.get('skuId'));
   if (!skuId.success) redirect(paraOnde('nao_encontrado'));
+  const foco = focoDo(dados);
 
   // `null` é produto fora do perfil. O `redirect` desse caso fica **fora** do `try`: ele
   // funciona lançando, e dentro do `try` o `catch` o engolia e mandava para a falha.
@@ -128,21 +146,23 @@ export async function sugerirCodigos(dados: FormData): Promise<void> {
     redirect(
       paraFalhaDeSugestao(
         erro instanceof OrcamentoEstourado ? 'o teto de gasto desta execução acabou.' : undefined,
+        foco,
       ),
     );
   }
 
-  if (resultado === null) redirect(paraOnde('nao_encontrado'));
-  if (resultado.tipo === 'sem_chave') redirect(paraOnde('sem_chave'));
-  if (resultado.tipo === 'nada_a_classificar') redirect(paraOnde('sem_texto'));
+  if (resultado === null) redirect(paraOnde('nao_encontrado', foco));
+  if (resultado.tipo === 'sem_chave') redirect(paraOnde('sem_chave', foco));
+  if (resultado.tipo === 'nada_a_classificar') redirect(paraOnde('sem_texto', foco));
   if (resultado.tipo === 'falhou') {
     log.aviso('fiscal.sugestao_falhou', { skuId: skuId.data, motivo: resultado.motivo });
-    redirect(paraFalhaDeSugestao(resultado.motivo));
+    redirect(paraFalhaDeSugestao(resultado.motivo, foco));
   }
 
   // A sugestão viaja na URL, e não em estado de servidor, pelo mesmo motivo da tela
   // de anúncio: o que a tela mostra fica reproduzível e o botão de voltar funciona.
   const busca = new URLSearchParams({ r: 'sugerido', sugerido: skuId.data });
+  if (foco !== undefined) busca.set('produto', foco);
   const primeiro = resultado.candidatos[0];
   if (primeiro !== undefined) {
     busca.set('ncm', primeiro.ncm);

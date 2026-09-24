@@ -7,6 +7,7 @@
  */
 import Link from 'next/link';
 import type { SkuGravado } from '@/dominio/catalogo/sku';
+import { ROTULO_DO_CAMPO, estadoFiscal } from '@/dominio/fiscal/codigos';
 import type { SimulacaoDeFaixa } from '@/dominio/precificacao/simulador';
 import {
   MODOS_FRETE,
@@ -16,13 +17,15 @@ import {
   type ResultadoDeMargem,
 } from '@/dominio/precificacao/tipos';
 import { centavos, centavosParaReais, formatarBRL } from '@/lib/dinheiro';
+import { contagem } from '@/lib/texto';
 import {
   ROTULO_DA_PLATAFORMA,
   ROTULO_DO_MODO_FRETE,
   ROTULO_DO_TIPO_ANUNCIO_ML,
 } from '../ui/rotulos';
+import { CAMINHO as CAMINHO_FISCAL } from '../fiscal/constantes';
 import { formatarRelativo } from '../ui/tempo';
-import { criarProduto, salvarCusto, salvarFicha } from './acoes';
+import { criarProduto, desativarProduto, reativarProduto, salvarCusto, salvarFicha } from './acoes';
 import {
   alvoEmPercentual,
   estadoDoProduto,
@@ -615,5 +618,112 @@ export function Ocorrencias({
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * O cadastro fiscal do produto, resumido, com o caminho para editar.
+ *
+ * O formulário não se repete aqui: ele mora na tela Fiscal, com a sugestão de NCM e a
+ * validação de cada código, e duas cópias do mesmo formulário divergiriam na primeira
+ * mudança. O botão abre a tela Fiscal **focada neste produto**, e ela devolve para cá.
+ */
+export function ResumoFiscal({ sku }: { readonly sku: SkuGravado }) {
+  const estado = estadoFiscal({
+    ncm: sku.ncm,
+    // CEST não é obrigatório e não entra na conta do que falta; a tela Fiscal mostra.
+    cest: null,
+    cst: sku.cst,
+    cclasstrib: sku.cclasstrib,
+  });
+  const campos = [
+    { campo: 'ncm', valor: sku.ncm },
+    { campo: 'cst', valor: sku.cst },
+    { campo: 'cclasstrib', valor: sku.cclasstrib },
+  ] as const;
+
+  return (
+    <>
+      <ul className={estilo.listaMiuda}>
+        {campos.map(({ campo, valor }) => (
+          <li key={campo}>
+            {ROTULO_DO_CAMPO[campo]}:{' '}
+            {valor === null || valor.trim() === '' ? 'não informado' : valor}
+          </li>
+        ))}
+      </ul>
+      <p className={estilo.dica}>{estado.mensagem}</p>
+      {sku.ativo ? (
+        <p className={estilo.acao}>
+          <Link
+            className={estilo.botaoSecundario}
+            href={`${CAMINHO_FISCAL}?${new URLSearchParams({ produto: sku.id }).toString()}`}
+          >
+            Editar dados fiscais
+          </Link>
+        </p>
+      ) : (
+        <p className={estilo.dica}>
+          Produto desativado não entra no cadastro fiscal. Reative para editar.
+        </p>
+      )}
+    </>
+  );
+}
+
+/** O aviso de produto desativado, com a volta no mesmo lugar. */
+export function ProdutoDesativado({ id }: { readonly id: string }) {
+  return (
+    <div className={estilo.avisoAtencao} role="status">
+      <strong className={estilo.avisoTitulo}>Este produto está desativado.</strong>
+      <span className={estilo.avisoCorpo}>
+        Não aparece no catálogo, nos anúncios, na compatibilidade, na consignação nem no cadastro
+        fiscal. Pedidos antigos continuam ligados a ele.
+      </span>
+      <form action={reativarProduto}>
+        <input name="id" type="hidden" value={id} />
+        <button className={estilo.botao} type="submit">
+          Reativar
+        </button>
+      </form>
+    </div>
+  );
+}
+
+/**
+ * Desativar, no fim do detalhe.
+ *
+ * Sem confirmação, de propósito: a volta custa o mesmo clique e fica no topo da página
+ * seguinte. Confirmação para ação reversível é atrito que ensina a clicar sem ler.
+ */
+export function DesativarProduto({ id }: { readonly id: string }) {
+  return (
+    <form action={desativarProduto}>
+      <input name="id" type="hidden" value={id} />
+      <button className={estilo.botaoSecundario} type="submit">
+        Desativar produto
+      </button>
+    </form>
+  );
+}
+
+/** Os desativados, recolhidos no fim da lista: estão lá para voltar, não para trabalhar. */
+export function Desativados({ produtos }: { readonly produtos: readonly SkuGravado[] }) {
+  if (produtos.length === 0) return null;
+  return (
+    <details className={estilo.bloco}>
+      <summary className={estilo.resumoDoBloco}>
+        {contagem(produtos.length, 'produto desativado', 'produtos desativados')}
+      </summary>
+      <ul className={estilo.listaMiuda}>
+        {produtos.map((produto) => (
+          <li key={produto.id}>
+            <Link className={estilo.link} href={`${CAMINHO}/${produto.id}`}>
+              {produto.tituloInterno}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }

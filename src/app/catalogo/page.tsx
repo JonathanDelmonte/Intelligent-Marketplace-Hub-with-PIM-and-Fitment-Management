@@ -20,7 +20,7 @@ import { carregarPerfil } from '@/dominio/perfil';
 import { banco } from '@/infra/banco/cliente';
 import estilo from './catalogo.module.css';
 import { descreverAviso, resumoDoCatalogo } from './apresentacao';
-import { AvisoDaAcao, FormularioDeProduto, Produtos } from './componentes';
+import { AvisoDaAcao, Desativados, FormularioDeProduto, Produtos } from './componentes';
 import { LIMITE_DO_CATALOGO } from './constantes';
 
 export const metadata: Metadata = { title: 'Catálogo' };
@@ -38,9 +38,11 @@ export default async function PaginaDeCatalogo({
   const perfil = await carregarPerfil(db, lerAmbiente().BANCADA_PERFIL_PADRAO);
   const agora = new Date();
 
-  const produtos = await new RepositorioDeSku(db).listar(perfil.id, {
-    limite: LIMITE_DO_CATALOGO,
-  });
+  const repo = new RepositorioDeSku(db);
+  const [produtos, desativados] = await Promise.all([
+    repo.listar(perfil.id, { limite: LIMITE_DO_CATALOGO }),
+    repo.desativados(perfil.id),
+  ]);
 
   const semCusto = produtos.filter((p) => p.custoAtual === null).length;
   const defasados = produtos.filter((p) => custoDefasado(p.custoAtualizadoEm, agora)).length;
@@ -72,6 +74,7 @@ export default async function PaginaDeCatalogo({
           grave de cada um, e não todas: linha com quatro etiquetas é linha que ninguém lê.
         </p>
         <Produtos agora={agora} produtos={produtos} />
+        <Desativados produtos={desativados} />
       </section>
 
       <section aria-labelledby="novo-titulo" className={estilo.secao}>

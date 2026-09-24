@@ -137,6 +137,12 @@
   composes: botao from '../ui/comum.module.css';
 }
 
+/* Ação que não é a principal da seção: desativar, e o atalho para a tela Fiscal. */
+.botaoSecundario {
+  composes: botaoSecundario from '../ui/comum.module.css';
+  text-decoration: none;
+}
+
 /* O botão numa linha própria, pelo mesmo motivo das outras telas com formulário. */
 .acao {
   display: flex;

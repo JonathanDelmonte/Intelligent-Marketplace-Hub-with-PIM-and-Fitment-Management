@@ -474,6 +474,42 @@ describe.skipIf(!temBancoDeTeste())('RepositorioDeSku (contra Postgres real)', (
       expect(await repo.listar(perfilA, { apenasAtivos: false })).toHaveLength(1);
       expect(await repo.buscarPorId(perfilA, criado.id)).not.toBeNull();
     });
+
+    it('reativar desfaz a desativação, com o mesmo custo de um clique', async () => {
+      const criado = await repo.criar({ perfil: perfilA, dados: { tituloInterno: 'Refil' } });
+      await repo.desativar(perfilA, criado.id);
+
+      expect(await repo.reativar(perfilA, criado.id)).toBe(true);
+      expect((await repo.listar(perfilA)).map((s) => s.id)).toEqual([criado.id]);
+      expect(await repo.desativados(perfilA)).toHaveLength(0);
+    });
+
+    it('a lista de desativados tem só os desativados, do perfil, o mais recente primeiro', async () => {
+      const antigo = await repo.criar({ perfil: perfilA, dados: { tituloInterno: 'Antigo' } });
+      const recente = await repo.criar({ perfil: perfilA, dados: { tituloInterno: 'Recente' } });
+      await repo.criar({ perfil: perfilA, dados: { tituloInterno: 'Ativo' } });
+      const doOutro = await repo.criar({ perfil: perfilB, dados: { tituloInterno: 'Do B' } });
+
+      await repo.desativar(perfilA, antigo.id);
+      // A ordem sai do instante da desativação, que tem milissegundo como resolução:
+      // sem a pausa, as duas podem cair no mesmo milissegundo e a ordem vira sorteio.
+      await new Promise((resolver) => setTimeout(resolver, 5));
+      await repo.desativar(perfilA, recente.id);
+      await repo.desativar(perfilB, doOutro.id);
+
+      expect((await repo.desativados(perfilA)).map((s) => s.tituloInterno)).toEqual([
+        'Recente',
+        'Antigo',
+      ]);
+    });
+
+    it('não reativa produto de outro perfil', async () => {
+      const doB = await repo.criar({ perfil: perfilB, dados: { tituloInterno: 'Do B' } });
+      await repo.desativar(perfilB, doB.id);
+
+      expect(await repo.reativar(perfilA, doB.id)).toBe(false);
+      expect(await repo.desativados(perfilB)).toHaveLength(1);
+    });
   });
 
   describe('pendências fiscais — prazo de 04/01/2027', () => {

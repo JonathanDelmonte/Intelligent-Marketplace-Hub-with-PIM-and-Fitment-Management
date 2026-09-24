@@ -31,6 +31,7 @@ declare const estilo: {
   readonly lista: string;
   readonly pagina: string;
   readonly resumo: string;
+  readonly link: string;
   readonly secao: string;
   readonly secaoTitulo: string;
   readonly subtitulo: string;

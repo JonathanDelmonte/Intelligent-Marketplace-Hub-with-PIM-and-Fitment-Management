@@ -19,6 +19,8 @@
  * que faz a pessoa fechar a tela e deixar para janeiro.
  */
 import type { Metadata } from 'next';
+import Link from 'next/link';
+import { z } from 'zod';
 import { lerAmbiente } from '@/config/ambiente';
 import { avaliarPrazos } from '@/dominio/fiscal/prazos';
 import { RepositorioFiscal } from '@/dominio/fiscal/repositorio';
@@ -26,6 +28,8 @@ import { carregarPerfil } from '@/dominio/perfil';
 import { banco } from '@/infra/banco/cliente';
 import { descreverAviso, resumoDoCadastro } from './apresentacao';
 import { AvisoDaAcao, Cadastro, Prazos, Teto, type SugestaoNaTela } from './componentes';
+import { CAMINHO as CAMINHO_DO_CATALOGO } from '../catalogo/constantes';
+import { CAMINHO } from './constantes';
 import estilo from './fiscal.module.css';
 
 export const metadata: Metadata = { title: 'Fiscal' };
@@ -61,6 +65,12 @@ export default async function PaginaFiscal({
 
   const aviso = descreverAviso(um('r'), um('motivo'));
 
+  // Focada num produto: é como a ficha do catálogo abre esta tela. Só o cartão dele e o
+  // caminho de volta — prazo e teto continuam na tela inteira, a um clique. Produto
+  // desativado não está no resumo, e aí o foco é ignorado em vez de mostrar tela vazia.
+  const idDoFoco = z.string().uuid().safeParse(um('produto'));
+  const focado = idDoFoco.success ? resumo.skus.find((s) => s.id === idDoFoco.data) : undefined;
+
   // A sugestão vem da URL e vale só para o item classificado. Pré-preencher o campo
   // de outro produto com o NCM de um produto diferente seria a pior coisa que esta
   // tela poderia fazer.
@@ -87,27 +97,49 @@ export default async function PaginaFiscal({
 
       {aviso !== null && <AvisoDaAcao aviso={aviso} />}
 
-      <section aria-labelledby="prazos-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="prazos-titulo">
-          Prazos
-        </h2>
-        <Prazos prazos={prazos} />
-      </section>
+      {focado !== undefined && (
+        <section aria-labelledby="cadastro-titulo" className={estilo.secao}>
+          <h2 className={estilo.secaoTitulo} id="cadastro-titulo">
+            Cadastro fiscal deste produto
+          </h2>
+          <p className={estilo.resumo}>
+            <Link className={estilo.link} href={`${CAMINHO_DO_CATALOGO}/${focado.id}`}>
+              ← Voltar ao produto
+            </Link>
+            {' · '}
+            <Link className={estilo.link} href={CAMINHO}>
+              Ver todos, com prazos e teto
+            </Link>
+          </p>
+          <Cadastro foco={focado.id} resumo={{ ...resumo, skus: [focado] }} sugestao={sugestao} />
+        </section>
+      )}
 
-      <section aria-labelledby="teto-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="teto-titulo">
-          Teto do ano
-        </h2>
-        <Teto ano={ano} regime={resumo.regime} teto={teto} />
-      </section>
+      {focado === undefined && (
+        <>
+          <section aria-labelledby="prazos-titulo" className={estilo.secao}>
+            <h2 className={estilo.secaoTitulo} id="prazos-titulo">
+              Prazos
+            </h2>
+            <Prazos prazos={prazos} />
+          </section>
 
-      <section aria-labelledby="cadastro-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="cadastro-titulo">
-          Cadastro fiscal por produto
-        </h2>
-        <p className={estilo.resumo}>{resumoDoCadastro(resumo)}</p>
-        <Cadastro resumo={resumo} sugestao={sugestao} />
-      </section>
+          <section aria-labelledby="teto-titulo" className={estilo.secao}>
+            <h2 className={estilo.secaoTitulo} id="teto-titulo">
+              Teto do ano
+            </h2>
+            <Teto ano={ano} regime={resumo.regime} teto={teto} />
+          </section>
+
+          <section aria-labelledby="cadastro-titulo" className={estilo.secao}>
+            <h2 className={estilo.secaoTitulo} id="cadastro-titulo">
+              Cadastro fiscal por produto
+            </h2>
+            <p className={estilo.resumo}>{resumoDoCadastro(resumo)}</p>
+            <Cadastro resumo={resumo} sugestao={sugestao} />
+          </section>
+        </>
+      )}
     </main>
   );
 }

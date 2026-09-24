@@ -1,14 +1,13 @@
 /**
  * Ações da tela de catálogo.
  *
- * Três, e a divisão entre elas não é arbitrária: criar produto, informar **custo** e
- * salvar o **resto da ficha**. Custo é separado porque tem data própria — é ela que
- * responde se o número ainda vale —, e um salvamento de peso não pode reescrever a data
- * do custo.
+ * Criar produto, informar **custo**, salvar o **resto da ficha**, e desativar ou
+ * reativar. Custo é separado da ficha porque tem data própria — é ela que responde se o
+ * número ainda vale —, e um salvamento de peso não pode reescrever a data do custo.
  *
  * Não há ação de apagar produto: pedido antigo ainda precisa resolver para o SKU, e o
- * repositório desativa em vez de apagar. Desativar pela tela entra quando houver
- * produto para desativar; hoje seria botão à procura de uso.
+ * repositório desativa em vez de apagar. Desativar é um clique e tem volta com o mesmo
+ * custo, por isso não pede confirmação.
  *
  * `redirect()` do Next sinaliza por exceção, então nenhum `redirect` daqui está dentro
  * de `try`.
@@ -217,4 +216,44 @@ export async function salvarFicha(dados: FormData): Promise<void> {
 
   revalidatePath(`${CAMINHO}/${lido.data.id}`);
   redirect(paraProduto(lido.data.id, salvou ? 'ficha' : 'nada'));
+}
+
+/**
+ * Desativa ou reativa, pelo botão do detalhe do produto.
+ *
+ * Volta para o próprio produto, e não para a lista: é lá que está o botão de desfazer,
+ * e é lá que o aviso diz de onde o produto saiu.
+ */
+async function definirAtivo(dados: FormData, ativo: boolean): Promise<void> {
+  const id = esquemaDoId.safeParse(dados.get('id') ?? '');
+  if (!id.success) {
+    log.aviso('catalogo.id_invalido', {});
+    redirect(paraLista('falha'));
+  }
+
+  let mudou = false;
+  try {
+    const { repo, perfil } = await repositorio();
+    mudou = ativo
+      ? await repo.reativar(perfil.id, id.data)
+      : await repo.desativar(perfil.id, id.data);
+  } catch (erro) {
+    log.erro(ativo ? 'catalogo.reativacao_falhou' : 'catalogo.desativacao_falhou', { erro });
+    redirect(paraProduto(id.data, 'falha'));
+  }
+
+  // Produto de outro perfil, ou apagado no meio: nada mudou, e a lista é o lugar certo.
+  if (!mudou) redirect(paraLista('nada'));
+
+  revalidatePath(CAMINHO);
+  revalidatePath(`${CAMINHO}/${id.data}`);
+  redirect(paraProduto(id.data, ativo ? 'reativado' : 'desativado'));
+}
+
+export async function desativarProduto(dados: FormData): Promise<void> {
+  await definirAtivo(dados, false);
+}
+
+export async function reativarProduto(dados: FormData): Promise<void> {
+  await definirAtivo(dados, true);
 }
