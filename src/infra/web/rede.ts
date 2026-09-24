@@ -101,23 +101,59 @@ export function enderecoPermitido(bruto: string): URL | null {
   return url;
 }
 
-async function lerCorpo(resposta: Response): Promise<string> {
+/** Os bytes da resposta, até o teto. */
+async function lerBytesDoCorpo(resposta: Response, teto: number): Promise<Uint8Array> {
   const leitor = resposta.body?.getReader();
-  if (leitor === undefined) return '';
-  const decodificador = new TextDecoder('utf-8');
-  let texto = '';
+  if (leitor === undefined) return new Uint8Array();
+  const partes: Uint8Array[] = [];
   let lidos = 0;
   for (;;) {
     const { done, value } = await leitor.read();
     if (done) break;
+    partes.push(value);
     lidos += value.byteLength;
-    texto += decodificador.decode(value, { stream: true });
-    if (lidos >= TAMANHO_MAXIMO_DA_RESPOSTA) {
+    if (lidos >= teto) {
       await leitor.cancel();
       break;
     }
   }
-  return texto + decodificador.decode();
+  const junto = new Uint8Array(lidos);
+  let posicao = 0;
+  for (const parte of partes) {
+    junto.set(parte, posicao);
+    posicao += parte.byteLength;
+  }
+  return junto;
+}
+
+async function lerCorpo(resposta: Response): Promise<string> {
+  return new TextDecoder('utf-8').decode(
+    await lerBytesDoCorpo(resposta, TAMANHO_MAXIMO_DA_RESPOSTA),
+  );
+}
+
+/** Teto de um arquivo lido da rede — o PDF de tabela de um fornecedor. */
+export const TAMANHO_MAXIMO_DO_ARQUIVO = 15_000_000;
+
+export interface RespostaDeBytes {
+  readonly status: number;
+  readonly url: string;
+  readonly tipo: string | null;
+  readonly bytes: Uint8Array;
+}
+
+/** Lê um endereço como bytes — para PDF. Mesmas regras de `lerTexto`. */
+export async function lerBytes(
+  endereco: string,
+  opcoes: OpcoesDaRede = {},
+): Promise<RespostaDeBytes> {
+  const { resposta, final } = await abrir(endereco, opcoes, 'application/pdf,*/*;q=0.5');
+  return {
+    status: resposta.status,
+    url: final,
+    tipo: resposta.headers.get('content-type'),
+    bytes: await lerBytesDoCorpo(resposta, TAMANHO_MAXIMO_DO_ARQUIVO),
+  };
 }
 
 /**
@@ -129,6 +165,25 @@ export async function lerTexto(
   endereco: string,
   opcoes: OpcoesDaRede & { readonly aceitar?: string | undefined } = {},
 ): Promise<RespostaDeTexto> {
+  const { resposta, final } = await abrir(
+    endereco,
+    opcoes,
+    opcoes.aceitar ?? 'text/html,application/json;q=0.9,*/*;q=0.5',
+  );
+  return {
+    status: resposta.status,
+    url: final,
+    tipo: resposta.headers.get('content-type'),
+    texto: await lerCorpo(resposta),
+  };
+}
+
+/** A abertura em comum: endereço conferido, tempo limite, e o destino final conferido. */
+async function abrir(
+  endereco: string,
+  opcoes: OpcoesDaRede,
+  aceitar: string,
+): Promise<{ readonly resposta: Response; readonly final: string }> {
   const url = enderecoPermitido(endereco);
   if (url === null) throw new FalhaDeRede(`endereço recusado: ${endereco.slice(0, 200)}`);
 
@@ -137,10 +192,7 @@ export async function lerTexto(
   let resposta: Response;
   try {
     resposta = await buscar(url.href, {
-      headers: {
-        ...CABECALHOS,
-        accept: opcoes.aceitar ?? 'text/html,application/json;q=0.9,*/*;q=0.5',
-      },
+      headers: { ...CABECALHOS, accept: aceitar },
       redirect: 'follow',
       signal: AbortSignal.timeout(tempo),
     });
@@ -161,10 +213,5 @@ export async function lerTexto(
     throw new FalhaDeRede(`o endereço redirecionou para fora da internet: ${final.slice(0, 200)}`);
   }
 
-  return {
-    status: resposta.status,
-    url: final,
-    tipo: resposta.headers.get('content-type'),
-    texto: await lerCorpo(resposta),
-  };
+  return { resposta, final };
 }

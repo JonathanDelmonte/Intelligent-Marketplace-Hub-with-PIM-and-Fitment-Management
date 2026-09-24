@@ -34,7 +34,14 @@ import { classificarPlanilha } from '@/dominio/pedidos/planilha';
 import { enfileirarImportacaoDePedidos } from '@/dominio/pedidos/tarefa';
 import { ImportadorDePlanilha } from './planilha/importador';
 import { linksDaPagina } from '@/dominio/web/pagina';
-import { FalhaDeRede, lerTexto, type OpcoesDaRede, type RespostaDeTexto } from '@/infra/web/rede';
+import { PdfIlegivel, textoDoPdf } from '@/infra/pdf/texto';
+import {
+  FalhaDeRede,
+  lerBytes,
+  lerTexto,
+  type OpcoesDaRede,
+  type RespostaDeTexto,
+} from '@/infra/web/rede';
 import { ehUrlDeAnuncio } from './classificador';
 import { capturasDoTexto, extrairDaPagina } from './extratores';
 import type { ProdutoExternoCapturado } from './produto-externo';
@@ -86,9 +93,9 @@ export type ResultadoDoProcessamento =
 /** Mensagem única para tipo que espera extrator com LLM. */
 function motivoDeExtratorAusente(tipo: TipoDeEntrada): string {
   return (
-    `não há extrator para "${tipo}" ainda: ler imagem e PDF de tabela são as etapas ` +
-    '3.5 e 3.6 do roadmap. A entrada está guardada e será processada quando o extrator ' +
-    'existir. Enquanto isso, o texto da tabela colado no campo de entrada já é lido.'
+    `não há extrator para "${tipo}" ainda: ler imagem de tabela é a etapa 3.6 do ` +
+    'roadmap. A entrada está guardada e será processada quando o extrator existir. ' +
+    'Enquanto isso, o texto da tabela colado no campo de entrada já é lido, e o PDF também.'
   );
 }
 
@@ -216,8 +223,10 @@ export class ExecutorDeIngestao {
       case 'texto_colado':
         return this.processarTexto(job, payload);
 
-      // Dependem de ler imagem e PDF, que não existem ainda.
       case 'tabela_precos_pdf':
+        return this.processarPdf(job, payload);
+
+      // Depende de ler imagem, que não existe ainda.
       case 'imagem_tabela': {
         const motivo = motivoDeExtratorAusente(tipo);
         await this.fila.mandarParaRevisao(job.id, motivo);
@@ -325,6 +334,63 @@ export class ExecutorDeIngestao {
       jobsFilhos: filhos.map((f) => f.job.id),
     });
     return { tipo: 'enfileirou_filhos', jobId: job.id, quantidade: filhos.length };
+  }
+
+  /**
+   * Tabela de preços em PDF — arquivo enviado ou link: o texto do PDF, lido linha por
+   * linha como a tabela colada.
+   */
+  private async processarPdf(
+    job: JobEnfileirado,
+    payload: EntradaDoJobDeIngestao,
+  ): Promise<ResultadoDoProcessamento> {
+    let bytes: Uint8Array;
+    let origem: string;
+    if (payload.hashConteudo !== null) {
+      bytes = await this.armazenamento.ler(payload.hashConteudo);
+      origem = payload.nomeArquivo ?? 'tabela em PDF';
+    } else if (payload.url !== null) {
+      if (this.rede === null) {
+        return this.revisao(
+          job,
+          'esta instalação foi montada sem rede, e o PDF não foi lido. Ele está guardado: reenfileire quando houver rede.',
+        );
+      }
+      const lido = await lerBytes(payload.url, this.rede);
+      if (lido.status >= 400 && lido.status < 500) {
+        return this.revisao(job, `o link do PDF respondeu ${String(lido.status)}.`);
+      }
+      if (lido.status >= 500)
+        throw new Error(`o site respondeu ${String(lido.status)} ao ler o PDF.`);
+      bytes = lido.bytes;
+      origem = new URL(lido.url).hostname.replace(/^www\./, '');
+    } else {
+      return this.revisao(job, 'PDF sem conteúdo guardado e sem endereço.');
+    }
+
+    let texto: string;
+    try {
+      texto = await textoDoPdf(bytes);
+    } catch (erro) {
+      if (erro instanceof PdfIlegivel) return this.revisao(job, erro.message);
+      throw erro;
+    }
+
+    const capturas = capturasDoTexto({
+      texto,
+      coletadoEm: this.agora(),
+      fonte: 'm1_planilha',
+      origem,
+    });
+    if (capturas.length === 0) {
+      return this.revisao(
+        job,
+        texto.trim() === ''
+          ? 'o PDF não tem texto — deve ser imagem escaneada, e ler imagem de tabela ainda não existe (etapa 3.6). Se tiver a tabela em planilha ou em texto, envie assim.'
+          : 'o PDF não tem linha com preço ou código de peça que desse para ler.',
+      );
+    }
+    return this.gravarTodas(job, 'tabela_precos_pdf', capturas);
   }
 
   /** Tabela de fornecedor colada como texto: uma captura por linha de produto. */

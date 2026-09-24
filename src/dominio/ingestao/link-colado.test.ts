@@ -22,6 +22,7 @@ import {
 } from '@/infra/banco/teste';
 import { Fila } from '@/infra/fila/fila';
 import { TIPO_JOB_IDENTIDADE } from '@/dominio/identidade/tarefa';
+import { pdfComLinhas } from '@/infra/pdf/teste';
 import { reaisParaCentavos } from '@/lib/dinheiro';
 import { ExecutorDeIngestao } from './executor';
 import { Orquestrador, MAX_TEXTO_NO_PAYLOAD, TIPO_JOB_INGESTAO } from './orquestrador';
@@ -189,6 +190,57 @@ describe.skipIf(!temBancoDeTeste())('link colado e texto colado', () => {
       { titulo: 'Refil PE11B', preco: reaisParaCentavos(42.5), fonte: 'manual' },
       { titulo: 'Vedação VD-10', preco: null, fonte: 'manual' },
     ]);
+  });
+
+  it('PDF de tabela de preços, enviado como arquivo, vira um produto por linha', async () => {
+    const pdf = pdfComLinhas([
+      'Distribuidora Agua Pura - Tabela de precos',
+      'Refil PA21G ........ 38,00',
+      'Refil PE11B ........ R$ 42,50',
+    ]);
+    await orquestrador.receber({
+      entrada: { tipo: 'arquivo', nome: 'tabela-agua-pura.pdf', tipoMime: 'application/pdf' },
+      conteudo: pdf,
+    });
+
+    const processado = await executor().processarProximo();
+
+    expect(processado).toMatchObject({ tipo: 'concluido', contagem: { gravados: 2 } });
+    const linhas = await conexao.db
+      .select({ titulo: produtoExterno.tituloBruto, origem: produtoExterno.plataformaOuSite })
+      .from(produtoExterno)
+      .orderBy(produtoExterno.tituloBruto);
+    expect(linhas).toEqual([
+      { titulo: 'Refil PA21G', origem: 'tabela-agua-pura.pdf' },
+      { titulo: 'Refil PE11B', origem: 'tabela-agua-pura.pdf' },
+    ]);
+  });
+
+  it('PDF por link é baixado e lido; PDF sem texto diz que é imagem', async () => {
+    respostas.set(
+      'https://aguapura.com.br/tabela.pdf',
+      () =>
+        new Response(pdfComLinhas(['Refil PA21G - 38,00']), {
+          headers: { 'content-type': 'application/pdf' },
+        }),
+    );
+    respostas.set(
+      'https://aguapura.com.br/escaneada.pdf',
+      () => new Response(pdfComLinhas([]), { headers: { 'content-type': 'application/pdf' } }),
+    );
+    await orquestrador.receber({
+      entrada: { tipo: 'url', valor: 'https://aguapura.com.br/tabela.pdf' },
+    });
+    await orquestrador.receber({
+      entrada: { tipo: 'url', valor: 'https://aguapura.com.br/escaneada.pdf' },
+    });
+
+    const [lida, escaneada] = await executor().processarTodos();
+
+    expect(lida).toMatchObject({ tipo: 'concluido', contagem: { gravados: 1 } });
+    expect(escaneada?.tipo === 'pendente_revisao' && escaneada.motivo).toContain(
+      'imagem escaneada',
+    );
   });
 
   it('tabela longa demais para o payload é guardada e lida inteira', async () => {
