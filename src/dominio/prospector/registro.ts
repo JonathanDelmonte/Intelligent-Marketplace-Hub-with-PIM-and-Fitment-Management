@@ -19,7 +19,7 @@ import { InvestigadorDeBuscaWeb } from './investigadores/busca-web';
 import { InvestigadorDeCnpj } from './investigadores/cnpj';
 import { InvestigadorDeDemandaPublica, SensorDePncpHttp } from './investigadores/demanda-publica';
 import { InvestigadorDePagina } from './investigadores/leitor-de-pagina';
-import type { OpcoesDaRede } from './investigadores/rede';
+import type { OpcoesDaRede } from '@/infra/web/rede';
 
 interface EntradaDoRegistro {
   readonly ferramenta: Ferramenta;

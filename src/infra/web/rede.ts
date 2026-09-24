@@ -1,9 +1,10 @@
 /**
- * A saída para a rede dos investigadores do garimpo (M6).
+ * A saída para a rede de quem lê a internet: as ferramentas do garimpo (M6) e a
+ * ingestão por link colado (M1).
  *
- * Um lugar para o que toda leitura de fora precisa, e que quatro cópias fariam de
- * quatro jeitos: tempo limite, teto de tamanho, só `http` e `https`, e nada de endereço
- * da rede local.
+ * Um lugar para o que toda leitura de fora precisa, e que cada cópia faria de um
+ * jeito: tempo limite, teto de tamanho, só `http` e `https`, e nada de endereço da
+ * rede local.
  *
  * ## Por que recusar endereço local
  *

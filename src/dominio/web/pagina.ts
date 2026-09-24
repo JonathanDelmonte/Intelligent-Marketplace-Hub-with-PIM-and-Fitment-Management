@@ -1,5 +1,6 @@
 /**
- * O que se tira de uma página HTML, sem IA (M6, ferramenta `ler_pagina`).
+ * O que se tira de uma página HTML, sem IA — para o leitor de página do garimpo (M6) e
+ * para a ingestão por link colado (M1).
  *
  * Funções puras sobre o texto da página. A ordem de confiança é a das fontes:
  *
@@ -242,6 +243,28 @@ export function cnpjsNoTexto(texto: string): readonly string[] {
   )) {
     const valor = achado.slice(1, 6).join('');
     if (cnpjValido(valor)) vistos.add(valor);
+  }
+  return [...vistos];
+}
+
+/**
+ * Os endereços para onde a página aponta, absolutos e sem repetição, na ordem em que
+ * aparecem. Âncora (`#`), `javascript:` e `mailto:` ficam de fora.
+ */
+export function linksDaPagina(html: string, base: string): readonly string[] {
+  const vistos = new Set<string>();
+  for (const achado of html.matchAll(/<a\b[^>]*\bhref\s*=\s*["']([^"']+)["']/gi)) {
+    const bruto = decodificarEntidades(achado[1] ?? '').trim();
+    if (bruto === '' || bruto.startsWith('#') || /^(javascript|mailto|tel):/i.test(bruto)) {
+      continue;
+    }
+    try {
+      const url = new URL(bruto, base);
+      url.hash = '';
+      if (url.protocol === 'http:' || url.protocol === 'https:') vistos.add(url.href);
+    } catch {
+      // Endereço quebrado na página não é endereço.
+    }
   }
   return [...vistos];
 }

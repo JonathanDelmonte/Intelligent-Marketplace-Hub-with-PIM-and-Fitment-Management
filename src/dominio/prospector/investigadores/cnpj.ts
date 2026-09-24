@@ -23,7 +23,7 @@ import { ZERO } from '@/lib/dinheiro';
 import type { Achado } from '../fronteira';
 import type { FamiliaDeHipotese } from '../hipoteses';
 import type { Investigador, PedidoDeInvestigacao, RespostaDaInvestigacao } from '../motor';
-import { FalhaDeRede, lerTexto, type OpcoesDaRede } from './rede';
+import { FalhaDeRede, lerTexto, type OpcoesDaRede } from '@/infra/web/rede';
 
 export const ENDERECO_DA_BRASILAPI = 'https://brasilapi.com.br/api/cnpj/v1';
 

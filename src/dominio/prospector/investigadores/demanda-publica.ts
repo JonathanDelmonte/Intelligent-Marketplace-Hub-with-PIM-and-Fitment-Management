@@ -31,7 +31,7 @@ import {
   type ItemDoPncp,
   type SensorDePncp,
 } from '../pncp';
-import { FalhaDeRede, lerTexto, type OpcoesDaRede } from './rede';
+import { FalhaDeRede, lerTexto, type OpcoesDaRede } from '@/infra/web/rede';
 
 export const ENDERECO_DO_PNCP = 'https://pncp.gov.br';
 

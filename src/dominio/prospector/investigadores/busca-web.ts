@@ -25,8 +25,8 @@ import { ZERO, formatarBRL } from '@/lib/dinheiro';
 import { itemDaFamilia, type Achado, type ItemDaFronteira } from '../fronteira';
 import type { FamiliaDeHipotese } from '../hipoteses';
 import type { Investigador, PedidoDeInvestigacao, RespostaDaInvestigacao } from '../motor';
-import { cnpjsNoTexto, precosNoTexto, semMarcacao } from './pagina';
-import { FalhaDeRede, enderecoPermitido, lerTexto, type OpcoesDaRede } from './rede';
+import { cnpjsNoTexto, precosNoTexto, semMarcacao } from '@/dominio/web/pagina';
+import { FalhaDeRede, enderecoPermitido, lerTexto, type OpcoesDaRede } from '@/infra/web/rede';
 
 export const ENDERECO_DO_BUSCADOR = 'https://html.duckduckgo.com/html/';
 

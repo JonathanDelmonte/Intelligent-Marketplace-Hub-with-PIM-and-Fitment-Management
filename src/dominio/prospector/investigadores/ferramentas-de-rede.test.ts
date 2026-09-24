@@ -20,8 +20,8 @@ import {
 import { InvestigadorDeCnpj, lerCadastro } from './cnpj';
 import { InvestigadorDeDemandaPublica, SensorDePncpHttp } from './demanda-publica';
 import { InvestigadorDePagina } from './leitor-de-pagina';
-import { cnpjsNoTexto, ofertasDaPagina, precosNoTexto, tituloDaPagina } from './pagina';
-import { FalhaDeRede } from './rede';
+import { cnpjsNoTexto, ofertasDaPagina, precosNoTexto, tituloDaPagina } from '@/dominio/web/pagina';
+import { FalhaDeRede } from '@/infra/web/rede';
 
 const AGORA = () => new Date('2026-09-24T12:00:00Z');
 

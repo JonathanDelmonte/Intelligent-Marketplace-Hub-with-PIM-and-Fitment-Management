@@ -136,6 +136,20 @@ const PADROES_DE_ITEM: Readonly<Record<SiteReconhecido, readonly RegExp[]>> = {
 };
 
 /**
+ * O endereço é de um anúncio de plataforma conhecida?
+ *
+ * É o filtro dos links de uma página de listagem: dos duzentos links de uma busca do
+ * Mercado Livre, só os de item viram entrada — o resto é menu, filtro e rodapé.
+ */
+export function ehUrlDeAnuncio(bruto: string): boolean {
+  const url = analisarUrl(bruto);
+  const site = siteDaUrl(bruto);
+  if (url === null || site === null) return false;
+  const alvo = `${url.hostname}${url.pathname}${url.search}`;
+  return PADROES_DE_ITEM[site].some((p) => p.test(alvo));
+}
+
+/**
  * URL de **listagem**: categoria, busca, loja, marca.
  *
  * Casado contra `hostname + pathname + search`, não só contra o caminho: no

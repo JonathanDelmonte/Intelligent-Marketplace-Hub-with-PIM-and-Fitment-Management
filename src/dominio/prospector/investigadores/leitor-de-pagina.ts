@@ -31,8 +31,8 @@ import {
   textoVisivel,
   tituloDaPagina,
   type OfertaDaPagina,
-} from './pagina';
-import { FalhaDeRede, lerTexto, type OpcoesDaRede } from './rede';
+} from '@/dominio/web/pagina';
+import { FalhaDeRede, lerTexto, type OpcoesDaRede } from '@/infra/web/rede';
 
 /** Quantos códigos novos uma página pode sugerir. Como na base local: seis. */
 export const CODIGOS_POR_PAGINA = 6;
