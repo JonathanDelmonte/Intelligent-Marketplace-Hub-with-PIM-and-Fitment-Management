@@ -155,6 +155,21 @@ anotado, e qualquer coisa que custou mais de meia hora para descobrir.
 
 ---
 
+## 3.7 Gratuito primeiro
+
+Regra do dono, de 24/09/2026: **tudo funciona de graça primeiro; opção paga entra depois,
+como opção, nunca como requisito.** Vale para modelo de IA (o padrão é o roteador gratuito
+do OpenRouter, `openrouter/free`), para fonte de dado (API pública e gratuita antes de
+serviço pago) e para qualquer dependência nova. Integração que só existe paga fica como
+porta com estado "não configurado", e o sistema funciona sem ela.
+
+Consequência de desenho: o plano gratuito tem cota — no OpenRouter, 20 pedidos por minuto
+e 50 por dia —, então o que usa IA trabalha **em lote** (vários itens por pedido), faz o
+determinístico antes, e trata cota esgotada como teto: para a execução e adia o trabalho
+até a hora que o provedor diz, sem insistir (pedido recusado também conta na cota).
+
+---
+
 ## 4. Convenções de código
 
 - TypeScript `strict`, sem `any` implícito, sem `as` para calar o compilador.
