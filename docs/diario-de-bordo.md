@@ -26,6 +26,68 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-24 — Compatibilidade tirada de manual, página, catálogo e fórum (6.10, 6.11)
+
+A ficha de compatibilidade só se alimentava de título de anúncio e de decisão na tela. Agora
+aceita as quatro fontes que faltavam — manual do fabricante, página oficial, catálogo de
+distribuidor e fórum —, por arquivo (PDF ou texto), link ou texto colado, no formulário
+"Trazer de um manual, página, catálogo ou fórum" da ficha do produto. De graça e sem IA: é o
+mesmo casamento de código de aparelho cadastrado que o título de anúncio já usava.
+
+### 🔀 A fonte vale com força quando cita o código do produto
+
+O manual do purificador cita o purificador; o catálogo do distribuidor cita cem aparelhos e
+trinta refis. O código do aparelho sozinho não diz que **esta** peça serve nele. A regra: o
+código do produto é o código de peça do título do SKU que não é código de aparelho
+(`EF-ELX-21`). Manual e página oficial que o citam entram com a força do tipo — e manual
+publica sozinho, como a especificação quer; os que não citam entram com 50%, abaixo do corte,
+e vão para a fila com o trecho. Produto sem código próprio no título não tem como ser
+reconhecido na fonte, e o formulário avisa antes de a pessoa tentar.
+
+### 🐛 "Linha vizinha" pegava a linha de outra peça numa tabela
+
+A primeira versão contava, no catálogo e no fórum, o aparelho citado na mesma linha do
+produto ou na vizinha — para a pergunta do fórum e a resposta embaixo. Numa tabela, a linha
+vizinha é **outra peça**: `EF-ELX-30 | PE11B` logo abaixo de `EF-ELX-21 | PA21G` punha o PE11B
+na ficha do EF-ELX-21. Só o teste pegou. A regra virou "seção": o aparelho é da última peça
+citada acima dele (na mesma linha, ou até trinta linhas para cima), e, sem nenhuma acima, da
+linha de baixo. Linha que cita outra peça começa outra seção.
+
+### 🔀 Texto colado sem link conta como uma fonte só por tipo
+
+Evidência igual é "mesmo tipo, mesma URL, mesmo lado", e texto colado não tem URL: dois
+posts de fórum colados para o mesmo par ficam como um. É a mesma regra da resolução para
+evidência sem URL — não há como distinguir duas fontes anônimas de uma registrada duas
+vezes —, e o erro é para o lado seguro. O arquivo enviado vai com o nome na frente do trecho
+(`manual-pa21g.pdf: …`), para a fila dizer de onde veio.
+
+### 🔀 O casamento saiu do coletor para `casamento.ts`
+
+A leitura de fonte usa o mesmo casamento do título de anúncio, e o coletor usa a leitura de
+fonte: os dois módulos se importariam em círculo. O casamento foi para um módulo próprio, e o
+coletor o reexporta para quem já o importava dali.
+
+### 🔀 A página vira texto em linhas, e o PDF é reconhecido pela assinatura
+
+`textoVisivel` junta a página numa linha só — basta para casar, não para saber o que está
+perto do quê. `linhasVisiveis` quebra em parágrafo, item, linha de tabela e título. E o link
+de manual quase nunca avisa que é PDF: o endereço é lido como bytes, e o formato vem do tipo
+da resposta ou do `%PDF` no começo do arquivo.
+
+### ❓ O link foi testado só no caminho da recusa
+
+A rede daqui recusa sites de fora (403 do proxy), então o link deu "não deu para ler a
+fonte" no navegador — o aviso certo para um site que só abre em navegador. O PDF enviado e o
+texto colado foram testados de ponta a ponta na tela; a leitura de link, com `fetch` falso
+nos testes (página, PDF sem o tipo certo, 403 e 503).
+
+### 🐛 O mesmo aperto de formulário na tela de compatibilidade
+
+A grade de campos do cadastro de aparelho também era item encolhido do formulário comum, que
+é uma linha que quebra. Mesmo conserto da tela de fornecedores.
+
+---
+
 ## 2026-09-24 — A confiabilidade do fornecedor, pelo atraso real (7.5)
 
 O roadmap deixou a nota de confiabilidade bloqueada até existir pedido com prazo e com data

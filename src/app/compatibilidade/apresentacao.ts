@@ -69,6 +69,25 @@ export function resumoDasEvidencias(evidencias: readonly Evidencia[]): readonly 
   return partes;
 }
 
+export interface OndeFoiDito {
+  readonly fonte: string;
+  readonly trecho: string;
+  readonly url: string | null;
+}
+
+/**
+ * Onde cada fonte disse o que disse: o trecho, e o link quando há. É o que a pessoa lê
+ * para decidir na fila — "manual do fabricante (1)" não diz se o manual fala mesmo desta
+ * peça. Só fonte do mundo; a inferência já se explica na frase da situação.
+ */
+export function ondeFoiDito(evidencias: readonly Evidencia[], limite = 3): readonly OndeFoiDito[] {
+  return evidencias
+    .filter((e) => !ehInferida(e.tipo) && e.tipo !== 'humano' && e.trecho !== null)
+    .sort((a, b) => FORCA_DA_EVIDENCIA[b.tipo] - FORCA_DA_EVIDENCIA[a.tipo])
+    .slice(0, limite)
+    .map((e) => ({ fonte: ETIQUETA_DA_EVIDENCIA[e.tipo], trecho: e.trecho ?? '', url: e.url }));
+}
+
 /** A decisão em palavras, sem o vocabulário do banco. */
 export function rotuloDaDecisao(decisao: Decisao): string {
   switch (decisao) {
@@ -140,6 +159,16 @@ export const CODIGOS_DE_AVISO = [
   'sem_anuncio',
   'linha_sumiu',
   'produto_de_outro_perfil',
+  'fonte_lida',
+  'fonte_para_conferir',
+  'fonte_sem_codigo_do_produto',
+  'fonte_longe_do_produto',
+  'fonte_ambigua',
+  'fonte_sem_aparelho',
+  'fonte_vazia',
+  'fonte_grande',
+  'fonte_recusada',
+  'fonte_sem_rede',
   'falha',
 ] as const;
 export type CodigoDeAviso = (typeof CODIGOS_DE_AVISO)[number];
@@ -156,7 +185,12 @@ export interface Aviso {
  * "Pronto" não é aviso: a pessoa precisa saber se a linha entrou na ficha, se
  * apenas ficou registrada, ou se nada mudou.
  */
-export function descreverAviso(codigo: string | undefined, quantidade?: number): Aviso | null {
+export function descreverAviso(
+  codigo: string | undefined,
+  quantidade?: number,
+  /** Segundo número, quando o aviso tem dois: os aparelhos com força, na leitura de fonte. */
+  outra?: number,
+): Aviso | null {
   if (codigo === undefined) return null;
   if (!(CODIGOS_DE_AVISO as readonly string[]).includes(codigo)) return null;
 
@@ -228,6 +262,79 @@ export function descreverAviso(codigo: string | undefined, quantidade?: number):
         titulo: 'Esse produto não é deste perfil',
         corpo:
           'A ficha abaixo é de outro produto — o de abertura. Escolha na lista antes de responder a um comprador: ficha errada com cara de ficha certa é o erro que esta tela existe para não deixar acontecer.',
+      };
+    case 'fonte_lida':
+      return {
+        tom: 'ok',
+        titulo: `A fonte confirmou ${contagem(quantidade ?? 0, 'aparelho', 'aparelhos')}`,
+        corpo:
+          'Cada um entrou com a força da fonte: manual e página oficial vão direto para a ficha; catálogo e fórum somam com outras fontes até chegar ao corte.',
+      };
+    case 'fonte_para_conferir': {
+      const comForca =
+        outra === undefined || outra === 0
+          ? ''
+          : ` Mais ${contagem(outra, 'aparelho entrou', 'aparelhos entraram')} com a força da fonte.`;
+      return {
+        tom: 'atencao',
+        titulo: `${contagem(quantidade ?? 0, 'aparelho espera', 'aparelhos esperam')} sua conferência`,
+        corpo: `A fonte cita o aparelho, mas não cita o código deste produto — pode estar falando de outra peça. Está na fila, com o trecho, para você decidir.${comForca}`,
+      };
+    }
+    case 'fonte_sem_codigo_do_produto':
+      return {
+        tom: 'atencao',
+        titulo: 'O produto não tem código próprio no título',
+        corpo:
+          'Sem o código da peça, a fonte não tem como dizer que fala dela: o catálogo e o fórum citam muitas peças. Ponha o código no título do produto, na tela de produtos, e leia de novo.',
+      };
+    case 'fonte_longe_do_produto':
+      return {
+        tom: 'atencao',
+        titulo: `${contagem(quantidade ?? 0, 'aparelho citado', 'aparelhos citados')} em trecho de outra peça`,
+        corpo:
+          'A fonte cita aparelhos cadastrados, mas na parte que fala de outro código de peça. Nada foi registrado para este produto.',
+      };
+    case 'fonte_ambigua':
+      return {
+        tom: 'atencao',
+        titulo: `${contagem(quantidade ?? 0, 'código', 'códigos')} de mais de uma marca`,
+        corpo:
+          'A fonte cita um modelo que existe em duas marcas cadastradas, e não diz qual. Nada foi escolhido no escuro: cole um trecho que tenha a marca.',
+      };
+    case 'fonte_sem_aparelho':
+      return {
+        tom: 'atencao',
+        titulo: 'Nenhum aparelho cadastrado aparece na fonte',
+        corpo:
+          'Ela foi lida inteira. Se os modelos dela não estão na lista de aparelhos abaixo, cadastre-os e leia de novo.',
+      };
+    case 'fonte_vazia':
+      return {
+        tom: 'atencao',
+        titulo: 'Faltou a fonte',
+        corpo: 'Envie o PDF, cole o link ou cole o texto — um dos três.',
+      };
+    case 'fonte_grande':
+      return {
+        tom: 'atencao',
+        titulo: 'Arquivo grande demais',
+        corpo:
+          'O limite por envio é o mesmo da importação. Mande o link do PDF, ou só as páginas que falam da peça.',
+      };
+    case 'fonte_recusada':
+      return {
+        tom: 'atencao',
+        titulo: 'Não deu para ler a fonte',
+        corpo:
+          'O site só abre no navegador, a página não existe, ou o PDF é imagem escaneada, sem texto. Baixe o PDF e envie, ou copie o texto e cole.',
+      };
+    case 'fonte_sem_rede':
+      return {
+        tom: 'atencao',
+        titulo: 'O link não abriu agora',
+        corpo:
+          'A rede ou o site estão fora. Nada foi registrado: tente de novo mais tarde, ou envie o arquivo.',
       };
     case 'falha':
       return {

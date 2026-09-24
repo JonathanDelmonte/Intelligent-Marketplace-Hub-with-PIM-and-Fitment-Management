@@ -22,6 +22,7 @@ declare const estilo: {
   readonly botaoSim: string;
   readonly cabecalho: string;
   readonly campo: string;
+  readonly campoLargo: string;
   readonly campos: string;
   readonly cartao: string;
   readonly cartaoNota: string;
@@ -54,6 +55,8 @@ declare const estilo: {
   readonly subtitulo: string;
   readonly tabela: string;
   readonly titulo: string;
+  readonly trechoFonte: string;
+  readonly trechos: string;
   readonly vazio: string;
 };
 export default estilo;

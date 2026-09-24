@@ -225,9 +225,26 @@
 
 .campos {
   display: grid;
+  /* O formulário comum é uma linha que quebra; a grade ocupa a linha inteira. */
+  flex: 1 1 100%;
   gap: 0.75rem;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
   margin-bottom: 0.875rem;
+}
+
+.campoLargo {
+  flex: 1 1 100%;
+}
+
+.trechos {
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0;
+  overflow-wrap: anywhere;
+  padding-left: 1.125rem;
+}
+
+.trechoFonte {
+  color: var(--cor-texto-fraco);
 }
 
 .campo {

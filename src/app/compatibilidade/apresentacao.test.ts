@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Evidencia, TipoDeEvidencia } from '@/dominio/compatibilidade/evidencia';
 import { LIMIAR_PUBLICACAO_BP, TOTAL_BP } from '@/dominio/compatibilidade/resolucao';
 import {
+  ondeFoiDito,
   CODIGOS_DE_AVISO,
   descreverAviso,
   emPorcento,
@@ -216,5 +217,40 @@ describe('aviso de produto de outro perfil', () => {
     expect(aviso?.tom).toBe('erro');
     expect(aviso?.corpo).toContain('outro produto');
     expect(CODIGOS_DE_AVISO).toContain('produto_de_outro_perfil');
+  });
+});
+
+describe('ondeFoiDito', () => {
+  const evidencia = (tipo: TipoDeEvidencia, trecho: string | null, url: string | null = null) =>
+    ({
+      tipo,
+      trecho,
+      url,
+      em: '2026-09-24T12:00:00.000Z',
+      negativa: false,
+      forcaBp: null,
+    }) satisfies Evidencia;
+
+  it('mostra o trecho das fontes do mundo, a mais forte primeiro', () => {
+    expect(
+      ondeFoiDito([
+        evidencia('forum', 'Serviu no meu PE11B'),
+        evidencia('inferencia_familia', 'irmão confirmado'),
+        evidencia('humano', 'conferido na tela'),
+        evidencia('manual_fabricante', 'manual.pdf: Purificador PE11B', null),
+        evidencia('pagina_oficial', null, 'https://fabricante.invalid'),
+      ]),
+    ).toEqual([
+      { fonte: 'manual do fabricante', trecho: 'manual.pdf: Purificador PE11B', url: null },
+      { fonte: 'fórum ou grupo de assistência', trecho: 'Serviu no meu PE11B', url: null },
+    ]);
+  });
+});
+
+describe('aviso da leitura de fonte', () => {
+  it('com dois números, diz os que esperam e os que entraram', () => {
+    const aviso = descreverAviso('fonte_para_conferir', 2, 1);
+    expect(aviso?.titulo).toBe('2 aparelhos esperam sua conferência');
+    expect(aviso?.corpo).toContain('Mais 1 aparelho entrou');
   });
 });

@@ -11,12 +11,13 @@ import type { Ficha, Resposta } from '@/dominio/compatibilidade/ficha';
 import type { SkuParaFicha } from '@/dominio/compatibilidade/repositorio';
 import type { Decisao } from '@/dominio/compatibilidade/resolucao';
 import { contagem } from '@/lib/texto';
-import { cadastrarAparelho, decidirLinha, procurarNosAnuncios } from './acoes';
+import { cadastrarAparelho, decidirLinha, procurarNosAnuncios, trazerDaFonte } from './acoes';
 import { CAMINHO_DO_ARQUIVO } from './constantes';
 import {
   emPorcento,
   explicarRetencao,
   explicarSituacao,
+  ondeFoiDito,
   resumoDasEvidencias,
   rotuloDaConfianca,
   rotuloDaDecisao,
@@ -179,6 +180,24 @@ export function Fila({ linhas }: { readonly linhas: readonly LinhaDaFila[] }) {
             <ul className={estilo.evidencias}>
               {resumoDasEvidencias(linha.evidencias).map((e) => (
                 <li key={e}>{e}</li>
+              ))}
+            </ul>
+          )}
+
+          {ondeFoiDito(linha.evidencias).length > 0 && (
+            <ul className={estilo.trechos}>
+              {ondeFoiDito(linha.evidencias).map((o) => (
+                <li key={`${o.fonte}:${o.url ?? ''}:${o.trecho}`}>
+                  <span className={estilo.trechoFonte}>{o.fonte}:</span> “{o.trecho}”
+                  {o.url !== null && (
+                    <>
+                      {' '}
+                      <a href={o.url} rel="noopener noreferrer" target="_blank">
+                        abrir
+                      </a>
+                    </>
+                  )}
+                </li>
               ))}
             </ul>
           )}
@@ -432,6 +451,83 @@ export function EscolhaDeProduto({
         Ver esta ficha
       </button>
     </form>
+  );
+}
+
+const ROTULO_DO_TIPO_DE_FONTE = {
+  manual_fabricante: 'Manual do fabricante',
+  pagina_oficial: 'Página oficial do fabricante',
+  catalogo_distribuidor: 'Catálogo ou tabela de distribuidor',
+  forum: 'Fórum ou grupo de assistência',
+} as const;
+
+/**
+ * Trazer compatibilidade de uma fonte de fora (6.10, 6.11): o manual em PDF, a página
+ * do fabricante, a tabela do distribuidor, o post do grupo. O que vale é a fonte citar o
+ * código deste produto junto com os aparelhos — e o formulário diz qual é esse código,
+ * ou avisa que o título não tem um.
+ */
+export function FormularioDeFonte({
+  skuId,
+  codigosDoProduto,
+}: {
+  readonly skuId: string;
+  readonly codigosDoProduto: readonly string[];
+}) {
+  return (
+    <details className={estilo.detalhe}>
+      <summary>Trazer de um manual, página, catálogo ou fórum</summary>
+      <form action={trazerDaFonte} className={estilo.formulario}>
+        <input name="skuId" type="hidden" value={skuId} />
+        <div className={estilo.campos}>
+          <label className={estilo.campo}>
+            <span>De onde vem</span>
+            <select className={estilo.entrada} defaultValue="manual_fabricante" name="tipo">
+              {Object.entries(ROTULO_DO_TIPO_DE_FONTE).map(([valor, rotulo]) => (
+                <option key={valor} value={valor}>
+                  {rotulo}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={estilo.campo}>
+            <span>Arquivo (PDF ou texto)</span>
+            <input
+              accept=".pdf,.txt,.html,.htm,application/pdf,text/plain,text/html"
+              className={estilo.entrada}
+              name="arquivo"
+              type="file"
+            />
+          </label>
+          <label className={estilo.campo}>
+            <span>Ou o link</span>
+            <input
+              className={estilo.entrada}
+              name="url"
+              placeholder="https://fabricante.com.br/manual.pdf"
+              type="url"
+            />
+          </label>
+        </div>
+        <label className={`${estilo.campo} ${estilo.campoLargo}`}>
+          <span>Ou cole o texto</span>
+          <textarea
+            className={estilo.entrada}
+            name="texto"
+            placeholder="O trecho da tabela, ou o post do grupo, com os modelos"
+            rows={4}
+          />
+        </label>
+        <button className={estilo.botao} type="submit">
+          Ler a fonte
+        </button>
+        <p className={estilo.dica}>
+          {codigosDoProduto.length === 0
+            ? 'O título deste produto não tem código de peça próprio, então a fonte não tem como dizer que fala dele: o que ela citar vai todo para a fila, e catálogo e fórum não entram. Vale pôr o código no título.'
+            : `Vale com força a fonte que cita ${codigosDoProduto.join(' ou ')} junto com os aparelhos. Manual e página oficial vão direto para a ficha; catálogo e fórum somam com outras fontes. O que não der para ter certeza vai para a fila, com o trecho, esperando você.`}
+        </p>
+      </form>
+    </details>
   );
 }
 

@@ -15,6 +15,8 @@
  */
 import type { Metadata } from 'next';
 import { and, eq, sql } from 'drizzle-orm';
+import { indexarPorCodigo } from '@/dominio/compatibilidade/casamento';
+import { codigosDoProduto, comoEstaNoTitulo } from '@/dominio/compatibilidade/fonte';
 import { descreverAnalise, analisarModelo } from '@/dominio/compatibilidade/gramatica';
 import { GRAMATICAS_SEMENTE } from '@/dominio/compatibilidade/gramaticas';
 import { montarFicha, responder } from '@/dominio/compatibilidade/ficha';
@@ -36,6 +38,7 @@ import {
   Fila,
   FichaPublicavel,
   FormularioDeAparelho,
+  FormularioDeFonte,
   ListaDeAparelhos,
   Painel,
   ResponderComprador,
@@ -98,7 +101,7 @@ export default async function PaginaDeCompatibilidade({
   // tela existe para não deixar acontecer.
   const aviso = escolha.pedidoInvalido
     ? descreverAviso('produto_de_outro_perfil', undefined)
-    : descreverAviso(codigo, inteiroDaUrl(parametros['n']));
+    : descreverAviso(codigo, inteiroDaUrl(parametros['n']), inteiroDaUrl(parametros['m']));
   const diagnostico = estadoDaBase({
     aparelhos: estado.aparelhos,
     publicaveis: estado.publicaveis,
@@ -164,6 +167,12 @@ export default async function PaginaDeCompatibilidade({
           <EscolhaDeProduto escolhido={emFoco} pergunta={pergunta} produtos={escolha.lista} />
           <FichaPublicavel ficha={ficha} />
           <BaixarFicha publicaveis={ficha.publicaveis.length} skuId={emFoco.id} />
+          <FormularioDeFonte
+            codigosDoProduto={codigosDoProduto(emFoco.titulo, indexarPorCodigo(aparelhos)).map(
+              (c) => comoEstaNoTitulo(emFoco.titulo, c),
+            )}
+            skuId={emFoco.id}
+          />
         </section>
       )}
 

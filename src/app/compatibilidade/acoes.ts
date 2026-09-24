@@ -1,9 +1,10 @@
 /**
  * Ações da tela de compatibilidade.
  *
- * Três: confirmar (ou negar) uma linha, cadastrar um aparelho, e procurar evidência
- * nos anúncios já capturados. Nenhuma faz trabalho de domínio — traduzem formulário
- * em chamada e voltam.
+ * Quatro: confirmar (ou negar) uma linha, cadastrar um aparelho, procurar evidência
+ * nos anúncios já capturados, e ler uma fonte de fora — manual, página oficial,
+ * catálogo, fórum. Nenhuma faz trabalho de domínio — traduzem formulário em chamada e
+ * voltam.
  *
  * `redirect()` do Next sinaliza por exceção (`NEXT_REDIRECT`), então **nenhum
  * `redirect` deste arquivo está dentro de `try`**: o trabalho acontece, o resultado
@@ -14,13 +15,20 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { and, eq } from 'drizzle-orm';
+import { z } from 'zod';
 import { lerAmbiente } from '@/config/ambiente';
+import { MAX_UPLOAD_BYTES } from '@/config/limites';
 import { ColetorDeCompatibilidade } from '@/dominio/compatibilidade/coletor';
+import { TIPOS_DE_FONTE } from '@/dominio/compatibilidade/fonte';
 import { RepositorioDeCompatibilidade } from '@/dominio/compatibilidade/repositorio';
 import { carregarPerfil } from '@/dominio/perfil';
+import { lerTextoDoEndereco } from '@/dominio/web/leitura';
+import { linhasVisiveis } from '@/dominio/web/pagina';
 import { banco } from '@/infra/banco/cliente';
 import { sku } from '@/infra/banco/schema';
 import { criarRegistrador, nivelDoAmbiente } from '@/infra/log';
+import { PdfIlegivel, textoDoPdf } from '@/infra/pdf/texto';
+import { FalhaDeRede } from '@/infra/web/rede';
 import type { CodigoDeAviso } from './apresentacao';
 import { CAMINHO } from './constantes';
 
@@ -203,4 +211,140 @@ export async function procurarNosAnuncios(): Promise<void> {
   revalidatePath(CAMINHO);
   if (novas > 0) redirect(paraOnde('coletado', novas));
   redirect(anunciosLidos === 0 ? paraOnde('sem_anuncio') : paraOnde('sem_coleta'));
+}
+
+/** A volta da leitura de fonte: para a ficha do mesmo produto, onde o formulário está. */
+function paraAFicha(skuId: string, codigo: CodigoDeAviso, n?: number, m?: number): string {
+  const numeros = `${n === undefined ? '' : `&n=${String(n)}`}${m === undefined ? '' : `&m=${String(m)}`}`;
+  return `${CAMINHO}?sku=${encodeURIComponent(skuId)}&r=${codigo}${numeros}#ficha-titulo`;
+}
+
+const esquemaDoTipoDeFonte = z.enum(TIPOS_DE_FONTE);
+
+type TextoDaFonte =
+  | {
+      readonly tipo: 'ok';
+      readonly texto: string;
+      readonly url: string | null;
+      readonly origem: string | null;
+    }
+  | { readonly tipo: 'erro'; readonly codigo: CodigoDeAviso };
+
+/** Os quatro primeiros bytes de todo PDF: `%PDF`. */
+function ehPdf(arquivo: File, bytes: Uint8Array): boolean {
+  return (
+    arquivo.type === 'application/pdf' ||
+    /\.pdf$/i.test(arquivo.name) ||
+    (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46)
+  );
+}
+
+/**
+ * O texto da fonte, do jeito que ela chegou. O arquivo vem antes do link e o link antes
+ * do texto, como na importação: quem escolheu um arquivo e deixou algo na caixa quis o
+ * arquivo.
+ */
+async function textoDaFonte(dados: FormData): Promise<TextoDaFonte> {
+  const arquivo = dados.get('arquivo');
+  if (arquivo instanceof File && arquivo.size > 0) {
+    if (arquivo.size > MAX_UPLOAD_BYTES) return { tipo: 'erro', codigo: 'fonte_grande' };
+    const bytes = new Uint8Array(await arquivo.arrayBuffer());
+    if (ehPdf(arquivo, bytes)) {
+      try {
+        return { tipo: 'ok', texto: await textoDoPdf(bytes), url: null, origem: arquivo.name };
+      } catch (erro) {
+        if (!(erro instanceof PdfIlegivel)) throw erro;
+        return { tipo: 'erro', codigo: 'fonte_recusada' };
+      }
+    }
+    const conteudo = new TextDecoder('utf-8').decode(bytes);
+    const texto = /\.html?$/i.test(arquivo.name) ? linhasVisiveis(conteudo) : conteudo;
+    return { tipo: 'ok', texto, url: null, origem: arquivo.name };
+  }
+
+  const url = texto(dados.get('url'));
+  if (url !== '') {
+    try {
+      const lido = await lerTextoDoEndereco(url);
+      return lido.tipo === 'ok'
+        ? { tipo: 'ok', texto: lido.texto, url: lido.url, origem: null }
+        : { tipo: 'erro', codigo: 'fonte_recusada' };
+    } catch (erro) {
+      if (!(erro instanceof FalhaDeRede)) throw erro;
+      // Endereço recusado — da rede local, ou que nem é endereço — não melhora tentando
+      // de novo; rede fora, sim.
+      return {
+        tipo: 'erro',
+        codigo: erro.message.startsWith('endereço recusado') ? 'fonte_recusada' : 'fonte_sem_rede',
+      };
+    }
+  }
+
+  const colado = texto(dados.get('texto'));
+  return colado === ''
+    ? { tipo: 'erro', codigo: 'fonte_vazia' }
+    : { tipo: 'ok', texto: colado, url: null, origem: null };
+}
+
+/**
+ * Lê uma fonte de fora — o manual em PDF, a página do fabricante, a tabela do
+ * distribuidor, o post do grupo — e registra em que aparelhos ela diz que este produto
+ * serve. As regras de força estão em `dominio/compatibilidade/fonte.ts`: manual e página
+ * que citam o código do produto publicam; o resto vai para a fila, com o trecho.
+ */
+export async function trazerDaFonte(dados: FormData): Promise<void> {
+  const db = banco();
+  const skuId = texto(dados.get('skuId'));
+  const tipo = esquemaDoTipoDeFonte.safeParse(texto(dados.get('tipo')));
+  if (skuId === '' || !tipo.success) redirect(paraOnde('falha'));
+
+  let destino: string;
+  try {
+    const perfil = await carregarPerfil(db, lerAmbiente().BANCADA_PERFIL_PADRAO);
+    const produto = await db
+      .select({ id: sku.id, titulo: sku.tituloInterno })
+      .from(sku)
+      .where(and(eq(sku.id, skuId), eq(sku.perfilId, perfil.id)))
+      .limit(1);
+    const escolhido = produto[0];
+
+    if (escolhido === undefined) {
+      destino = paraOnde('produto_de_outro_perfil');
+    } else {
+      const fonte = await textoDaFonte(dados);
+      if (fonte.tipo === 'erro') {
+        destino = paraAFicha(skuId, fonte.codigo);
+      } else {
+        const repo = new RepositorioDeCompatibilidade(db);
+        const r = await new ColetorDeCompatibilidade(db, repo).coletarDaFonte({
+          skuId,
+          tituloDoProduto: escolhido.titulo,
+          tipo: tipo.data,
+          texto: fonte.texto,
+          url: fonte.url,
+          origem: fonte.origem,
+          agora: new Date(),
+        });
+        log.info('compatibilidade.fonte_lida', { skuId, tipo: tipo.data, ...r });
+        destino =
+          r.paraConferir > 0
+            ? paraAFicha(skuId, 'fonte_para_conferir', r.paraConferir, r.comForca)
+            : r.comForca > 0
+              ? paraAFicha(skuId, 'fonte_lida', r.comForca)
+              : !r.produtoTemCodigo && r.longeDoProduto > 0
+                ? paraAFicha(skuId, 'fonte_sem_codigo_do_produto')
+                : r.longeDoProduto > 0
+                  ? paraAFicha(skuId, 'fonte_longe_do_produto', r.longeDoProduto)
+                  : r.ambiguos.length > 0
+                    ? paraAFicha(skuId, 'fonte_ambigua', r.ambiguos.length)
+                    : paraAFicha(skuId, 'fonte_sem_aparelho');
+      }
+    }
+  } catch (erro) {
+    log.erro('compatibilidade.fonte_falhou', { skuId, erro });
+    redirect(paraOnde('falha'));
+  }
+
+  revalidatePath(CAMINHO);
+  redirect(destino);
 }
