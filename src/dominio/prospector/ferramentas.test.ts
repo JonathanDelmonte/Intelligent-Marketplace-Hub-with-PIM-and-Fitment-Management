@@ -28,7 +28,7 @@ describe('estadoDaFerramenta', () => {
   });
 
   it('o que falta diz o nome do que alguém tem de escrever', () => {
-    // "Indisponível" manda procurar; "nenhum buscador implementado" manda construir.
+    // "Indisponível" manda procurar; "rede de saída para o buscador" diz o que ligar.
     const busca = estadoDaFerramenta('busca_web', []);
     if (busca.tipo === 'falta') expect(busca.oQueFalta).toContain('buscador');
   });
@@ -45,8 +45,9 @@ describe('estadoDaFerramenta', () => {
 });
 
 describe('FERRAMENTAS_PRONTAS', () => {
-  it('hoje é a base local, e só', () => {
-    expect(FERRAMENTAS_PRONTAS).toEqual(['base_local']);
+  it('hoje são cinco — todas gratuitas —, e falta só a visão', () => {
+    expect(FERRAMENTAS_PRONTAS).toEqual(['base_local', 'busca_web', 'ler_pagina', 'cnpj', 'pncp']);
+    expect(ferramentasQueFaltam(FERRAMENTAS_PRONTAS)).toEqual(['visao']);
   });
 
   it('entra direto nos limites da busca, sem tradução', () => {
@@ -68,15 +69,26 @@ describe('FERRAMENTAS_PRONTAS', () => {
       ],
     };
 
-    expect(escolherDaFronteira(estado, FERRAMENTAS_PRONTAS)?.id).toBe('b');
+    // Com o buscador pronto, o item de custo — que vale mais — vem primeiro.
+    expect(escolherDaFronteira(estado, FERRAMENTAS_PRONTAS)?.id).toBe('a');
+    expect(escolherDaFronteira(estado, ['base_local'])?.id).toBe('b');
     expect(proximoPasso(estado, { passos: 10, ferramentas: FERRAMENTAS_PRONTAS }).tipo).toBe(
       'investigar',
     );
   });
 
-  it('as famílias possíveis hoje são as duas que a base local alcança', () => {
-    // As de custo e de distribuidor exigem sair para fora, e é isso que a tela diz.
+  it('com as ferramentas de rede, as sete perguntas dão para investigar', () => {
     expect([...familiasPossiveis(FERRAMENTAS_PRONTAS)].sort()).toEqual([
+      'demanda_publica',
+      'em_que_mais_serve',
+      'onde_e_mais_barato',
+      'que_outras_pecas',
+      'quem_distribui',
+      'quem_fabrica',
+      'quem_ja_vende',
+    ]);
+    // Sem rede, as duas que a base local alcança — e é isso que a tela diz.
+    expect([...familiasPossiveis(['base_local'])].sort()).toEqual([
       'em_que_mais_serve',
       'que_outras_pecas',
     ]);

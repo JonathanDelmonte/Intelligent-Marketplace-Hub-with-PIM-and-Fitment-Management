@@ -38,6 +38,7 @@ import { Orquestrador } from '@/dominio/ingestao/orquestrador';
 import { IngestorDeProdutoExterno } from '@/dominio/ingestao/produto-externo';
 import { RepositorioDoMonitor } from '@/dominio/monitor/repositorio';
 import { MotorDoProspector } from '@/dominio/prospector/motor';
+import type { OpcoesDaRede } from '@/dominio/prospector/investigadores/rede';
 import { investigadoresDaInstalacao } from '@/dominio/prospector/registro';
 import { RepositorioDeDossies } from '@/dominio/prospector/repositorio';
 import { ExecutorDoProspector, tarefaDoProspector } from '@/dominio/prospector/tarefa';
@@ -69,6 +70,11 @@ export type LlmDeJob = () =>
 export interface OpcoesDaMontagem {
   /** Ausente em teste: o grafo monta sem LLM, que é o caminho que não depende de rede. */
   readonly llmDeJob?: LlmDeJob | undefined;
+  /**
+   * Rede para as ferramentas do garimpo. Ausente em teste: o garimpo monta só com a base
+   * local, e a suíte não depende de internet nem bate em serviço de terceiro.
+   */
+  readonly rede?: OpcoesDaRede | undefined;
 }
 
 export interface Nucleo {
@@ -241,7 +247,10 @@ export function montarNucleoCom(
   // linha em `prospector/registro.ts`, e a tela passa a mostrá-la como disponível sem
   // mudança nenhuma aqui.
   const dossies = new RepositorioDeDossies(db);
-  const prospector = new MotorDoProspector(dossies, investigadoresDaInstalacao(db));
+  const prospector = new MotorDoProspector(
+    dossies,
+    investigadoresDaInstalacao(db, { rede: opcoes.rede ?? false }),
+  );
   const executorDoProspector = new ExecutorDoProspector(fila, prospector);
 
   return {
@@ -293,6 +302,8 @@ export function montarNucleo(): Nucleo {
       return perfil.id;
     },
     {
+      // As ferramentas do garimpo saem para a internet: buscador, páginas, CNPJ, PNCP.
+      rede: {},
       // Por job, e não uma vez aqui: cada chamada monta um orçamento novo.
       llmDeJob: () => {
         const llm = llmDoAmbiente(db);

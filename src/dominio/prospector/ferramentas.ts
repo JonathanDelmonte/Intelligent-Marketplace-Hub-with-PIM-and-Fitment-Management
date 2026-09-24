@@ -40,13 +40,11 @@ export const O_QUE_A_FERRAMENTA_FAZ: Readonly<Record<Ferramenta, string>> = {
  * a diferença entre as duas é que a segunda manda a pessoa procurar.
  */
 export const O_QUE_FALTA_PARA_A_FERRAMENTA: Readonly<Record<Ferramenta, string>> = {
-  busca_web: 'Nenhum buscador implementado, e rede de saída para ele.',
-  ler_pagina: 'Nenhum leitor de página implementado, e rede de saída.',
-  visao: 'Nenhum investigador de visão, e o prospector não tem de onde receber imagem.',
-  cnpj: 'Nenhuma consulta de CNPJ implementada, e rede de saída.',
-  // `SensorDePncpAusente` já é o estado correto disto no domínio: a política de rede
-  // deste ambiente recusa `pncp.gov.br` com CONNECT 403.
-  pncp: 'Sensor de PNCP ausente, e a rede daqui recusa pncp.gov.br.',
+  busca_web: 'Rede de saída para o buscador (html.duckduckgo.com).',
+  ler_pagina: 'Rede de saída para as páginas que a busca aponta.',
+  visao: 'Nenhum investigador de visão, e o garimpo não tem de onde receber imagem.',
+  cnpj: 'Rede de saída para a consulta de CNPJ (brasilapi.com.br).',
+  pncp: 'Rede de saída para o PNCP (pncp.gov.br).',
   base_local: 'Nenhum investigador de base local registrado.',
 };
 

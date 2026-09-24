@@ -132,5 +132,23 @@ export function abrirAlvo(alvo: string, disponiveis: readonly Ferramenta[]): Est
     }),
   );
 
-  return { ...ESTADO_INICIAL, hipoteses, fronteira };
+  // A base local é de graça e instantânea. Família que a declara e abriu com outra
+  // ferramenta — o buscador, quando há rede — ganha também um item nela, em vez de
+  // perder a consulta ao que já está aqui.
+  const naBaseLocal = disponiveis.includes('base_local')
+    ? DEFINICOES.filter(
+        (d) =>
+          d.ferramentas.includes('base_local') &&
+          ferramentaDaFamilia(d.familia, disponiveis) !== 'base_local',
+      ).map((d): ItemDaFronteira =>
+        itemDaFamilia({
+          id: `${d.familia}:base_local`,
+          familia: d.familia,
+          alvo: limpo,
+          ferramenta: 'base_local',
+        }),
+      )
+    : [];
+
+  return { ...ESTADO_INICIAL, hipoteses, fronteira: [...fronteira, ...naBaseLocal] };
 }

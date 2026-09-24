@@ -16,8 +16,9 @@
  *
  * **Investigar é enfileirar.** Cada passo é uma chamada de ferramenta, então o laço roda
  * no poller e não dentro da ação: a tela responde na hora e o dossiê aparece preenchido
- * na próxima olhada. Das seis ferramentas, uma é chamável hoje — a base local —, e a
- * tela diz ferramenta por ferramenta o que falta para as outras existirem.
+ * na próxima olhada. Das seis ferramentas, cinco são chamáveis hoje, todas gratuitas —
+ * base local, buscador, leitor de página, CNPJ e PNCP —, e a tela diz o que falta para
+ * a sexta, a visão.
  */
 import type { Metadata } from 'next';
 import { lerAmbiente } from '@/config/ambiente';

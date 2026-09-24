@@ -83,6 +83,14 @@ describe('abrirAlvo', () => {
     expect(item?.ferramenta).toBe('base_local');
   });
 
+  it('com rede, a família abre no buscador e ainda consulta a base local, que é de graça', () => {
+    const estado = abrirAlvo('refil PA21G', ['busca_web', 'ler_pagina', 'base_local']);
+    const itens = estado.fronteira.filter((i) => i.familia === 'em_que_mais_serve');
+    expect(itens.map((i) => i.ferramenta).sort()).toEqual(['base_local', 'busca_web']);
+    // Família que não declara a base local não ganha item nela.
+    expect(estado.fronteira.filter((i) => i.familia === 'onde_e_mais_barato')).toHaveLength(1);
+  });
+
   it('família sem ferramenta disponível guarda a que ela precisaria', () => {
     const estado = abrirAlvo('refil', ['base_local']);
     const item = estado.fronteira.find((i) => i.familia === 'onde_e_mais_barato');
