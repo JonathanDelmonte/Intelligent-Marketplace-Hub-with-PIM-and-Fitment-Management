@@ -239,6 +239,36 @@ export function fonteLegivel(fonte: string): string {
  * ordem" ou "nada foi importado ainda". As duas exigem ações opostas de quem olha, e
  * confundi-las é o jeito de a pessoa ficar esperando por algo que não vem.
  */
+/**
+ * Quantas ofertas esperam a leitura do título pela IA, e por quê.
+ *
+ * Existe porque a espera é invisível: oferta sem EAN e sem marca e código lidos não
+ * gera candidato nenhum, e a fila desta tela fica vazia sem dizer que há gente
+ * esperando. Sem chave, o motivo é a chave; com chave, é a cota — e a fila anda sozinha.
+ */
+export function estadoDaLeitura(params: {
+  readonly esperando: number;
+  readonly temChave: boolean;
+}): Aviso | null {
+  if (params.esperando === 0) return null;
+  const quantas =
+    params.esperando === 1 ? '1 oferta espera' : `${String(params.esperando)} ofertas esperam`;
+  if (!params.temChave) {
+    return {
+      tom: 'atencao',
+      titulo: `${quantas} a leitura do título pela IA.`,
+      corpo:
+        'Sem chave de IA (a linha LLM_API_KEY do .env), marca e código não são lidos dos títulos, e oferta sem EAN não junta com nada. O que tem EAN continua sendo juntado.',
+    };
+  }
+  return {
+    tom: 'ok',
+    titulo: `${quantas} a leitura do título pela IA.`,
+    corpo:
+      'A leitura roda sozinha com o atalho aberto, vinte títulos por pedido — no plano gratuito, até mil por dia. Quando a cota do dia acaba, ela continua no dia seguinte.',
+  };
+}
+
 export function estadoDaBase(params: {
   readonly ocorrencias: number;
   readonly pendentes: number;

@@ -14,13 +14,15 @@
 import type { Metadata } from 'next';
 import { sql } from 'drizzle-orm';
 import { RepositorioDeExemplos } from '@/dominio/identidade/exemplos';
+import { esperandoExtracao } from '@/dominio/identidade/extracao';
 import { RepositorioDePares, type LadoDaFila } from '@/dominio/identidade/pares';
 import { propostaDeSku } from '@/dominio/identidade/propagacao';
 import { lerRegistro, REGISTRO_VAZIO } from '@/dominio/identidade/registro';
 import { produtoExterno } from '@/infra/banco/schema';
 import { banco } from '@/infra/banco/cliente';
+import { temChaveDeLlm } from '@/infra/llm/ambiente';
 import { LIMITE_DA_FILA, LIMITE_DE_RESOLUCAO_MANUAL } from './constantes';
-import { descreverAviso, estadoDaBase, inteiroDaUrl } from './apresentacao';
+import { descreverAviso, estadoDaBase, estadoDaLeitura, inteiroDaUrl } from './apresentacao';
 import { AvisoDaAcao, BotaoResolverAgora, Fila, Painel, ParaCriarProduto } from './componentes';
 import estilo from './juntar-iguais.module.css';
 
@@ -49,16 +51,19 @@ export default async function PaginaDeJuntarIguais({
   const pares = new RepositorioDePares(db);
   const exemplos = new RepositorioDeExemplos(db);
 
-  const [fila, semProduto, contagem, contagemDeExemplos, totalDeOcorrencias] = await Promise.all([
-    pares.fila(LIMITE_DA_FILA),
-    pares.juntadosSemProduto(LIMITE_DA_FILA),
-    pares.contarPorStatus(),
-    exemplos.contar(),
-    db
-      .select({ n: sql<number>`count(*)::int` })
-      .from(produtoExterno)
-      .then((linhas) => linhas[0]?.n ?? 0),
-  ]);
+  const [fila, semProduto, contagem, contagemDeExemplos, totalDeOcorrencias, esperando] =
+    await Promise.all([
+      pares.fila(LIMITE_DA_FILA),
+      pares.juntadosSemProduto(LIMITE_DA_FILA),
+      pares.contarPorStatus(),
+      exemplos.contar(),
+      db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(produtoExterno)
+        .then((linhas) => linhas[0]?.n ?? 0),
+      esperandoExtracao(db),
+    ]);
+  const leitura = estadoDaLeitura({ esperando, temChave: temChaveDeLlm() });
 
   const codigo = Array.isArray(parametros['r']) ? parametros['r'][0] : parametros['r'];
   const aviso = descreverAviso(codigo, inteiroDaUrl(parametros['n']));
@@ -96,6 +101,8 @@ export default async function PaginaDeJuntarIguais({
       {aviso !== null && <AvisoDaAcao aviso={aviso} />}
 
       <Painel contagem={contagem} exemplos={contagemDeExemplos} ocorrencias={totalDeOcorrencias} />
+
+      {leitura !== null && <AvisoDaAcao aviso={leitura} />}
 
       <section className={estilo.secao} aria-label="Juntar automaticamente">
         <BotaoResolverAgora limite={LIMITE_DE_RESOLUCAO_MANUAL} />

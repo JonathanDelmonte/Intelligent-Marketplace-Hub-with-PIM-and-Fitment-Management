@@ -4,6 +4,7 @@ import {
   confiancaLegivel,
   descreverAviso,
   estadoDaBase,
+  estadoDaLeitura,
   fonteLegivel,
   inteiroDaUrl,
   cabecalhoDoPar,
@@ -209,5 +210,24 @@ describe('estadoDaBase', () => {
     expect(estadoDaBase({ ocorrencias: 0, pendentes: 0, avaliadas: 0 })?.corpo).toContain(
       '/importar',
     );
+  });
+});
+
+describe('estadoDaLeitura', () => {
+  it('ninguém esperando, nada a dizer', () => {
+    expect(estadoDaLeitura({ esperando: 0, temChave: false })).toBeNull();
+  });
+
+  it('sem chave, o motivo é a chave — e o que tem EAN continua juntando', () => {
+    const aviso = estadoDaLeitura({ esperando: 12, temChave: false });
+    expect(aviso?.tom).toBe('atencao');
+    expect(aviso?.titulo).toBe('12 ofertas esperam a leitura do título pela IA.');
+    expect(aviso?.corpo).toContain('LLM_API_KEY');
+  });
+
+  it('com chave, diz que anda sozinho e o ritmo do gratuito, no singular quando é uma', () => {
+    const aviso = estadoDaLeitura({ esperando: 1, temChave: true });
+    expect(aviso?.titulo).toBe('1 oferta espera a leitura do título pela IA.');
+    expect(aviso?.corpo).toContain('vinte títulos por pedido');
   });
 });

@@ -65,6 +65,11 @@ export function chamadorDoAmbiente(ambiente: Ambiente = lerAmbiente()): Chamador
   });
 }
 
+/** Há chave de IA no `.env`? A tela usa para dizer por que algo está parado. */
+export function temChaveDeLlm(ambiente: Ambiente = lerAmbiente()): boolean {
+  return preenchido(ambiente.LLM_API_KEY) !== undefined;
+}
+
 export interface LlmDoAmbiente {
   readonly servico: ServicoDeLlm;
   /** Há chave? Sem ela o serviço existe e responde `sem_chave` a tudo. */
@@ -91,7 +96,7 @@ export function llmDoAmbiente(db: Banco, ambiente: Ambiente = lerAmbiente()): Ll
   // e num lugar só para serem ajustados quando houver custo real medido.
   const chamadas = Math.max(10, Math.trunc(centavos / 100));
 
-  const temChave = preenchido(ambiente.LLM_API_KEY) !== undefined;
+  const temChave = temChaveDeLlm(ambiente);
   const modelos = modelosDoAmbiente(ambiente);
 
   return {
