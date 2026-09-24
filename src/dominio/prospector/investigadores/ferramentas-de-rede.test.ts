@@ -12,12 +12,10 @@ import { itemDaFamilia } from '../fronteira';
 import type { FamiliaDeHipotese, Ferramenta } from '../hipoteses';
 import type { PedidoDeInvestigacao } from '../motor';
 import type { SensorDePncp } from '../pncp';
-import {
-  InvestigadorDeBuscaWeb,
-  lerResultadosDoDuckDuckGo,
-  CONSULTA_DA_FAMILIA,
-} from './busca-web';
-import { InvestigadorDeCnpj, lerCadastro } from './cnpj';
+import { InvestigadorDeBuscaWeb, CONSULTA_DA_FAMILIA } from './busca-web';
+import { lerResultadosDoDuckDuckGo } from '@/dominio/web/buscador';
+import { InvestigadorDeCnpj } from './cnpj';
+import { lerCadastro } from '@/dominio/web/receita';
 import { InvestigadorDeDemandaPublica, SensorDePncpHttp } from './demanda-publica';
 import { InvestigadorDePagina } from './leitor-de-pagina';
 import { cnpjsNoTexto, ofertasDaPagina, precosNoTexto, tituloDaPagina } from '@/dominio/web/pagina';
@@ -223,12 +221,12 @@ describe('consulta de CNPJ', () => {
   });
 
   it('CNPJ baixado é achado — e o mais útil: descarta o fornecedor', () => {
-    const { frase, confirma } = lerCadastro('11222333000181', {
+    const leitura = lerCadastro('11222333000181', {
       ...CADASTRO,
       descricao_situacao_cadastral: 'BAIXADA',
     });
-    expect(frase).toContain('situação baixada');
-    expect(confirma).toEqual([]);
+    expect(leitura.frase).toContain('situação baixada');
+    expect(leitura).toMatchObject({ ativo: false, atacadista: false, nomeParaBusca: 'AGUA PURA' });
   });
 
   it('CNPJ que a Receita não conhece também é achado', async () => {
