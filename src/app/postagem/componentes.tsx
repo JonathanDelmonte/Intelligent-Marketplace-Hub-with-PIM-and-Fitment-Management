@@ -5,17 +5,22 @@
  * com ação de servidor. Esta é a tela que se usa com o celular na mão e a caixa na
  * bancada, então tem de funcionar em rede ruim e com a aba recarregada.
  */
+import Link from 'next/link';
 import type { FilaDoDia, ItemDaFila } from '@/dominio/pedidos/fila-do-dia';
-import { ehPlataforma } from '@/dominio/precificacao/tipos';
+import { ehPlataforma, type Plataforma } from '@/dominio/precificacao/tipos';
 import type { Centavos } from '@/lib/dinheiro';
 import { formatarBRL } from '@/lib/dinheiro';
 import { CAMINHO as CAMINHO_DE_CONSIGNACAO } from '@/app/consignacao/constantes';
 import { contagem } from '@/lib/texto';
+import { caminhoDaAba } from '../lojas/caminhos';
+import { IDENTIDADE_DA_LOJA } from '../lojas/identidade';
+import { Selo } from '../lojas/selo';
 import { ROTULO_DA_PLATAFORMA } from '../ui/rotulos';
 import { IDIOMA } from '../ui/tempo';
 import { confirmarPostagem, desfazerConferenciaDeRepasse, marcarRepasseConferido } from './acoes';
 import {
   divergenciaEmTexto,
+  repasseDaLojaEmTexto,
   rotuloDaUrgencia,
   tempoRestanteEmTexto,
   tomDaUrgencia,
@@ -282,5 +287,32 @@ export function Divergencias({
       </ul>
       <Conferidas conferidas={conferidas} voltar={voltar} />
     </>
+  );
+}
+
+/**
+ * O repasse de cada loja, com o atalho para a aba dela.
+ *
+ * A conferência de repasse morava inteira aqui; com a área de cada loja (ADR 0009) ela
+ * foi para a aba Repasse da loja, onde o extrato que se confere é o daquela loja. Aqui
+ * fica o que pesa no dia: quanto espera conferência em cada uma.
+ */
+export function RepasseNasLojas({
+  lojas,
+}: {
+  readonly lojas: readonly { readonly plataforma: Plataforma; readonly paraConferir: number }[];
+}) {
+  return (
+    <ul className={estilo.repasses}>
+      {lojas.map(({ plataforma, paraConferir }) => (
+        <li className={estilo.repasse} key={plataforma}>
+          <Selo identidade={IDENTIDADE_DA_LOJA[plataforma]} tamanho={24} />
+          <Link href={caminhoDaAba(plataforma, 'repasse')}>{ROTULO_DA_PLATAFORMA[plataforma]}</Link>
+          <span className={paraConferir === 0 ? estilo.repasseCalmo : estilo.repasseAberto}>
+            {repasseDaLojaEmTexto(paraConferir)}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }

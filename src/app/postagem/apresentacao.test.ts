@@ -9,6 +9,7 @@ import {
   rotuloDaUrgencia,
   tempoRestanteEmTexto,
   tomDaUrgencia,
+  repasseDaLojaEmTexto,
 } from './apresentacao';
 
 describe('tomDaUrgencia', () => {
@@ -115,5 +116,13 @@ describe('aviso de repasse conferido', () => {
     const aviso = descreverAviso('repasse_de_volta');
     expect(aviso?.tom).toBe('ok');
     expect(aviso?.corpo).toContain('voltou');
+  });
+});
+
+describe('repasseDaLojaEmTexto', () => {
+  it('diz quanto espera conferência na loja, e nada quando não há', () => {
+    expect(repasseDaLojaEmTexto(0)).toBe('nada para conferir');
+    expect(repasseDaLojaEmTexto(1)).toBe('1 pedido com repasse diferente do esperado');
+    expect(repasseDaLojaEmTexto(3)).toBe('3 pedidos com repasse diferente do esperado');
   });
 });

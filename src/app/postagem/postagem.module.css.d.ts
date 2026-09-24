@@ -33,6 +33,10 @@ declare const estilo: {
   readonly itemTitulo: string;
   readonly pagina: string;
   readonly painel: string;
+  readonly repasse: string;
+  readonly repasseAberto: string;
+  readonly repasseCalmo: string;
+  readonly repasses: string;
   readonly resumo: string;
   readonly secao: string;
   readonly secaoTitulo: string;

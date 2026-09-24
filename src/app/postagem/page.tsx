@@ -5,21 +5,22 @@
  * uma frase só. Então ela não tem filtro, não tem busca e não tem coluna de valor:
  * tem a lista na ordem em que o trabalho precisa ser feito, e um botão por pedido.
  *
- * No fim, colapsada, a conferência de repasse — que é onde aparecem as taxas que
- * não estavam na conta. Fica aqui, e não em tela própria, porque é a mesma pessoa
- * no mesmo momento: quem confere a postagem do dia é quem nota que o repasse veio
- * diferente.
+ * No fim, quanto repasse espera conferência em cada loja. A conferência em si mora na
+ * aba Repasse da área de cada loja desde a navegação por loja (ADR 0009): o extrato que
+ * se confere é o de uma loja, e lá a lista é só dela. Aqui fica o número, porque quem
+ * posta o dia é quem nota que o repasse veio diferente.
  */
 import type { Metadata } from 'next';
 import { lerAmbiente } from '@/config/ambiente';
 import { resumoDaFila } from '@/dominio/pedidos/fila-do-dia';
 import { RepositorioDePedidos } from '@/dominio/pedidos/repositorio';
 import { carregarPerfil } from '@/dominio/perfil';
+import { PLATAFORMAS } from '@/dominio/precificacao/tipos';
 import { banco } from '@/infra/banco/cliente';
 import { RepositorioDeConsignacao } from '@/dominio/consignacao/repositorio';
 import { avisoDeConsignacao, descreverAviso } from './apresentacao';
-import { AvisoDaAcao, AvisoDeConsignacao, Divergencias, Fila, Painel } from './componentes';
-import { LIMITE_DA_FILA, LIMITE_DE_CONFERIDAS, LIMITE_DE_DIVERGENCIAS } from './constantes';
+import { AvisoDaAcao, AvisoDeConsignacao, Fila, Painel, RepasseNasLojas } from './componentes';
+import { LIMITE_DA_FILA, LIMITE_DE_DIVERGENCIAS } from './constantes';
 import estilo from './postagem.module.css';
 
 export const metadata: Metadata = { title: 'Postagem' };
@@ -42,10 +43,16 @@ export default async function PaginaDePostagem({
   // do painel não fecha com a lista.
   const agora = new Date();
 
-  const [fila, divergencias, conferidas, consignacao] = await Promise.all([
+  const [fila, repassePorLoja, consignacao] = await Promise.all([
     repo.filaDoDia(perfil.id, agora, LIMITE_DA_FILA),
-    repo.divergenciasDeRepasse(perfil.id, LIMITE_DE_DIVERGENCIAS),
-    repo.repassesConferidos(perfil.id, LIMITE_DE_CONFERIDAS),
+    Promise.all(
+      PLATAFORMAS.map(async (plataforma) => ({
+        plataforma,
+        paraConferir: (
+          await repo.divergenciasDeRepasse(perfil.id, LIMITE_DE_DIVERGENCIAS, plataforma)
+        ).length,
+      })),
+    ),
     new RepositorioDeConsignacao(db).quadroDeConferencia(perfil.id, { agora }),
   ]);
 
@@ -78,9 +85,12 @@ export default async function PaginaDePostagem({
 
       <section aria-labelledby="repasse-titulo" className={estilo.secao}>
         <h2 className={estilo.secaoTitulo} id="repasse-titulo">
-          Conferência de repasse
+          Repasse de cada loja
         </h2>
-        <Divergencias conferidas={conferidas} divergencias={divergencias} />
+        <p className={estilo.dica}>
+          A conferência mora na aba Repasse de cada loja, com o extrato daquela loja do lado.
+        </p>
+        <RepasseNasLojas lojas={repassePorLoja} />
       </section>
     </main>
   );

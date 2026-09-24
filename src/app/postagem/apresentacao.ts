@@ -66,6 +66,16 @@ export function divergenciaEmTexto(divergencia: Centavos): string {
  *
  * `null` quando não há nada a dizer, para a tela não renderizar caixa vazia.
  */
+/**
+ * O repasse de uma loja, como a linha do atalho o diz. O repasse mora na área de cada
+ * loja (ADR 0009), e aqui só aparece quanto espera conferência em cada uma.
+ */
+export function repasseDaLojaEmTexto(paraConferir: number): string {
+  return paraConferir === 0
+    ? 'nada para conferir'
+    : `${contagem(paraConferir, 'pedido', 'pedidos')} com repasse diferente do esperado`;
+}
+
 export function avisoDeConsignacao(unidadesEmRisco: number): string | null {
   if (unidadesEmRisco <= 0) return null;
   const unidades = contagem(unidadesEmRisco, 'unidade', 'unidades');

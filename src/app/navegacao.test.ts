@@ -6,6 +6,8 @@
  * existia, e ninguém percebeu porque nada quebrou. O que uma tela inalcançável
  * produz é uma tela inalcançável, não um erro.
  */
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { PLATAFORMAS } from '@/dominio/precificacao/tipos';
 import {
@@ -146,5 +148,35 @@ describe('hrefAtual', () => {
     const portas = [escrita('/a'), escrita('/a/b')];
     expect(hrefAtual('/a/b/c', portas, [])).toBe('/a/b');
     expect(hrefAtual('/a/b/c', [...portas].reverse(), [])).toBe('/a/b');
+  });
+});
+
+describe('toda porta leva a uma tela', () => {
+  /** O arquivo de página que o App Router serve para um caminho sem parâmetro. */
+  function paginaDe(href: string): string {
+    return join(
+      process.cwd(),
+      'src',
+      'app',
+      ...href.split('/').filter((p) => p !== ''),
+      'page.tsx',
+    );
+  }
+
+  it('cada porta, cada "também" e a área das lojas têm page.tsx', () => {
+    // Link da barra para rota sem página é um 404 com cara de funcionalidade. A barra
+    // nova (ADR 0009) passou alguns dias assim, com o assistente listado antes de existir:
+    // é o que este teste impede de voltar a acontecer sem aviso.
+    const hrefs = PORTAS.flatMap((p) => [p.href, ...p.tambem]);
+    const semTela = hrefs.filter((href) => !existsSync(paginaDe(href)));
+    expect(semTela).toEqual([]);
+
+    // A área de cada loja é uma rota com parâmetro: o arquivo é um só para todas.
+    expect(existsSync(join(process.cwd(), 'src', 'app', 'lojas', '[plataforma]', 'page.tsx'))).toBe(
+      true,
+    );
+    for (const plataforma of PLATAFORMAS) {
+      expect(caminhoDaLoja(plataforma)).toBe(`${CAMINHO_DAS_LOJAS}/${plataforma}`);
+    }
   });
 });

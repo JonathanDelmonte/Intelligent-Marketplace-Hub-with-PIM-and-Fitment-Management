@@ -192,3 +192,31 @@
 .vazio {
   composes: vazio from '../ui/comum.module.css';
 }
+
+/* O repasse de cada loja, com o atalho para a aba dela (ADR 0009). */
+.repasses {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+}
+
+.repasse {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+}
+
+.repasseCalmo {
+  color: var(--cor-texto-fraco);
+  font-size: 0.875rem;
+}
+
+.repasseAberto {
+  color: var(--cor-texto);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
