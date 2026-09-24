@@ -26,6 +26,46 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-24 — Imagem de tabela lida pela IA (3.6)
+
+O print da tabela do fornecedor no WhatsApp — o caso comum de verdade, pelo próprio
+classificador — ia para revisão com "não há extrator". Agora a imagem vai para um modelo
+com visão, gratuito, que transcreve o texto dela; e a transcrição passa pela mesma leitura
+de linhas da tabela colada.
+
+### 🔀 A IA só transcreve; quem lê a tabela é o código
+
+O modelo recebe uma ordem só: transcrever o texto da imagem, linha por linha, como está,
+sem corrigir nem completar. Separar título de preço, reconhecer código de peça e deixar de
+fora "Bom dia" e "pagamento à vista ou 30 dias" é o `linhasDeCatalogo` de sempre — testado,
+determinístico, e o mesmo do texto colado e do PDF (CLAUDE.md, 3.5). IA onde é IA: ler texto
+de imagem.
+
+### 🔀 A imagem entra no cache pelo hash, e não vai inteira para o registro de custo
+
+O pedido à IA ganhou `imagens` opcionais. O hash de cache inclui o hash de cada imagem — a
+mesma foto não é lida duas vezes —, e o `llm_call` grava o tipo, o tamanho e o hash, e não os
+megabytes de base64. Pedido sem imagem tem o mesmo hash de antes: o cache que já existia
+continua valendo. Com imagem, a mensagem ao OpenRouter vira lista de partes (texto mais
+`data:` URL); sem, continua texto puro.
+
+### 🔀 O tipo da imagem vem da assinatura, e HEIC é recusado antes do pedido
+
+O WhatsApp troca nome e extensão; os primeiros bytes não mentem (PNG, JPEG, WEBP, GIF). Foto
+de iPhone vem em HEIC, que os modelos não leem — e a revisão diz para mandar um print, sem
+gastar um pedido da cota.
+
+### ❓ O roteador gratuito com imagem não foi conferido daqui
+
+O modelo padrão de visão é o mesmo `openrouter/free`, que escolhe entre os gratuitos que
+atendem o pedido — com imagem, um que vê. Não deu para confirmar daqui (a rede recusa o
+OpenRouter). Se ele não ler imagem, a revisão diz exatamente isso e aponta a linha nova do
+`.env`, `LLM_MODELO_VISAO`, para um modelo de visão gratuito com nome. Testado com modelo
+falso: o print vira um produto por linha, sem chave fica guardado, HEIC é recusado, provedor
+fora reagenda o job, e a segunda tentativa não cai no cache da primeira.
+
+---
+
 ## 2026-09-24 — A leitura do monitor por IA (11.1)
 
 O monitor detectava, media a severidade e agrupava — faltava a **leitura**: a hipótese e a

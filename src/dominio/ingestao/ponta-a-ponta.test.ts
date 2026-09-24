@@ -299,15 +299,15 @@ describe.skipIf(!temBancoDeTeste())('ingestão de ponta a ponta', () => {
       expect(processado.motivo).toContain('guardado');
     });
 
-    it('PDF e imagem de tabela dizem a etapa que falta, e o caminho que já existe', async () => {
+    it('imagem de tabela por link, sem rede, fica guardada dizendo o que faltou', async () => {
+      // A imagem é lida pela IA desde a 3.6; aqui a instalação está sem rede, e a
+      // revisão diz isso em vez de culpar a imagem.
       await orquestrador.receber({
         entrada: { tipo: 'url', valor: 'https://exemplo.com/tabela.jpg' },
       });
       const processado = await executor.processarProximo();
-      expect(processado.tipo === 'pendente_revisao' && processado.motivo).toContain('3.6');
-      expect(processado.tipo === 'pendente_revisao' && processado.motivo).toContain(
-        'texto da tabela',
-      );
+      expect(processado.tipo === 'pendente_revisao' && processado.motivo).toContain('sem rede');
+      expect(processado.tipo === 'pendente_revisao' && processado.motivo).toContain('guardada');
     });
 
     it('planilha sem plataforma no nome não fala de LLM, fala do nome', async () => {

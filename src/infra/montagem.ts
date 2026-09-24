@@ -37,6 +37,7 @@ import { ExecutorDePedidos, tarefaDePedidos, type ResolverPerfil } from '@/domin
 import { carregarPerfil } from '@/dominio/perfil';
 import { tarefaDeIngestao } from '@/dominio/ingestao/tarefa';
 import { ExecutorDeIngestao } from '@/dominio/ingestao/executor';
+import { leitorDeImagemCom } from '@/dominio/ingestao/imagem';
 import { ImportadorDePlanilha } from '@/dominio/ingestao/planilha/importador';
 import { ExecutorDeIdentidade } from '@/dominio/identidade/tarefa';
 import { ResolvedorDeIdentidade } from '@/dominio/identidade/resolucao';
@@ -75,6 +76,8 @@ export type LlmDeJob = () =>
       readonly modeloDeJulgamento: string;
       readonly modeloDeExtracao: string;
       readonly modeloDeEmbedding: string;
+      /** Modelo com visão, para imagem de tabela (3.6). Sem ele, o de extração. */
+      readonly modeloDeVisao?: string | undefined;
     }
   | undefined;
 
@@ -199,6 +202,18 @@ export function montarNucleoCom(
     ingestor,
     orquestrador,
     opcoes.rede ?? null,
+    undefined,
+    // A imagem de tabela é lida pela IA com visão (3.6), com orçamento novo por imagem.
+    // Sem chave — e no teste —, a leitura responde "sem chave", e a imagem fica guardada.
+    (bytes, tentativa) => {
+      const llm = opcoes.llmDeJob?.();
+      return llm === undefined
+        ? Promise.resolve({ tipo: 'sem_chave' as const })
+        : leitorDeImagemCom(llm.servico, llm.modeloDeVisao ?? llm.modeloDeExtracao)(
+            bytes,
+            tentativa,
+          );
+    },
   );
   // Uma instância de importador para as duas pontas: a de anúncio, dentro do
   // executor de ingestão, e a de venda, aqui. É sem estado.
@@ -360,6 +375,7 @@ export function montarNucleo(): Nucleo {
               modeloDeJulgamento: llm.modelos.julgamento,
               modeloDeExtracao: llm.modelos.extracao,
               modeloDeEmbedding: llm.modelos.embedding,
+              modeloDeVisao: llm.modelos.visao,
             }
           : undefined;
       },

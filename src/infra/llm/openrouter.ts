@@ -213,9 +213,15 @@ export class RespostaCortada extends RespostaInutilizavel {
  * Pedido por escrito, qualquer modelo entende — e quem garante o formato na volta é o
  * Zod do serviço, de qualquer jeito.
  */
-export function mensagensDoPedido(
-  pedido: PedidoAoModelo,
-): readonly { readonly role: 'system' | 'user'; readonly content: string }[] {
+/** Parte de uma mensagem com imagem, no formato de chat do OpenRouter. */
+type ParteDaMensagem =
+  | { readonly type: 'text'; readonly text: string }
+  | { readonly type: 'image_url'; readonly image_url: { readonly url: string } };
+
+export function mensagensDoPedido(pedido: PedidoAoModelo): readonly {
+  readonly role: 'system' | 'user';
+  readonly content: string | readonly ParteDaMensagem[];
+}[] {
   const sistema = [
     pedido.instrucoes.trim(),
     '',
@@ -229,10 +235,26 @@ export function mensagensDoPedido(
     partes.push(`Contexto:\n${JSON.stringify(pedido.contexto, null, 2)}`);
   }
   partes.push(`Pergunta:\n${JSON.stringify(pedido.entrada, null, 2)}`);
+  const texto = partes.join('\n\n');
 
+  // Com imagem, a mensagem vira lista de partes: o texto, e cada imagem como `data:` URL.
+  // Sem imagem, continua texto puro — o formato que todo modelo entende.
+  const imagens = pedido.imagens ?? [];
   return [
     { role: 'system', content: sistema },
-    { role: 'user', content: partes.join('\n\n') },
+    {
+      role: 'user',
+      content:
+        imagens.length === 0
+          ? texto
+          : [
+              { type: 'text', text: texto },
+              ...imagens.map((i): ParteDaMensagem => ({
+                type: 'image_url',
+                image_url: { url: `data:${i.tipo};base64,${i.base64}` },
+              })),
+            ],
+    },
   ];
 }
 

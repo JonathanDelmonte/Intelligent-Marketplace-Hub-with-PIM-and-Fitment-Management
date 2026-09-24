@@ -44,6 +44,18 @@ export const PROPOSITOS = [
 ] as const;
 export type Proposito = (typeof PROPOSITOS)[number];
 
+/**
+ * Uma imagem mandada junto da pergunta — o print da tabela do fornecedor (3.6).
+ *
+ * Em base64, porque é assim que o provedor a recebe (`data:` URL). O serviço não a grava
+ * em `llm_call`: grava o tipo, o tamanho e o hash, que é o que entra no cache.
+ */
+export interface ImagemDoPedido {
+  /** Tipo MIME: `image/png`, `image/jpeg`, `image/webp`, `image/gif`. */
+  readonly tipo: string;
+  readonly base64: string;
+}
+
 export interface PedidoAoModelo {
   readonly proposito: Proposito;
   readonly modelo: string;
@@ -62,6 +74,8 @@ export interface PedidoAoModelo {
   readonly entrada: unknown;
   /** Contexto enviado junto, fora do hash. Exemplo few-shot mora aqui. */
   readonly contexto?: unknown;
+  /** Imagens que o modelo precisa ver. Só modelo com visão as lê. */
+  readonly imagens?: readonly ImagemDoPedido[] | undefined;
 }
 
 export interface RespostaDoModelo {
@@ -335,6 +349,11 @@ export interface ParametrosDoPedido<T> {
    * ser reproduzível, e não invalidam nada.
    */
   readonly contexto?: unknown;
+  /**
+   * Imagens da pergunta. **Entram no hash** — pelo hash de cada uma, e não pelo conteúdo,
+   * que é grande demais para o registro de custo.
+   */
+  readonly imagens?: readonly ImagemDoPedido[] | undefined;
   readonly esquema: z.ZodType<T>;
   readonly jobId?: string | undefined;
 }
@@ -362,7 +381,18 @@ export class ServicoDeLlm {
   }
 
   async pedir<T>(params: ParametrosDoPedido<T>): Promise<ResultadoDoPedido<T>> {
-    const hashEntrada = hashDeEntrada(params.entrada);
+    // Imagem entra no hash pelo próprio hash: a mesma foto da tabela não é perguntada duas
+    // vezes, e o registro de custo não guarda megabytes de base64. Sem imagem, o hash é o
+    // de sempre — o cache que já existe continua valendo.
+    const imagens = params.imagens?.map((i) => ({
+      tipo: i.tipo,
+      bytes: Math.floor((i.base64.length * 3) / 4),
+      sha256: createHash('sha256').update(i.base64, 'utf8').digest('hex'),
+    }));
+    const hashEntrada =
+      imagens === undefined || imagens.length === 0
+        ? hashDeEntrada(params.entrada)
+        : hashDeEntrada({ pergunta: params.entrada, imagens });
 
     const cacheado = await this.lerCache(params.proposito, params.modelo, hashEntrada);
     if (cacheado !== null) {
@@ -380,6 +410,7 @@ export class ServicoDeLlm {
       pergunta: params.entrada,
       contexto: params.contexto ?? null,
       instrucoes: params.instrucoes,
+      ...(imagens === undefined || imagens.length === 0 ? {} : { imagens }),
     };
 
     const comecou = Date.now();
@@ -392,6 +423,9 @@ export class ServicoDeLlm {
         formato: formatoDaResposta(params.esquema),
         entrada: params.entrada,
         ...(params.contexto === undefined ? {} : { contexto: params.contexto }),
+        ...(params.imagens === undefined || params.imagens.length === 0
+          ? {}
+          : { imagens: params.imagens }),
       });
     } catch (erro) {
       const semChave = erro instanceof SemChaveDeLlm;

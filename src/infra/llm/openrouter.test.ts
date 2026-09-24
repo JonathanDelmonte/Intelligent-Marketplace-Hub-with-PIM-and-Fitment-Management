@@ -114,14 +114,27 @@ describe('ChamadorOpenRouter — o que vai', () => {
 
     expect(sistema?.content).toContain('Classifique o produto.');
     expect(sistema?.content).toContain(JSON.stringify(pedido.formato));
-    const texto = usuario?.content ?? '';
+    const texto = typeof usuario?.content === 'string' ? usuario.content : '';
     expect(texto.indexOf('Contexto:')).toBeLessThan(texto.indexOf('Pergunta:'));
     expect(texto).toContain('Refil filtro Electrolux PA21G');
   });
 
   it('sem contexto, a mensagem do usuário é só a pergunta', () => {
     const [, usuario] = mensagensDoPedido(pedido);
-    expect(usuario?.content.startsWith('Pergunta:')).toBe(true);
+    expect(typeof usuario?.content === 'string' && usuario.content.startsWith('Pergunta:')).toBe(
+      true,
+    );
+  });
+
+  it('com imagem, a mensagem vira texto mais a imagem como data URL', () => {
+    const [, usuario] = mensagensDoPedido({
+      ...pedido,
+      imagens: [{ tipo: 'image/png', base64: 'iVBORw0KGgo=' }],
+    });
+    expect(usuario?.content).toEqual([
+      { type: 'text', text: expect.stringContaining('Pergunta:') as unknown },
+      { type: 'image_url', image_url: { url: 'data:image/png;base64,iVBORw0KGgo=' } },
+    ]);
   });
 });
 

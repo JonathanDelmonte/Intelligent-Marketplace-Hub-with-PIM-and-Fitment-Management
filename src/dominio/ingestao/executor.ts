@@ -44,6 +44,7 @@ import {
 } from '@/infra/web/rede';
 import { ehUrlDeAnuncio } from './classificador';
 import { capturasDoTexto, extrairDaPagina } from './extratores';
+import type { LeitorDeImagem } from './imagem';
 import type { ProdutoExternoCapturado } from './produto-externo';
 
 export interface ContagemDaIngestao {
@@ -90,12 +91,11 @@ export type ResultadoDoProcessamento =
       readonly reagendado: boolean;
     };
 
-/** Mensagem única para tipo que espera extrator com LLM. */
+/** Entrada de página que chegou sem o link — não há o que abrir. */
 function motivoDeExtratorAusente(tipo: TipoDeEntrada): string {
   return (
-    `não há extrator para "${tipo}" ainda: ler imagem de tabela é a etapa 3.6 do ` +
-    'roadmap. A entrada está guardada e será processada quando o extrator existir. ' +
-    'Enquanto isso, o texto da tabela colado no campo de entrada já é lido, e o PDF também.'
+    `não há como ler "${tipo}" sem o link da página. A entrada está guardada: cole o ` +
+    'link, ou o texto da tabela, no campo de entrada.'
   );
 }
 
@@ -139,6 +139,11 @@ export class ExecutorDeIngestao {
      */
     private readonly rede: OpcoesDaRede | null = null,
     private readonly agora: () => Date = () => new Date(),
+    /**
+     * Lê o texto de uma imagem de tabela (3.6), pela IA com visão. `null` — o padrão, e o
+     * do teste — deixa a imagem guardada em revisão, dizendo o que falta.
+     */
+    private readonly lerImagem: LeitorDeImagem | null = null,
   ) {}
 
   /**
@@ -226,12 +231,8 @@ export class ExecutorDeIngestao {
       case 'tabela_precos_pdf':
         return this.processarPdf(job, payload);
 
-      // Depende de ler imagem, que não existe ainda.
-      case 'imagem_tabela': {
-        const motivo = motivoDeExtratorAusente(tipo);
-        await this.fila.mandarParaRevisao(job.id, motivo);
-        return { tipo: 'pendente_revisao', jobId: job.id, motivo };
-      }
+      case 'imagem_tabela':
+        return this.processarImagem(job, payload);
     }
   }
 
@@ -386,11 +387,84 @@ export class ExecutorDeIngestao {
       return this.revisao(
         job,
         texto.trim() === ''
-          ? 'o PDF não tem texto — deve ser imagem escaneada, e ler imagem de tabela ainda não existe (etapa 3.6). Se tiver a tabela em planilha ou em texto, envie assim.'
+          ? 'o PDF não tem texto — deve ser imagem escaneada. Tire um print da tabela e envie a imagem, que a IA lê; ou envie a tabela em planilha ou em texto.'
           : 'o PDF não tem linha com preço ou código de peça que desse para ler.',
       );
     }
     return this.gravarTodas(job, 'tabela_precos_pdf', capturas);
+  }
+
+  /**
+   * Imagem de tabela — o print do WhatsApp (3.6). A IA transcreve o texto da imagem, e a
+   * transcrição passa pela mesma leitura de linhas da tabela colada: um produto por linha
+   * com preço ou código de peça.
+   *
+   * Sem chave, a imagem fica guardada em revisão, dizendo isso. Provedor fora e cota
+   * esgotada **lançam**: o job é reagendado, e a imagem é lida mais tarde.
+   */
+  private async processarImagem(
+    job: JobEnfileirado,
+    payload: EntradaDoJobDeIngestao,
+  ): Promise<ResultadoDoProcessamento> {
+    let bytes: Uint8Array;
+    let origem: string;
+    if (payload.hashConteudo !== null) {
+      bytes = await this.armazenamento.ler(payload.hashConteudo);
+      origem = payload.nomeArquivo ?? 'imagem de tabela';
+    } else if (payload.url !== null) {
+      if (this.rede === null) {
+        return this.revisao(
+          job,
+          'esta instalação foi montada sem rede, e a imagem não foi lida. Ela está guardada: reenfileire quando houver rede.',
+        );
+      }
+      const lido = await lerBytes(payload.url, this.rede);
+      if (lido.status >= 400 && lido.status < 500) {
+        return this.revisao(
+          job,
+          `o site recusou a imagem (${String(lido.status)}). Salve a imagem e envie o arquivo.`,
+        );
+      }
+      if (lido.status >= 400) {
+        throw new Error(`o site respondeu ${String(lido.status)} ao ler ${payload.url}.`);
+      }
+      bytes = lido.bytes;
+      origem = payload.url;
+    } else {
+      return this.revisao(job, 'imagem sem conteúdo guardado e sem link.');
+    }
+
+    const semChave =
+      'a leitura de imagem usa a IA, e esta instalação está sem a chave dela. A imagem está guardada: com LLM_API_KEY no .env, reenfileire. Enquanto isso, o texto da tabela colado no campo de entrada já é lido.';
+    if (this.lerImagem === null) return this.revisao(job, semChave);
+
+    const lida = await this.lerImagem(bytes, job.tentativas);
+    switch (lida.tipo) {
+      case 'sem_chave':
+        return this.revisao(job, semChave);
+      case 'ilegivel':
+        return this.revisao(job, lida.motivo);
+      case 'provedor_falhou':
+        throw new Error(`a IA não respondeu à leitura da imagem: ${lida.motivo}`);
+      case 'ok':
+        break;
+    }
+
+    const capturas = capturasDoTexto({
+      texto: lida.texto,
+      coletadoEm: this.agora(),
+      fonte: 'm1_planilha',
+      origem,
+    });
+    if (capturas.length === 0) {
+      return this.revisao(
+        job,
+        lida.texto.trim() === ''
+          ? 'a IA não achou texto na imagem. Se for foto, tente um print mais nítido, ou cole o texto da tabela.'
+          : 'a imagem foi lida, mas nenhuma linha tem preço ou código de peça. Confira se é a tabela, ou cole o texto dela.',
+      );
+    }
+    return this.gravarTodas(job, 'imagem_tabela', capturas);
   }
 
   /** Tabela de fornecedor colada como texto: uma captura por linha de produto. */

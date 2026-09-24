@@ -48,6 +48,8 @@ const esquemaAmbiente = z.object({
   LLM_MODELO_EMBEDDING: z.string().optional(),
   /** Modelo da classificação fiscal (M12 — 9.1). Sem ele, a tela não sugere. */
   LLM_MODELO_FISCAL: z.string().optional(),
+  /** Modelo que lê imagem de tabela (M1 — 3.6). Precisa ter visão. */
+  LLM_MODELO_VISAO: z.string().optional(),
 
   /**
    * Tag de afiliado por plataforma.

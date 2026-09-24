@@ -31,6 +31,10 @@ export const MODELOS_PADRAO = {
   julgamento: ROTEADOR_GRATUITO,
   fiscal: ROTEADOR_GRATUITO,
   embedding: 'liquid/lfm-2.5-embedding-350m:free',
+  // Ler imagem de tabela (3.6). O roteador gratuito escolhe entre os modelos que atendem
+  // o pedido — com imagem, um que vê. Não foi conferido daqui (ver o diário de bordo);
+  // um modelo de visão gratuito com nome é uma linha no `.env`.
+  visao: ROTEADOR_GRATUITO,
 } as const;
 
 export interface ModelosDoAmbiente {
@@ -38,6 +42,7 @@ export interface ModelosDoAmbiente {
   readonly julgamento: string;
   readonly fiscal: string;
   readonly embedding: string;
+  readonly visao: string;
 }
 
 /** Linha vazia no `.env` é linha ausente: `LLM_MODELO_FISCAL=` não é um modelo chamado "". */
@@ -52,6 +57,7 @@ export function modelosDoAmbiente(ambiente: Ambiente = lerAmbiente()): ModelosDo
     julgamento: preenchido(ambiente.LLM_MODELO_JULGAMENTO) ?? MODELOS_PADRAO.julgamento,
     fiscal: preenchido(ambiente.LLM_MODELO_FISCAL) ?? MODELOS_PADRAO.fiscal,
     embedding: preenchido(ambiente.LLM_MODELO_EMBEDDING) ?? MODELOS_PADRAO.embedding,
+    visao: preenchido(ambiente.LLM_MODELO_VISAO) ?? MODELOS_PADRAO.visao,
   };
 }
 

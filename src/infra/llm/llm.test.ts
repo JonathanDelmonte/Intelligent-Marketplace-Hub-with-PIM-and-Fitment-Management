@@ -190,6 +190,29 @@ describe.skipIf(!temBancoDeTeste())('ServicoDeLlm', () => {
     expect(chamador.chamadas).toHaveLength(2);
   });
 
+  it('imagem entra no cache pelo hash, chega ao chamador, e não vai inteira para o registro', async () => {
+    const chamador = new ChamadorFalso(boa);
+    const s = servico(chamador);
+    const comImagem = (base64: string) => ({
+      ...pedido({ a: 1 }),
+      imagens: [{ tipo: 'image/png', base64 }],
+    });
+
+    await s.pedir(comImagem('AAAA'));
+    await s.pedir(comImagem('AAAA'));
+    await s.pedir(comImagem('BBBB'));
+    await s.pedir(pedido({ a: 1 }));
+
+    // A mesma foto sai do cache; outra foto, e a pergunta sem foto, pagam.
+    expect(chamador.chamadas).toHaveLength(3);
+    expect(chamador.chamadas[0]?.imagens).toEqual([{ tipo: 'image/png', base64: 'AAAA' }]);
+    const linhas = await conexao.db.select().from(llmCall);
+    expect(JSON.stringify(linhas.map((l) => l.entrada))).not.toContain('AAAA');
+    expect(linhas[0]?.entrada).toMatchObject({
+      imagens: [{ tipo: 'image/png', bytes: 3 }],
+    });
+  });
+
   it('propósito diferente com a mesma entrada não compartilha cache', async () => {
     const chamador = new ChamadorFalso(boa);
     const s = servico(chamador);
