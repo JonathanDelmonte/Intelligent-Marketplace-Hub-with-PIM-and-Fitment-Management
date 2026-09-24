@@ -20,6 +20,8 @@ import { RepositorioDePedidos } from '@/dominio/pedidos/repositorio';
 import { carregarPerfil } from '@/dominio/perfil';
 import { banco } from '@/infra/banco/cliente';
 import { criarRegistrador, nivelDoAmbiente } from '@/infra/log';
+import { caminhoDaLoja } from '../navegacao';
+import { destinoComAviso, lerVolta, type Volta } from '../lojas/caminhos';
 import type { CodigoDeAviso } from './apresentacao';
 import { CAMINHO } from './constantes';
 
@@ -28,8 +30,20 @@ const log = criarRegistrador({
   contexto: { origem: 'tela_de_postagem' },
 });
 
-function paraOnde(codigo: CodigoDeAviso): string {
-  return `${CAMINHO}?r=${codigo}`;
+/**
+ * Para onde voltar: a aba da loja de onde o formulário saiu, ou "Postar hoje".
+ *
+ * `volta` já vem lida por `lerVolta`, que só aceita a área de uma loja — o texto do
+ * campo nunca vira destino direto.
+ */
+function paraOnde(codigo: CodigoDeAviso, volta: Volta | null = null): string {
+  return destinoComAviso(volta, CAMINHO, { r: codigo });
+}
+
+/** A tela que muda com a ação: "Postar hoje" sempre, e a área da loja quando veio dela. */
+function revalidar(volta: Volta | null): void {
+  revalidatePath(CAMINHO);
+  if (volta !== null) revalidatePath(caminhoDaLoja(volta.plataforma));
 }
 
 function texto(valor: FormDataEntryValue | null): string {
@@ -39,9 +53,10 @@ function texto(valor: FormDataEntryValue | null): string {
 export async function confirmarPostagem(dados: FormData): Promise<void> {
   const db = banco();
   const pedidoId = texto(dados.get('pedidoId'));
+  const volta = lerVolta(dados.get('voltar'));
   const rastreio = texto(dados.get('rastreio'));
 
-  if (pedidoId === '') redirect(paraOnde('falha'));
+  if (pedidoId === '') redirect(paraOnde('falha', volta));
 
   let destino: CodigoDeAviso = 'postado';
 
@@ -57,11 +72,11 @@ export async function confirmarPostagem(dados: FormData): Promise<void> {
     if (!marcou) destino = 'nao_encontrado';
   } catch (erro) {
     log.erro('postagem.confirmacao_falhou', { pedidoId, erro });
-    redirect(paraOnde('falha'));
+    redirect(paraOnde('falha', volta));
   }
 
-  revalidatePath(CAMINHO);
-  redirect(paraOnde(destino));
+  revalidar(volta);
+  redirect(paraOnde(destino, volta));
 }
 
 /**
@@ -74,8 +89,9 @@ export async function confirmarPostagem(dados: FormData): Promise<void> {
 export async function marcarRepasseConferido(dados: FormData): Promise<void> {
   const db = banco();
   const pedidoId = texto(dados.get('pedidoId'));
+  const volta = lerVolta(dados.get('voltar'));
 
-  if (pedidoId === '') redirect(paraOnde('falha'));
+  if (pedidoId === '') redirect(paraOnde('falha', volta));
 
   let destino: CodigoDeAviso = 'repasse_conferido';
 
@@ -86,19 +102,20 @@ export async function marcarRepasseConferido(dados: FormData): Promise<void> {
     if (!marcou) destino = 'nao_encontrado';
   } catch (erro) {
     log.erro('postagem.conferencia_de_repasse_falhou', { pedidoId, erro });
-    redirect(paraOnde('falha'));
+    redirect(paraOnde('falha', volta));
   }
 
-  revalidatePath(CAMINHO);
-  redirect(paraOnde(destino));
+  revalidar(volta);
+  redirect(paraOnde(destino, volta));
 }
 
 /** Devolve a divergência à lista. Mão dupla, pelo motivo no topo do arquivo. */
 export async function desfazerConferenciaDeRepasse(dados: FormData): Promise<void> {
   const db = banco();
   const pedidoId = texto(dados.get('pedidoId'));
+  const volta = lerVolta(dados.get('voltar'));
 
-  if (pedidoId === '') redirect(paraOnde('falha'));
+  if (pedidoId === '') redirect(paraOnde('falha', volta));
 
   let destino: CodigoDeAviso = 'repasse_de_volta';
 
@@ -109,9 +126,9 @@ export async function desfazerConferenciaDeRepasse(dados: FormData): Promise<voi
     if (!desfez) destino = 'nao_encontrado';
   } catch (erro) {
     log.erro('postagem.desfazer_conferencia_falhou', { pedidoId, erro });
-    redirect(paraOnde('falha'));
+    redirect(paraOnde('falha', volta));
   }
 
-  revalidatePath(CAMINHO);
-  redirect(paraOnde(destino));
+  revalidar(volta);
+  redirect(paraOnde(destino, volta));
 }

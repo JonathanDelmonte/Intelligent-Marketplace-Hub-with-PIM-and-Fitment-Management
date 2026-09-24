@@ -25,6 +25,7 @@ import { montarAnuncio } from '@/dominio/anuncios/anuncio';
 import { avaliarCatalogoML } from '@/dominio/anuncios/catalogo';
 import { RepositorioDeAnuncios } from '@/dominio/anuncios/repositorio';
 import { carregarPerfil } from '@/dominio/perfil';
+import { ehPlataforma } from '@/dominio/precificacao/tipos';
 import { banco } from '@/infra/banco/cliente';
 import { registroPadrao } from '@/plataformas/registro';
 import { avisoDeCamposInvalidos, descreverAviso } from './apresentacao';
@@ -46,6 +47,10 @@ import estilo from './anuncios.module.css';
 
 export const metadata: Metadata = { title: 'Anúncio' };
 
+function primeiroParametro(valor: string | string[] | undefined): string | undefined {
+  return Array.isArray(valor) ? valor[0] : valor;
+}
+
 /** Sempre dinâmica: monta a partir do banco e da query string. */
 export const dynamic = 'force-dynamic';
 
@@ -64,7 +69,14 @@ export default async function PaginaDeAnuncios({
 
   const codigo = Array.isArray(parametros['r']) ? parametros['r'][0] : parametros['r'];
   let aviso = descreverAviso(codigo);
-  if (leitura.tipo === 'invalido') aviso = avisoDeCamposInvalidos(leitura.campos);
+  // Produto e loja sem preço é o link da área da loja (ADR 0009): o formulário abre
+  // preenchido, e o preço fica para a pessoa — não é erro, é o passo que falta.
+  const precoNaoVeio = primeiroParametro(parametros['preco']) === undefined;
+  const soFaltaOPreco =
+    leitura.tipo === 'invalido' && precoNaoVeio && leitura.campos.every((c) => c === 'preco');
+  if (leitura.tipo === 'invalido' && !soFaltaOPreco) {
+    aviso = avisoDeCamposInvalidos(leitura.campos);
+  }
 
   const dados =
     leitura.tipo === 'ok' ? await repo.dadosDoSku(perfil.id, leitura.parametros.skuId) : null;
@@ -117,6 +129,8 @@ export default async function PaginaDeAnuncios({
         ).instrucao
       : null;
 
+  const skuPedido = primeiroParametro(parametros['sku']);
+  const plataformaPedida = primeiroParametro(parametros['plataforma']);
   const valores: ValoresDoFormulario =
     leitura.tipo === 'ok'
       ? {
@@ -126,7 +140,13 @@ export default async function PaginaDeAnuncios({
           quantidade: leitura.parametros.quantidade,
           tipoProduto: leitura.parametros.tipoProduto ?? dados?.tipoProduto ?? '',
         }
-      : VALORES_PADRAO;
+      : {
+          ...VALORES_PADRAO,
+          // Só pré-seleciona produto que está na lista de escolha: id que não está nela
+          // viria de URL digitada, e selecionaria nada com cara de algo.
+          ...(candidatos.some((c) => c.id === skuPedido) ? { skuId: skuPedido ?? null } : {}),
+          ...(ehPlataforma(plataformaPedida) ? { plataforma: plataformaPedida } : {}),
+        };
 
   return (
     <main className={estilo.pagina}>

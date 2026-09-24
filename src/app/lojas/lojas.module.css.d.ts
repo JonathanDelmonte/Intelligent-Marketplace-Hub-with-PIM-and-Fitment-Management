@@ -1,0 +1,85 @@
+/**
+ * Tipos das classes de `lojas.module.css`. Escrito à mão pelo mesmo motivo dos
+ * outros módulos de estilo: a declaração injetada é assinatura de índice, e nome de
+ * classe errado compilaria.
+ */
+declare const estilo: {
+  readonly aba: string;
+  readonly abaAtual: string;
+  readonly abaContagem: string;
+  readonly abas: string;
+  readonly acoes: string;
+  readonly barra: string;
+  readonly barraVazia: string;
+  readonly bloco: string;
+  readonly blocoAbaixo: string;
+  readonly blocoCabecalho: string;
+  readonly blocoNota: string;
+  readonly blocoTitulo: string;
+  readonly botao: string;
+  readonly botaoSecundario: string;
+  readonly cabecalho: string;
+  readonly caixa: string;
+  readonly caixaTexto: string;
+  readonly caminho: string;
+  readonly caminhoEtiqueta: string;
+  readonly caminhoTexto: string;
+  readonly caminhoTitulo: string;
+  readonly caminhos: string;
+  readonly coluna: string;
+  readonly dica: string;
+  readonly eixo: string;
+  readonly estado: string;
+  readonly estadoConectada: string;
+  readonly estadoNome: string;
+  readonly estadoPlanilha: string;
+  readonly etiquetaDepende: string;
+  readonly etiquetaHoje: string;
+  readonly figura: string;
+  readonly grade: string;
+  readonly grafico: string;
+  readonly identidade: string;
+  readonly legenda: string;
+  readonly loja: string;
+  readonly lojaACaminho: string;
+  readonly lojaCabecalho: string;
+  readonly lojaNaBarra: string;
+  readonly lojaNome: string;
+  readonly lojaRodape: string;
+  readonly lojaTexto: string;
+  readonly lojas: string;
+  readonly margemNegativa: string;
+  readonly notaAlta: string;
+  readonly notaBaixa: string;
+  readonly numero: string;
+  readonly numeroDaTabela: string;
+  readonly numeroNota: string;
+  readonly numeroRotulo: string;
+  readonly numeroValor: string;
+  readonly numeros: string;
+  readonly pagina: string;
+  readonly pendencia: string;
+  readonly pendenciaAcao: string;
+  readonly pendenciaTexto: string;
+  readonly pendencias: string;
+  readonly ponto: string;
+  readonly pontoAgora: string;
+  readonly pontoAtencao: string;
+  readonly pontoConectada: string;
+  readonly pontoPlanilha: string;
+  readonly pontoSemDados: string;
+  readonly secao: string;
+  readonly secaoTitulo: string;
+  readonly situacao: string;
+  readonly situacaoBloqueado: string;
+  readonly situacaoFunciona: string;
+  readonly situacaoNaoOferece: string;
+  readonly situacaoPrevisto: string;
+  readonly situacaoSemConexao: string;
+  readonly subtitulo: string;
+  readonly tabela: string;
+  readonly titulo: string;
+  readonly vazio: string;
+};
+
+export default estilo;

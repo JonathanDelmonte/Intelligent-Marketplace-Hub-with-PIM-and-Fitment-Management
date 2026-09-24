@@ -95,6 +95,14 @@ export interface ContextoDeChamada {
 export interface Adaptador {
   readonly plataforma: Plataforma;
 
+  /**
+   * Como se obtém a integração oficial desta loja, numa frase para a tela de conexão.
+   *
+   * Mora no adaptador porque é conhecimento da plataforma, e a área da loja não pode
+   * perguntar o nome dela para escolher o texto (ADR 0001, ADR 0009).
+   */
+  readonly comoConectar: string;
+
   /** Estado de cada capacidade. Descoberto em runtime, cacheado por 24 h. */
   capacidades(): Promise<MapaDeCapacidades>;
 

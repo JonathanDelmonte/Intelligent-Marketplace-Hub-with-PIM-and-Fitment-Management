@@ -16,7 +16,7 @@
  * **Reimportar a mesma planilha não duplica nem regrava margem à toa.** A chave é
  * `(plataforma, id_externo)`, que já é única no schema.
  */
-import { and, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, sql, type SQL } from 'drizzle-orm';
 import type { PerfilId } from '@/dominio/catalogo/sku';
 import type { Fonte } from '@/dominio/procedencia';
 import type { Plataforma } from '@/dominio/precificacao/tipos';
@@ -69,6 +69,13 @@ export interface ResultadoDoRegistro {
   readonly margem: MargemRealizada;
   readonly casouComSku: boolean;
   readonly novo: boolean;
+}
+
+/** Os pedidos do perfil — e, quando dada, só os de uma loja. */
+function daLoja(perfil: PerfilId, plataforma: Plataforma | undefined): SQL | undefined {
+  return plataforma === undefined
+    ? eq(pedido.perfilId, perfil)
+    : and(eq(pedido.perfilId, perfil), eq(pedido.plataforma, plataforma));
 }
 
 function dinheiro(valor: number | null | undefined): Centavos | null {
@@ -190,8 +197,19 @@ export class RepositorioDePedidos {
     };
   }
 
-  /** A fila de postagem do dia, já ordenada por urgência. */
-  async filaDoDia(perfil: PerfilId, agora: Date, limite = 200): Promise<FilaDoDia> {
+  /**
+   * A fila de postagem do dia, já ordenada por urgência.
+   *
+   * `plataforma` restringe à fila de uma loja, para a área dela (ADR 0009). O limite
+   * vale depois do filtro: a fila da Shopee não perde pedido porque o Mercado Livre
+   * vendeu muito.
+   */
+  async filaDoDia(
+    perfil: PerfilId,
+    agora: Date,
+    limite = 200,
+    plataforma?: Plataforma,
+  ): Promise<FilaDoDia> {
     const linhas = await this.db
       .select({
         id: pedido.id,
@@ -205,7 +223,7 @@ export class RepositorioDePedidos {
       })
       .from(pedido)
       .leftJoin(sku, eq(sku.id, pedido.skuId))
-      .where(eq(pedido.perfilId, perfil))
+      .where(daLoja(perfil, plataforma))
       .orderBy(desc(pedido.data))
       .limit(limite);
 
@@ -271,6 +289,7 @@ export class RepositorioDePedidos {
   async repassesConferidos(
     perfil: PerfilId,
     limite = 20,
+    plataforma?: Plataforma,
   ): Promise<
     readonly {
       readonly id: string;
@@ -287,7 +306,7 @@ export class RepositorioDePedidos {
         repasseLiquido: pedido.repasseLiquido,
       })
       .from(pedido)
-      .where(and(eq(pedido.perfilId, perfil), isNotNull(pedido.repasseConferidoEm)))
+      .where(and(daLoja(perfil, plataforma), isNotNull(pedido.repasseConferidoEm)))
       .orderBy(desc(pedido.repasseConferidoEm))
       .limit(limite);
 
@@ -319,6 +338,7 @@ export class RepositorioDePedidos {
   async divergenciasDeRepasse(
     perfil: PerfilId,
     limite = 100,
+    plataforma?: Plataforma,
   ): Promise<
     readonly {
       readonly id: string;
@@ -342,7 +362,7 @@ export class RepositorioDePedidos {
       .from(pedido)
       .where(
         and(
-          eq(pedido.perfilId, perfil),
+          daLoja(perfil, plataforma),
           isNotNull(pedido.repasseLiquido),
           isNull(pedido.repasseConferidoEm),
         ),

@@ -32,7 +32,10 @@ export interface EstadoDaLoja {
   readonly tipo: TipoDeEstadoDaLoja;
   /** Legenda curta, para a barra: "Por planilha · até 22/09". */
   readonly legenda: string;
-  /** Frase para o cabeçalho da área da loja. */
+  /**
+   * O complemento do estado, para o cabeçalho da área da loja: vem depois do nome do
+   * estado ("Por planilha · os números vão até 22/09…"), e por isso não o repete.
+   */
   readonly frase: string;
 }
 
@@ -50,7 +53,7 @@ export function estadoDaLoja(numeros: NumerosDaLoja, fuso: string = FUSO_PADRAO)
     return {
       tipo: 'conectada',
       legenda: 'Conectada',
-      frase: 'Conectada pela API: pedidos e anúncios chegam sozinhos.',
+      frase: 'pedidos e anúncios chegam sozinhos, pela API.',
     };
   }
 
@@ -59,13 +62,13 @@ export function estadoDaLoja(numeros: NumerosDaLoja, fuso: string = FUSO_PADRAO)
     return {
       tipo: 'planilha',
       legenda: `Por planilha · até ${ate}`,
-      frase: `Por planilha: os números vão até ${ate}, a data do pedido mais recente importado.`,
+      frase: `os números vão até ${ate}, a data do pedido mais recente importado.`,
     };
   }
 
   return {
     tipo: 'sem_dados',
     legenda: 'Sem dados',
-    frase: 'Nenhum pedido desta loja ainda. Importe a planilha de pedidos do painel dela.',
+    frase: 'nenhum pedido desta loja ainda.',
   };
 }

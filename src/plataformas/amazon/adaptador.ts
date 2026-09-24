@@ -16,6 +16,8 @@ import { centavosParaCampo } from '../csv';
 
 export class AdaptadorAmazon extends AdaptadorBase {
   override readonly plataforma: Plataforma = 'amazon';
+  override readonly comoConectar =
+    'A integração oficial (SP-API) exige conta de vendedor profissional e cadastro de desenvolvedor aprovado pela Amazon. Até sair, os pedidos entram pela planilha do Seller Central.';
 
   constructor(relogio?: Relogio) {
     super(relogio);

@@ -39,6 +39,7 @@ export const relogioDoSistema: Relogio = { agora: () => Date.now() };
 
 export abstract class AdaptadorBase implements Adaptador {
   abstract readonly plataforma: Plataforma;
+  abstract readonly comoConectar: string;
 
   private cache: { readonly mapa: MapaDeCapacidades; readonly em: number } | null = null;
 

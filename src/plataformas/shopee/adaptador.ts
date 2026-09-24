@@ -15,6 +15,8 @@ import { centavosParaCampo, montarCsv } from '../csv';
 
 export class AdaptadorShopee extends AdaptadorBase {
   override readonly plataforma: Plataforma = 'shopee';
+  override readonly comoConectar =
+    'A integração oficial (Open Platform) exige cadastro de parceiro aprovado pela Shopee. Até sair, os pedidos e os anúncios entram pela planilha do Seller Center.';
 
   constructor(relogio?: Relogio) {
     super(relogio);

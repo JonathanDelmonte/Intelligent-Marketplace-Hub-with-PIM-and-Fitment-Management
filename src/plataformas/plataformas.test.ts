@@ -220,6 +220,7 @@ class RelogioFalso implements Relogio {
 
 class AdaptadorEspiao extends AdaptadorBase {
   override readonly plataforma: Plataforma = 'ml';
+  override readonly comoConectar = 'espião de teste';
   chamadas = 0;
 
   constructor(

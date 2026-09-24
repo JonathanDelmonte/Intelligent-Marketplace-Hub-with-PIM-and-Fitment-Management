@@ -24,6 +24,8 @@ export interface OpcoesAdaptadorMl {
 
 export class AdaptadorMercadoLivre extends AdaptadorBase {
   override readonly plataforma: Plataforma = 'ml';
+  override readonly comoConectar =
+    'A integração oficial sai com um app próprio, criado em minutos no portal de desenvolvedores do Mercado Livre, sem aprovação. Com ele, conectar é autorizar na sua conta.';
 
   constructor(private readonly opcoes: OpcoesAdaptadorMl) {
     super(opcoes.relogio);

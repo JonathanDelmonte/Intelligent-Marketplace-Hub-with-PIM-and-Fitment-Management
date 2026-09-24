@@ -19,6 +19,33 @@ export const ROTULO_DA_PLATAFORMA: Readonly<Record<Plataforma, string>> = {
 };
 
 /**
+ * O artigo de cada loja: "o Mercado Livre", "a Shopee".
+ *
+ * Existe porque a área da loja é uma tela só para todas, e frase montada com "a" fixo
+ * escrevia "o que a Mercado Livre pagou". O gênero é do nome, e o nome é dado do mundo.
+ */
+const ARTIGO_DA_PLATAFORMA: Readonly<Record<Plataforma, 'o' | 'a'>> = {
+  ml: 'o',
+  shopee: 'a',
+  amazon: 'a',
+};
+
+/** "o Mercado Livre", "a Shopee". */
+export function aLoja(plataforma: Plataforma): string {
+  return `${ARTIGO_DA_PLATAFORMA[plataforma]} ${ROTULO_DA_PLATAFORMA[plataforma]}`;
+}
+
+/** "do Mercado Livre", "da Shopee". */
+export function daLoja(plataforma: Plataforma): string {
+  return `d${aLoja(plataforma)}`;
+}
+
+/** "no Mercado Livre", "na Shopee". */
+export function naLoja(plataforma: Plataforma): string {
+  return `n${aLoja(plataforma)}`;
+}
+
+/**
  * Tipo de anúncio do ML, com a consequência no nome.
  *
  * É a escolha de precificação mais consequente da plataforma — comissão menor contra

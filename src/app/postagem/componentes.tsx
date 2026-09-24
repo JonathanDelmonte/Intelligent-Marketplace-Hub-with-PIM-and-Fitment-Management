@@ -6,10 +6,12 @@
  * bancada, então tem de funcionar em rede ruim e com a aba recarregada.
  */
 import type { FilaDoDia, ItemDaFila } from '@/dominio/pedidos/fila-do-dia';
+import { ehPlataforma } from '@/dominio/precificacao/tipos';
 import type { Centavos } from '@/lib/dinheiro';
 import { formatarBRL } from '@/lib/dinheiro';
 import { CAMINHO as CAMINHO_DE_CONSIGNACAO } from '@/app/consignacao/constantes';
 import { contagem } from '@/lib/texto';
+import { ROTULO_DA_PLATAFORMA } from '../ui/rotulos';
 import { IDIOMA } from '../ui/tempo';
 import { confirmarPostagem, desfazerConferenciaDeRepasse, marcarRepasseConferido } from './acoes';
 import {
@@ -73,7 +75,29 @@ export function Painel({ fila }: { readonly fila: FilaDoDia }) {
   );
 }
 
-function CartaoDoPedido({ item }: { readonly item: ItemDaFila }) {
+/**
+ * O campo que devolve a ação para a tela de onde o formulário saiu.
+ *
+ * A área de cada loja usa estes mesmos formulários; sem a volta, confirmar uma postagem
+ * na área da Shopee levaria para "Postar hoje". A ação lê o campo com `lerVolta`, que
+ * só aceita a área de uma loja.
+ */
+function CampoDeVolta({ voltar }: { readonly voltar: string | undefined }) {
+  return voltar === undefined ? null : <input name="voltar" type="hidden" value={voltar} />;
+}
+
+/** "Mercado Livre", e não "ml": o id da coluna é para o banco, o nome é para quem lê. */
+function nomeDaLoja(plataforma: string): string {
+  return ehPlataforma(plataforma) ? ROTULO_DA_PLATAFORMA[plataforma] : plataforma;
+}
+
+function CartaoDoPedido({
+  item,
+  voltar,
+}: {
+  readonly item: ItemDaFila;
+  readonly voltar: string | undefined;
+}) {
   const tom = tomDaUrgencia(item.urgencia);
   const classe =
     tom === 'alerta'
@@ -90,7 +114,7 @@ function CartaoDoPedido({ item }: { readonly item: ItemDaFila }) {
             {item.tituloDoProduto ?? 'produto não identificado'}
           </h3>
           <p className={estilo.itemSub}>
-            {item.plataforma} · {item.idExterno}
+            {nomeDaLoja(item.plataforma)} · {item.idExterno}
             {item.qtd > 1 ? ` · ${String(item.qtd)} unidades` : ''}
           </p>
         </div>
@@ -108,6 +132,7 @@ function CartaoDoPedido({ item }: { readonly item: ItemDaFila }) {
 
       <form action={confirmarPostagem} className={estilo.formulario}>
         <input name="pedidoId" type="hidden" value={item.id} />
+        <CampoDeVolta voltar={voltar} />
         <label className={estilo.campo}>
           <span>Rastreio (opcional)</span>
           <input
@@ -126,7 +151,13 @@ function CartaoDoPedido({ item }: { readonly item: ItemDaFila }) {
   );
 }
 
-export function Fila({ fila }: { readonly fila: FilaDoDia }) {
+export function Fila({
+  fila,
+  voltar,
+}: {
+  readonly fila: FilaDoDia;
+  readonly voltar?: string | undefined;
+}) {
   if (fila.itens.length === 0) {
     return (
       <p className={estilo.vazio}>
@@ -137,7 +168,7 @@ export function Fila({ fila }: { readonly fila: FilaDoDia }) {
   return (
     <ul className={estilo.fila}>
       {fila.itens.map((item) => (
-        <CartaoDoPedido item={item} key={item.id} />
+        <CartaoDoPedido item={item} key={item.id} voltar={voltar} />
       ))}
     </ul>
   );
@@ -165,7 +196,13 @@ export interface ConferidaParaTela {
  * volta porque a marca esconde um número de dinheiro, e botão de mão única sobre
  * dinheiro é o tipo de coisa que se descobre na hora errada.
  */
-export function Conferidas({ conferidas }: { readonly conferidas: readonly ConferidaParaTela[] }) {
+export function Conferidas({
+  conferidas,
+  voltar,
+}: {
+  readonly conferidas: readonly ConferidaParaTela[];
+  readonly voltar?: string | undefined;
+}) {
   if (conferidas.length === 0) return null;
 
   return (
@@ -183,6 +220,7 @@ export function Conferidas({ conferidas }: { readonly conferidas: readonly Confe
             </span>
             <form action={desfazerConferenciaDeRepasse}>
               <input name="pedidoId" type="hidden" value={c.id} />
+              <CampoDeVolta voltar={voltar} />
               <button className={estilo.botaoConferido} type="submit">
                 Voltar para a lista
               </button>
@@ -197,9 +235,11 @@ export function Conferidas({ conferidas }: { readonly conferidas: readonly Confe
 export function Divergencias({
   divergencias,
   conferidas,
+  voltar,
 }: {
   readonly divergencias: readonly DivergenciaParaTela[];
   readonly conferidas: readonly ConferidaParaTela[];
+  readonly voltar?: string | undefined;
 }) {
   if (divergencias.length === 0) {
     return (
@@ -207,7 +247,7 @@ export function Divergencias({
         <p className={estilo.vazio}>
           Nenhuma diferença entre o que a plataforma informou e o que as taxas explicam.
         </p>
-        <Conferidas conferidas={conferidas} />
+        <Conferidas conferidas={conferidas} voltar={voltar} />
       </>
     );
   }
@@ -232,6 +272,7 @@ export function Divergencias({
             */}
             <form action={marcarRepasseConferido}>
               <input name="pedidoId" type="hidden" value={d.id} />
+              <CampoDeVolta voltar={voltar} />
               <button className={estilo.botaoConferido} type="submit">
                 Conferi no extrato
               </button>
@@ -239,7 +280,7 @@ export function Divergencias({
           </li>
         ))}
       </ul>
-      <Conferidas conferidas={conferidas} />
+      <Conferidas conferidas={conferidas} voltar={voltar} />
     </>
   );
 }
