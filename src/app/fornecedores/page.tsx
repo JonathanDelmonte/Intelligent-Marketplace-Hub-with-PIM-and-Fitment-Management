@@ -34,10 +34,12 @@ export default async function PaginaDeFornecedores({
   const db = banco();
   const repo = new RepositorioDeFornecedores(db);
 
-  const [fornecedores, contagem, perfil] = await Promise.all([
+  const perfil = await carregarPerfil(db, lerAmbiente().BANCADA_PERFIL_PADRAO);
+  const [fornecedores, contagem, confiabilidades] = await Promise.all([
     repo.listar(LIMITE_DA_LISTA),
     repo.contarPorVeredito(),
-    carregarPerfil(db, lerAmbiente().BANCADA_PERFIL_PADRAO),
+    // Medida nos pedidos deste perfil: fornecedor é compartilhado, pedido não.
+    repo.confiabilidades(perfil.id, new Date()),
   ]);
 
   const codigo = Array.isArray(parametros['r']) ? parametros['r'][0] : parametros['r'];
@@ -70,7 +72,7 @@ export default async function PaginaDeFornecedores({
           Cadastrados
         </h2>
         {diagnostico !== null && <AvisoDaAcao aviso={diagnostico} />}
-        <Lista fornecedores={fornecedores} vendedor={vendedor} />
+        <Lista confiabilidades={confiabilidades} fornecedores={fornecedores} vendedor={vendedor} />
       </section>
 
       <section aria-labelledby="cadastro-titulo" className={estilo.secao}>

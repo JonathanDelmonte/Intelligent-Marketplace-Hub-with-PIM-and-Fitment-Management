@@ -6,13 +6,16 @@
  * mensagem de primeiro contato fica num `textarea` justamente para poder ser
  * copiada sem precisar de script.
  */
+import type { Confiabilidade } from '@/dominio/fornecedores/confiabilidade';
 import type { FornecedorGravado } from '@/dominio/fornecedores/repositorio';
 import { mensagemDePrimeiroContato } from '@/dominio/fornecedores/contato';
 import { CANAIS, ORIGENS } from '@/dominio/fornecedores/repositorio';
 import { contagem } from '@/lib/texto';
 import { cadastrarFornecedor, conferirAgora, responderPerguntas } from './acoes';
 import {
+  COMO_SE_MEDE_A_CONFIABILIDADE,
   conferenciaNaTela,
+  confiabilidadeEmTexto,
   documentoEmTexto,
   etiquetaDoVeredito,
   pedidoMinimoEmTexto,
@@ -156,9 +159,12 @@ function ConferenciaDoFornecedor({ fornecedor }: { readonly fornecedor: Forneced
 export function CartaoDoFornecedor({
   fornecedor,
   vendedor,
+  confiabilidade,
 }: {
   readonly fornecedor: FornecedorGravado;
   readonly vendedor: string;
+  /** Medida nos pedidos do perfil; ausente quando ele não tem pedido deste fornecedor. */
+  readonly confiabilidade: Confiabilidade | undefined;
 }) {
   const tom = tomDoVeredito(fornecedor.triagem.veredito);
   const classeDaEtiqueta =
@@ -214,6 +220,10 @@ export function CartaoDoFornecedor({
         <div>
           <dt>Vende na mesma vitrine</dt>
           <dd>{vitrineEmTexto(fornecedor.vendeDiretoMarketplace, fornecedor.vendeDiretoFonte)}</dd>
+        </div>
+        <div>
+          <dt>Confiabilidade</dt>
+          <dd title={COMO_SE_MEDE_A_CONFIABILIDADE}>{confiabilidadeEmTexto(confiabilidade)}</dd>
         </div>
       </dl>
 
@@ -306,9 +316,11 @@ export function CartaoDoFornecedor({
 export function Lista({
   fornecedores,
   vendedor,
+  confiabilidades,
 }: {
   readonly fornecedores: readonly FornecedorGravado[];
   readonly vendedor: string;
+  readonly confiabilidades: ReadonlyMap<string, Confiabilidade>;
 }) {
   if (fornecedores.length === 0) {
     return <p className={estilo.vazio}>Nenhum fornecedor cadastrado.</p>;
@@ -316,7 +328,12 @@ export function Lista({
   return (
     <ul className={estilo.lista}>
       {fornecedores.map((f) => (
-        <CartaoDoFornecedor fornecedor={f} key={f.id} vendedor={vendedor} />
+        <CartaoDoFornecedor
+          confiabilidade={confiabilidades.get(f.id)}
+          fornecedor={f}
+          key={f.id}
+          vendedor={vendedor}
+        />
       ))}
     </ul>
   );

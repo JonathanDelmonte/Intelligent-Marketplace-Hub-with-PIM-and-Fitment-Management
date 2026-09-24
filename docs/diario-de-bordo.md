@@ -26,6 +26,53 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-24 — A confiabilidade do fornecedor, pelo atraso real (7.5)
+
+O roadmap deixou a nota de confiabilidade bloqueada até existir pedido com prazo e com data
+real de postagem, porque nota sobre impressão daria ao palpite cara de medição. Os dois dados
+existem agora — a data da venda vem da planilha, e o "postado" da tela de postagem grava
+quando o fornecedor postou —, e a nota aparece no cartão do fornecedor.
+
+### 🔀 Sem o prazo da plataforma, o prazo é o que o fornecedor prometeu
+
+A planilha de vendas não traz o prazo de postagem, e nenhuma tela o preenche: medir só
+contra ele deixaria a nota vazia para sempre. A referência passa a ser, nessa ordem, o prazo
+da plataforma, quando o pedido tem, e o prazo que o próprio fornecedor prometeu — a terceira
+das cinco perguntas —, em dias úteis a partir do dia da venda, contado no fuso do vendedor.
+Sem nenhum dos dois, o pedido não mede nada. É também a medida mais justa com o fornecedor: é
+a promessa dele.
+
+### 🔀 Só conta o pedido que tem um responsável
+
+Pedido de produto que dois fornecedores atendem não diz qual deles postou, e dividir o atraso
+seria inventar: fica fora. Pedido sem postagem confirmada também — não se sabe se atrasou ou
+se ninguém marcou. Janela de 180 dias, e nota só a partir de cinco pedidos medidos; com menos,
+a tela diz quantos há.
+
+### 🔀 Os cortes da nota são escolha do projeto
+
+95% no prazo é 5; 85%, 4; 70%, 3; 50%, 2; abaixo disso, 1; nenhum, 0. Marketplace pune atraso
+cedo, então 5 é quase nunca atrasar. Comparação em inteiro (`noPrazo × 100 ≥ corte ×
+medidos`), sem ponto flutuante, como toda porcentagem do sistema.
+
+### 🔀 Calculada na leitura, e por perfil — a coluna `confiabilidade` fica sem uso
+
+Pedido é do perfil, fornecedor é compartilhado (CLAUDE.md, 3.4): uma nota gravada no
+fornecedor misturaria os perfis. A nota é recalculada a cada leitura, como a triagem, e a
+coluna antiga saiu do tipo do repositório — continua na tabela só para não exigir migração.
+
+### 🧹 Feriado conta como dia útil
+
+Não há calendário de feriados no sistema. O erro é a favor do fornecedor: um pedido postado
+no dia seguinte a um feriado pode contar como atrasado de um dia a menos do que foi.
+
+### ⚠️ A nota depende de alguém marcar "postado"
+
+Quem nunca aperta "postado" na tela de postagem não tem pedido medido, e a nota fica "sem
+pedido medido" — nunca zero. A marcação é o dado.
+
+---
+
 ## 2026-09-24 — A conferência de fornecedor (7.3)
 
 O fornecedor passa a ser conferido sozinho: o CNPJ na Receita, pela BrasilAPI, e uma busca

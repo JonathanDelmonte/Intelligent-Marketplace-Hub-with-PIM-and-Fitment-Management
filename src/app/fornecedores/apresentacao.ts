@@ -12,6 +12,10 @@ import {
 } from '@/dominio/fornecedores/triagem';
 import type { VereditoDeTriagem } from '@/dominio/fornecedores/triagem';
 import {
+  MINIMO_DE_PEDIDOS_MEDIDOS,
+  type Confiabilidade,
+} from '@/dominio/fornecedores/confiabilidade';
+import {
   vitrineConcluida,
   type Conferencia,
   type Encontro,
@@ -57,6 +61,22 @@ export function vitrineEmTexto(valor: boolean | null, fonte: Fonte | null): stri
   }
   return respostaEmTexto(valor);
 }
+
+/**
+ * A confiabilidade em uma linha. Sem nota com poucos pedidos: a tela diz quantos faltam,
+ * em vez de mostrar um número que é mais sorte que medida.
+ */
+export function confiabilidadeEmTexto(medida: Confiabilidade | undefined): string {
+  if (medida === undefined || medida.tipo === 'sem_pedidos') return 'sem pedido medido';
+  if (medida.tipo === 'poucos') {
+    return `${contagem(medida.medidos, 'pedido medido', 'pedidos medidos')} — a nota sai com ${String(MINIMO_DE_PEDIDOS_MEDIDOS)}`;
+  }
+  return `${String(medida.nota)} de 5 — ${String(medida.noPrazo)} de ${String(medida.medidos)} postados no prazo`;
+}
+
+/** O que a confiabilidade mede, para quem quer saber de onde vem o número. */
+export const COMO_SE_MEDE_A_CONFIABILIDADE =
+  'Pedidos dos últimos 180 dias, com a postagem confirmada, de produto que só este fornecedor atende. No prazo é até o prazo da plataforma ou, sem ele, até o prazo que o fornecedor prometeu.';
 
 /** O documento como se lê: com pontuação, e dizendo quando não confere. */
 export function documentoEmTexto(documento: string | null): string {

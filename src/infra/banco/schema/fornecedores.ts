@@ -75,7 +75,12 @@ export const fornecedor = pgTable(
     conferencia: jsonb('conferencia'),
 
     origem: origemFornecedorEnum('origem'),
-    /** 0 a 5, alimentado por atraso real dos pedidos, não por impressão. */
+    /**
+     * Não é gravada, e fica só por compatibilidade. A confiabilidade — 0 a 5, pelo atraso
+     * real dos pedidos — é medida na leitura, por perfil (`dominio/fornecedores/
+     * confiabilidade`): pedido é do perfil e fornecedor é compartilhado, e uma nota
+     * gravada aqui misturaria os perfis.
+     */
     confiabilidade: smallint('confiabilidade'),
     notas: text('notas'),
     ...procedencia,

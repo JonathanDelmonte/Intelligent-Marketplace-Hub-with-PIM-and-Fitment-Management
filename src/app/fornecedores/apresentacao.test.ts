@@ -6,6 +6,7 @@ import type { Conferencia } from '@/dominio/fornecedores/conferencia';
 import {
   CODIGOS_DE_AVISO,
   conferenciaNaTela,
+  confiabilidadeEmTexto,
   descreverAviso,
   documentoEmTexto,
   estadoDaBase,
@@ -216,5 +217,20 @@ describe('conferenciaNaTela', () => {
     });
     expect(tela.vitrine).toContain('Conferido só em Mercado Livre');
     expect(tela.vitrine).toContain('pediu uma pausa');
+  });
+});
+
+describe('confiabilidadeEmTexto', () => {
+  it('sem pedido e com poucos, não mostra nota', () => {
+    expect(confiabilidadeEmTexto(undefined)).toBe('sem pedido medido');
+    expect(confiabilidadeEmTexto({ tipo: 'poucos', medidos: 1 })).toBe(
+      '1 pedido medido — a nota sai com 5',
+    );
+  });
+
+  it('com nota, diz de onde ela vem', () => {
+    expect(confiabilidadeEmTexto({ tipo: 'medida', nota: 4, medidos: 20, noPrazo: 18 })).toBe(
+      '4 de 5 — 18 de 20 postados no prazo',
+    );
   });
 });

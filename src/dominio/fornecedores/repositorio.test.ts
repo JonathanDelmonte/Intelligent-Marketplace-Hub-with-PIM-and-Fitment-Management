@@ -7,7 +7,7 @@
  */
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { perfilId, type PerfilId } from '@/dominio/catalogo/sku';
-import { perfilVendedor, sku } from '@/infra/banco/schema';
+import { fornecedorSku, pedido, perfilVendedor, sku } from '@/infra/banco/schema';
 import {
   abrirBancoDeTeste,
   limparTabelas,
@@ -43,6 +43,7 @@ function conferencia(params: { readonly em: Date; readonly loja: boolean }): Con
 }
 
 const TABELAS = [
+  'pedido',
   'fornecedor_preco_historico',
   'fornecedor_sku',
   'fornecedor',
@@ -207,6 +208,80 @@ describe.skipIf(!temBancoDeTeste())('RepositorioDeFornecedores', () => {
         vendeDiretoMarketplace: null,
         vendeDiretoFonte: null,
         vendeDiretoVerificadoEm: null,
+      });
+    });
+  });
+
+  describe('confiabilidade pelo atraso real (7.5)', () => {
+    // 2026-09-25 é sexta-feira; o fornecedor promete postar em 1 dia útil.
+    const AGORA = new Date('2026-10-15T12:00:00-03:00');
+    const SEXTA = new Date('2026-09-25T14:00:00-03:00');
+    const SEGUNDA = new Date('2026-09-28T18:00:00-03:00');
+    const TERCA = new Date('2026-09-29T18:00:00-03:00');
+
+    let pedidos = 0;
+    const venda = async (params: {
+      readonly skuId: string;
+      readonly postadoEm: Date | null;
+      readonly perfil?: PerfilId;
+      readonly data?: Date;
+    }) => {
+      pedidos += 1;
+      await conexao.db.insert(pedido).values({
+        perfilId: params.perfil ?? perfil,
+        skuId: params.skuId,
+        plataforma: 'ml',
+        idExterno: `P-${String(pedidos)}`,
+        data: params.data ?? SEXTA,
+        precoBruto: centavos(5_000),
+        postagemConfirmadaEm: params.postadoEm,
+        fonte: 'm1_planilha',
+      });
+    };
+
+    it('mede a fração postada no prazo prometido, com cinco pedidos ou mais', async () => {
+      const f = await criar();
+      await repo.responder(f.id, { prazoPostagemDias: 1 });
+      await conexao.db.insert(fornecedorSku).values({ fornecedorId: f.id, skuId, fonte: 'manual' });
+
+      for (let i = 0; i < 4; i += 1) await venda({ skuId, postadoEm: SEGUNDA });
+      await venda({ skuId, postadoEm: TERCA });
+      // Não confirmado não mede; e o de fora da janela de 180 dias também não.
+      await venda({ skuId, postadoEm: null });
+      await venda({ skuId, postadoEm: SEGUNDA, data: new Date('2026-01-10T12:00:00-03:00') });
+
+      const medidas = await repo.confiabilidades(perfil, AGORA);
+      expect(medidas.get(f.id)).toEqual({ tipo: 'medida', nota: 3, medidos: 5, noPrazo: 4 });
+    });
+
+    it('pedido de produto com dois fornecedores não conta para nenhum', async () => {
+      const a = await repo.criar({ nome: 'A', fonte: 'manual' });
+      const b = await repo.criar({ nome: 'B', fonte: 'manual' });
+      await repo.responder(a.id, { prazoPostagemDias: 1 });
+      await conexao.db.insert(fornecedorSku).values([
+        { fornecedorId: a.id, skuId, fonte: 'manual' },
+        { fornecedorId: b.id, skuId, fonte: 'manual' },
+      ]);
+      await venda({ skuId, postadoEm: TERCA });
+
+      expect((await repo.confiabilidades(perfil, AGORA)).size).toBe(0);
+    });
+
+    it('pedido de outro perfil não entra na medida deste', async () => {
+      const outros = await conexao.db
+        .insert(perfilVendedor)
+        .values({ slug: 'outro-perfil', nome: 'Outro', regime: 'cpf' })
+        .returning({ id: perfilVendedor.id });
+      const outroPerfil = perfilId(outros[0]?.id ?? '');
+      const f = await criar();
+      await repo.responder(f.id, { prazoPostagemDias: 1 });
+      await conexao.db.insert(fornecedorSku).values({ fornecedorId: f.id, skuId, fonte: 'manual' });
+      await venda({ skuId, postadoEm: SEGUNDA, perfil: outroPerfil });
+
+      expect((await repo.confiabilidades(perfil, AGORA)).get(f.id)).toBeUndefined();
+      expect((await repo.confiabilidades(outroPerfil, AGORA)).get(f.id)).toEqual({
+        tipo: 'poucos',
+        medidos: 1,
       });
     });
   });

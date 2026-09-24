@@ -11,12 +11,24 @@
  * com etiqueta e emite nota" é verdade sobre a Acme, não sobre o vendedor. O que é
  * do perfil é o preço que ela cobra de um SKU seu — e aí o filtro entra pelo SKU.
  */
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, isNotNull, sql } from 'drizzle-orm';
 import type { PerfilId } from '@/dominio/catalogo/sku';
 import { decidirEscrita, type Fonte } from '@/dominio/procedencia';
 import { centavos, type Centavos } from '@/lib/dinheiro';
 import type { Banco } from '@/infra/banco/cliente';
-import { fornecedor, fornecedorPrecoHistorico, fornecedorSku, sku } from '@/infra/banco/schema';
+import {
+  fornecedor,
+  fornecedorPrecoHistorico,
+  fornecedorSku,
+  pedido,
+  sku,
+} from '@/infra/banco/schema';
+import {
+  JANELA_DA_CONFIABILIDADE_DIAS,
+  medirConfiabilidade,
+  type Confiabilidade,
+  type PedidoParaMedir,
+} from './confiabilidade';
 import {
   achouLojaPropria,
   lerConferencia,
@@ -61,7 +73,6 @@ export interface FornecedorGravado {
   readonly canal: Canal | null;
   readonly origem: Origem | null;
   readonly notas: string | null;
-  readonly confiabilidade: number | null;
   readonly postaComEtiqueta: boolean | null;
   readonly emiteNf: boolean | null;
   readonly prazoPostagemDias: number | null;
@@ -98,7 +109,6 @@ interface LinhaDeFornecedor {
   readonly canal: Canal | null;
   readonly origem: Origem | null;
   readonly notas: string | null;
-  readonly confiabilidade: number | null;
   readonly postaComEtiqueta: boolean | null;
   readonly emiteNf: boolean | null;
   readonly prazoPostagemDias: number | null;
@@ -165,7 +175,6 @@ export class RepositorioDeFornecedores {
       canal: fornecedor.canal,
       origem: fornecedor.origem,
       notas: fornecedor.notas,
-      confiabilidade: fornecedor.confiabilidade,
       postaComEtiqueta: fornecedor.postaComEtiqueta,
       emiteNf: fornecedor.emiteNf,
       prazoPostagemDias: fornecedor.prazoPostagemDias,
@@ -464,6 +473,71 @@ export class RepositorioDeFornecedores {
       precoAtualizadoEm: l.precoAtualizadoEm,
       triagem: this.triar(l),
     }));
+  }
+
+  /**
+   * A confiabilidade de cada fornecedor, medida nos pedidos do perfil (7.5).
+   *
+   * Pedido é operacional e filtra por perfil; o fornecedor entra pelo SKU do pedido. Só
+   * conta pedido dos últimos 180 dias, com postagem confirmada, de SKU que um fornecedor
+   * só atende — as regras estão em `confiabilidade.ts`. Fornecedor sem pedido não aparece
+   * no mapa.
+   */
+  async confiabilidades(
+    perfil: PerfilId,
+    agora: Date,
+  ): Promise<ReadonlyMap<string, Confiabilidade>> {
+    const desde = new Date(agora.getTime() - JANELA_DA_CONFIABILIDADE_DIAS * 24 * 60 * 60 * 1000);
+    const linhas = await this.db
+      .select({
+        pedidoId: pedido.id,
+        fornecedorId: fornecedorSku.fornecedorId,
+        prometidoDias: fornecedor.prazoPostagemDias,
+        data: pedido.data,
+        prazoPostagemAte: pedido.prazoPostagemAte,
+        postagemConfirmadaEm: pedido.postagemConfirmadaEm,
+      })
+      .from(pedido)
+      .innerJoin(fornecedorSku, eq(fornecedorSku.skuId, pedido.skuId))
+      .innerJoin(fornecedor, eq(fornecedor.id, fornecedorSku.fornecedorId))
+      .where(
+        and(
+          eq(pedido.perfilId, perfil),
+          gte(pedido.data, desde),
+          isNotNull(pedido.postagemConfirmadaEm),
+        ),
+      );
+
+    // Pedido de SKU com mais de um fornecedor não diz qual deles postou.
+    const fornecedoresDoPedido = new Map<string, number>();
+    for (const l of linhas) {
+      fornecedoresDoPedido.set(l.pedidoId, (fornecedoresDoPedido.get(l.pedidoId) ?? 0) + 1);
+    }
+
+    const porFornecedor = new Map<
+      string,
+      { readonly prometido: number | null; readonly pedidos: PedidoParaMedir[] }
+    >();
+    for (const l of linhas) {
+      if (fornecedoresDoPedido.get(l.pedidoId) !== 1 || l.postagemConfirmadaEm === null) continue;
+      const grupo = porFornecedor.get(l.fornecedorId) ?? {
+        prometido: l.prometidoDias,
+        pedidos: [],
+      };
+      grupo.pedidos.push({
+        data: l.data,
+        prazoPostagemAte: l.prazoPostagemAte,
+        postagemConfirmadaEm: l.postagemConfirmadaEm,
+      });
+      porFornecedor.set(l.fornecedorId, grupo);
+    }
+
+    return new Map(
+      [...porFornecedor].map(([id, grupo]) => [
+        id,
+        medirConfiabilidade(grupo.pedidos, grupo.prometido),
+      ]),
+    );
   }
 
   /** Histórico de preço, mais recente primeiro. É o que mostra o aumento. */
