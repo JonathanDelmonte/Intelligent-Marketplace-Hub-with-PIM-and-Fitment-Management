@@ -147,7 +147,14 @@ export const PORTAS: readonly Porta[] = [
     href: '/fiscal',
     rotulo: 'Fiscal',
     descricao:
-      'O que a virada de janeiro de 2027 vai exigir: prazos, teto do ano, e o NCM e o cClassTrib de cada produto.',
+      'O que a virada de janeiro de 2027 vai exigir: prazos, teto do ano, o emissor de nota, e o NCM e o cClassTrib de cada produto.',
+    grupo: 'protecao',
+  },
+  {
+    href: '/negocio',
+    rotulo: 'Meu negócio',
+    descricao:
+      'Regime, CNPJ, estado, certificado e DAS — o que muda a margem, o teto e o emissor de nota. Preenchido aqui, e as vendas do mês o sistema conta sozinho.',
     grupo: 'protecao',
   },
 ];

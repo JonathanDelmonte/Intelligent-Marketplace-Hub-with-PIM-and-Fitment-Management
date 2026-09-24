@@ -1,0 +1,139 @@
+/*
+ * Estilo da tela "Meu negócio". Cores só de variável de tema (convenções, 3.1).
+ *
+ * Um formulário de dez campos, preenchido uma vez e revisto de vez em quando. Os campos
+ * vêm em três grupos pelo que decidem, cada grupo numa moldura, e cada campo com a dica
+ * embaixo dizendo o que muda quando ele muda.
+ *
+ * O que é comum a todas as telas vem de `ui/comum.module.css` por `composes`. Aqui fica
+ * o que é desta tela: o formulário em coluna, a moldura de cada grupo e a dica miúda.
+ */
+
+.pagina {
+  composes: pagina from '../ui/comum.module.css';
+  --largura-pagina: 56rem;
+}
+
+.cabecalho {
+  composes: cabecalho from '../ui/comum.module.css';
+}
+
+.titulo {
+  composes: titulo from '../ui/comum.module.css';
+}
+
+.subtitulo {
+  composes: subtitulo from '../ui/comum.module.css';
+}
+
+.resumo {
+  composes: resumo from '../ui/comum.module.css';
+}
+
+.secao {
+  composes: secao from '../ui/comum.module.css';
+}
+
+.secaoTitulo {
+  composes: secaoTitulo from '../ui/comum.module.css';
+}
+
+.aviso {
+  composes: aviso from '../ui/comum.module.css';
+}
+
+.avisoAtencao {
+  composes: avisoAtencao from '../ui/comum.module.css';
+}
+
+.avisoErro {
+  composes: avisoErro from '../ui/comum.module.css';
+}
+
+.avisoTitulo {
+  composes: avisoTitulo from '../ui/comum.module.css';
+}
+
+.avisoCorpo {
+  composes: avisoCorpo from '../ui/comum.module.css';
+}
+
+.painel {
+  composes: painel from '../ui/comum.module.css';
+}
+
+.cartao {
+  composes: cartao from '../ui/comum.module.css';
+}
+
+.cartaoNumero {
+  composes: cartaoNumero from '../ui/comum.module.css';
+}
+
+.cartaoRotulo {
+  composes: cartaoRotulo from '../ui/comum.module.css';
+}
+
+.vazio {
+  composes: vazio from '../ui/comum.module.css';
+}
+
+/*
+ * O formulário é uma coluna de grupos, e não a linha que quebra das outras telas: os
+ * grupos são o que dá ordem aos dez campos.
+ */
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 0.875rem;
+}
+
+/* `min-width: 0` porque fieldset tem largura mínima do conteúdo, e estouraria no celular. */
+.grupo {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.875rem;
+  margin: 0;
+  min-width: 0;
+  padding: 0.75rem 1rem 1rem;
+}
+
+.grupoTitulo {
+  font-weight: 600;
+  padding: 0 0.375rem;
+}
+
+/* Doze rem cabem os quatro campos da nota fiscal numa linha, sem um sobrar sozinho. */
+.campo {
+  composes: campo from '../ui/comum.module.css';
+  --largura-campo: 12rem;
+}
+
+.entrada {
+  composes: entrada from '../ui/comum.module.css';
+}
+
+/* A dica de campo é miúda: está ali para quem tem a dúvida, e não para ser lida sempre. */
+.dica {
+  composes: dica from '../ui/comum.module.css';
+  font-size: 0.75rem;
+  margin: 0;
+}
+
+.botao {
+  composes: botao from '../ui/comum.module.css';
+  align-self: flex-start;
+}
+
+.botao:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.link {
+  color: var(--cor-primaria);
+}
