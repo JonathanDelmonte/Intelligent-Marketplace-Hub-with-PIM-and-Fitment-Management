@@ -502,8 +502,35 @@ describe.skipIf(!temBancoDeTeste())('ChamadorOpenRouter com o ServicoDeLlm', () 
     const primeira = await servico.pedir(parametros);
     const segunda = await servico.pedir(parametros);
 
-    expect(primeira.tipo).toBe('erro');
+    // "Resposta": o modelo respondeu, e não serve — quem trabalha em lote parte o lote.
+    expect(primeira).toMatchObject({ tipo: 'erro', natureza: 'resposta' });
     expect(segunda).toMatchObject({ tipo: 'ok', deCache: false });
     expect(enviados).toHaveLength(2);
+  });
+
+  it('resposta cortada no teto de tokens também é "resposta", e chave recusada é "provedor"', async () => {
+    const cortada = fetchFalso(() =>
+      Response.json({
+        choices: [{ message: { content: '{"registros": [' }, finish_reason: 'length' }],
+      }),
+    );
+    const recusada = fetchFalso(
+      () =>
+        new Response(JSON.stringify({ error: { message: 'User not found.' } }), { status: 401 }),
+    );
+
+    const porCorte = await new ServicoDeLlm(
+      conexao.db,
+      chamador(cortada.buscar),
+      new Orcamento(500, 10),
+    ).pedir(parametros);
+    const porChave = await new ServicoDeLlm(
+      conexao.db,
+      chamador(recusada.buscar),
+      new Orcamento(500, 10),
+    ).pedir(parametros);
+
+    expect(porCorte).toMatchObject({ tipo: 'erro', natureza: 'resposta' });
+    expect(porChave).toMatchObject({ tipo: 'erro', natureza: 'provedor' });
   });
 });

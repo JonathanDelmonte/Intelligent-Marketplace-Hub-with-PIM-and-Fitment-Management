@@ -43,6 +43,7 @@
 import { z } from 'zod';
 import {
   LimiteDoProvedor,
+  RespostaInutilizavel,
   type Chamador,
   type PedidoAoModelo,
   type RespostaDoModelo,
@@ -166,11 +167,19 @@ const esquemaDoErro = z.object({
   }),
 });
 
-export class RespostaSemJson extends Error {
+export class RespostaSemJson extends RespostaInutilizavel {
   override readonly name = 'RespostaSemJson';
   constructor(texto: string) {
     const trecho = texto.replace(/\s+/g, ' ').trim().slice(0, TRECHO_NO_ERRO);
     super(`a resposta do modelo não é JSON: "${trecho}"`);
+  }
+}
+
+/** A resposta parou no teto de tokens: o JSON veio pela metade. */
+export class RespostaCortada extends RespostaInutilizavel {
+  override readonly name = 'RespostaCortada';
+  constructor(teto: number) {
+    super(`a resposta do modelo foi cortada no limite de ${String(teto)} tokens.`);
   }
 }
 
@@ -432,9 +441,7 @@ export class ChamadorOpenRouter implements Chamador {
     const [escolha] = lido.data.choices;
     const texto = escolha?.message.content ?? '';
     if (escolha?.finish_reason === 'length') {
-      throw new Error(
-        `a resposta do modelo foi cortada no limite de ${String(MAX_TOKENS_DA_RESPOSTA)} tokens.`,
-      );
+      throw new RespostaCortada(MAX_TOKENS_DA_RESPOSTA);
     }
 
     const uso = lido.data.usage;

@@ -158,6 +158,19 @@ export class LimiteDoProvedor extends ExecucaoInterrompida {
 }
 
 /**
+ * O modelo respondeu, e a resposta não serve: veio cortada no teto de tokens, ou não é
+ * JSON.
+ *
+ * É diferente de falha do provedor — chave recusada, conta sem crédito, rede fora —, e a
+ * diferença decide o que fazer: pedir de novo o mesmo não adianta, mas pedir **menos**
+ * costuma adiantar. Quem trabalha em lote usa isso para partir o lote; quem não trabalha,
+ * trata como qualquer erro.
+ */
+export class RespostaInutilizavel extends Error {
+  override readonly name: string = 'RespostaInutilizavel';
+}
+
+/**
  * Teto de gasto de uma execução.
  *
  * **Dois tetos, e os dois são obrigatórios.** Centavos é o teto que interessa ao
@@ -262,7 +275,12 @@ export type ResultadoDoPedido<T> =
       readonly deCache: boolean;
     }
   | { readonly tipo: 'sem_chave' }
-  | { readonly tipo: 'erro'; readonly mensagem: string };
+  | {
+      readonly tipo: 'erro';
+      readonly mensagem: string;
+      /** `resposta`: o modelo respondeu algo inutilizável. `provedor`: nem isso. */
+      readonly natureza: 'provedor' | 'resposta';
+    };
 
 export interface ParametrosDoPedido<T> {
   readonly proposito: Proposito;
@@ -388,7 +406,11 @@ export class ServicoDeLlm {
         latenciaMs: Date.now() - comecou,
         jobId: params.jobId,
       });
-      return { tipo: 'erro', mensagem };
+      return {
+        tipo: 'erro',
+        mensagem,
+        natureza: erro instanceof RespostaInutilizavel ? 'resposta' : 'provedor',
+      };
     }
 
     this.orcamento.registrar(resposta.custoCentavos);

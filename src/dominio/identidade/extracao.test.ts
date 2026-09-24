@@ -16,6 +16,7 @@ import {
   temBancoDeTeste,
   type ConexaoDeTeste,
 } from '@/infra/banco/teste';
+import { RespostaCortada } from '@/infra/llm/openrouter';
 import {
   Orcamento,
   ServicoDeLlm,
@@ -365,6 +366,21 @@ describe.skipIf(!temBancoDeTeste())('ExtratorDeRegistros', () => {
     expect(lerMarcaDeExtracao((await ler(intocado))?.atributos)).toBeNull();
     // A chamada que falhou fica em `llm_call`, para a conta fechar.
     expect(await conexao.db.select({ id: llmCall.id }).from(llmCall)).toHaveLength(1);
+  });
+
+  it('resposta cortada no teto de tokens parte o lote: todos voltam, e o próximo lote é a metade', async () => {
+    for (let i = 0; i < 12; i += 1) await produto(`Correia de lavadora modelo ${String(i)}`);
+    const cortada: Chamador = {
+      nome: 'cortada',
+      chamar: () => Promise.reject(new RespostaCortada(4_000)),
+    };
+
+    const primeiro = await extrator(cortada).extrairLote();
+    expect(primeiro).toMatchObject({ enviados: 12, paraTentarDeNovo: 12, chamada: 'feita' });
+
+    await extrator().extrairLote();
+    // Doze voltaram com uma tentativa, e o lote de quem já tentou uma vez é de dez.
+    expect(modelo.titulosDoUltimoPedido()).toHaveLength(10);
   });
 
   it('sem nada esperando, não pergunta nada', async () => {

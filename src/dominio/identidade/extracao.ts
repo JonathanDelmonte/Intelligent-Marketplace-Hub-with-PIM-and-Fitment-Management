@@ -473,7 +473,10 @@ export class ExtratorDeRegistros {
       esquema: esquemaDoLoteExtraido,
     });
 
-    if (resultado.tipo === 'sem_chave' || resultado.tipo === 'erro') {
+    if (
+      resultado.tipo === 'sem_chave' ||
+      (resultado.tipo === 'erro' && resultado.natureza === 'provedor')
+    ) {
       // Nada é marcado: a falha não é do item, e contá-la como tentativa faria um
       // problema de configuração — chave recusada, privacidade do gratuito — descartar
       // o catálogo inteiro, três lotes por vez.
@@ -500,8 +503,14 @@ export class ExtratorDeRegistros {
         if (item !== undefined) porTitulo.set(titulo, item);
       });
     }
+    // Resposta torta ou inutilizável — fora do formato, cortada no teto de tokens, sem
+    // JSON — é do lote, e não de um item: todos voltam, num lote com a metade do tamanho.
     const problemasDoLote =
-      resultado.tipo === 'pendente_revisao' ? resultado.problemas.slice(0, 5) : [];
+      resultado.tipo === 'pendente_revisao'
+        ? resultado.problemas.slice(0, 5)
+        : resultado.tipo === 'erro'
+          ? [resultado.mensagem]
+          : [];
 
     let recusados = 0;
     let paraTentarDeNovo = 0;
@@ -557,7 +566,7 @@ export class ExtratorDeRegistros {
       recusados,
       paraTentarDeNovo,
       descartes,
-      chamada: resultado.deCache ? 'cache' : 'feita',
+      chamada: resultado.tipo !== 'erro' && resultado.deCache ? 'cache' : 'feita',
     };
   }
 
