@@ -260,20 +260,24 @@ describe.skipIf(!temBancoDeTeste())('resolução de identidade como tarefa de po
   }
 
   it('teto de orçamento adia o job em vez de falhar, e não gasta tentativa', async () => {
-    // Duas ocorrências próximas por embedding e sem código de peça: o par só o
-    // julgamento resolve, e o orçamento de uma chamada estoura na segunda.
+    // Ocorrências próximas por embedding e sem código de peça: os pares só o
+    // julgamento resolve. Um par por pedido e orçamento de um pedido: o primeiro par é
+    // julgado, e o segundo estoura.
     const { jobId } = await prepararParQueSoOJulgamentoResolve();
 
     const chamador: Chamador = {
       nome: 'falso',
       chamar: (): Promise<RespostaDoModelo> =>
         Promise.resolve({
-          saida: { mesmoProduto: true, certeza: 'media', justificativa: 'parecem iguais' },
+          saida: {
+            julgamentos: [
+              { id: 'q1', mesmoProduto: true, certeza: 'media', justificativa: 'parecem iguais' },
+            ],
+          },
           custoCentavos: 1,
         }),
     };
 
-    // Orçamento de uma chamada: o primeiro par é julgado, o segundo estoura.
     const executor = new ExecutorDeIdentidade(
       nucleo.fila,
       (jobId) =>
@@ -281,6 +285,7 @@ describe.skipIf(!temBancoDeTeste())('resolução de identidade como tarefa de po
           jobId,
           modeloDeEmbedding: 'sintetico',
           modeloDeJulgamento: 'modelo-de-teste',
+          paresPorPedido: 1,
           llm: new ServicoDeLlm(conexao.db, chamador, new Orcamento(1_000, 1)),
         }),
     );
@@ -413,7 +418,16 @@ describe.skipIf(!temBancoDeTeste())('resolução de identidade como tarefa de po
               nome: 'falso',
               chamar: (): Promise<RespostaDoModelo> =>
                 Promise.resolve({
-                  saida: { mesmoProduto: true, certeza: 'alta', justificativa: 'mesmo refil' },
+                  saida: {
+                    julgamentos: [
+                      {
+                        id: 'q1',
+                        mesmoProduto: true,
+                        certeza: 'alta',
+                        justificativa: 'mesmo refil',
+                      },
+                    ],
+                  },
                   custoCentavos: 2,
                 }),
             },

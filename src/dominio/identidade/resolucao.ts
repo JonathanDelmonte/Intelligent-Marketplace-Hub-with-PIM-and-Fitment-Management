@@ -80,6 +80,49 @@ export const esquemaJulgamentoDeIdentidade = z.object({
 
 export type JulgamentoDeIdentidade = z.infer<typeof esquemaJulgamentoDeIdentidade>;
 
+type JulgamentoLido =
+  | { readonly tipo: 'ok'; readonly id: string; readonly julgamento: JulgamentoDeIdentidade }
+  | {
+      readonly tipo: 'recusado';
+      readonly id: string | null;
+      readonly problemas: readonly string[];
+    };
+
+const esquemaIdDoPar = z.union([z.string(), z.number()]);
+
+/** `"q3"`, `"Q3"` ou `3` são o mesmo par. */
+function lerIdDoPar(bruto: string | number): string {
+  const texto = String(bruto).trim().toLowerCase();
+  return /^\d+$/.test(texto) ? `q${texto}` : texto;
+}
+
+/**
+ * A resposta de um pedido com vários pares — e o julgamento torto **não derruba os
+ * outros**: vira recusa daquele par, que vai para revisão com o motivo.
+ */
+export const esquemaDoLoteDeJulgamento = z.object({
+  julgamentos: z.array(
+    esquemaJulgamentoDeIdentidade
+      .extend({ id: esquemaIdDoPar })
+      .transform((item): JulgamentoLido => {
+        const { id, ...julgamento } = item;
+        return { tipo: 'ok', id: lerIdDoPar(id), julgamento };
+      })
+      .catch((ctx): JulgamentoLido => {
+        const id = z.object({ id: esquemaIdDoPar }).safeParse(ctx.value);
+        return {
+          tipo: 'recusado',
+          id: id.success ? lerIdDoPar(id.data.id) : null,
+          problemas: ctx.issues.map((problema) => {
+            const campo = (problema.path ?? []).join('.');
+            const mensagem = problema.message ?? 'valor inválido';
+            return campo === '' ? mensagem : `${campo}: ${mensagem}`;
+          }),
+        };
+      }),
+  ),
+});
+
 /**
  * O que o modelo deve fazer.
  *
@@ -90,7 +133,7 @@ export type JulgamentoDeIdentidade = z.infer<typeof esquemaJulgamentoDeIdentidad
  * ("original" incluída) e decidir pela peça — e por isso as decisões humanas entram
  * como exemplo: o critério fino é do dono do negócio, e se aprende com a fila.
  */
-export const INSTRUCOES_DE_IDENTIDADE = `Você decide se dois registros descrevem o mesmo produto físico: a mesma peça, com o mesmo encaixe e a mesma função, vendida na mesma quantidade — de forma que, para o comprador, tanto faz levar um ou o outro.
+export const INSTRUCOES_DE_IDENTIDADE = `Você recebe pares de registros e decide, para cada par, se os dois descrevem o mesmo produto físico: a mesma peça, com o mesmo encaixe e a mesma função, vendida na mesma quantidade — de forma que, para o comprador, tanto faz levar um ou o outro. Responda um julgamento por par, com o mesmo "id" do par.
 
 Os registros foram extraídos de anúncios de marketplace e de listas de fornecedor. Campos podem estar vazios (null), e o mesmo produto costuma aparecer com nomes, códigos e grafias diferentes: título de marketplace carrega palavra de busca ("original", "premium", "promoção", listas de modelos), e fornecedor usa código interno próprio. "riqueza" diz quantos campos de cada lado estão preenchidos.
 
@@ -99,9 +142,20 @@ Como decidir:
 - EAN igual é sinal forte de mesmo produto. EAN diferente pesa contra, mas não decide sozinho: o mesmo item é revendido com códigos diferentes.
 - Quantidade diferente na embalagem (uma unidade contra kit com duas) é produto diferente.
 - Atributo que distingue — medida, voltagem, material, aparelho que só um dos lados atende — é produto diferente.
+- Cada par se decide sozinho: um par não diz nada sobre o outro.
 - Se o contexto trouxer exemplos de decisões anteriores, siga o mesmo critério: são decisões do dono do negócio.
 - Faltando informação para decidir, responda o mais provável com certeza "baixa": o par vai para revisão humana.
 - Na justificativa, cite em uma ou duas frases o atributo que decidiu.`;
+
+/**
+ * Pares por pedido de julgamento.
+ *
+ * Gratuito primeiro (CLAUDE.md, 3.7): a cota gratuita é de 50 pedidos por dia, e um
+ * pedido por par a esgotaria com quatro produtos de vinte vizinhos. Os pares de um
+ * produto vão juntos, dez por pedido — mais que isso, e a resposta de um modelo pequeno
+ * começa a confundir um par com o outro.
+ */
+export const MAX_PARES_POR_PEDIDO = 10;
 
 /** Quantos candidatos considerar por produto, somando todas as vias. */
 export const MAX_CANDIDATOS = 30;
@@ -111,6 +165,8 @@ export interface OpcoesDoResolvedor {
   readonly modeloDeJulgamento?: string | undefined;
   readonly modeloDeEmbedding?: string | undefined;
   readonly maxCandidatos?: number | undefined;
+  /** Pares por pedido de julgamento. Padrão: `MAX_PARES_POR_PEDIDO`. */
+  readonly paresPorPedido?: number | undefined;
   /**
    * Job que originou a resolução, quando houver.
    *
@@ -146,6 +202,27 @@ interface Candidato {
 interface LadoCarregado extends LadoDoCasamento {
   readonly id: string;
   readonly formaCanonica: string;
+}
+
+/** Um par que o determinístico não decidiu e que vale julgamento. */
+interface ParParaJulgar {
+  readonly outro: LadoCarregado;
+  readonly candidato: Candidato;
+  readonly motivoDeterministico: string;
+  /**
+   * Nível que o casamento determinístico alcançou antes de desistir.
+   *
+   * Precisa chegar até a gravação, e o motivo apareceu na tela: gravando `'nenhum'`
+   * sempre, a fila de revisão dizia "sem evidência forte" para um par casado por marca e
+   * código de peça cuja única pendência era a quantidade divergente. Informação errada
+   * na tela de revisão é pior que informação nenhuma, porque a pessoa decide com ela.
+   */
+  readonly nivelDeterministico: NivelDeCasamento;
+}
+
+interface Roteado {
+  readonly julgou: boolean;
+  readonly balde: 'agrupados' | 'separados' | 'paraRevisao' | 'descartados' | 'pendenteDeLlm';
 }
 
 export class ResolvedorDeIdentidade {
@@ -244,6 +321,8 @@ export class ResolvedorDeIdentidade {
     // contexto não muda entre os pares de uma mesma resolução.
     const exemplos = this.opcoes.llm === undefined ? [] : await this.exemplos.paraPrompt();
 
+    const aJulgar: ParParaJulgar[] = [];
+
     for (const candidato of candidatos) {
       const outro = outros.get(candidato.id);
       if (outro === undefined) continue;
@@ -292,16 +371,26 @@ export class ResolvedorDeIdentidade {
         continue;
       }
 
-      const roteado = await this.julgar({
-        base,
+      aJulgar.push({
         outro,
         candidato,
-        exemplos,
         motivoDeterministico: deterministico.motivo,
         nivelDeterministico: deterministico.nivel,
       });
-      if (roteado.julgou) contagem.julgamentos += 1;
-      contagem[roteado.balde] += 1;
+    }
+
+    // Os pares que só julgamento resolve vão juntos, e não um pedido por par.
+    const porPedido = Math.max(1, this.opcoes.paresPorPedido ?? MAX_PARES_POR_PEDIDO);
+    for (let inicio = 0; inicio < aJulgar.length; inicio += porPedido) {
+      const roteados = await this.julgarLote(
+        base,
+        aJulgar.slice(inicio, inicio + porPedido),
+        exemplos,
+      );
+      for (const roteado of roteados) {
+        if (roteado.julgou) contagem.julgamentos += 1;
+        contagem[roteado.balde] += 1;
+      }
     }
 
     return { produtoId, ...preparo, candidatos: candidatos.length, ...contagem };
@@ -335,99 +424,126 @@ export class ResolvedorDeIdentidade {
   }
 
   /**
-   * Julga um par com LLM e roteia pelo limiar.
+   * Julga um lote de pares do mesmo produto com **um** pedido, e roteia cada par pelo
+   * limiar.
    *
-   * Sem chave, o par vai para a fila de revisão com o motivo escrito — que é a
-   * resposta honesta: o sistema sabe que não sabe, e quem olhar entende por quê.
+   * Sem chave, cada par vai para a fila de revisão com o motivo escrito — que é a
+   * resposta honesta: o sistema sabe que não sabe, e quem olhar entende por quê. Par que
+   * o modelo não julgou, ou julgou fora do esquema, também vai para revisão, com o
+   * motivo; os outros do lote seguem.
    */
-  private async julgar(params: {
-    readonly base: LadoCarregado;
-    readonly outro: LadoCarregado;
-    readonly candidato: Candidato;
-    readonly exemplos: readonly Exemplo[];
-    readonly motivoDeterministico: string;
-    /**
-     * Nível que o casamento determinístico alcançou antes de desistir.
-     *
-     * Precisa chegar até a gravação, e o motivo apareceu na tela: gravando
-     * `'nenhum'` sempre, a fila de revisão dizia "sem evidência forte" para um par
-     * casado por marca e código de peça cuja única pendência era a quantidade
-     * divergente. Informação errada na tela de revisão é pior que informação
-     * nenhuma, porque a pessoa decide com base nela.
-     */
-    readonly nivelDeterministico: NivelDeCasamento;
-  }): Promise<{
-    readonly julgou: boolean;
-    readonly balde: 'agrupados' | 'separados' | 'paraRevisao' | 'descartados' | 'pendenteDeLlm';
-  }> {
-    const { base, outro, candidato } = params;
-    const distancia =
-      candidato.distanciaBp === undefined ? {} : { distanciaBp: candidato.distanciaBp };
-
+  private async julgarLote(
+    base: LadoCarregado,
+    pares: readonly ParParaJulgar[],
+    exemplos: readonly Exemplo[],
+  ): Promise<readonly Roteado[]> {
     const servico = this.opcoes.llm;
     const modelo = this.opcoes.modeloDeJulgamento;
 
     if (servico === undefined || modelo === undefined) {
-      await this.pares.registrar({
-        produtoA: base.id,
-        produtoB: outro.id,
-        decisao: 'indeciso',
-        origem: 'deterministico',
-        nivel: params.nivelDeterministico,
-        confiancaBp: 0,
-        status: 'pendente',
-        justificativa: `${params.motivoDeterministico}; sem chave de LLM, então ninguém julgou`,
-        ...distancia,
-      });
-      return { julgou: false, balde: 'pendenteDeLlm' };
+      const roteados: Roteado[] = [];
+      for (const par of pares) {
+        roteados.push(
+          await this.paraRevisao(
+            base,
+            par,
+            'deterministico',
+            `${par.motivoDeterministico}; sem chave de LLM, então ninguém julgou`,
+            'pendenteDeLlm',
+          ),
+        );
+      }
+      return roteados;
     }
 
     const resultado = await servico.pedir({
       proposito: PROPOSITO_JULGAMENTO,
       modelo,
       instrucoes: INSTRUCOES_DE_IDENTIDADE,
-      entrada: perguntaDeIdentidade(base, outro),
-      contexto: { exemplos: params.exemplos },
-      esquema: esquemaJulgamentoDeIdentidade,
+      entrada: pedidoDeJulgamento(pares.map((par) => ({ a: base, b: par.outro }))),
+      contexto: { exemplos },
+      esquema: esquemaDoLoteDeJulgamento,
       ...(this.opcoes.jobId === undefined ? {} : { jobId: this.opcoes.jobId }),
     });
 
-    if (resultado.tipo === 'sem_chave') {
-      await this.pares.registrar({
-        produtoA: base.id,
-        produtoB: outro.id,
-        decisao: 'indeciso',
-        origem: 'deterministico',
-        nivel: params.nivelDeterministico,
-        confiancaBp: 0,
-        status: 'pendente',
-        justificativa: 'sem chave de LLM, então ninguém julgou',
-        ...distancia,
-      });
-      return { julgou: false, balde: 'pendenteDeLlm' };
+    const roteados: Roteado[] = [];
+
+    if (resultado.tipo !== 'ok') {
+      const [origem, motivo, balde]: readonly [
+        'deterministico' | 'llm',
+        string,
+        'pendenteDeLlm' | 'paraRevisao',
+      ] =
+        resultado.tipo === 'sem_chave'
+          ? ['deterministico', 'sem chave de LLM, então ninguém julgou', 'pendenteDeLlm']
+          : resultado.tipo === 'erro'
+            ? ['llm', `falha ao julgar: ${resultado.mensagem}`, 'paraRevisao']
+            : [
+                'llm',
+                `julgamento fora do schema: ${resultado.problemas.join('; ')}`,
+                'paraRevisao',
+              ];
+      for (const par of pares) {
+        roteados.push(await this.paraRevisao(base, par, origem, motivo, balde));
+      }
+      return roteados;
     }
 
-    if (resultado.tipo === 'erro' || resultado.tipo === 'pendente_revisao') {
-      const motivo =
-        resultado.tipo === 'erro'
-          ? `falha ao julgar: ${resultado.mensagem}`
-          : `julgamento fora do schema: ${resultado.problemas.join('; ')}`;
-      await this.pares.registrar({
-        produtoA: base.id,
-        produtoB: outro.id,
-        decisao: 'indeciso',
-        origem: 'llm',
-        nivel: params.nivelDeterministico,
-        confiancaBp: 0,
-        status: 'pendente',
-        justificativa: motivo,
-        ...distancia,
-      });
-      return { julgou: true, balde: 'paraRevisao' };
+    const porId = new Map<string, JulgamentoLido>();
+    for (const item of resultado.valor.julgamentos) {
+      if (item.id !== null && !porId.has(item.id)) porId.set(item.id, item);
     }
 
-    const julgamento = resultado.valor;
+    for (const [indice, par] of pares.entries()) {
+      const item = porId.get(idDoPar(indice));
+      if (item?.tipo === 'ok') {
+        roteados.push(await this.registrarJulgamento(base, par, item.julgamento));
+      } else {
+        const motivo =
+          item === undefined
+            ? 'o modelo não julgou este par'
+            : `julgamento fora do schema: ${item.problemas.join('; ')}`;
+        roteados.push(await this.paraRevisao(base, par, 'llm', motivo, 'paraRevisao'));
+      }
+    }
+    return roteados;
+  }
+
+  /** Par que ninguém decidiu: fica na fila de revisão, com o motivo. */
+  private async paraRevisao(
+    base: LadoCarregado,
+    par: ParParaJulgar,
+    origem: 'deterministico' | 'llm',
+    justificativa: string,
+    balde: 'pendenteDeLlm' | 'paraRevisao',
+  ): Promise<Roteado> {
+    await this.pares.registrar({
+      produtoA: base.id,
+      produtoB: par.outro.id,
+      decisao: 'indeciso',
+      origem,
+      nivel: par.nivelDeterministico,
+      confiancaBp: 0,
+      status: 'pendente',
+      justificativa,
+      ...(par.candidato.distanciaBp === undefined
+        ? {}
+        : { distanciaBp: par.candidato.distanciaBp }),
+    });
+    return { julgou: origem === 'llm', balde };
+  }
+
+  /** Grava o que o modelo decidiu e roteia pelo limiar. */
+  private async registrarJulgamento(
+    base: LadoCarregado,
+    par: ParParaJulgar,
+    julgamento: JulgamentoDeIdentidade,
+  ): Promise<Roteado> {
+    const { outro, candidato } = par;
+    const distancia =
+      candidato.distanciaBp === undefined ? {} : { distanciaBp: candidato.distanciaBp };
     const confiancaBp = CONFIANCA_POR_CERTEZA[julgamento.certeza];
+    const nivel = candidato.via === 'embedding' ? 'embedding' : par.nivelDeterministico;
 
     if (!julgamento.mesmoProduto) {
       await this.pares.registrar({
@@ -435,7 +551,7 @@ export class ResolvedorDeIdentidade {
         produtoB: outro.id,
         decisao: 'diferente',
         origem: 'llm',
-        nivel: candidato.via === 'embedding' ? 'embedding' : params.nivelDeterministico,
+        nivel,
         confiancaBp,
         status: 'automatico',
         justificativa: julgamento.justificativa,
@@ -456,7 +572,7 @@ export class ResolvedorDeIdentidade {
       produtoB: outro.id,
       decisao: status === 'descartado' ? 'indeciso' : 'mesmo',
       origem: 'llm',
-      nivel: candidato.via === 'embedding' ? 'embedding' : params.nivelDeterministico,
+      nivel,
       confiancaBp,
       status,
       justificativa: julgamento.justificativa,
@@ -570,18 +686,19 @@ function lerRegistroVazio(): RegistroDeProduto {
   return leitura.registro;
 }
 
+type LadoDaPergunta = LadoDoCasamento & { readonly formaCanonica: string };
+
 /**
- * A pergunta que vai ao modelo, e **só** ela vai para o hash de cache.
+ * Os dois lados de um par como vão ao modelo, **ordenados pela forma canônica**.
  *
- * Sem id de banco dentro: o mesmo par de descrições capturado em outra instalação
- * deve bater no mesmo cache. Com `riqueza` porque é o que diz quanta evidência havia
- * — e permite auditar depois se o modelo estava julgando com dado suficiente.
+ * Sem id de banco dentro: o mesmo par de descrições capturado em outra instalação deve
+ * bater no mesmo cache. Com `riqueza` porque é o que diz quanta evidência havia — e
+ * permite auditar depois se o modelo estava julgando com dado suficiente. E ordenado
+ * porque perguntar (A,B) e (B,A) é a mesma pergunta: sem ordenar seriam dois hashes e
+ * duas chamadas.
  */
-export function perguntaDeIdentidade(
-  a: LadoDoCasamento & { readonly formaCanonica: string },
-  b: LadoDoCasamento & { readonly formaCanonica: string },
-): unknown {
-  const lado = (l: LadoDoCasamento & { readonly formaCanonica: string }) => ({
+function ladosOrdenados(a: LadoDaPergunta, b: LadoDaPergunta) {
+  const lado = (l: LadoDaPergunta) => ({
     canonico: l.formaCanonica,
     ean: l.ean,
     tipoProduto: l.registro.tipoProduto,
@@ -593,16 +710,36 @@ export function perguntaDeIdentidade(
     quantidadeEmbalagem: l.registro.quantidadeEmbalagem,
     riqueza: riquezaDoRegistro(l.registro),
   });
+  return a.formaCanonica <= b.formaCanonica
+    ? { a: lado(a), b: lado(b) }
+    : { a: lado(b), b: lado(a) };
+}
 
-  // Par ordenado pela forma canônica: perguntar (A,B) e (B,A) é a mesma pergunta, e
-  // sem ordenar seriam dois hashes e duas chamadas pagas.
-  const [primeiro, segundo] =
-    a.formaCanonica <= b.formaCanonica ? [lado(a), lado(b)] : [lado(b), lado(a)];
-
+/** A pergunta de um par só. É o formato de cada par dentro do pedido em lote. */
+export function perguntaDeIdentidade(a: LadoDaPergunta, b: LadoDaPergunta): unknown {
   return {
     pergunta: 'estes dois registros descrevem o mesmo produto físico?',
-    a: primeiro,
-    b: segundo,
+    ...ladosOrdenados(a, b),
+  };
+}
+
+/** `q1`, `q2`… — o id de cada par no pedido, por posição. */
+function idDoPar(indice: number): string {
+  return `q${String(indice + 1)}`;
+}
+
+/**
+ * O pedido de julgamento de vários pares, e **só** ele vai para o hash de cache.
+ *
+ * Cada par vai no formato da pergunta de um par só: ordenado, sem id de banco, com a
+ * riqueza de cada lado.
+ */
+export function pedidoDeJulgamento(
+  pares: readonly { readonly a: LadoDaPergunta; readonly b: LadoDaPergunta }[],
+): unknown {
+  return {
+    pergunta: 'para cada par, os dois registros descrevem o mesmo produto físico?',
+    pares: pares.map((par, indice) => ({ id: idDoPar(indice), ...ladosOrdenados(par.a, par.b) })),
   };
 }
 

@@ -10,6 +10,7 @@
  *   orçamento e a regra de que decisão humana não é sobrescrita.
  */
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import { parIdentidade, perfilVendedor, produtoExterno } from '@/infra/banco/schema';
 import {
   Orcamento,
@@ -38,20 +39,35 @@ import {
 const MODELO = 'julgador-de-teste';
 const EAN_A = '7896541200121';
 
+type Resposta = RespostaDoModelo | ((pedido: PedidoAoModelo) => RespostaDoModelo);
+
 class ChamadorFalso implements Chamador {
   readonly nome = 'falso';
   chamadas: PedidoAoModelo[] = [];
-  constructor(private readonly resposta: RespostaDoModelo) {}
+  constructor(private readonly resposta: Resposta) {}
   async chamar(pedido: PedidoAoModelo): Promise<RespostaDoModelo> {
     this.chamadas.push(pedido);
-    return await Promise.resolve(this.resposta);
+    const resposta = typeof this.resposta === 'function' ? this.resposta(pedido) : this.resposta;
+    return await Promise.resolve(resposta);
   }
 }
 
-const julga = (mesmoProduto: boolean, certeza: 'alta' | 'media' | 'baixa'): RespostaDoModelo => ({
-  saida: { mesmoProduto, certeza, justificativa: 'mesmo elemento filtrante, nomes diferentes' },
-  custoCentavos: 1,
-});
+const esquemaDoPedido = z.object({ pares: z.array(z.object({ id: z.string() })) });
+
+/** Julga todos os pares do pedido do mesmo jeito, como um modelo que concorda consigo. */
+const julga =
+  (mesmoProduto: boolean, certeza: 'alta' | 'media' | 'baixa') =>
+  (pedido: PedidoAoModelo): RespostaDoModelo => ({
+    saida: {
+      julgamentos: esquemaDoPedido.parse(pedido.entrada).pares.map((par) => ({
+        id: par.id,
+        mesmoProduto,
+        certeza,
+        justificativa: 'mesmo elemento filtrante, nomes diferentes',
+      })),
+    },
+    custoCentavos: 1,
+  });
 
 const TABELAS = [
   'par_identidade',
@@ -371,7 +387,9 @@ describe.skipIf(!temBancoDeTeste())('resolução de identidade', () => {
 
     it('saída fora do schema vira revisão, não gravação de lixo', async () => {
       const [a, b] = await parPorEmbedding();
-      const chamador = new ChamadorFalso({ saida: { mesmoProduto: 'talvez' } });
+      const chamador = new ChamadorFalso({
+        saida: { julgamentos: [{ id: 'q1', mesmoProduto: 'talvez' }] },
+      });
       const r = await comLlm(chamador).resolver(a);
 
       expect(r.paraRevisao).toBe(1);
@@ -412,9 +430,53 @@ describe.skipIf(!temBancoDeTeste())('resolução de identidade', () => {
       });
     });
 
+    it('os pares de um produto vão num pedido só, e o par que o modelo pulou vai para revisão', async () => {
+      const ids: string[] = [];
+      for (let i = 0; i < 3; i += 1) {
+        ids.push(
+          await ocorrencia(`h${String(i)}`, {
+            atributos: { tipoProduto: `tipo ${String(i)}`, marca: 'Electrolux' },
+          }),
+        );
+      }
+      await new ResolvedorDeIdentidade(conexao.db).prepararLote();
+      const embeddings = new RepositorioDeEmbeddings(conexao.db);
+      for (const [i, id] of ids.entries()) {
+        await embeddings.gravar({
+          produtoExternoId: id,
+          textoCanonico: `tipo ${String(i)} electrolux`,
+          modelo: MODELO_EMBEDDING,
+          vetor: vetorProximo(i * 0.01),
+        });
+      }
+
+      // O modelo responde só o primeiro par.
+      const chamador = new ChamadorFalso((pedido) => {
+        const [primeiro] = esquemaDoPedido.parse(pedido.entrada).pares;
+        return {
+          saida: {
+            julgamentos: [
+              {
+                id: primeiro?.id,
+                mesmoProduto: true,
+                certeza: 'alta',
+                justificativa: 'mesma peça',
+              },
+            ],
+          },
+        };
+      });
+      const r = await comLlm(chamador).resolver(ids[0] ?? '');
+
+      expect(chamador.chamadas).toHaveLength(1);
+      expect(r).toMatchObject({ candidatos: 2, julgamentos: 2, agrupados: 1, paraRevisao: 1 });
+      const fila = await pares.fila();
+      expect(fila[0]?.justificativa).toBe('o modelo não julgou este par');
+    });
+
     it('orçamento estourado interrompe o lote sem perder o que já resolveu', async () => {
-      // Quatro ocorrências próximas: a primeira resolução gasta três chamadas, e a
-      // segunda estoura um teto de quatro.
+      // Quatro ocorrências próximas: cada produto julga os seus pares num pedido, e o
+      // terceiro produto estoura um teto de dois pedidos.
       const ids: string[] = [];
       for (let i = 0; i < 4; i += 1) {
         ids.push(
@@ -436,12 +498,12 @@ describe.skipIf(!temBancoDeTeste())('resolução de identidade', () => {
       }
 
       const chamador = new ChamadorFalso(julga(true, 'media'));
-      const resolvedor = comLlm(chamador, new Orcamento(100, 4));
+      const resolvedor = comLlm(chamador, new Orcamento(100, 2));
 
       const lote = await resolvedor.resolverLote();
       expect(lote.pararamPorOrcamento).toBe(true);
-      expect(lote.resolvidos.length).toBeGreaterThan(0);
-      expect(chamador.chamadas).toHaveLength(4);
+      expect(lote.resolvidos).toHaveLength(2);
+      expect(chamador.chamadas).toHaveLength(2);
 
       // O que foi decidido antes do estouro continua decidido: o lote é retomável.
       const contagem = await pares.contarPorStatus();
