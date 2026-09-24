@@ -119,6 +119,11 @@ export const llmCall = pgTable(
     tokensEntrada: integer('tokens_entrada'),
     tokensSaida: integer('tokens_saida'),
     latenciaMs: integer('latencia_ms'),
+    /**
+     * O modelo que de fato respondeu, quando o provedor informa. Difere de `modelo`
+     * quando o pedido vai a um roteador — `openrouter/free` escolhe a cada chamada.
+     */
+    modeloServido: text('modelo_servido'),
     /** Job que originou a chamada, quando houver. */
     jobId: uuid('job_id').references(() => job.id, { onDelete: 'set null' }),
     /** Dossiê que originou a chamada, para o orçamento do agente ser rastreável. */

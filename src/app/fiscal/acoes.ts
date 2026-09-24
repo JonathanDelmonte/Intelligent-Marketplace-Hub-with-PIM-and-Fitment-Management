@@ -20,7 +20,7 @@ import { CAMPOS_FISCAIS, lerCodigoFiscal, type CampoFiscal } from '@/dominio/fis
 import { RepositorioFiscal, type CodigosParaGravar } from '@/dominio/fiscal/repositorio';
 import { carregarPerfil } from '@/dominio/perfil';
 import { banco } from '@/infra/banco/cliente';
-import { OrcamentoEstourado } from '@/infra/llm';
+import { LimiteDoProvedor, OrcamentoEstourado } from '@/infra/llm';
 import { llmDoAmbiente } from '@/infra/llm/ambiente';
 import { criarRegistrador, nivelDoAmbiente } from '@/infra/log';
 import { ZERO, lerReaisDigitados } from '@/lib/dinheiro';
@@ -140,15 +140,17 @@ export async function sugerirCodigos(dados: FormData): Promise<void> {
       resultado = await sugerirClassificacao(produto, { llm: servico, modelo: modeloFiscal });
     }
   } catch (erro) {
-    // `OrcamentoEstourado` é o único motivo daqui que vale mostrar; o resto é falha de
-    // banco ou de código, e a tela não tem o que dizer sobre ela além de "não deu".
+    // Teto de gasto e cota do provedor são os motivos daqui que valem mostrar — a
+    // cota diz quando volta. O resto é falha de banco ou de código, e a tela não tem o
+    // que dizer sobre ela além de "não deu".
     log.erro('fiscal.sugestao_falhou', { skuId: skuId.data, erro });
-    redirect(
-      paraFalhaDeSugestao(
-        erro instanceof OrcamentoEstourado ? 'o teto de gasto desta execução acabou.' : undefined,
-        foco,
-      ),
-    );
+    const motivo =
+      erro instanceof LimiteDoProvedor
+        ? erro.message
+        : erro instanceof OrcamentoEstourado
+          ? 'o teto de gasto desta execução acabou.'
+          : undefined;
+    redirect(paraFalhaDeSugestao(motivo, foco));
   }
 
   if (resultado === null) redirect(paraOnde('nao_encontrado', foco));

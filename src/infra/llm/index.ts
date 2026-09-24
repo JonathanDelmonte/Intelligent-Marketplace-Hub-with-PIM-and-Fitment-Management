@@ -70,6 +70,13 @@ export interface RespostaDoModelo {
   readonly tokensSaida?: number | undefined;
   /** Centavos inteiros. `undefined` quando o provedor não informa. */
   readonly custoCentavos?: number | undefined;
+  /**
+   * O modelo que de fato respondeu, quando o provedor diz.
+   *
+   * Difere do pedido quando o pedido é a um roteador: `openrouter/free` escolhe um modelo
+   * gratuito a cada chamada, e a auditoria precisa saber qual foi.
+   */
+  readonly modeloServido?: string | undefined;
 }
 
 /**
@@ -106,7 +113,19 @@ export class OrcamentoInvalido extends Error {
   override readonly name = 'OrcamentoInvalido';
 }
 
-export class OrcamentoEstourado extends Error {
+/**
+ * Continuar é sempre errado: a execução para aqui, e o que falta é retomável.
+ *
+ * Duas causas, e quem trata uma trata as duas pela base: o teto de gasto desta execução
+ * (`OrcamentoEstourado`) e a cota do provedor (`LimiteDoProvedor`). Um laço que tratasse
+ * qualquer uma delas como "esse item falhou" seguiria para o próximo e bateria no mesmo
+ * teto, uma vez por item — e, na cota do provedor, cada batida ainda conta como pedido.
+ */
+export class ExecucaoInterrompida extends Error {
+  override readonly name: string = 'ExecucaoInterrompida';
+}
+
+export class OrcamentoEstourado extends ExecucaoInterrompida {
   override readonly name = 'OrcamentoEstourado';
   constructor(
     readonly limite: { readonly centavos: number; readonly chamadas: number },
@@ -116,6 +135,25 @@ export class OrcamentoEstourado extends Error {
       `orçamento estourado: ${String(gasto.chamadas)}/${String(limite.chamadas)} chamadas, ` +
         `${String(gasto.centavos)}/${String(limite.centavos)} centavos`,
     );
+  }
+}
+
+/**
+ * A cota do provedor acabou: pedidos por minuto, ou por dia no plano gratuito.
+ *
+ * `ate` é quando vale tentar de novo — o provedor diz, e quem adia um job usa esta data
+ * em vez de um intervalo fixo. `houveChamada` separa a recusa que veio do provedor (conta
+ * como pedido, e vai para `llm_call`) da que foi decidida aqui, sem sair da máquina,
+ * porque a cota já era sabida esgotada.
+ */
+export class LimiteDoProvedor extends ExecucaoInterrompida {
+  override readonly name = 'LimiteDoProvedor';
+  constructor(
+    mensagem: string,
+    readonly ate: Date,
+    readonly houveChamada: boolean,
+  ) {
+    super(mensagem);
   }
 }
 
@@ -261,10 +299,11 @@ export interface ParametrosDoPedido<T> {
 /**
  * O serviço que todo módulo de IA usa.
  *
- * **Só lança `OrcamentoEstourado`.** Todo o resto — falha de rede, schema
+ * **Só lança `ExecucaoInterrompida`** — orçamento estourado ou cota do provedor. Todo o
+ * resto — falha de rede, schema
  * inválido, ausência de chave — volta como valor no tipo de retorno, porque são
- * situações previstas que o chamador trata de formas diferentes. Orçamento é a
- * exceção porque é a única em que continuar é sempre errado: um laço que trata
+ * situações previstas que o chamador trata de formas diferentes. Orçamento e cota são a
+ * exceção porque são as únicas em que continuar é sempre errado: um laço que trata
  * "estourei o teto" como "esse par falhou" segue para o par seguinte e estoura de
  * novo, uma vez por par.
  */
@@ -318,6 +357,25 @@ export class ServicoDeLlm {
       // cheio de linhas de uma chamada que não aconteceu.
       if (semChave) return { tipo: 'sem_chave' };
 
+      // Cota do provedor: interrompe, como o orçamento. Se a recusa veio de lá, foi
+      // um pedido, e fica registrado; se foi decidida aqui, nada saiu da máquina.
+      if (erro instanceof LimiteDoProvedor) {
+        if (erro.houveChamada) {
+          this.orcamento.registrar(undefined);
+          await this.registrarChamada({
+            proposito: params.proposito,
+            modelo: params.modelo,
+            hashEntrada,
+            entrada: entradaGravada,
+            saida: null,
+            erro: erro.message,
+            latenciaMs: Date.now() - comecou,
+            jobId: params.jobId,
+          });
+        }
+        throw erro;
+      }
+
       const mensagem = erro instanceof Error ? erro.message : String(erro);
       this.orcamento.registrar(undefined);
       await this.registrarChamada({
@@ -347,6 +405,7 @@ export class ServicoDeLlm {
       tokensEntrada: resposta.tokensEntrada,
       tokensSaida: resposta.tokensSaida,
       custoCentavos: resposta.custoCentavos,
+      modeloServido: resposta.modeloServido,
     });
 
     return this.validar(resposta.saida, params.esquema, false);
@@ -423,6 +482,7 @@ export class ServicoDeLlm {
     tokensEntrada?: number | undefined;
     tokensSaida?: number | undefined;
     custoCentavos?: number | undefined;
+    modeloServido?: string | undefined;
   }): Promise<void> {
     const valores = {
       proposito: dados.proposito,
@@ -436,6 +496,7 @@ export class ServicoDeLlm {
       tokensEntrada: dados.tokensEntrada ?? null,
       tokensSaida: dados.tokensSaida ?? null,
       custoCentavos: dados.custoCentavos ?? null,
+      modeloServido: dados.modeloServido ?? null,
     };
 
     await this.db
@@ -450,6 +511,7 @@ export class ServicoDeLlm {
           tokensEntrada: valores.tokensEntrada,
           tokensSaida: valores.tokensSaida,
           custoCentavos: valores.custoCentavos,
+          modeloServido: valores.modeloServido,
           criadoEm: new Date(),
         },
       });

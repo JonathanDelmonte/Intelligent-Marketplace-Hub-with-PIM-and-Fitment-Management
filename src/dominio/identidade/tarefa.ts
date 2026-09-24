@@ -19,7 +19,7 @@
  * uma tentativa por rodada e mandaria para a lista de mortos um job que progride.
  */
 import { z } from 'zod';
-import { OrcamentoEstourado } from '@/infra/llm';
+import { ExecucaoInterrompida, LimiteDoProvedor } from '@/infra/llm';
 import type { Fila, JobEnfileirado } from '@/infra/fila/fila';
 import type { Registrador } from '@/infra/log';
 import { registradorSilencioso } from '@/infra/log';
@@ -97,10 +97,15 @@ export class ExecutorDeIdentidade {
     try {
       return await this.resolver(job, analise.data.produtoExternoId);
     } catch (erro) {
-      if (erro instanceof OrcamentoEstourado) {
+      if (erro instanceof ExecucaoInterrompida) {
         const motivo = `adiado: ${erro.message}`;
+        // A cota do provedor diz quando volta; o orçamento da execução volta no job
+        // seguinte, que ganha um novo.
         await this.fila.adiar(job.id, {
-          quando: new Date(Date.now() + ESPERA_POR_ORCAMENTO_MS),
+          quando:
+            erro instanceof LimiteDoProvedor
+              ? erro.ate
+              : new Date(Date.now() + ESPERA_POR_ORCAMENTO_MS),
           motivo,
         });
         return { tipo: 'adiado', jobId: job.id, motivo };

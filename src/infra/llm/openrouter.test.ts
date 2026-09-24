@@ -16,14 +16,24 @@ import {
   temBancoDeTeste,
   type ConexaoDeTeste,
 } from '@/infra/banco/teste';
-import { ChamadorAusente, Orcamento, ServicoDeLlm, type PedidoAoModelo } from './index';
+import {
+  ChamadorAusente,
+  LimiteDoProvedor,
+  Orcamento,
+  ServicoDeLlm,
+  type PedidoAoModelo,
+} from './index';
 import { MODELOS_PADRAO, chamadorDoAmbiente, modelosDoAmbiente } from './ambiente';
 import {
   ChamadorOpenRouter,
+  CotaGratuita,
   ENDERECO_DO_OPENROUTER,
+  ROTEADOR_GRATUITO,
   RespostaSemJson,
   centavosDoCusto,
+  ehModeloGratuito,
   lerJsonDaResposta,
+  lerLimite,
   mensagemDeRecusa,
   mensagensDoPedido,
 } from './openrouter';
@@ -252,6 +262,10 @@ describe('ambiente', () => {
     );
   });
 
+  it('todo modelo padrão é gratuito: é a regra do dono', () => {
+    for (const modelo of Object.values(MODELOS_PADRAO)) expect(ehModeloGratuito(modelo)).toBe(true);
+  });
+
   it('linha de modelo vazia no .env usa o padrão — o .env antigo traz as linhas vazias', () => {
     const modelos = modelosDoAmbiente(
       validarAmbiente({ ...minimo, LLM_MODELO_FISCAL: '', LLM_MODELO_JULGAMENTO: 'outro/modelo' }),
@@ -259,6 +273,152 @@ describe('ambiente', () => {
     expect(modelos.fiscal).toBe(MODELOS_PADRAO.fiscal);
     expect(modelos.julgamento).toBe('outro/modelo');
     expect(modelos.extracao).toBe(MODELOS_PADRAO.extracao);
+  });
+});
+
+describe('plano gratuito', () => {
+  const gratuito: PedidoAoModelo = { ...pedido, modelo: ROTEADOR_GRATUITO };
+
+  function chamadorGratuito(buscar: typeof fetch, cota: CotaGratuita): ChamadorOpenRouter {
+    return new ChamadorOpenRouter({ chave: CHAVE, centavosPorDolar: 600, buscar, cota });
+  }
+
+  function cotaDiariaEsgotada(resetMs: number): Response {
+    return new Response(
+      JSON.stringify({
+        error: {
+          message:
+            'Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day',
+          code: 429,
+          metadata: {
+            headers: {
+              'X-RateLimit-Limit': '50',
+              'X-RateLimit-Remaining': '0',
+              'X-RateLimit-Reset': String(resetMs),
+            },
+          },
+        },
+      }),
+      { status: 429 },
+    );
+  }
+
+  it('reconhece modelo gratuito pelo sufixo e pelo roteador', () => {
+    expect(ehModeloGratuito('openrouter/free')).toBe(true);
+    expect(ehModeloGratuito('google/gemma-4-31b-it:free')).toBe(true);
+    expect(ehModeloGratuito('anthropic/claude-sonnet-5')).toBe(false);
+  });
+
+  it('cota diária esgotada interrompe com a hora de volta, e o pedido seguinte nem sai', async () => {
+    const volta = Date.now() + 6 * 60 * 60 * 1000;
+    const { buscar, enviados } = fetchFalso(() => cotaDiariaEsgotada(volta));
+    const cota = new CotaGratuita(0);
+    const chamador = chamadorGratuito(buscar, cota);
+
+    const primeira = await chamador.chamar(gratuito).catch((e: unknown) => e);
+    expect(primeira).toBeInstanceOf(LimiteDoProvedor);
+    if (!(primeira instanceof LimiteDoProvedor)) throw new Error('esperava LimiteDoProvedor');
+    expect(primeira.ate.getTime()).toBe(volta);
+    expect(primeira.houveChamada).toBe(true);
+    expect(primeira.message).toContain('cota diária');
+    expect(primeira.message).toContain('50 pedidos por dia');
+
+    // Pedido recusado por cota também conta: o segundo é recusado aqui, sem rede.
+    const segunda = await chamador.chamar(gratuito).catch((e: unknown) => e);
+    expect(segunda).toBeInstanceOf(LimiteDoProvedor);
+    expect(segunda instanceof LimiteDoProvedor && segunda.houveChamada).toBe(false);
+    expect(enviados).toHaveLength(1);
+  });
+
+  it('o bloqueio acaba na hora que o provedor disse', () => {
+    let agora = 1_000_000;
+    const cota = new CotaGratuita(0, () => agora);
+    cota.bloquear(new Date(agora + 60_000), 'pausa');
+    expect(cota.vigente()).not.toBeNull();
+    agora += 60_000;
+    expect(cota.vigente()).toBeNull();
+  });
+
+  it('espaça os pedidos gratuitos para não passar de 20 por minuto', async () => {
+    let agora = 0;
+    const esperas: number[] = [];
+    const cota = new CotaGratuita(
+      3_100,
+      () => agora,
+      (ms) => {
+        esperas.push(ms);
+        agora += ms;
+        return Promise.resolve();
+      },
+    );
+
+    await cota.aguardarVez();
+    await cota.aguardarVez();
+    await cota.aguardarVez();
+
+    expect(esperas).toEqual([3_100, 3_100]);
+  });
+
+  it('modelo pago não espera vez nem consulta a cota gratuita', async () => {
+    const cota = new CotaGratuita(0);
+    cota.bloquear(new Date(Date.now() + 60_000), 'cota gratuita esgotada');
+    const { buscar } = fetchFalso(() => respostaDeChat('{"ncm":"84212100"}'));
+
+    const resposta = await chamadorGratuito(buscar, cota).chamar(pedido);
+    expect(resposta.saida).toEqual({ ncm: '84212100' });
+  });
+
+  it('registra o modelo que o roteador escolheu', async () => {
+    const { buscar } = fetchFalso(
+      () =>
+        new Response(
+          JSON.stringify({
+            model: 'google/gemma-4-31b-it:free',
+            choices: [{ message: { content: '{"ncm":"84212100"}' }, finish_reason: 'stop' }],
+            usage: { prompt_tokens: 50, completion_tokens: 10, cost: 0 },
+          }),
+        ),
+    );
+    const resposta = await chamadorGratuito(buscar, new CotaGratuita(0)).chamar(gratuito);
+    expect(resposta.modeloServido).toBe('google/gemma-4-31b-it:free');
+    expect(resposta.custoCentavos).toBe(0);
+  });
+
+  it('conta sem a opção de privacidade dos gratuitos diz onde clicar', async () => {
+    const { buscar } = fetchFalso(() =>
+      recusa(404, 'No endpoints found matching your data policy (Free model publication).'),
+    );
+    await expect(chamadorGratuito(buscar, new CotaGratuita(0)).chamar(gratuito)).rejects.toThrow(
+      /openrouter\.ai\/settings\/privacy/,
+    );
+  });
+
+  it('lerLimite: sem dado do provedor, a do dia vira na meia-noite UTC e a do minuto em um minuto', () => {
+    const agora = Date.UTC(2026, 8, 24, 15, 0, 0);
+    const diaria = lerLimite(
+      JSON.stringify({ error: { message: 'Rate limit exceeded: free-models-per-day' } }),
+      agora,
+    );
+    expect(diaria.ate.getTime()).toBe(Date.UTC(2026, 8, 25, 0, 0, 0));
+
+    const doMinuto = lerLimite('não é json', agora);
+    expect(doMinuto.ate.getTime()).toBe(agora + 60_000);
+    expect(doMinuto.mensagem).toContain('pausa');
+  });
+
+  it('lerLimite aceita o instante de volta em segundos', () => {
+    const agora = 1_780_000_000_000;
+    const emSegundos = Math.floor((agora + 30_000) / 1000);
+    const limite = lerLimite(
+      JSON.stringify({
+        error: {
+          message: 'Rate limit exceeded: free-models-per-min',
+          metadata: { headers: { 'X-RateLimit-Reset': emSegundos } },
+        },
+      }),
+      agora,
+    );
+    expect(limite.ate.getTime()).toBe(emSegundos * 1000);
   });
 });
 
@@ -293,6 +453,42 @@ describe.skipIf(!temBancoDeTeste())('ChamadorOpenRouter com o ServicoDeLlm', () 
     const [linha] = await conexao.db.select().from(llmCall);
     expect(linha).toMatchObject({ custoCentavos: 1, tokensEntrada: 100, tokensSaida: 20 });
     expect(servico.gasto).toEqual({ centavos: 1, chamadas: 1 });
+  });
+
+  it('cota do provedor interrompe e fica registrada; a recusa decidida aqui não', async () => {
+    const volta = Date.now() + 60 * 60 * 1000;
+    const { buscar } = fetchFalso(
+      () =>
+        new Response(
+          JSON.stringify({
+            error: {
+              message: 'Rate limit exceeded: free-models-per-day',
+              metadata: { headers: { 'X-RateLimit-Reset': String(volta) } },
+            },
+          }),
+          { status: 429 },
+        ),
+    );
+    const servico = new ServicoDeLlm(
+      conexao.db,
+      new ChamadorOpenRouter({
+        chave: CHAVE,
+        centavosPorDolar: 600,
+        buscar,
+        cota: new CotaGratuita(0),
+      }),
+      new Orcamento(500, 10),
+    );
+    const gratuitos = { ...parametros, modelo: ROTEADOR_GRATUITO };
+
+    await expect(servico.pedir(gratuitos)).rejects.toBeInstanceOf(LimiteDoProvedor);
+    await expect(
+      servico.pedir({ ...gratuitos, entrada: { titulo: 'outro produto' } }),
+    ).rejects.toBeInstanceOf(LimiteDoProvedor);
+
+    const linhas = await conexao.db.select().from(llmCall);
+    expect(linhas).toHaveLength(1);
+    expect(linhas[0]?.erro).toContain('cota diária');
   });
 
   it('resposta em prosa não vira cache: a segunda tentativa pergunta de novo', async () => {

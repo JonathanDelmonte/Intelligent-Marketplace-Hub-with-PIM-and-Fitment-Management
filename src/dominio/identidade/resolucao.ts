@@ -22,7 +22,7 @@ import { and, eq, inArray, isNotNull, isNull, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Banco } from '@/infra/banco/cliente';
 import { produtoExterno } from '@/infra/banco/schema';
-import { OrcamentoEstourado, type Proposito, type ServicoDeLlm } from '@/infra/llm';
+import { ExecucaoInterrompida, type Proposito, type ServicoDeLlm } from '@/infra/llm';
 import { chaveDeAgrupamento, formaCanonica } from './canonico';
 import {
   casarDeterministicamente,
@@ -324,7 +324,8 @@ export class ResolvedorDeIdentidade {
       try {
         resolvidos.push(await this.resolver(id));
       } catch (erro) {
-        if (erro instanceof OrcamentoEstourado) {
+        // Orçamento estourado ou cota do provedor: o próximo bateria no mesmo teto.
+        if (erro instanceof ExecucaoInterrompida) {
           return { resolvidos, pararamPorOrcamento: true };
         }
         throw erro;

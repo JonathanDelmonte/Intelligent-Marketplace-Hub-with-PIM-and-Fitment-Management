@@ -89,8 +89,11 @@ responde.
   o Docker Desktop instalado **ou** a URL do banco na nuvem (Neon). Sem Docker, deixe o
   primeiro clique criar o `.env`, troque nele a linha `DATABASE_URL` pela URL do Neon e
   clique de novo — o `.env` não vem no clone, porque guarda senha.
-- **IA, opcional:** a chave do OpenRouter vai na linha `LLM_API_KEY` do `.env`. O sistema lê
-  o `.env` ao subir, então feche a janela e clique de novo depois de colar. Sem chave nada
+- **IA, opcional e gratuita:** a chave do OpenRouter vai na linha `LLM_API_KEY` do `.env`.
+  O sistema lê o `.env` ao subir, então feche a janela e clique de novo depois de colar. Os
+  modelos são gratuitos, e para eles responderem a conta precisa liberar os modelos
+  gratuitos em openrouter.ai/settings/privacy. Cota: 50 pedidos por dia (1.000 depois de
+  uma compra única de US$ 10); esgotada, o trabalho espera ela voltar. Sem chave nada
   quebra: o que depende de IA diz "ninguém sugeriu".
 - **Primeira vez:** alguns minutos. **Depois:** cerca de três segundos.
 - **Clicar de novo com tudo rodando** só abre o navegador.

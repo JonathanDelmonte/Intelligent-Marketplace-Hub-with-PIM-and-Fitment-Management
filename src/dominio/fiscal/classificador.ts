@@ -33,7 +33,7 @@
  * chave do relatório de custo por finalidade.
  */
 import { z } from 'zod';
-import { OrcamentoEstourado, type Proposito, type ServicoDeLlm } from '@/infra/llm';
+import { ExecucaoInterrompida, type Proposito, type ServicoDeLlm } from '@/infra/llm';
 import { lerCodigoFiscal } from './codigos';
 
 /** Propósito da chamada, para o cache e para o relatório de custo por finalidade. */
@@ -194,7 +194,7 @@ export async function sugerirClassificacao(
     });
   } catch (erro) {
     // Orçamento sobe; o resto é tratado como valor.
-    if (erro instanceof OrcamentoEstourado) throw erro;
+    if (erro instanceof ExecucaoInterrompida) throw erro;
     return { tipo: 'falhou', motivo: erro instanceof Error ? erro.message : String(erro) };
   }
 

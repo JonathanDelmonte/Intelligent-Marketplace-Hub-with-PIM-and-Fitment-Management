@@ -10,27 +10,27 @@
 import { lerAmbiente, type Ambiente } from '@/config/ambiente';
 import type { Banco } from '@/infra/banco/cliente';
 import { ChamadorAusente, Orcamento, ServicoDeLlm, type Chamador } from './index';
-import { ChamadorOpenRouter } from './openrouter';
+import { ChamadorOpenRouter, ROTEADOR_GRATUITO } from './openrouter';
 
 /**
- * O modelo de cada finalidade quando o `.env` não diz.
+ * O modelo de cada finalidade quando o `.env` não diz — **todos gratuitos**.
  *
- * Mora aqui, e não só no `.env.example`, por causa de quem já tem `.env`: ele foi criado
- * antes de estas linhas terem valor, e traz `LLM_MODELO_FISCAL=` vazio. Sem padrão no
- * código, colar a chave não bastaria — seria preciso também descobrir e escrever o nome
- * de três modelos.
+ * Regra do dono (CLAUDE.md, 3.7): tudo funciona de graça primeiro, e opção paga entra
+ * depois, como opção. Para texto, o padrão é o roteador `openrouter/free`, que escolhe a
+ * cada chamada um modelo gratuito disponível — e não um modelo gratuito com nome, porque a
+ * lista deles muda sem aviso: os gratuitos de Llama, Qwen e DeepSeek saíram do catálogo em
+ * 2026, e um nome fixo aqui seria um sistema que para de funcionar sozinho. Para embedding
+ * não há roteador, e o padrão é um modelo gratuito com nome, de 1024 dimensões.
  *
- * Julgamento e fiscal no modelo forte, porque são decisão sobre evidência incompleta;
- * extração no rápido e barato, porque é volume. Nomes do catálogo do OpenRouter,
- * conferidos em 24/09/2026, com o preço por milhão de tokens de entrada e de saída:
- * Sonnet 5 a US$ 2 e US$ 10, Haiku 4.5 a US$ 1 e US$ 5. O embedding tem 1536
- * dimensões, que é o tamanho da coluna (`DIMENSAO_EMBEDDING`).
+ * Mora aqui, e não só no `.env.example`, por causa de quem já tem `.env`: ele traz as
+ * linhas de modelo vazias, e colar a chave tem de bastar. Trocar por um modelo pago, ou
+ * por um gratuito escolhido, é uma linha no `.env`.
  */
 export const MODELOS_PADRAO = {
-  extracao: 'anthropic/claude-haiku-4.5',
-  julgamento: 'anthropic/claude-sonnet-5',
-  fiscal: 'anthropic/claude-sonnet-5',
-  embedding: 'openai/text-embedding-3-small',
+  extracao: ROTEADOR_GRATUITO,
+  julgamento: ROTEADOR_GRATUITO,
+  fiscal: ROTEADOR_GRATUITO,
+  embedding: 'liquid/lfm-2.5-embedding-350m:free',
 } as const;
 
 export interface ModelosDoAmbiente {

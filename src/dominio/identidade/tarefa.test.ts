@@ -16,7 +16,13 @@ import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { llmCall, parIdentidade, produtoExterno } from '@/infra/banco/schema';
 import { montarNucleoCom, type Nucleo } from '@/infra/montagem';
 import { Poller, tarefasEmOrdem, type Temporizador } from '@/infra/fila/poller';
-import { Orcamento, ServicoDeLlm, type Chamador, type RespostaDoModelo } from '@/infra/llm';
+import {
+  LimiteDoProvedor,
+  Orcamento,
+  ServicoDeLlm,
+  type Chamador,
+  type RespostaDoModelo,
+} from '@/infra/llm';
 import {
   abrirBancoDeTeste,
   limparTabelas,
@@ -199,9 +205,12 @@ describe.skipIf(!temBancoDeTeste())('resolução de identidade como tarefa de po
     expect(resultado.reagendado).toBe(true);
   });
 
-  it('teto de orçamento adia o job em vez de falhar, e não gasta tentativa', async () => {
-    // Duas ocorrências próximas por embedding e sem código de peça: o par só o
-    // julgamento resolve, e o orçamento de uma chamada estoura na segunda.
+  /**
+   * Três ocorrências próximas por embedding e sem código de peça, e o job da primeira
+   * enfileirado: o par só o julgamento resolve, então cada teste decide o que o
+   * julgamento faz.
+   */
+  async function prepararParQueSoOJulgamentoResolve(): Promise<{ readonly jobId: string }> {
     const criados = await conexao.db
       .insert(produtoExterno)
       .values([
@@ -247,6 +256,13 @@ describe.skipIf(!temBancoDeTeste())('resolução de identidade como tarefa de po
       chaveIdempotencia: chaveDeIdentidade(alvo),
       entrada: { produtoExternoId: alvo },
     });
+    return { jobId: job.id };
+  }
+
+  it('teto de orçamento adia o job em vez de falhar, e não gasta tentativa', async () => {
+    // Duas ocorrências próximas por embedding e sem código de peça: o par só o
+    // julgamento resolve, e o orçamento de uma chamada estoura na segunda.
+    const { jobId } = await prepararParQueSoOJulgamentoResolve();
 
     const chamador: Chamador = {
       nome: 'falso',
@@ -274,7 +290,7 @@ describe.skipIf(!temBancoDeTeste())('resolução de identidade como tarefa de po
 
     // `buscarDetalhado`, não `buscarPorId`: só o detalhado traz `agendadoPara`, que é
     // o campo que prova o adiamento.
-    const depois = await nucleo.fila.buscarDetalhado(job.id);
+    const depois = await nucleo.fila.buscarDetalhado(jobId);
     expect(depois?.status).toBe('pendente');
     // Adiamento não é erro: a tentativa fica intacta, senão um job que progride
     // acabaria na lista de mortos por progredir devagar.
@@ -287,6 +303,42 @@ describe.skipIf(!temBancoDeTeste())('resolução de identidade como tarefa de po
     expect(await conexao.db.select().from(parIdentidade)).toHaveLength(1);
   });
 
+  it('cota do provedor adia o job até a hora que o provedor disse', async () => {
+    const { jobId } = await prepararParQueSoOJulgamentoResolve();
+    const volta = new Date(Date.now() + 5 * 60 * 60 * 1000);
+
+    const chamador: Chamador = {
+      nome: 'falso',
+      chamar: (): Promise<RespostaDoModelo> =>
+        Promise.reject(new LimiteDoProvedor('acabou a cota diária', volta, true)),
+    };
+    const executor = new ExecutorDeIdentidade(
+      nucleo.fila,
+      (id) =>
+        new ResolvedorDeIdentidade(conexao.db, {
+          jobId: id,
+          modeloDeEmbedding: 'sintetico',
+          modeloDeJulgamento: 'openrouter/free',
+          llm: new ServicoDeLlm(conexao.db, chamador, new Orcamento(1_000, 10)),
+        }),
+    );
+
+    const resultado = await executor.processarProximo();
+    expect(resultado.tipo).toBe('adiado');
+
+    const depois = await nucleo.fila.buscarDetalhado(jobId);
+    expect(depois?.status).toBe('pendente');
+    expect(depois?.tentativas).toBe(0);
+    // A hora do provedor, e não o intervalo fixo do orçamento: repetir antes só
+    // gastaria cota com pedido recusado.
+    expect(depois?.agendadoPara.getTime()).toBe(volta.getTime());
+    expect(depois?.erro).toContain('cota diária');
+
+    // A recusa veio do provedor, então foi um pedido, e ficou registrada.
+    const chamadas = await conexao.db.select().from(llmCall);
+    expect(chamadas).toHaveLength(1);
+    expect(chamadas[0]?.erro).toContain('cota diária');
+  });
   it('cada job nasce com orçamento novo, senão o teto seria por vida do processo', async () => {
     const orcamentos: Orcamento[] = [];
     const executor = new ExecutorDeIdentidade(nucleo.fila, (jobId) => {

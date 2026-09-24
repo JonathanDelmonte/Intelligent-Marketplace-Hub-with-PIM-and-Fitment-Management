@@ -1,0 +1,1 @@
+ALTER TABLE "llm_call" ADD COLUMN "modelo_servido" text;
