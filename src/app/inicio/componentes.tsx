@@ -6,7 +6,11 @@
  * `inicio.module.css`.
  */
 import Link from 'next/link';
-import { CAMINHO as CAMINHO_DO_ASSISTENTE, PERGUNTAS_PRONTAS } from '../assistente/constantes';
+import {
+  CAMINHO as CAMINHO_DO_ASSISTENTE,
+  PERGUNTAS_PRONTAS,
+  PRONTAS_NA_VISAO_GERAL,
+} from '../assistente/constantes';
 import { IconeDaPorta } from '../icones';
 import { IDENTIDADE_DA_LOJA } from '../lojas/identidade';
 import { Selo } from '../lojas/selo';
@@ -170,7 +174,7 @@ export function PergunteAIA() {
         </button>
       </form>
       <ul aria-label="Perguntas prontas" className={estilo.prontas}>
-        {PERGUNTAS_PRONTAS.map((p) => (
+        {PERGUNTAS_PRONTAS.slice(0, PRONTAS_NA_VISAO_GERAL).map((p) => (
           <li key={p.id}>
             <Link className={estilo.pronta} href={`${CAMINHO_DO_ASSISTENTE}?pronta=${p.id}`}>
               {p.rotulo}

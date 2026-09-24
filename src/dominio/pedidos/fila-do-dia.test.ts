@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   diaNoFuso,
   FUSO_PADRAO,
+  juntarFilas,
   montarFilaDoDia,
   resumoDaFila,
   ROTULO_DA_URGENCIA,
@@ -167,6 +168,37 @@ describe('resumoDaFila', () => {
 
   it('tudo postado é dito como conquista, com o número', () => {
     expect(resumo([pedido({ postagemConfirmadaEm: AGORA })])).toContain('Tudo postado: 1');
+  });
+});
+
+describe('juntarFilas', () => {
+  it('soma as contagens e mantém a ordem de uma fila única', () => {
+    const shopee = montarFilaDoDia(
+      [
+        pedido({ plataforma: 'shopee', prazoPostagemAte: new Date('2026-09-14T20:00:00.000Z') }),
+        pedido({ plataforma: 'shopee', postagemConfirmadaEm: AGORA }),
+      ],
+      AGORA,
+    );
+    const ml = montarFilaDoDia(
+      [pedido({ prazoPostagemAte: new Date('2026-09-14T12:00:00.000Z') }), pedido()],
+      AGORA,
+    );
+
+    const junta = juntarFilas([shopee, ml]);
+
+    expect(junta.porUrgencia).toEqual({ sem_prazo: 1, atrasado: 1, hoje: 1, amanha: 0, depois: 0 });
+    // O postado de uma loja continua contado: é o "3 de 8 feitos" da tela.
+    expect(junta.jaPostados).toBe(1);
+    expect(junta.itens.map((i) => i.urgencia)).toEqual(['sem_prazo', 'atrasado', 'hoje']);
+  });
+
+  it('nenhuma fila é a fila vazia', () => {
+    expect(juntarFilas([])).toEqual({
+      itens: [],
+      porUrgencia: { sem_prazo: 0, atrasado: 0, hoje: 0, amanha: 0, depois: 0 },
+      jaPostados: 0,
+    });
   });
 });
 

@@ -140,18 +140,46 @@ export function montarFilaDoDia(
     });
   }
 
-  // Ordena por urgência e, dentro dela, por prazo mais próximo. Desempate por id
-  // para a lista não trocar de ordem entre dois carregamentos.
-  const ordenados = [...itens].sort((a, b) => {
-    const peso = PESO_DA_URGENCIA[a.urgencia] - PESO_DA_URGENCIA[b.urgencia];
-    if (peso !== 0) return peso;
-    const prazoA = a.prazoPostagemAte?.getTime() ?? 0;
-    const prazoB = b.prazoPostagemAte?.getTime() ?? 0;
-    if (prazoA !== prazoB) return prazoA - prazoB;
-    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
-  });
+  return { itens: [...itens].sort(compararItens), porUrgencia, jaPostados };
+}
 
-  return { itens: ordenados, porUrgencia, jaPostados };
+/**
+ * A ordem da fila: por urgência e, dentro dela, por prazo mais próximo. Desempate por id
+ * para a lista não trocar de ordem entre dois carregamentos.
+ */
+function compararItens(a: ItemDaFila, b: ItemDaFila): number {
+  const peso = PESO_DA_URGENCIA[a.urgencia] - PESO_DA_URGENCIA[b.urgencia];
+  if (peso !== 0) return peso;
+  const prazoA = a.prazoPostagemAte?.getTime() ?? 0;
+  const prazoB = b.prazoPostagemAte?.getTime() ?? 0;
+  if (prazoA !== prazoB) return prazoA - prazoB;
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+
+/**
+ * As filas de várias lojas numa só, na mesma ordem de uma fila única.
+ *
+ * Existe para o assistente responder "o que postar hoje" de duas lojas sem ler a fila de
+ * todas e filtrar depois — o que perderia a contagem do que cada uma já postou.
+ */
+export function juntarFilas(filas: readonly FilaDoDia[]): FilaDoDia {
+  const porUrgencia: Record<Urgencia, number> = {
+    sem_prazo: 0,
+    atrasado: 0,
+    hoje: 0,
+    amanha: 0,
+    depois: 0,
+  };
+  let jaPostados = 0;
+  for (const fila of filas) {
+    for (const urgencia of URGENCIAS) porUrgencia[urgencia] += fila.porUrgencia[urgencia];
+    jaPostados += fila.jaPostados;
+  }
+  return {
+    itens: filas.flatMap((f) => f.itens).sort(compararItens),
+    porUrgencia,
+    jaPostados,
+  };
 }
 
 /** Uma frase dizendo o tamanho do trabalho do dia. */

@@ -41,6 +41,9 @@ export const PROPOSITOS = [
   'fiscal',
   'prospeccao',
   'leitura_serie',
+  // O assistente (ADR 0009) só traduz a pergunta livre em consulta fechada, e só quando a
+  // regra não entendeu. A conta é sempre do código.
+  'assistente',
 ] as const;
 export type Proposito = (typeof PROPOSITOS)[number];
 

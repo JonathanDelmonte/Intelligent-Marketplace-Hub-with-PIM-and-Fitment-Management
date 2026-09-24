@@ -1,0 +1,299 @@
+/*
+ * A tela do assistente (ADR 0009).
+ *
+ * Uma coluna estreita, como conversa: a caixa da pergunta, as prontas, e o cartão da
+ * resposta. Cores só de variável de tema (ADR 0003) — a cor de cada loja entra pelo selo,
+ * e só nele.
+ */
+
+.pagina {
+  composes: pagina from '../ui/comum.module.css';
+  --largura-pagina: 52rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-4);
+}
+
+.cabecalho {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-2);
+}
+
+.titulo {
+  composes: titulo from '../ui/comum.module.css';
+}
+
+.subtitulo {
+  composes: subtitulo from '../ui/comum.module.css';
+}
+
+.contexto {
+  align-items: center;
+  color: var(--cor-texto-fraco);
+  display: flex;
+  font-size: var(--texto-menor);
+  gap: var(--espaco-2);
+  margin: 0;
+}
+
+/* ── A pergunta ──────────────────────────────────────────────────────────── */
+
+.caixa {
+  display: flex;
+  gap: var(--espaco-2);
+}
+
+.campo {
+  composes: entrada from '../ui/comum.module.css';
+  flex: 1;
+  min-height: 2.75rem;
+  min-width: 0;
+}
+
+.botao {
+  composes: botao from '../ui/comum.module.css';
+}
+
+.prontas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pronta {
+  align-items: center;
+  background: var(--cor-superficie-baixa);
+  border-radius: 999px;
+  color: var(--cor-texto);
+  display: inline-flex;
+  font-size: var(--texto-menor);
+  min-height: 2rem;
+  padding: 0 var(--espaco-3);
+  text-decoration: none;
+}
+
+.pronta:hover {
+  background: var(--cor-borda);
+}
+
+.vazio {
+  color: var(--cor-texto-fraco);
+  font-size: var(--texto-menor);
+  margin: var(--espaco-2) 0 0;
+}
+
+/* ── A resposta ──────────────────────────────────────────────────────────── */
+
+.resposta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-3);
+  margin-top: var(--espaco-2);
+}
+
+/* A pergunta como foi feita, à direita, como a fala de quem perguntou. */
+.perguntado {
+  align-self: flex-end;
+  background: var(--cor-primaria);
+  border-radius: var(--raio) var(--raio) var(--raio-pequeno) var(--raio);
+  color: var(--cor-fundo);
+  margin: 0;
+  max-width: min(36rem, 90%);
+  padding: var(--espaco-2) var(--espaco-4);
+}
+
+.corpo {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra-cartao);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-3);
+  padding: var(--espaco-4) var(--espaco-5);
+}
+
+.entendido {
+  align-items: flex-start;
+  color: var(--cor-texto-fraco);
+  display: flex;
+  font-size: var(--texto-miudo);
+  gap: var(--espaco-2);
+  margin: 0;
+}
+
+/* O ícone fica ao lado do texto, e não numa linha sozinho quando o texto quebra. */
+.entendido > svg {
+  flex: none;
+  margin-top: 0.1em;
+}
+
+.entendido strong {
+  color: var(--cor-texto);
+  font-weight: 600;
+}
+
+.lead {
+  font-size: var(--texto-maior);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.complemento {
+  color: var(--cor-texto-fraco);
+  margin: 0;
+}
+
+.secao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-2);
+}
+
+.secaoTitulo {
+  color: var(--cor-texto-fraco);
+  font-size: var(--texto-miudo);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin: var(--espaco-2) 0 0;
+  text-transform: uppercase;
+}
+
+.linhas {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.linha {
+  align-items: center;
+  border-top: 1px solid var(--cor-borda);
+  display: flex;
+  gap: var(--espaco-3);
+  padding: var(--espaco-2) 0;
+}
+
+.linha:first-child {
+  border-top: none;
+}
+
+.linhaTextos {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.linhaRotulo {
+  overflow-wrap: anywhere;
+}
+
+.linhaNota {
+  color: var(--cor-texto-fraco);
+  font-size: var(--texto-miudo);
+}
+
+.linhaValor {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.notas {
+  border-left: 3px solid var(--cor-aviso);
+  color: var(--cor-texto-fraco);
+  display: flex;
+  flex-direction: column;
+  font-size: var(--texto-menor);
+  gap: var(--espaco-1);
+  margin: 0;
+  padding: 0 0 0 var(--espaco-3);
+  list-style: none;
+}
+
+.acao {
+  composes: botaoSecundario from '../ui/comum.module.css';
+  align-self: flex-start;
+  text-decoration: none;
+}
+
+.rodape {
+  color: var(--cor-texto-fraco);
+  font-size: var(--texto-miudo);
+  margin: 0;
+}
+
+/* ── Sem resposta ────────────────────────────────────────────────────────── */
+
+.avisoNeutro {
+  border-left: 3px solid var(--cor-borda-forte);
+}
+
+.avisoAtencao {
+  border-left: 3px solid var(--cor-aviso);
+}
+
+.avisoErro {
+  border-left: 3px solid var(--cor-erro);
+}
+
+.avisoTitulo {
+  font-size: var(--texto-base);
+  font-weight: 600;
+  margin: 0;
+}
+
+.avisoCorpo {
+  margin: 0;
+}
+
+.detalhe {
+  color: var(--cor-texto-fraco);
+  font-size: var(--texto-miudo);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ── Como eu respondo ────────────────────────────────────────────────────── */
+
+.como {
+  border-top: 1px solid var(--cor-borda);
+  margin-top: var(--espaco-4);
+  padding-top: var(--espaco-3);
+}
+
+.comoResumo {
+  color: var(--cor-texto-fraco);
+  cursor: pointer;
+  font-size: var(--texto-menor);
+}
+
+.comoLista {
+  color: var(--cor-texto-fraco);
+  display: flex;
+  flex-direction: column;
+  font-size: var(--texto-menor);
+  gap: var(--espaco-2);
+  margin: var(--espaco-3) 0 0;
+  max-width: var(--medida-texto);
+  padding-left: var(--espaco-5);
+}
+
+@media (max-width: 40rem) {
+  .caixa {
+    flex-direction: column;
+  }
+
+  .corpo {
+    padding: var(--espaco-4);
+  }
+}
