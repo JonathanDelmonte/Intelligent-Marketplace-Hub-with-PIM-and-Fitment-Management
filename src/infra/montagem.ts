@@ -21,7 +21,9 @@ import {
   ExecutorDeCompatibilidade,
   tarefaDeCompatibilidade,
 } from '@/dominio/compatibilidade/tarefa';
+import { ExtratorDeRegistros } from '@/dominio/identidade/extracao';
 import { tarefaDeIdentidade } from '@/dominio/identidade/tarefa';
+import { ExecutorDeExtracao, tarefaDeExtracao } from '@/dominio/identidade/tarefa-de-extracao';
 import { RepositorioDePedidos } from '@/dominio/pedidos/repositorio';
 import { ExecutorDePedidos, tarefaDePedidos, type ResolverPerfil } from '@/dominio/pedidos/tarefa';
 import { carregarPerfil } from '@/dominio/perfil';
@@ -47,13 +49,19 @@ import { llmDoAmbiente } from './llm/ambiente';
 import { registradorSilencioso, type Registrador } from './log';
 
 /**
- * O LLM de um job de identidade: serviço com orçamento novo e o modelo de julgamento.
+ * O LLM de um job, ou de um lote de extração: serviço com orçamento novo e os modelos.
  *
  * `undefined` quando não há chave — e o resolvedor decide tudo o que dá para decidir
- * sem julgamento, deixando o resto na fila de revisão com o motivo escrito.
+ * sem julgamento, deixando o resto na fila de revisão com o motivo escrito; a extração
+ * fica parada, e o que foi importado espera a chave sem se perder.
  */
 export type LlmDeJob = () =>
-  { readonly servico: ServicoDeLlm; readonly modeloDeJulgamento: string } | undefined;
+  | {
+      readonly servico: ServicoDeLlm;
+      readonly modeloDeJulgamento: string;
+      readonly modeloDeExtracao: string;
+    }
+  | undefined;
 
 export interface OpcoesDaMontagem {
   /** Ausente em teste: o grafo monta sem LLM, que é o caminho que não depende de rede. */
@@ -67,6 +75,8 @@ export interface Nucleo {
   readonly ingestor: IngestorDeProdutoExterno;
   readonly orquestrador: Orquestrador;
   readonly executor: ExecutorDeIngestao;
+  /** Lê marca, peça e aparelho dos títulos, em lote (M3, 5.1). */
+  readonly executorDeExtracao: ExecutorDeExtracao;
   /** Consome a fila de resolução de identidade (M3). */
   readonly executorDeIdentidade: ExecutorDeIdentidade;
   /** Consome a fila de coleta de compatibilidade (M4). */
@@ -83,7 +93,8 @@ export interface Nucleo {
 }
 
 /** Nome da tarefa composta, no log. */
-export const NOME_DA_TAREFA_COMPLETA = 'ingestao+identidade+compatibilidade+pedidos+prospector';
+export const NOME_DA_TAREFA_COMPLETA =
+  'ingestao+extracao+identidade+compatibilidade+pedidos+prospector';
 
 /**
  * A tarefa que o sistema roda, com as três filas na ordem de prioridade.
@@ -101,6 +112,9 @@ export function tarefaCompleta(
 ): Tarefa {
   return tarefasEmOrdem(NOME_DA_TAREFA_COMPLETA, [
     tarefaDeIngestao(nucleo.executor, registrador),
+    // Antes da identidade: com extração pendente, a resolução espera e resolve já com
+    // marca e modelo, em vez de resolver sem e ter de resolver de novo.
+    tarefaDeExtracao(nucleo.executorDeExtracao, registrador),
     tarefaDeIdentidade(nucleo.executorDeIdentidade, registrador),
     tarefaDeCompatibilidade(nucleo.executorDeCompatibilidade, registrador),
     tarefaDePedidos(nucleo.executorDePedidos, registrador),
@@ -171,6 +185,18 @@ export function montarNucleoCom(
     });
   });
 
+  /**
+   * Um extrator **por lote**, pelo mesmo motivo do resolvedor: orçamento novo a cada
+   * pedido. O executor em volta é um só, porque é ele que guarda a espera depois de uma
+   * cota esgotada — e espera que se esquece a cada tique não é espera.
+   */
+  const executorDeExtracao = new ExecutorDeExtracao(fila, () => {
+    const llm = opcoes.llmDeJob?.();
+    return llm === undefined
+      ? undefined
+      : new ExtratorDeRegistros(db, { llm: llm.servico, modelo: llm.modeloDeExtracao });
+  });
+
   // Sem LLM e sem orçamento: a coleta de compatibilidade é comparação de texto
   // normalizado contra os aparelhos cadastrados, então uma instância só serve para
   // todos os jobs — ao contrário do resolvedor de identidade.
@@ -207,6 +233,7 @@ export function montarNucleoCom(
     ingestor,
     orquestrador,
     executor,
+    executorDeExtracao,
     executorDeIdentidade,
     executorDeCompatibilidade,
     compatibilidade,
@@ -251,7 +278,11 @@ export function montarNucleo(): Nucleo {
       llmDeJob: () => {
         const llm = llmDoAmbiente(db);
         return llm.temChave
-          ? { servico: llm.servico, modeloDeJulgamento: llm.modelos.julgamento }
+          ? {
+              servico: llm.servico,
+              modeloDeJulgamento: llm.modelos.julgamento,
+              modeloDeExtracao: llm.modelos.extracao,
+            }
           : undefined;
       },
     },

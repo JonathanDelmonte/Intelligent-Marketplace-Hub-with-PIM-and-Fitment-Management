@@ -118,7 +118,9 @@ describe.skipIf(!temBancoDeTeste())('tarefa completa', () => {
       resolvedorDePerfilDeTeste(conexao.db, 'perfil-montagem'),
     );
     expect(tarefaCompleta(nucleo).nome).toBe(NOME_DA_TAREFA_COMPLETA);
-    expect(NOME_DA_TAREFA_COMPLETA).toBe('ingestao+identidade+compatibilidade+pedidos+prospector');
+    expect(NOME_DA_TAREFA_COMPLETA).toBe(
+      'ingestao+extracao+identidade+compatibilidade+pedidos+prospector',
+    );
   });
 
   it('o prospector monta com os investigadores da instalação', () => {
