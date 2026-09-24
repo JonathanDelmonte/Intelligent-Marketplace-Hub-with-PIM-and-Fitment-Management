@@ -78,8 +78,14 @@ export class Orquestrador {
   }): Promise<ResultadoDoRecebimento> {
     const classificacao = classificar(params.entrada);
 
-    const hashConteudo =
-      params.conteudo === undefined ? null : await this.armazenamento.guardar(params.conteudo);
+    // Texto longo demais para o payload vai para o armazenamento, como arquivo. Sem isso
+    // a tabela colada de um fornecedor grande chegava ao executor sem texto nenhum.
+    const conteudo =
+      params.conteudo ??
+      (params.entrada.tipo === 'texto' && params.entrada.valor.length > MAX_TEXTO_NO_PAYLOAD
+        ? new TextEncoder().encode(params.entrada.valor)
+        : undefined);
+    const hashConteudo = conteudo === undefined ? null : await this.armazenamento.guardar(conteudo);
 
     const payload = montarPayload({ entrada: params.entrada, classificacao, hashConteudo });
     const chave = chaveDeIdempotencia(payload);

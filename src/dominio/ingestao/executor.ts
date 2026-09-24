@@ -33,6 +33,11 @@ import { formatoPorNome } from './planilha/leitor';
 import { classificarPlanilha } from '@/dominio/pedidos/planilha';
 import { enfileirarImportacaoDePedidos } from '@/dominio/pedidos/tarefa';
 import { ImportadorDePlanilha } from './planilha/importador';
+import { linksDaPagina } from '@/dominio/web/pagina';
+import { FalhaDeRede, lerTexto, type OpcoesDaRede, type RespostaDeTexto } from '@/infra/web/rede';
+import { ehUrlDeAnuncio } from './classificador';
+import { capturasDoTexto, extrairDaPagina } from './extratores';
+import type { ProdutoExternoCapturado } from './produto-externo';
 
 export interface ContagemDaIngestao {
   readonly gravados: number;
@@ -81,9 +86,9 @@ export type ResultadoDoProcessamento =
 /** Mensagem única para tipo que espera extrator com LLM. */
 function motivoDeExtratorAusente(tipo: TipoDeEntrada): string {
   return (
-    `não há extrator para "${tipo}" ainda. Esse tipo depende de extração por LLM ` +
-    '(roadmap, etapas 3.2 a 3.6), que precisa de chave de LLM configurada. ' +
-    'A entrada está guardada e será processada quando o extrator existir.'
+    `não há extrator para "${tipo}" ainda: ler imagem e PDF de tabela são as etapas ` +
+    '3.5 e 3.6 do roadmap. A entrada está guardada e será processada quando o extrator ' +
+    'existir. Enquanto isso, o texto da tabela colado no campo de entrada já é lido.'
   );
 }
 
@@ -110,6 +115,9 @@ function motivoDePlataformaDesconhecida(): string {
   );
 }
 
+/** Links de anúncio que uma página de lista enfileira, no máximo. A primeira página da busca. */
+export const LINKS_POR_LISTAGEM = 50;
+
 export class ExecutorDeIngestao {
   private readonly importador = new ImportadorDePlanilha();
 
@@ -118,6 +126,12 @@ export class ExecutorDeIngestao {
     private readonly armazenamento: ArmazenamentoDeConteudo,
     private readonly ingestor: IngestorDeProdutoExterno,
     private readonly orquestrador: Orquestrador,
+    /**
+     * Rede para ler link colado. `null` — o padrão, e o do teste — deixa o link guardado
+     * em revisão, dizendo que esta instalação foi montada sem rede.
+     */
+    private readonly rede: OpcoesDaRede | null = null,
+    private readonly agora: () => Date = () => new Date(),
   ) {}
 
   /**
@@ -180,23 +194,207 @@ export class ExecutorDeIngestao {
       // Planilha genérica é o único destes que **não** espera LLM: espera um nome
       // de arquivo que diga a plataforma. Mensagem própria, por isso.
       case 'planilha_generica': {
+        // Tabela **colada** — do WhatsApp, de um e-mail — não tem nome de arquivo para
+        // renomear: vai para a leitura de linhas, que é o que ela é.
+        if (payload.nomeArquivo === null && payload.url === null) {
+          return this.processarTexto(job, payload);
+        }
         const motivo = motivoDePlataformaDesconhecida();
         await this.fila.mandarParaRevisao(job.id, motivo);
         return { tipo: 'pendente_revisao', jobId: job.id, motivo };
       }
 
-      // Todos dependem de extração por LLM, que não existe ainda.
       case 'anuncio_marketplace':
-      case 'listagem_categoria':
+        return this.processarPagina(job, payload, { anuncio: true });
+
       case 'catalogo_distribuidor':
+        return this.processarPagina(job, payload, { anuncio: false });
+
+      case 'listagem_categoria':
+        return this.processarListagem(job, payload);
+
+      case 'texto_colado':
+        return this.processarTexto(job, payload);
+
+      // Dependem de ler imagem e PDF, que não existem ainda.
       case 'tabela_precos_pdf':
-      case 'imagem_tabela':
-      case 'texto_colado': {
+      case 'imagem_tabela': {
         const motivo = motivoDeExtratorAusente(tipo);
         await this.fila.mandarParaRevisao(job.id, motivo);
         return { tipo: 'pendente_revisao', jobId: job.id, motivo };
       }
     }
+  }
+
+  private async revisao(job: JobEnfileirado, motivo: string): Promise<ResultadoDoProcessamento> {
+    await this.fila.mandarParaRevisao(job.id, motivo);
+    return { tipo: 'pendente_revisao', jobId: job.id, motivo };
+  }
+
+  /**
+   * Lê o link. Devolve o texto, ou o motivo de revisão quando a página não serve.
+   *
+   * Falha passageira — rede fora, 429, erro 5xx — **lança**: o job é reagendado com
+   * espera, e o link é lido de novo mais tarde. Página que não existe (404) ou que recusa
+   * quem não é navegador (403) vira revisão: ler de novo não muda nada.
+   */
+  private async lerLink(
+    url: string,
+  ): Promise<
+    | { readonly tipo: 'ok'; readonly resposta: RespostaDeTexto }
+    | { readonly tipo: 'revisao'; readonly motivo: string }
+  > {
+    if (this.rede === null) {
+      return {
+        tipo: 'revisao',
+        motivo:
+          'esta instalação foi montada sem rede, e o link não foi lido. Ele está guardado: reenfileire quando houver rede.',
+      };
+    }
+    let resposta: RespostaDeTexto;
+    try {
+      resposta = await lerTexto(url, this.rede);
+    } catch (erro) {
+      if (erro instanceof FalhaDeRede && erro.message.startsWith('endereço recusado')) {
+        return { tipo: 'revisao', motivo: erro.message };
+      }
+      throw erro;
+    }
+    if (resposta.status === 404 || resposta.status === 410) {
+      return { tipo: 'revisao', motivo: `a página não existe mais (${String(resposta.status)}).` };
+    }
+    if (resposta.status === 401 || resposta.status === 403) {
+      return {
+        tipo: 'revisao',
+        motivo: `o site recusou a leitura (${String(resposta.status)}): ele só abre no navegador. Cole o título e o preço como texto.`,
+      };
+    }
+    if (resposta.status >= 400) {
+      throw new Error(`o site respondeu ${String(resposta.status)} ao ler ${url}.`);
+    }
+    return { tipo: 'ok', resposta };
+  }
+
+  /** Link de anúncio ou de catálogo: uma captura por produto que a página declara. */
+  private async processarPagina(
+    job: JobEnfileirado,
+    payload: EntradaDoJobDeIngestao,
+    opcoes: { readonly anuncio: boolean },
+  ): Promise<ResultadoDoProcessamento> {
+    const tipo = payload.classificacao.tipoDeEntrada;
+    if (payload.url === null) return this.revisao(job, motivoDeExtratorAusente(tipo));
+
+    const lido = await this.lerLink(payload.url);
+    if (lido.tipo === 'revisao') return this.revisao(job, lido.motivo);
+
+    const extraido = extrairDaPagina({
+      html: lido.resposta.texto,
+      url: lido.resposta.url,
+      site: payload.classificacao.site,
+      coletadoEm: this.agora(),
+      anuncio: opcoes.anuncio,
+    });
+    if (extraido.tipo === 'revisao') return this.revisao(job, extraido.motivo);
+
+    return this.gravarTodas(job, tipo, extraido.capturas);
+  }
+
+  /** Página de lista: um job por link de anúncio que ela aponta. */
+  private async processarListagem(
+    job: JobEnfileirado,
+    payload: EntradaDoJobDeIngestao,
+  ): Promise<ResultadoDoProcessamento> {
+    if (payload.url === null) return this.revisao(job, 'lista sem endereço');
+
+    const lido = await this.lerLink(payload.url);
+    if (lido.tipo === 'revisao') return this.revisao(job, lido.motivo);
+
+    const links = linksDaPagina(lido.resposta.texto, lido.resposta.url)
+      .filter(ehUrlDeAnuncio)
+      .slice(0, LINKS_POR_LISTAGEM);
+    if (links.length === 0) {
+      return this.revisao(
+        job,
+        'a página de lista não trouxe link de anúncio — a plataforma pode montar a lista no navegador. Cole os links dos anúncios, um por linha.',
+      );
+    }
+
+    const filhos = await this.orquestrador.receberLista(links);
+    await this.fila.concluir(job.id, {
+      filhosEnfileirados: filhos.length,
+      jobsFilhos: filhos.map((f) => f.job.id),
+    });
+    return { tipo: 'enfileirou_filhos', jobId: job.id, quantidade: filhos.length };
+  }
+
+  /** Tabela de fornecedor colada como texto: uma captura por linha de produto. */
+  private async processarTexto(
+    job: JobEnfileirado,
+    payload: EntradaDoJobDeIngestao,
+  ): Promise<ResultadoDoProcessamento> {
+    const texto =
+      payload.texto ??
+      (payload.hashConteudo === null
+        ? null
+        : await this.armazenamento.lerTexto(payload.hashConteudo));
+    if (texto === null || texto.trim() === '') return this.revisao(job, 'texto vazio');
+
+    const capturas = capturasDoTexto({
+      texto,
+      coletadoEm: this.agora(),
+      fonte: 'manual',
+      origem: 'texto colado',
+    });
+    if (capturas.length === 0) {
+      return this.revisao(
+        job,
+        'nenhuma linha com preço ou código de peça. Cole a tabela com um produto por linha — por exemplo "Refil PA21G - 38,00".',
+      );
+    }
+    return this.gravarTodas(job, 'texto_colado', capturas);
+  }
+
+  /**
+   * Grava as capturas, enfileira a resolução de identidade de cada uma e conclui o job.
+   *
+   * O mesmo laço da planilha, com o mesmo motivo de enfileirar também o duplicado: se
+   * o job quebrar entre gravar e enfileirar, a reexecução vê a linha como duplicada.
+   */
+  private async gravarTodas(
+    job: JobEnfileirado,
+    tipoDeEntrada: TipoDeEntrada,
+    capturas: readonly ProdutoExternoCapturado[],
+  ): Promise<ResultadoDoProcessamento> {
+    let gravados = 0;
+    let duplicados = 0;
+    let rejeitados = 0;
+    const recusadas: { readonly titulo: string; readonly problemas: readonly string[] }[] = [];
+
+    for (const captura of capturas) {
+      const resultado = await this.ingestor.gravar(captura);
+      if (resultado.tipo === 'pendente_revisao') {
+        rejeitados += 1;
+        recusadas.push({ titulo: captura.tituloBruto, problemas: resultado.problemas });
+        continue;
+      }
+      if (resultado.tipo === 'gravado') gravados += 1;
+      else duplicados += 1;
+      await this.fila.enfileirar({
+        tipo: TIPO_JOB_IDENTIDADE,
+        chaveIdempotencia: chaveDeIdentidade(resultado.id),
+        entrada: { produtoExternoId: resultado.id },
+      });
+    }
+
+    const contagem: ContagemDaIngestao = { gravados, duplicados, rejeitados };
+    await this.fila.concluir(job.id, { ...contagem, rejeitadas: recusadas });
+    return {
+      tipo: 'concluido',
+      jobId: job.id,
+      tipoDeEntrada,
+      contagem,
+      colunasNaoReconhecidas: [],
+    };
   }
 
   private async processarPlanilha(

@@ -38,7 +38,7 @@ import { Orquestrador } from '@/dominio/ingestao/orquestrador';
 import { IngestorDeProdutoExterno } from '@/dominio/ingestao/produto-externo';
 import { RepositorioDoMonitor } from '@/dominio/monitor/repositorio';
 import { MotorDoProspector } from '@/dominio/prospector/motor';
-import type { OpcoesDaRede } from '@/dominio/prospector/investigadores/rede';
+import type { OpcoesDaRede } from '@/infra/web/rede';
 import { investigadoresDaInstalacao } from '@/dominio/prospector/registro';
 import { RepositorioDeDossies } from '@/dominio/prospector/repositorio';
 import { ExecutorDoProspector, tarefaDoProspector } from '@/dominio/prospector/tarefa';
@@ -71,8 +71,9 @@ export interface OpcoesDaMontagem {
   /** Ausente em teste: o grafo monta sem LLM, que é o caminho que não depende de rede. */
   readonly llmDeJob?: LlmDeJob | undefined;
   /**
-   * Rede para as ferramentas do garimpo. Ausente em teste: o garimpo monta só com a base
-   * local, e a suíte não depende de internet nem bate em serviço de terceiro.
+   * Rede para ler link colado e para as ferramentas do garimpo. Ausente em teste: o link
+   * fica guardado em revisão, o garimpo monta só com a base local, e a suíte não depende
+   * de internet nem bate em serviço de terceiro.
    */
   readonly rede?: OpcoesDaRede | undefined;
 }
@@ -172,7 +173,13 @@ export function montarNucleoCom(
   // ingestão nem o monitor precisam conhecer o outro.
   const ingestor = new IngestorDeProdutoExterno(db, new RepositorioDoMonitor(db));
   const orquestrador = new Orquestrador(fila, armazenamento);
-  const executor = new ExecutorDeIngestao(fila, armazenamento, ingestor, orquestrador);
+  const executor = new ExecutorDeIngestao(
+    fila,
+    armazenamento,
+    ingestor,
+    orquestrador,
+    opcoes.rede ?? null,
+  );
   // Uma instância de importador para as duas pontas: a de anúncio, dentro do
   // executor de ingestão, e a de venda, aqui. É sem estado.
   const importadorDePlanilha = new ImportadorDePlanilha();

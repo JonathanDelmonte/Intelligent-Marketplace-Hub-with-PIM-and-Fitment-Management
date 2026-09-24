@@ -284,7 +284,7 @@ describe.skipIf(!temBancoDeTeste())('ingestão de ponta a ponta', () => {
   });
 
   describe('tipos sem extrator vão para revisão, não para erro', () => {
-    it('URL de anúncio diz exatamente o que falta', async () => {
+    it('URL de anúncio, sem rede, fica guardada dizendo exatamente o que faltou', async () => {
       const recebido = await orquestrador.receber({
         entrada: { tipo: 'url', valor: 'https://produto.mercadolivre.com.br/MLB-1234567890-refil' },
       });
@@ -294,10 +294,20 @@ describe.skipIf(!temBancoDeTeste())('ingestão de ponta a ponta', () => {
 
       expect(processado.tipo).toBe('pendente_revisao');
       if (processado.tipo !== 'pendente_revisao') return;
-      // Não é erro genérico: diz o tipo, a etapa do roadmap e o que falta.
-      expect(processado.motivo).toContain('anuncio_marketplace');
-      expect(processado.motivo).toContain('LLM');
-      expect(processado.motivo).toContain('3.2');
+      // Não é erro genérico: diz que faltou rede, e que o link não se perdeu.
+      expect(processado.motivo).toContain('sem rede');
+      expect(processado.motivo).toContain('guardado');
+    });
+
+    it('PDF e imagem de tabela dizem a etapa que falta, e o caminho que já existe', async () => {
+      await orquestrador.receber({
+        entrada: { tipo: 'url', valor: 'https://exemplo.com/tabela.jpg' },
+      });
+      const processado = await executor.processarProximo();
+      expect(processado.tipo === 'pendente_revisao' && processado.motivo).toContain('3.6');
+      expect(processado.tipo === 'pendente_revisao' && processado.motivo).toContain(
+        'texto da tabela',
+      );
     });
 
     it('planilha sem plataforma no nome não fala de LLM, fala do nome', async () => {
@@ -341,7 +351,7 @@ describe.skipIf(!temBancoDeTeste())('ingestão de ponta a ponta', () => {
       expect(await executor.processarProximo()).toEqual({ tipo: 'fila_vazia' });
     });
 
-    it('todos os tipos que dependem de LLM caem em revisão', async () => {
+    it('sem rede, todo link cai em revisão, e nenhum vira erro', async () => {
       const entradas = [
         { tipo: 'url' as const, valor: 'https://produto.mercadolivre.com.br/MLB-1234567890-a' },
         { tipo: 'url' as const, valor: 'https://lista.mercadolivre.com.br/refil' },
