@@ -4,20 +4,17 @@
  * ## Por que lateral, e não barra no topo
  *
  * A barra no topo empatou com o número de telas. Com quinze portas em uma linha, ela
- * ocupava quatro linhas em 390px e duas em 1440px, e o agrupamento por momento de
- * trabalho — que é a única coisa que torna quinze portas navegáveis — tinha de ser dito
- * por um traço vertical, porque não havia onde escrever o título do grupo.
+ * ocupava quatro linhas em 390px e duas em 1440px, e o agrupamento — que é a única coisa
+ * que torna quinze portas navegáveis — tinha de ser dito por um traço vertical, porque
+ * não havia onde escrever o título do grupo.
  *
- * Na lateral o título do grupo caber é de graça. É a metade boa do painel de vendedor
- * da Shopee: a lateral agrupada escala para muitas telas e diz a que categoria cada uma
- * pertence, sem gastar altura da área onde o trabalho acontece.
+ * ## Por que escura (ADR 0009)
  *
- * ## Por que o cromo é neutro
- *
- * O painel do Mercado Livre põe a cor da marca numa faixa chapada no topo. Aqui a cor
- * da marca vem de `perfil_vendedor.marca_visual` e pode ser qualquer uma (ADR 0003) —
- * uma faixa chapada de cor desconhecida é aposta, não desenho. Então a cor de marca
- * aparece só onde significa alguma coisa: ação, link, e a marca da tela aberta.
+ * A barra passou a ter um grupo de lojas, cada uma com o selo e o estado dela. Sobre
+ * fundo escuro o selo colorido é achado de relance, e a navegação se separa da área de
+ * trabalho sem precisar de borda. O escuro é neutro: a cor da marca vem de
+ * `perfil_vendedor.marca_visual` e pode ser qualquer uma (ADR 0003), então ela aparece
+ * só onde significa alguma coisa — o botão de importar e o ícone da tela aberta.
  *
  * Cores só de variável de tema, nunca literal (ADR 0003).
  */
@@ -44,20 +41,16 @@
  *
  * Uma camada só não resolve: `position: sticky` com `height: 100dvh` pinta a lateral até
  * a altura da janela e deixa o resto da coluna com a cor do corpo — numa página de 2700px
- * isso é um corte horizontal atravessando a lateral no meio, que foi exatamente o que
- * apareceu na primeira renderização.
+ * isso é um corte horizontal atravessando a lateral no meio.
  */
 .colunaLateral {
-  background: var(--cor-superficie);
-  border-right: 1px solid var(--cor-borda);
+  background: var(--lateral-fundo);
+  color: var(--lateral-texto);
   grid-area: lateral;
   /*
-   * `min-width: 0` na coluna, além de na faixa rolável de dentro.
-   *
-   * Item de grid também tem largura mínima automática, então a coluna crescia até o
-   * tamanho da faixa inteira — 1251px numa janela de 390px — e a página ganhava rolagem
-   * horizontal. Conter o estouro exige `min-width: 0` em **cada** nível entre a janela e
-   * o elemento que rola: foi o primeiro consertado e a página continuou estourando.
+   * `min-width: 0` na coluna, além de na faixa rolável de dentro. Item de grid também
+   * tem largura mínima automática, e sem isto a coluna crescia até o tamanho do conteúdo
+   * e a página ganhava rolagem horizontal no telefone.
    */
   min-width: 0;
 }
@@ -65,7 +58,7 @@
 .lateral {
   display: flex;
   flex-direction: column;
-  gap: var(--espaco-5);
+  gap: var(--espaco-2);
   /*
    * Grudada: as telas longas deste sistema são de trabalho em lista, e rolar até o fim
    * para voltar ao topo e trocar de tela é atrito em cima de atrito.
@@ -82,48 +75,65 @@
  *
  * A inicial vem do nome do sistema em runtime, e não de um arquivo de logo, porque a
  * instalação sem logo cadastrado é o caso comum — e um quadrado vazio seria pior que
- * uma inicial. Quando houver `logoUrl`, é ela que entra aqui.
+ * uma inicial.
  */
 .marca {
   align-items: center;
-  border-radius: var(--raio);
-  color: var(--cor-texto);
   display: flex;
   gap: var(--espaco-3);
-  padding: var(--espaco-2);
-  text-decoration: none;
-}
-
-.marca:hover {
-  background: var(--cor-fundo);
+  padding: var(--espaco-1) var(--espaco-2) var(--espaco-2);
 }
 
 .sigla {
   align-items: center;
   background: var(--cor-primaria);
-  border-radius: var(--raio-pequeno);
+  border-radius: var(--raio);
   color: var(--cor-superficie);
   display: flex;
   flex: none;
   font-size: var(--texto-maior);
   font-weight: 700;
-  height: 1.875rem;
+  height: 2rem;
   justify-content: center;
   letter-spacing: -0.02em;
-  width: 1.875rem;
+  width: 2rem;
 }
 
 .nomeDoSistema {
+  color: var(--lateral-texto-forte);
   font-size: var(--texto-base);
   font-weight: 600;
   letter-spacing: -0.01em;
   white-space: nowrap;
 }
 
+/*
+ * O botão de importar: a única porta que é ação, e não lugar. Tudo entra por ele —
+ * planilha, tabela, link, PDF, print —, e é por isso que fica acima de tudo.
+ */
+.destaque {
+  align-items: center;
+  background: var(--cor-primaria);
+  border-radius: var(--raio);
+  color: var(--cor-superficie);
+  display: flex;
+  font-size: var(--texto-menor);
+  font-weight: 600;
+  gap: var(--espaco-2);
+  justify-content: center;
+  margin: 0 var(--espaco-1) var(--espaco-2);
+  min-height: 2.5rem;
+  text-decoration: none;
+}
+
+.destaque:hover {
+  filter: brightness(1.1);
+}
+
 .navegacao {
   display: flex;
   flex-direction: column;
-  gap: var(--espaco-5);
+  gap: var(--espaco-3);
 }
 
 .grupo {
@@ -139,12 +149,12 @@
  * o que se lê é a categoria, não a palavra. Ela some da leitura e fica como marcação.
  */
 .grupoTitulo {
-  color: var(--cor-texto-fraco);
+  color: var(--lateral-texto-fraco);
   font-size: var(--texto-micro);
   font-weight: 600;
   letter-spacing: 0.06em;
   margin: 0;
-  padding: 0 var(--espaco-2) var(--espaco-1);
+  padding: var(--espaco-2) var(--espaco-2) var(--espaco-1);
   text-transform: uppercase;
 }
 
@@ -157,33 +167,124 @@
   padding: 0;
 }
 
-.porta {
-  border-radius: var(--raio-pequeno);
-  color: var(--cor-texto-fraco);
-  display: block;
+.porta,
+.loja {
+  align-items: center;
+  border-radius: var(--raio);
+  color: var(--lateral-texto);
+  display: flex;
   font-size: var(--texto-menor);
-  padding: var(--espaco-2) var(--espaco-2);
+  gap: var(--espaco-3);
+  padding: 0 var(--espaco-2);
   text-decoration: none;
 }
 
-.porta:hover {
-  background: var(--cor-fundo);
-  color: var(--cor-texto);
+.porta {
+  min-height: 2.125rem;
+}
+
+.loja {
+  min-height: 2.75rem;
+}
+
+.porta:hover,
+.loja:hover {
+  background: var(--lateral-realce);
+  color: var(--lateral-texto-forte);
+}
+
+.icone {
+  color: var(--lateral-icone);
+  flex: none;
+}
+
+.portaRotulo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /*
- * A tela aberta, marcada por barra lateral e não por fundo chapado.
+ * A tela aberta: fundo um tom acima, texto forte, e o ícone na cor da marca clareada.
  *
- * O fundo chapado na cor da marca funcionava na barra do topo, onde a pílula era
- * pequena. Numa lista vertical de quinze itens, um bloco chapado de cor de marca é o
- * elemento mais forte da tela inteira — e o que tem de ser mais forte é o trabalho, não
- * o menu. A barra de 3px diz a mesma coisa e não grita.
+ * O ícone é o único lugar da barra onde a marca aparece fora do botão, e clareada
+ * porque a cor de marca foi escolhida para fundo claro — sobre o escuro ela sumiria.
  */
-.portaAtual {
-  background: var(--cor-fundo);
-  box-shadow: inset 3px 0 0 var(--cor-primaria);
-  color: var(--cor-texto);
+.portaAtual,
+.portaAtual:hover {
+  background: var(--lateral-realce);
+  color: var(--lateral-texto-forte);
   font-weight: 600;
+}
+
+.portaAtual .icone {
+  color: color-mix(in srgb, var(--cor-primaria) 45%, white);
+}
+
+.contagem {
+  background: var(--lateral-contagem);
+  border-radius: 999px;
+  color: var(--lateral-texto-forte);
+  flex: none;
+  font-size: var(--texto-micro);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  padding: 1px var(--espaco-2);
+}
+
+/* O selo com o ponto do estado no canto, como a bolinha de presença de um contato. */
+.seloComPonto {
+  display: inline-flex;
+  flex: none;
+  position: relative;
+}
+
+.ponto {
+  border: 2px solid var(--lateral-fundo);
+  border-radius: 50%;
+  bottom: -3px;
+  height: 10px;
+  position: absolute;
+  right: -3px;
+  width: 10px;
+}
+
+.portaAtual .ponto,
+.loja:hover .ponto {
+  border-color: var(--lateral-realce);
+}
+
+.pontoConectada {
+  background: var(--lateral-ponto-conectada);
+}
+
+.pontoPlanilha {
+  background: var(--lateral-ponto-planilha);
+}
+
+/* Sem dados é o ponto vazado: a loja está na barra, mas ainda não tem o que mostrar. */
+.pontoSemDados {
+  background: var(--lateral-fundo);
+  box-shadow: inset 0 0 0 2px var(--lateral-ponto-sem-dados);
+}
+
+.lojaTextos {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  line-height: 1.25;
+  min-width: 0;
+}
+
+.lojaLegenda {
+  color: var(--lateral-texto-fraco);
+  font-size: var(--texto-micro);
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ── Conteúdo ────────────────────────────────────────────────────────────── */
@@ -209,10 +310,10 @@
 /*
  * Abaixo de 60rem a lateral vira uma faixa no topo, com os grupos em linha.
  *
- * Sem JavaScript, e por isso sem gaveta: um menu que abre e fecha precisa de estado, e
- * esta casca é de servidor inteira. O que se perde é altura de tela no telefone; o que
- * se ganha é a navegação funcionando com JavaScript desligado, que é a condição da tela
- * de bipar na loja, usada em rede ruim com o aparelho na mão.
+ * Sem gaveta: um menu que abre e fecha precisa de estado, e a navegação funcionando
+ * até com JavaScript desligado é a condição da tela de bipar na loja, usada em rede
+ * ruim com o aparelho na mão. Os números da barra dependem de JavaScript; a navegação,
+ * não.
  */
 @media (max-width: 60rem) {
   .casca {
@@ -220,34 +321,25 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .colunaLateral {
-    border-bottom: 1px solid var(--cor-borda);
-    border-right: 0;
-  }
-
   .lateral {
-    gap: var(--espaco-3);
+    gap: var(--espaco-2);
     max-height: none;
     overflow-y: visible;
     padding: var(--espaco-3) var(--espaco-4);
     position: static;
   }
 
+  .marca {
+    padding: 0;
+  }
+
+  .destaque {
+    margin: 0;
+  }
+
   /*
-   * A navegação no telefone: título do grupo **na mesma linha** das portas dele.
-   *
-   * Duas tentativas antes desta, e as duas anotadas porque a segunda parecia certa:
-   *
-   * 1. Título em linha própria e portas quebrando embaixo: quatro grupos viravam oito
-   *    linhas, 430px de uma tela de 844px gastos em menu antes do primeiro cartão — e o
-   *    primeiro cartão é o mais urgente.
-   * 2. Uma faixa rolável horizontal: elegante, e **estourava a página**. O `nav` media
-   *    390px e o documento 1251px, e nenhum `min-width: 0` nem `overflow-x: clip` na
-   *    cadeia continha. Rolagem horizontal no documento é o defeito que sempre aparece
-   *    primeiro no telefone, e a prova dele é a largura do print de página inteira.
-   *
-   * Título inline gasta quatro linhas em vez de oito, mantém o agrupamento visível, e
-   * não tem eixo X para estourar. Menos bonito que a faixa rolável; correto.
+   * O título do grupo **na mesma linha** das portas dele: título em linha própria
+   * dobrava a altura do menu, e uma faixa rolável horizontal estourava a página.
    */
   .navegacao {
     gap: var(--espaco-2);
@@ -255,8 +347,7 @@
 
   .grupo {
     align-items: baseline;
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-flow: row wrap;
     gap: var(--espaco-1) var(--espaco-2);
   }
 
@@ -266,20 +357,22 @@
   }
 
   .portas {
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-flow: row wrap;
     gap: var(--espaco-1);
   }
 
   /* Em linha as portas voltam a ser pílulas: é a forma que quebra bem. */
-  .porta {
+  .porta,
+  .loja {
     border-radius: 999px;
     font-size: var(--texto-miudo);
-    padding: var(--espaco-1) var(--espaco-2);
+    gap: var(--espaco-2);
+    min-height: 2rem;
+    padding: 0 var(--espaco-3) 0 var(--espaco-2);
   }
 
-  .portaAtual {
-    box-shadow: inset 0 -2px 0 var(--cor-primaria);
+  .lojaLegenda {
+    display: none;
   }
 
   .rodape {

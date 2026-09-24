@@ -13,6 +13,11 @@ import type { Fonte } from '@/dominio/procedencia';
 export const PLATAFORMAS = ['ml', 'shopee', 'amazon'] as const;
 export type Plataforma = (typeof PLATAFORMAS)[number];
 
+/** É uma das plataformas do domínio? Para o que chega como texto: URL e JSON. */
+export function ehPlataforma(valor: unknown): valor is Plataforma {
+  return PLATAFORMAS.some((p) => p === valor);
+}
+
 /**
  * Tipo de anúncio do Mercado Livre. Muda a comissão, e é a escolha de
  * precificação mais consequente da plataforma.

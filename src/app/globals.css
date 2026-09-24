@@ -91,7 +91,27 @@
   --tinta-ok: #f0fdf4;
 
   /* Largura da lateral de navegação. Uma medida, usada pela casca e pelas medias. */
-  --largura-lateral: 15rem;
+  --largura-lateral: 16.5rem;
+
+  /*
+   * ── Lateral escura ──
+   *
+   * Cromo neutro, sem cor de marca: a marca vem de configuração e pode ser qualquer uma
+   * (ADR 0003), e na barra ela aparece só no botão de importar e no ícone da tela
+   * aberta. O escuro separa a navegação da área de trabalho sem gastar uma borda, e faz
+   * os selos das lojas serem achados de relance.
+   */
+  --lateral-fundo: #141518;
+  --lateral-realce: #262a31;
+  --lateral-texto: #d4d4d8;
+  --lateral-texto-forte: #fafafa;
+  --lateral-texto-fraco: #8f939b;
+  --lateral-icone: #9a9ea6;
+  --lateral-contagem: #2f3440;
+  /* O estado da loja, no ponto do selo. A legenda escrita diz o mesmo em palavras. */
+  --lateral-ponto-conectada: #22c55e;
+  --lateral-ponto-planilha: #60a5fa;
+  --lateral-ponto-sem-dados: #71717a;
   /* Sombra de elemento que se levanta de verdade: menu, cartão em foco. */
   --sombra-suspensa: 0 4px 12px rgb(0 0 0 / 8%);
 

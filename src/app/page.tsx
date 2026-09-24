@@ -17,15 +17,8 @@
  *    todo caiu, quando o que caiu foi uma contagem.
  */
 import type { Metadata } from 'next';
-import {
-  filtrarPorMomento,
-  lerMomento,
-  momentosNaTela,
-  montarPendencias,
-  resumoDaCasa,
-  separarCalmas,
-} from './inicio/apresentacao';
-import { Calmas, Cartoes, Momentos, Portas } from './inicio/componentes';
+import { montarPendencias, resumoDaCasa, separarCalmas } from './inicio/apresentacao';
+import { Calmas, Cartoes, Portas } from './inicio/componentes';
 import { lerCasa } from './inicio/dados';
 import { formatarDataEHora } from './ui/tempo';
 import estilo from './inicio/inicio.module.css';
@@ -35,26 +28,15 @@ export const metadata: Metadata = { title: 'Início' };
 /** Sempre dinâmica: são contagens de agora, e pré-renderizar as congelaria. */
 export const dynamic = 'force-dynamic';
 
-export default async function Pagina({
-  searchParams,
-}: {
-  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
+export default async function Pagina() {
   // Um `agora` para a tela inteira: duas leituras de relógio na mesma renderização
   // podem cair em lados diferentes da virada do dia, e aí a fila do dia e o prazo
   // fiscal contariam dias diferentes lado a lado.
   const agora = new Date();
-  const parametros = await searchParams;
-  const momento = lerMomento(parametros['momento']);
 
   const pendencias = montarPendencias(await lerCasa(agora));
 
-  // As pílulas contam o total, e não o filtrado: o número delas é justamente o que faz
-  // a pessoa decidir trocar de filtro, e contar só o que já está na tela seria um
-  // contador que sempre concorda com a escolha atual.
-  const momentos = momentosNaTela(pendencias);
-  const { ativas, calmas } = separarCalmas(filtrarPorMomento(pendencias, momento));
-  const totalAtivas = separarCalmas(pendencias).ativas.length;
+  const { ativas, calmas } = separarCalmas(pendencias);
 
   return (
     <main className={estilo.pagina}>
@@ -69,8 +51,6 @@ export default async function Pagina({
         </div>
         <p className={estilo.subtitulo}>{resumoDaCasa(pendencias)}</p>
       </header>
-
-      <Momentos escolhido={momento} momentos={momentos} totalAtivas={totalAtivas} />
 
       <Cartoes itens={ativas} />
       <Calmas itens={calmas} />

@@ -13,7 +13,6 @@
  */
 import { DIAS_QUE_JA_SAO_AGORA } from '@/dominio/fiscal/prazos';
 import { contagem } from '@/lib/texto';
-import { GRUPOS, TITULO_DO_GRUPO, portaAtual, type Grupo } from '../navegacao';
 
 /** Ordem de atenção: `agora` é dinheiro parado ou vazando hoje. */
 export const TONS = ['agora', 'atencao', 'calmo'] as const;
@@ -259,63 +258,4 @@ export function separarCalmas(itens: readonly Pendencia[]): Separacao {
     ativas: itens.filter((i) => !estaCalma(i)),
     calmas: itens.filter(estaCalma),
   };
-}
-
-/** O momento de trabalho de uma pendência, derivado da porta a que ela aponta. */
-export function momentoDaPendencia(item: Pendencia): Grupo | null {
-  return portaAtual(item.href)?.grupo ?? null;
-}
-
-export interface MomentoNaTela {
-  readonly grupo: Grupo;
-  readonly titulo: string;
-  /** Quantas pendências deste momento pedem atenção. Entra na pílula. */
-  readonly ativas: number;
-  /** O tom mais grave do momento. `null` quando não há nada ativo. */
-  readonly tom: Tom | null;
-}
-
-/**
- * Os momentos de trabalho com o que cada um tem esperando.
- *
- * As pílulas com contagem são a ideia melhor do painel do Mercado Livre — "Envios de
- * hoje 448 · Próximos dias 127" responde *onde está o trabalho* antes de mostrar
- * trabalho nenhum. O que muda aqui é o eixo: lá as abas são estados de envio, e aqui são
- * os momentos em que alguém abre este sistema, que é o agrupamento que a navegação já
- * usa. Uma lista, duas leituras — de novo.
- *
- * Momento sem pendência nenhuma não vira pílula: pílula com zero eterno é a mesma coisa
- * que o contador zerado que esta tela recolheu.
- */
-export function momentosNaTela(itens: readonly Pendencia[]): readonly MomentoNaTela[] {
-  return GRUPOS.flatMap((grupo) => {
-    const doMomento = itens.filter((i) => momentoDaPendencia(i) === grupo);
-    if (doMomento.length === 0) return [];
-
-    const ativas = doMomento.filter((i) => !estaCalma(i));
-    const tom = ativas.map((i) => i.tom).sort((a, b) => PESO_DO_TOM[a] - PESO_DO_TOM[b])[0] ?? null;
-
-    return [{ grupo, titulo: TITULO_DO_GRUPO[grupo], ativas: ativas.length, tom }];
-  });
-}
-
-/** Só as pendências de um momento. `null` não filtra nada. */
-export function filtrarPorMomento(
-  itens: readonly Pendencia[],
-  momento: Grupo | null,
-): readonly Pendencia[] {
-  return momento === null ? itens : itens.filter((i) => momentoDaPendencia(i) === momento);
-}
-
-/**
- * Lê o momento da URL.
- *
- * Valor que não é momento cai em `null` — mostrar tudo — em vez de derrubar a página:
- * URL é texto que qualquer um digita, e a porta de entrada do sistema é o último lugar
- * onde vale devolver erro de servidor por parâmetro torto.
- */
-export function lerMomento(bruto: string | string[] | undefined): Grupo | null {
-  const texto = Array.isArray(bruto) ? bruto[0] : bruto;
-  if (texto === undefined) return null;
-  return (GRUPOS as readonly string[]).includes(texto) ? (texto as Grupo) : null;
 }

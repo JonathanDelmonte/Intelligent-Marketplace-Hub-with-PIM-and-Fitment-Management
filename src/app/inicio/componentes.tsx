@@ -4,14 +4,10 @@
  * O que decide texto, tom e ordem está em `apresentacao.ts`, com teste. Aqui só há onde
  * cada coisa fica — e o porquê de cada escolha de forma está no cabeçalho de
  * `inicio.module.css`.
- *
- * O filtro por momento é um link, não um botão com estado: a escolha vira `?momento=` na
- * URL, recarregar não perde, e a URL de "o que está urgente no catálogo" é
- * compartilhável. É a mesma regra do simulador do catálogo e do seletor de ficha.
  */
 import Link from 'next/link';
-import { portasPorGrupo, type Grupo } from '../navegacao';
-import type { MomentoNaTela, Pendencia, Tom } from './apresentacao';
+import { portasPorGrupo } from '../navegacao';
+import type { Pendencia, Tom } from './apresentacao';
 import estilo from './inicio.module.css';
 
 const CLASSE_DO_CARTAO: Readonly<Record<Tom, string>> = {
@@ -37,69 +33,6 @@ const PALAVRA_DA_GRAVIDADE: Readonly<Record<Tom, string>> = {
   atencao: 'Atenção',
   calmo: 'Em dia',
 };
-
-const CLASSE_DO_PONTO: Readonly<Record<Tom, string>> = {
-  agora: `${estilo.pontoDoMomento} ${estilo.pontoAgora}`,
-  atencao: `${estilo.pontoDoMomento} ${estilo.pontoAtencao}`,
-  calmo: estilo.pontoDoMomento,
-};
-
-/** O caminho da própria tela com o momento escolhido. `null` limpa o filtro. */
-function caminhoDoMomento(momento: Grupo | null): string {
-  return momento === null ? '/' : `/?momento=${momento}`;
-}
-
-/**
- * As pílulas de momento de trabalho, com quantas pendências cada um tem.
- *
- * Só aparecem quando há mais de um momento com pendência: uma pílula "Tudo" e uma
- * "Hoje" ao lado, com a mesma contagem, é enfeite que ocupa uma linha.
- */
-export function Momentos({
-  momentos,
-  escolhido,
-  totalAtivas,
-}: {
-  readonly momentos: readonly MomentoNaTela[];
-  readonly escolhido: Grupo | null;
-  readonly totalAtivas: number;
-}) {
-  if (momentos.length < 2) return null;
-
-  return (
-    <ul aria-label="Filtrar por momento de trabalho" className={estilo.momentos}>
-      <li>
-        <Link
-          aria-current={escolhido === null ? 'true' : undefined}
-          className={
-            escolhido === null ? `${estilo.momento} ${estilo.momentoAtual}` : estilo.momento
-          }
-          href={caminhoDoMomento(null)}
-        >
-          Tudo
-          <span className={estilo.contagemDoMomento}>{totalAtivas}</span>
-        </Link>
-      </li>
-      {momentos.map((m) => (
-        <li key={m.grupo}>
-          <Link
-            aria-current={escolhido === m.grupo ? 'true' : undefined}
-            className={
-              escolhido === m.grupo ? `${estilo.momento} ${estilo.momentoAtual}` : estilo.momento
-            }
-            href={caminhoDoMomento(m.grupo)}
-          >
-            {m.tom !== null && m.tom !== 'calmo' && (
-              <span aria-hidden="true" className={CLASSE_DO_PONTO[m.tom]} />
-            )}
-            {m.titulo}
-            <span className={estilo.contagemDoMomento}>{m.ativas}</span>
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
-}
 
 /**
  * O número do cartão.
@@ -184,17 +117,19 @@ export function Portas() {
           key={grupo.grupo}
         >
           <h3 className={estilo.grupoTitulo} id={`grupo-${grupo.grupo}`}>
-            {grupo.titulo}
+            {grupo.titulo ?? 'Dia a dia'}
           </h3>
           <ul className={estilo.portas}>
-            {grupo.portas.map((porta) => (
-              <li key={porta.href}>
-                <Link className={estilo.porta} href={porta.href}>
-                  <span className={estilo.portaTitulo}>{porta.rotulo}</span>
-                  <span className={estilo.portaDescricao}>{porta.descricao}</span>
-                </Link>
-              </li>
-            ))}
+            {grupo.portas
+              .filter((porta) => porta.descricao !== null)
+              .map((porta) => (
+                <li key={porta.href}>
+                  <Link className={estilo.porta} href={porta.href}>
+                    <span className={estilo.portaTitulo}>{porta.rotulo}</span>
+                    <span className={estilo.portaDescricao}>{porta.descricao}</span>
+                  </Link>
+                </li>
+              ))}
           </ul>
         </section>
       ))}
