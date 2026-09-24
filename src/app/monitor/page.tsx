@@ -15,9 +15,11 @@
  */
 import type { Metadata } from 'next';
 import { agruparEventos } from '@/dominio/monitor/eventos';
+import { leituraDoGrupo, lerLeituraGravada } from '@/dominio/monitor/leitura';
 import { avaliarQueda } from '@/dominio/monitor/queda';
 import { RepositorioDoMonitor } from '@/dominio/monitor/repositorio';
 import { banco } from '@/infra/banco/cliente';
+import { temChaveDeLlm } from '@/infra/llm/ambiente';
 import {
   descreverAviso,
   inteiroDaUrl,
@@ -48,12 +50,20 @@ export default async function PaginaDoMonitor({
   // diferentes da virada do dia.
   const agora = new Date();
 
-  const [eventos, candidatos] = await Promise.all([
-    repo.naoLidos(LIMITE_DE_EVENTOS),
+  const [linhas, candidatos] = await Promise.all([
+    repo.naoLidosComLeitura(LIMITE_DE_EVENTOS),
     repo.candidatosAQueda(LIMITE_DE_QUEDAS, { agora }),
   ]);
 
-  const grupos = ordenarGrupos(agruparEventos(eventos));
+  const grupos = ordenarGrupos(agruparEventos(linhas.map((l) => l.evento)));
+  // A leitura por IA mora em cada evento; o grupo junta as dos seus.
+  const leituraDoEvento = new Map(linhas.map((l) => [l.evento.id, lerLeituraGravada(l.leitura)]));
+  const leituras = new Map(
+    grupos.map((g) => [
+      g.chave,
+      leituraDoGrupo(g.eventos.map((e) => leituraDoEvento.get(e.id) ?? null)),
+    ]),
+  );
 
   const quedas = ordenarQuedas(
     candidatos.map((c): QuedaNaTela => ({
@@ -87,7 +97,7 @@ export default async function PaginaDoMonitor({
         <h2 className={estilo.secaoTitulo} id="mudancas-titulo">
           O que mudou
         </h2>
-        <Grupos agora={agora} grupos={grupos} />
+        <Grupos agora={agora} grupos={grupos} leituras={leituras} temChave={temChaveDeLlm()} />
       </section>
 
       <section aria-labelledby="quedas-titulo" className={estilo.secao}>

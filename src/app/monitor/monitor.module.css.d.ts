@@ -25,6 +25,9 @@ declare const estilo: {
   readonly itemSub: string;
   readonly itemTitulo: string;
   readonly leitura: string;
+  readonly leituraIa: string;
+  readonly leituraIaNota: string;
+  readonly leituraIaTexto: string;
   readonly lista: string;
   readonly mudanca: string;
   readonly mudancaDetalhe: string;

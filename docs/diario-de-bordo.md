@@ -26,6 +26,49 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-24 — A leitura do monitor por IA (11.1)
+
+O monitor detectava, media a severidade e agrupava — faltava a **leitura**: a hipótese e a
+recomendação em linguagem natural, que é a parte que a especificação usa para separar
+inteligência de automação. Agora cada grupo (mesmo alvo, mesma semana) é lido pela IA
+gratuita, oito grupos por pedido, com a série de preço do alvo e a leitura por regra junto.
+Na tela, a hipótese aparece embaixo da leitura por regra, marcada como hipótese.
+
+### 🔀 A leitura mora em cada evento, porque o grupo não é gravado
+
+O grupo é recalculado na leitura, como sempre foi — gravar o grupo seria guardar duas
+verdades. Então a leitura vai, como JSON, na coluna `leitura_ia` de cada evento do grupo
+(que existia desde a fase 0, vazia). O efeito bom: evento novo que entra num grupo já lido
+chega sem leitura, o grupo volta a ficar pendente, e é lido de novo com ele — a hipótese
+nunca fica velha em relação aos números que estão na tela.
+
+### 🔀 Item que falta volta com a tentativa na pergunta; lote torto encolhe o próximo
+
+As lições da extração, repetidas: resposta fora do formato também vira cache, então a
+segunda tentativa leva o número da tentativa na pergunta; três tentativas e o grupo fica só
+com a leitura por regra. Cada item da resposta é conferido sozinho — um item torto não
+derruba os outros sete —, e resposta que não serve para o lote inteiro faz o próximo lote ter
+a metade do tamanho. Cota esgotada e provedor fora não marcam nada: o executor espera.
+
+### 🔀 A espera do provedor mudou para `infra/llm/espera.ts`
+
+Era da identidade, e o monitor pergunta ao mesmo provedor sob a mesma cota. Duas cópias
+divergiriam. A identidade a reexporta, e nada que a importava mudou.
+
+### 🔀 Depois das filas de dado, na ordem do poller
+
+A leitura divide a cota gratuita com a extração e o julgamento de identidade. Vem depois da
+ingestão, da identidade e dos pedidos: dado novo vale mais que a hipótese sobre dado velho.
+
+### ❓ A qualidade da hipótese não foi vista com modelo de verdade
+
+Testada com modelo falso: a forma da pergunta, a série de preço, o que fica gravado, a
+releitura com evento novo, as tentativas e a espera. O que o roteador gratuito de fato
+escreve só aparece com a chave do dono — e as instruções dizem para não inventar número nem
+fato de fora e para dizer quando os dados não bastam.
+
+---
+
 ## 2026-09-24 — Compatibilidade tirada de manual, página, catálogo e fórum (6.10, 6.11)
 
 A ficha de compatibilidade só se alimentava de título de anúncio e de decisão na tela. Agora

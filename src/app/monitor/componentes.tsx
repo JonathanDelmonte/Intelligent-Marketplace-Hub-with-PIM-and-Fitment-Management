@@ -7,6 +7,7 @@
  * Invertido, a tela seria uma lista de números com uma conclusão escondida no fim.
  */
 import { O_QUE_SIGNIFICA, type GrupoDeEventos } from '@/dominio/monitor/eventos';
+import type { LeituraDoGrupo } from '@/dominio/monitor/leitura';
 import { formatarBRL } from '@/lib/dinheiro';
 import { formatarAbsoluto, formatarRelativo } from '../ui/tempo';
 import { marcarLido } from './acoes';
@@ -43,7 +44,55 @@ const CLASSE_DA_ETIQUETA: Readonly<Record<'alerta' | 'atencao' | 'neutro', strin
   neutro: estilo.etiqueta,
 };
 
-function Grupo({ grupo, agora }: { readonly grupo: GrupoDeEventos; readonly agora: Date }) {
+/**
+ * A hipótese da IA, embaixo da leitura por regra e marcada como hipótese (11.1). Sem
+ * chave, nada aparece — a leitura por regra continua sendo a leitura.
+ */
+function LeituraDaIa({
+  leitura,
+  temChave,
+}: {
+  readonly leitura: LeituraDoGrupo | undefined;
+  readonly temChave: boolean;
+}) {
+  if (leitura === undefined) return null;
+  if (leitura.tipo === 'lida') {
+    return (
+      <div className={estilo.leituraIa}>
+        <p className={estilo.leituraIaTexto}>
+          <strong>Hipótese da IA:</strong> {leitura.hipotese}
+        </p>
+        <p className={estilo.leituraIaTexto}>
+          <strong>O que fazer:</strong> {leitura.recomendacao}
+        </p>
+        <p className={estilo.leituraIaNota}>
+          Leitura por IA gratuita, em {formatarAbsoluto(new Date(leitura.em))}. É hipótese sobre os
+          números acima — confira antes de agir.
+        </p>
+      </div>
+    );
+  }
+  if (!temChave) return null;
+  return (
+    <p className={estilo.leituraIaNota}>
+      {leitura.tipo === 'pendente'
+        ? 'A IA ainda vai ler este grupo: ela lê sozinha, alguns grupos por pedido, e para quando a cota gratuita do dia acaba.'
+        : 'A IA não conseguiu ler este grupo. Fica a leitura por regra, acima.'}
+    </p>
+  );
+}
+
+function Grupo({
+  grupo,
+  agora,
+  leituraIa,
+  temChave,
+}: {
+  readonly grupo: GrupoDeEventos;
+  readonly agora: Date;
+  readonly leituraIa: LeituraDoGrupo | undefined;
+  readonly temChave: boolean;
+}) {
   const tom = TOM_DA_SEVERIDADE[grupo.severidade];
   const classeDoItem =
     tom === 'alerta'
@@ -68,6 +117,7 @@ function Grupo({ grupo, agora }: { readonly grupo: GrupoDeEventos; readonly agor
 
       {/* A conclusão primeiro. É o que a especificação chama de agrupar antes de avisar. */}
       <p className={estilo.leitura}>{grupo.leitura}</p>
+      <LeituraDaIa leitura={leituraIa} temChave={temChave} />
 
       <ul className={estilo.mudancas}>
         {grupo.eventos.map((evento) => {
@@ -113,9 +163,14 @@ function Grupo({ grupo, agora }: { readonly grupo: GrupoDeEventos; readonly agor
 export function Grupos({
   grupos,
   agora,
+  leituras,
+  temChave,
 }: {
   readonly grupos: readonly GrupoDeEventos[];
   readonly agora: Date;
+  /** A leitura por IA de cada grupo, pela chave do grupo. */
+  readonly leituras: ReadonlyMap<string, LeituraDoGrupo>;
+  readonly temChave: boolean;
 }) {
   if (grupos.length === 0) {
     return (
@@ -129,7 +184,13 @@ export function Grupos({
   return (
     <ul className={estilo.lista}>
       {grupos.map((grupo) => (
-        <Grupo agora={agora} grupo={grupo} key={grupo.chave} />
+        <Grupo
+          agora={agora}
+          grupo={grupo}
+          key={grupo.chave}
+          leituraIa={leituras.get(grupo.chave)}
+          temChave={temChave}
+        />
       ))}
     </ul>
   );
