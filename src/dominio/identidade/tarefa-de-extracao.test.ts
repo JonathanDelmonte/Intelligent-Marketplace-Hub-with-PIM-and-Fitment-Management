@@ -34,11 +34,8 @@ import {
 import { drenar, montarNucleoCom, tarefaCompleta, type Nucleo } from '@/infra/montagem';
 import { ExtratorDeRegistros } from './extracao';
 import { TIPO_JOB_IDENTIDADE, chaveDeIdentidade } from './tarefa';
-import {
-  ESPERA_INICIAL_POR_FALHA_MS,
-  ExecutorDeExtracao,
-  tarefaDeExtracao,
-} from './tarefa-de-extracao';
+import { ESPERA_INICIAL_POR_FALHA_MS } from './lote';
+import { ExecutorDeExtracao, tarefaDeExtracao } from './tarefa-de-extracao';
 
 const NL = String.fromCharCode(10);
 
@@ -104,6 +101,7 @@ describe.skipIf(!temBancoDeTeste())('extração como tarefa do poller', () => {
           servico: new ServicoDeLlm(conexao.db, modelo, new Orcamento(1_000, 10)),
           modeloDeJulgamento: 'julgador-de-teste',
           modeloDeExtracao: 'extrator-de-teste',
+          modeloDeEmbedding: 'embedding-de-teste',
         }),
       },
     );

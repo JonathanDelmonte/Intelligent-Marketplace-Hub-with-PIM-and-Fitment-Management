@@ -119,7 +119,7 @@ describe.skipIf(!temBancoDeTeste())('tarefa completa', () => {
     );
     expect(tarefaCompleta(nucleo).nome).toBe(NOME_DA_TAREFA_COMPLETA);
     expect(NOME_DA_TAREFA_COMPLETA).toBe(
-      'ingestao+extracao+identidade+compatibilidade+pedidos+prospector',
+      'ingestao+extracao+embedding+identidade+compatibilidade+pedidos+prospector',
     );
   });
 

@@ -21,26 +21,17 @@
  *
  * ## Espera
  *
- * Cota do provedor esgotada: espera a hora que ele disse. Falha do provedor que não é
- * cota — chave recusada, privacidade do gratuito desligada —: espera cinco minutos e
- * dobra até uma hora, sem marcar nenhum item. Sem essa espera, o poller perguntaria de
- * novo a cada tique, e cada pergunta recusada ainda conta na cota do dia.
+ * Cota esgotada e falha do provedor viram espera (`lote.ts`), sem marcar nenhum item:
+ * a falha não é do item.
  */
 import type { Fila } from '@/infra/fila/fila';
 import type { ResultadoDoTique, Tarefa } from '@/infra/fila/poller';
-import { ExecucaoInterrompida, LimiteDoProvedor } from '@/infra/llm';
+import { ExecucaoInterrompida } from '@/infra/llm';
 import { registradorSilencioso, type Registrador } from '@/infra/log';
 import type { ExtratorDeRegistros, ResultadoDaExtracao } from './extracao';
-import { TIPO_JOB_IDENTIDADE, chaveDeIdentidade } from './tarefa';
+import { EsperaDoProvedor, reabrirResolucao } from './lote';
 
 export const NOME_DA_TAREFA_DE_EXTRACAO = 'extracao';
-
-/** Primeira espera depois de uma falha do provedor que não é cota. Dobra a cada falha. */
-export const ESPERA_INICIAL_POR_FALHA_MS = 5 * 60_000;
-export const ESPERA_MAXIMA_POR_FALHA_MS = 60 * 60_000;
-
-/** Espera depois do teto da execução — que é por lote, então quase não acontece. */
-export const ESPERA_POR_ORCAMENTO_MS = 60_000;
 
 /** Um extrator por lote, e é isso que faz o orçamento ser novo a cada um. `undefined` sem chave. */
 export type FabricaDeExtrator = () => ExtratorDeRegistros | undefined;
@@ -57,22 +48,20 @@ export type ResultadoDoLoteDeExtracao =
     };
 
 export class ExecutorDeExtracao {
-  private espera: { readonly ate: number; readonly motivo: string } | null = null;
-  private proximaEsperaPorFalha = ESPERA_INICIAL_POR_FALHA_MS;
+  private readonly espera: EsperaDoProvedor;
 
   constructor(
     private readonly fila: Fila,
     private readonly criarExtrator: FabricaDeExtrator,
-    private readonly relogio: () => number = Date.now,
-  ) {}
+    relogio: () => number = Date.now,
+  ) {
+    this.espera = new EsperaDoProvedor(relogio);
+  }
 
   /** Extrai um lote. Nunca lança por causa do provedor: cota e falha viram espera. */
   async processarLote(): Promise<ResultadoDoLoteDeExtracao> {
-    const agora = this.relogio();
-    if (this.espera !== null && agora < this.espera.ate) {
-      return { tipo: 'em_espera', ate: new Date(this.espera.ate), motivo: this.espera.motivo };
-    }
-    this.espera = null;
+    const vigente = this.espera.vigente();
+    if (vigente !== null) return { tipo: 'em_espera', ...vigente };
 
     const extrator = this.criarExtrator();
     if (extrator === undefined) return { tipo: 'sem_chave' };
@@ -82,50 +71,22 @@ export class ExecutorDeExtracao {
       resultado = await extrator.extrairLote();
     } catch (erro) {
       if (!(erro instanceof ExecucaoInterrompida)) throw erro;
-      const ate =
-        erro instanceof LimiteDoProvedor ? erro.ate : new Date(agora + ESPERA_POR_ORCAMENTO_MS);
-      this.espera = { ate: ate.getTime(), motivo: erro.message };
-      return { tipo: 'interrompido', ate, motivo: erro.message };
+      return { tipo: 'interrompido', ate: this.espera.interrompida(erro), motivo: erro.message };
     }
 
     if (resultado.tipo === 'lote') {
-      if (resultado.chamada === 'erro' || resultado.chamada === 'sem_chave') {
-        const espera = this.proximaEsperaPorFalha;
-        this.proximaEsperaPorFalha = Math.min(espera * 2, ESPERA_MAXIMA_POR_FALHA_MS);
-        this.espera = {
-          ate: agora + espera,
-          motivo:
-            resultado.chamada === 'erro'
-              ? `o provedor falhou: ${resultado.erro ?? 'sem mensagem'}`
-              : 'sem chave de LLM',
-        };
+      if (resultado.chamada === 'erro') {
+        this.espera.falhou(`o provedor falhou: ${resultado.erro ?? 'sem mensagem'}`);
+      } else if (resultado.chamada === 'sem_chave') {
+        this.espera.falhou('sem chave de LLM');
       } else if (resultado.chamada !== 'nenhuma') {
-        this.proximaEsperaPorFalha = ESPERA_INICIAL_POR_FALHA_MS;
+        this.espera.funcionou();
       }
     }
 
-    const reabertos = resultado.tipo === 'lote' ? await this.reabrirResolucao(resultado.lidos) : 0;
+    const reabertos =
+      resultado.tipo === 'lote' ? await reabrirResolucao(this.fila, resultado.lidos) : 0;
     return { tipo: 'extracao', resultado, reabertos };
-  }
-
-  private async reabrirResolucao(ids: readonly string[]): Promise<number> {
-    let reabertos = 0;
-    for (const id of ids) {
-      const chave = chaveDeIdentidade(id);
-      const existente = await this.fila.buscarPorChave(TIPO_JOB_IDENTIDADE, chave);
-      if (existente === null) {
-        await this.fila.enfileirar({
-          tipo: TIPO_JOB_IDENTIDADE,
-          chaveIdempotencia: chave,
-          entrada: { produtoExternoId: id },
-        });
-        reabertos += 1;
-      } else if (existente.status === 'concluido') {
-        await this.fila.reenfileirar(existente.id);
-        reabertos += 1;
-      }
-    }
-    return reabertos;
   }
 }
 

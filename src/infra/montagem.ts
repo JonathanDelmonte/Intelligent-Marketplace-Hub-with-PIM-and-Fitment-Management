@@ -21,8 +21,10 @@ import {
   ExecutorDeCompatibilidade,
   tarefaDeCompatibilidade,
 } from '@/dominio/compatibilidade/tarefa';
+import { GeradorDeEmbeddings } from '@/dominio/identidade/embedding';
 import { ExtratorDeRegistros } from '@/dominio/identidade/extracao';
 import { tarefaDeIdentidade } from '@/dominio/identidade/tarefa';
+import { ExecutorDeEmbedding, tarefaDeEmbedding } from '@/dominio/identidade/tarefa-de-embedding';
 import { ExecutorDeExtracao, tarefaDeExtracao } from '@/dominio/identidade/tarefa-de-extracao';
 import { RepositorioDePedidos } from '@/dominio/pedidos/repositorio';
 import { ExecutorDePedidos, tarefaDePedidos, type ResolverPerfil } from '@/dominio/pedidos/tarefa';
@@ -60,6 +62,7 @@ export type LlmDeJob = () =>
       readonly servico: ServicoDeLlm;
       readonly modeloDeJulgamento: string;
       readonly modeloDeExtracao: string;
+      readonly modeloDeEmbedding: string;
     }
   | undefined;
 
@@ -77,6 +80,8 @@ export interface Nucleo {
   readonly executor: ExecutorDeIngestao;
   /** Lê marca, peça e aparelho dos títulos, em lote (M3, 5.1). */
   readonly executorDeExtracao: ExecutorDeExtracao;
+  /** Gera o vetor da forma canônica, em lote (M3, 5.2). */
+  readonly executorDeEmbedding: ExecutorDeEmbedding;
   /** Consome a fila de resolução de identidade (M3). */
   readonly executorDeIdentidade: ExecutorDeIdentidade;
   /** Consome a fila de coleta de compatibilidade (M4). */
@@ -94,7 +99,7 @@ export interface Nucleo {
 
 /** Nome da tarefa composta, no log. */
 export const NOME_DA_TAREFA_COMPLETA =
-  'ingestao+extracao+identidade+compatibilidade+pedidos+prospector';
+  'ingestao+extracao+embedding+identidade+compatibilidade+pedidos+prospector';
 
 /**
  * A tarefa que o sistema roda, com as três filas na ordem de prioridade.
@@ -115,6 +120,8 @@ export function tarefaCompleta(
     // Antes da identidade: com extração pendente, a resolução espera e resolve já com
     // marca e modelo, em vez de resolver sem e ter de resolver de novo.
     tarefaDeExtracao(nucleo.executorDeExtracao, registrador),
+    // Depois da extração, que dá a forma canônica; antes da identidade, que usa os vizinhos.
+    tarefaDeEmbedding(nucleo.executorDeEmbedding, registrador),
     tarefaDeIdentidade(nucleo.executorDeIdentidade, registrador),
     tarefaDeCompatibilidade(nucleo.executorDeCompatibilidade, registrador),
     tarefaDePedidos(nucleo.executorDePedidos, registrador),
@@ -181,7 +188,11 @@ export function montarNucleoCom(
       jobId,
       ...(llm === undefined
         ? {}
-        : { llm: llm.servico, modeloDeJulgamento: llm.modeloDeJulgamento }),
+        : {
+            llm: llm.servico,
+            modeloDeJulgamento: llm.modeloDeJulgamento,
+            modeloDeEmbedding: llm.modeloDeEmbedding,
+          }),
     });
   });
 
@@ -195,6 +206,13 @@ export function montarNucleoCom(
     return llm === undefined
       ? undefined
       : new ExtratorDeRegistros(db, { llm: llm.servico, modelo: llm.modeloDeExtracao });
+  });
+
+  const executorDeEmbedding = new ExecutorDeEmbedding(fila, () => {
+    const llm = opcoes.llmDeJob?.();
+    return llm === undefined
+      ? undefined
+      : new GeradorDeEmbeddings(db, { llm: llm.servico, modelo: llm.modeloDeEmbedding });
   });
 
   // Sem LLM e sem orçamento: a coleta de compatibilidade é comparação de texto
@@ -234,6 +252,7 @@ export function montarNucleoCom(
     orquestrador,
     executor,
     executorDeExtracao,
+    executorDeEmbedding,
     executorDeIdentidade,
     executorDeCompatibilidade,
     compatibilidade,
@@ -282,6 +301,7 @@ export function montarNucleo(): Nucleo {
               servico: llm.servico,
               modeloDeJulgamento: llm.modelos.julgamento,
               modeloDeExtracao: llm.modelos.extracao,
+              modeloDeEmbedding: llm.modelos.embedding,
             }
           : undefined;
       },
