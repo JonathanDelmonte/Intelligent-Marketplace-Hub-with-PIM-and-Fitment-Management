@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { reaisParaCentavos } from '@/lib/dinheiro';
+import { centavos, reaisParaCentavos } from '@/lib/dinheiro';
 import { QUANTIDADE_PADRAO } from './constantes';
-import { comoQueryString, lerParametros } from './parametros';
+import { caminhoParaMontar, comoQueryString, lerParametros } from './parametros';
 
 const SKU = '346e84ef-0228-4031-80f2-211011796f7f';
 
@@ -120,5 +120,43 @@ describe('comoQueryString', () => {
     const r = ler({ sku: SKU, plataforma: 'ml', preco: '89,90' });
     if (r.tipo !== 'ok') throw new Error('esperava ok');
     expect(comoQueryString(r.parametros)).toContain('preco=89%2C90');
+  });
+});
+
+describe('caminhoParaMontar', () => {
+  const SKU = '0f8fad5b-d9cb-469f-a165-70867728950e';
+
+  it('sem preço, abre com o produto e a loja, e o preço em branco', () => {
+    expect(caminhoParaMontar({ skuId: SKU, plataforma: 'shopee' })).toBe(
+      `/anuncios?sku=${SKU}&plataforma=shopee`,
+    );
+  });
+
+  it('o preço do simulador vai como se digita, e a montagem lê o mesmo valor', () => {
+    const caminho = caminhoParaMontar({
+      skuId: SKU,
+      plataforma: 'ml',
+      preco: centavos(8990),
+      quantidade: 3,
+      tipoProduto: 'refil',
+    });
+    const busca = Object.fromEntries(new URL(caminho, 'http://x').searchParams);
+    const lido = lerParametros(busca);
+    expect(lido).toMatchObject({
+      tipo: 'ok',
+      parametros: {
+        skuId: SKU,
+        plataforma: 'ml',
+        preco: 8990,
+        quantidade: 3,
+        tipoProduto: 'refil',
+      },
+    });
+  });
+
+  it('a quantidade padrão não entra no endereço', () => {
+    expect(
+      caminhoParaMontar({ skuId: SKU, plataforma: 'ml', quantidade: QUANTIDADE_PADRAO }),
+    ).not.toContain('qtd=');
   });
 });

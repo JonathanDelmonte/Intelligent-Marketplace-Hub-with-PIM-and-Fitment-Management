@@ -7,6 +7,7 @@ declare const estilo: {
   readonly acao: string;
   readonly ajuda: string;
   readonly ajudaDoQuadro: string;
+  readonly atalho: string;
   readonly aviso: string;
   readonly avisoAtencao: string;
   readonly avisoCorpo: string;
@@ -50,6 +51,12 @@ declare const estilo: {
   readonly pagina: string;
   readonly presuncoes: string;
   readonly presuncoesTitulo: string;
+  readonly publicar: string;
+  readonly publicarAcoes: string;
+  readonly publicarLoja: string;
+  readonly publicarNome: string;
+  readonly publicarNota: string;
+  readonly publicarTextos: string;
   readonly resposta: string;
   readonly resumo: string;
   readonly resumoDoBloco: string;

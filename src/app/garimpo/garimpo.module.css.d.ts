@@ -44,6 +44,8 @@ declare const estilo: {
   readonly listaMiuda: string;
   readonly origem: string;
   readonly pagina: string;
+  readonly publicarEm: string;
+  readonly publicarEmRotulo: string;
   readonly recomendacao: string;
   readonly resumo: string;
   readonly resumoDoBloco: string;

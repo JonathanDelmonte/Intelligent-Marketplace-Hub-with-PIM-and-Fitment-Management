@@ -275,3 +275,22 @@
   color: var(--cor-erro);
   font-size: 0.75rem;
 }
+
+/* Publicar em (ADR 0009): o alvo vira produto do catálogo, na loja escolhida. */
+.publicarEm {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.publicarEm > a {
+  text-decoration: none;
+}
+
+.publicarEmRotulo {
+  color: var(--cor-texto-fraco);
+  font-size: 0.8125rem;
+  margin-right: 0.25rem;
+}

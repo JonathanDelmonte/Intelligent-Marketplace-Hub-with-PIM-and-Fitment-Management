@@ -9,17 +9,20 @@ import { custoDefasado, idadeDoCustoEmDias } from '@/dominio/catalogo/custo';
 import type { SkuGravado } from '@/dominio/catalogo/sku';
 import { O_QUE_O_PRESUMIDO_CUSTA, type CampoPresumido } from '@/dominio/precificacao/entrada';
 import {
+  ehPlataforma,
   MODOS_FRETE,
   PLATAFORMAS,
   TIPOS_ANUNCIO_ML,
+  type Aviso as AvisoDeMargem,
   type ModoFrete,
   type Plataforma,
+  type Severidade,
   type TipoAnuncioML,
 } from '@/dominio/precificacao/tipos';
-import type { Aviso as AvisoDeMargem, Severidade } from '@/dominio/precificacao/tipos';
 import { formatarBRL, lerReaisDigitados, pontosBase, type Centavos } from '@/lib/dinheiro';
 import { contagem } from '@/lib/texto';
-import { MARGEM_ALVO_PADRAO_BP } from './constantes';
+import { caminhoParaMontar } from '../anuncios/parametros';
+import { CAMINHO, MARGEM_ALVO_PADRAO_BP } from './constantes';
 
 /** O estado de um produto na lista: o que falta nele para a margem ser real. */
 export interface EstadoDoProduto {
@@ -328,4 +331,96 @@ export function descreverAviso(codigo: string | undefined): Aviso | null {
     case 'falha':
       return { tom: 'erro', titulo: 'Não deu.', corpo: 'Nada foi salvo. O erro está no log.' };
   }
+}
+
+// ─── Publicar em: da ficha do produto para cada loja (ADR 0009) ──────────────
+
+/** A ficha do produto com o simulador numa loja: é o passo antes de montar o anúncio. */
+export function caminhoDoSimulador(skuId: string, plataforma: Plataforma): string {
+  return `${CAMINHO}/${skuId}?${new URLSearchParams({ plataforma }).toString()}#preco-titulo`;
+}
+
+export interface LojaParaPublicar {
+  readonly plataforma: Plataforma;
+  readonly nota: string;
+  /** A montagem do anúncio nesta loja. */
+  readonly montar: string;
+  /** O simulador desta ficha, na loja: o preço de cada loja é outro. */
+  readonly simular: string;
+}
+
+/**
+ * Uma linha por loja no "Publicar em" da ficha.
+ *
+ * O preço do simulador vai junto **só para a loja simulada**. Levar o preço do Mercado
+ * Livre para a Shopee seria copiar um número que a comissão da outra loja não sustenta:
+ * a margem que ele dá numa não é a que dá na outra.
+ */
+export function lojasParaPublicar(
+  skuId: string,
+  simulado: { readonly plataforma: Plataforma; readonly preco: Centavos | null },
+): readonly LojaParaPublicar[] {
+  return PLATAFORMAS.map((plataforma) => {
+    const daSimulada = plataforma === simulado.plataforma;
+    const preco = daSimulada ? simulado.preco : null;
+    return {
+      plataforma,
+      nota:
+        preco !== null
+          ? `leva o preço simulado acima: ${formatarBRL(preco)}`
+          : daSimulada
+            ? 'o simulador acima está nesta loja: informe um preço nele, ou decida na montagem'
+            : 'a comissão é outra, e o preço também: simule antes, ou decida na montagem',
+      montar: caminhoParaMontar({ skuId, plataforma, preco }),
+      simular: caminhoDoSimulador(skuId, plataforma),
+    };
+  });
+}
+
+// ─── Produto novo pedido por outra tela ─────────────────────────────────────
+
+/** Um produto a cadastrar, pedido por outra tela — o "Publicar em" do garimpo. */
+export interface ProdutoNovoPedido {
+  readonly titulo: string;
+  /** A loja em que a pessoa quer publicar. Vai junto até a ficha do produto criado. */
+  readonly plataforma: Plataforma | undefined;
+}
+
+/**
+ * O formulário de produto novo, aberto com o nome preenchido.
+ *
+ * Abre o formulário, e não cadastra direto: o nome do produto não se edita depois, e o
+ * alvo de uma investigação nem sempre é o nome que se quer ver no catálogo para sempre.
+ */
+export function caminhoDoProdutoNovo(titulo: string, plataforma: Plataforma | undefined): string {
+  const busca = new URLSearchParams({ novo: titulo });
+  if (plataforma !== undefined) busca.set('plataforma', plataforma);
+  return `${CAMINHO}?${busca.toString()}#novo-titulo`;
+}
+
+/** O pedido de produto novo, lido da URL. Nome curto ou longo demais não é pedido. */
+export function lerProdutoNovo(
+  busca: Readonly<Record<string, string | string[] | undefined>>,
+): ProdutoNovoPedido | null {
+  const um = (valor: string | string[] | undefined): string | undefined =>
+    Array.isArray(valor) ? valor[0] : valor;
+  const titulo = (um(busca['novo']) ?? '').trim().replace(/\s+/g, ' ');
+  if (titulo.length < 3 || titulo.length > 200) return null;
+  const plataforma = um(busca['plataforma']);
+  return { titulo, plataforma: ehPlataforma(plataforma) ? plataforma : undefined };
+}
+
+/**
+ * Para onde vai o produto recém-criado: a ficha, e o simulador da loja quando o pedido
+ * veio com uma — é o passo seguinte do "Publicar em".
+ */
+export function caminhoDoProdutoCriado(
+  skuId: string,
+  plataforma: Plataforma | undefined,
+  codigo: CodigoDeAviso,
+): string {
+  if (plataforma === undefined) {
+    return `${CAMINHO}/${skuId}?${new URLSearchParams({ r: codigo }).toString()}`;
+  }
+  return `${CAMINHO}/${skuId}?${new URLSearchParams({ plataforma, r: codigo }).toString()}#publicar-titulo`;
 }

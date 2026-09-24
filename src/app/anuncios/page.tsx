@@ -28,7 +28,8 @@ import { carregarPerfil } from '@/dominio/perfil';
 import { ehPlataforma } from '@/dominio/precificacao/tipos';
 import { banco } from '@/infra/banco/cliente';
 import { registroPadrao } from '@/plataformas/registro';
-import { avisoDeCamposInvalidos, descreverAviso } from './apresentacao';
+import { PublicarEm } from '../catalogo/componentes';
+import { avisoDeCamposInvalidos, descreverAviso, outrasLojas } from './apresentacao';
 import {
   AvisoDaAcao,
   Catalogo,
@@ -175,6 +176,13 @@ export default async function PaginaDeAnuncios({
               montado={montado}
               preco={leitura.parametros.preco}
             />
+          </section>
+
+          <section aria-labelledby="outras-titulo" className={estilo.secao}>
+            <h2 className={estilo.secaoTitulo} id="outras-titulo">
+              Montar também para
+            </h2>
+            <PublicarEm lojas={outrasLojas(leitura.parametros)} />
           </section>
 
           <section aria-labelledby="checklist-titulo" className={estilo.secao}>

@@ -17,6 +17,10 @@ import {
   resumoDoCatalogo,
   textoDasPresuncoes,
   textoDoPrecoMinimo,
+  caminhoDoProdutoCriado,
+  caminhoDoProdutoNovo,
+  lerProdutoNovo,
+  lojasParaPublicar,
 } from './apresentacao';
 import { MARGEM_ALVO_PADRAO_BP } from './constantes';
 
@@ -292,5 +296,63 @@ describe('descreverAviso', () => {
     expect(corpo).toContain('gramas');
     expect(corpo).toContain('milímetros');
     expect(corpo).toContain('inteiro');
+  });
+});
+
+describe('publicar em (ADR 0009)', () => {
+  const SKU = '0f8fad5b-d9cb-469f-a165-70867728950e';
+
+  it('uma linha por loja; o preço simulado vai só para a loja simulada', () => {
+    const lojas = lojasParaPublicar(SKU, {
+      plataforma: 'shopee',
+      preco: reaisParaCentavos('89.90'),
+    });
+    expect(lojas.map((l) => l.plataforma)).toEqual(['ml', 'shopee', 'amazon']);
+
+    const shopee = lojas.find((l) => l.plataforma === 'shopee');
+    expect(shopee?.montar).toBe(`/anuncios?sku=${SKU}&plataforma=shopee&preco=89%2C90`);
+    expect(shopee?.nota).toBe('leva o preço simulado acima: R$\u00a089,90');
+
+    // O preço da Shopee não vai para o Mercado Livre: a comissão é outra.
+    const ml = lojas.find((l) => l.plataforma === 'ml');
+    expect(ml?.montar).toBe(`/anuncios?sku=${SKU}&plataforma=ml`);
+    expect(ml?.simular).toBe(`/catalogo/${SKU}?plataforma=ml#preco-titulo`);
+  });
+
+  it('sem preço no simulador, nenhuma loja leva preço', () => {
+    const lojas = lojasParaPublicar(SKU, { plataforma: 'ml', preco: null });
+    expect(lojas.every((l) => !l.montar.includes('preco='))).toBe(true);
+    expect(lojas[0]?.nota).toContain('o simulador acima está nesta loja');
+  });
+});
+
+describe('produto novo pedido por outra tela', () => {
+  it('o caminho abre o formulário com o nome e a loja, e a leitura devolve os dois', () => {
+    const caminho = caminhoDoProdutoNovo('refil de purificador PA21G', 'shopee');
+    expect(caminho).toBe('/catalogo?novo=refil+de+purificador+PA21G&plataforma=shopee#novo-titulo');
+
+    const busca = Object.fromEntries(new URL(caminho, 'http://x').searchParams);
+    expect(lerProdutoNovo(busca)).toEqual({
+      titulo: 'refil de purificador PA21G',
+      plataforma: 'shopee',
+    });
+  });
+
+  it('nome curto não é pedido, e loja que não existe é ignorada', () => {
+    expect(lerProdutoNovo({ novo: 'x' })).toBeNull();
+    expect(lerProdutoNovo({})).toBeNull();
+    expect(lerProdutoNovo({ novo: '  capa   X9  ', plataforma: 'orkut' })).toEqual({
+      titulo: 'capa X9',
+      plataforma: undefined,
+    });
+  });
+
+  it('o produto criado abre no simulador da loja pedida, ou na ficha sem loja', () => {
+    expect(caminhoDoProdutoCriado('0f8fad5b-d9cb-469f-a165-70867728950e', 'amazon', 'criado')).toBe(
+      '/catalogo/0f8fad5b-d9cb-469f-a165-70867728950e?plataforma=amazon&r=criado#publicar-titulo',
+    );
+    expect(
+      caminhoDoProdutoCriado('0f8fad5b-d9cb-469f-a165-70867728950e', undefined, 'criado'),
+    ).toBe('/catalogo/0f8fad5b-d9cb-469f-a165-70867728950e?r=criado');
   });
 });

@@ -6,10 +6,14 @@
  * auditar abre. Esconder atrás de clique só vale para o que é conferência; o estado e o
  * motivo de parada ficam abertos, porque são a razão de olhar a tela.
  */
+import Link from 'next/link';
+import { PLATAFORMAS } from '@/dominio/precificacao/tipos';
 import { fronteiraRestante } from '@/dominio/prospector/dossie';
 import type { DossieGravado } from '@/dominio/prospector/repositorio';
 import { definicaoDaFamilia, FERRAMENTAS, type Ferramenta } from '@/dominio/prospector/hipoteses';
 import { estadoDaFerramenta, O_QUE_A_FERRAMENTA_FAZ } from '@/dominio/prospector/ferramentas';
+import { caminhoDoProdutoNovo } from '../catalogo/apresentacao';
+import { ROTULO_DA_PLATAFORMA } from '../ui/rotulos';
 import { formatarAbsoluto, formatarRelativo } from '../ui/tempo';
 import { investigarAlvo } from './acoes';
 import {
@@ -141,6 +145,24 @@ function Dossie({
       )}
 
       {dossie.recomendacao !== null && <p className={estilo.recomendacao}>{dossie.recomendacao}</p>}
+
+      {/*
+        "Publicar em" (ADR 0009): o garimpo serve a todas as lojas, e quando vira venda
+        pergunta em qual. O link abre o cadastro do produto com o alvo como nome — para
+        conferir, porque o nome não muda depois — e a loja escolhida segue até o preço.
+      */}
+      <div className={estilo.publicarEm}>
+        <span className={estilo.publicarEmRotulo}>Publicar em</span>
+        {PLATAFORMAS.map((plataforma) => (
+          <Link
+            className={estilo.botaoMiudo}
+            href={caminhoDoProdutoNovo(dossie.alvo, plataforma)}
+            key={plataforma}
+          >
+            {ROTULO_DA_PLATAFORMA[plataforma]}
+          </Link>
+        ))}
+      </div>
 
       {/*
         Continuar é passar um teto maior, e é por isso que o teto é campo e não botão:

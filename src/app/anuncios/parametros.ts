@@ -17,8 +17,8 @@
 import { z } from 'zod';
 import { PLATAFORMAS } from '@/dominio/precificacao/tipos';
 import type { Plataforma } from '@/dominio/precificacao/tipos';
-import { ZERO, lerReaisDigitados, type Centavos } from '@/lib/dinheiro';
-import { QUANTIDADE_PADRAO } from './constantes';
+import { ZERO, centavosParaDigitar, lerReaisDigitados, type Centavos } from '@/lib/dinheiro';
+import { CAMINHO, QUANTIDADE_PADRAO } from './constantes';
 
 /**
  * Preço como a pessoa digita: `89`, `89,90` ou `89.90`.
@@ -123,4 +123,36 @@ export function comoQueryString(parametros: ParametrosDaMontagem): string {
   });
   if (parametros.tipoProduto !== null) busca.set('tipo', parametros.tipoProduto);
   return busca.toString();
+}
+
+/** O que outra tela sabe quando manda montar um anúncio: o produto e a loja, e talvez mais. */
+export interface PedidoDeMontagem {
+  readonly skuId: string;
+  readonly plataforma: Plataforma;
+  /** O preço já decidido — o do simulador do catálogo, para aquela loja. */
+  readonly preco?: Centavos | null;
+  readonly quantidade?: number;
+  readonly tipoProduto?: string | null;
+}
+
+/**
+ * O endereço da montagem, vindo de outra tela: a ficha do produto, a área da loja, o
+ * anúncio já montado para outra loja.
+ *
+ * Sem preço, a tela abre com o produto e a loja escolhidos e o preço em branco — o passo
+ * que falta, e não erro. O preço não se copia de uma loja para outra: a comissão muda, e
+ * o preço que dá margem numa dá prejuízo noutra.
+ */
+export function caminhoParaMontar(pedido: PedidoDeMontagem): string {
+  const busca = new URLSearchParams({ sku: pedido.skuId, plataforma: pedido.plataforma });
+  if (pedido.preco !== undefined && pedido.preco !== null) {
+    busca.set('preco', centavosParaDigitar(pedido.preco));
+  }
+  if (pedido.quantidade !== undefined && pedido.quantidade !== QUANTIDADE_PADRAO) {
+    busca.set('qtd', String(pedido.quantidade));
+  }
+  if (pedido.tipoProduto !== undefined && pedido.tipoProduto !== null) {
+    busca.set('tipo', pedido.tipoProduto);
+  }
+  return `${CAMINHO}?${busca.toString()}`;
 }

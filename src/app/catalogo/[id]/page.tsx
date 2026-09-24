@@ -35,6 +35,7 @@ import estilo from '../catalogo.module.css';
 import {
   descreverAviso,
   lerParametros,
+  lojasParaPublicar,
   textoDasPresuncoes,
   textoDoPrecoMinimo,
 } from '../apresentacao';
@@ -49,6 +50,7 @@ import {
   Ocorrencias,
   Presuncoes,
   ProdutoDesativado,
+  PublicarEm,
   ResumoFiscal,
 } from '../componentes';
 import { CAMINHO, FAIXA_PADRAO, OCORRENCIAS_NA_TELA } from '../constantes';
@@ -168,6 +170,25 @@ export default async function PaginaDoProduto({
         </p>
         <Faixas simulacao={simulacao} />
       </section>
+
+      {sku.ativo && (
+        <section aria-labelledby="publicar-titulo" className={estilo.secao}>
+          <h2 className={estilo.secaoTitulo} id="publicar-titulo">
+            Publicar em
+          </h2>
+          <p className={estilo.dica}>
+            {sku.custoAtual === null
+              ? 'Sem custo, o preço de qualquer loja é chute: informe o custo lá em cima antes de montar o anúncio.'
+              : 'Uma loja por vez, porque o preço de cada uma é outro — a comissão muda. O anúncio sai como arquivo de importação da loja, sem precisar de conexão.'}
+          </p>
+          <PublicarEm
+            lojas={lojasParaPublicar(sku.id, {
+              plataforma: parametros.plataforma,
+              preco: parametros.preco,
+            })}
+          />
+        </section>
+      )}
 
       <section aria-labelledby="ficha-titulo" className={estilo.secao}>
         <h2 className={estilo.secaoTitulo} id="ficha-titulo">

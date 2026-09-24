@@ -16,6 +16,8 @@ import type { Plataforma } from '@/dominio/precificacao/tipos';
 import { banco } from '@/infra/banco/cliente';
 import { registroPadrao } from '@/plataformas/registro';
 import { LIMITE_DE_CANDIDATOS } from '../../anuncios/constantes';
+import { caminhoParaMontar } from '../../anuncios/parametros';
+import { caminhoDoSimulador } from '../../catalogo/apresentacao';
 import { Divergencias, type DivergenciaParaTela } from '../../postagem/componentes';
 import { LIMITE_DE_CONFERIDAS } from '../../postagem/constantes';
 import { aLoja, naLoja } from '../../ui/rotulos';
@@ -107,11 +109,9 @@ export async function AbaAnuncios({
                   <td>{c.titulo}</td>
                   <td>{faltas.length === 0 ? 'pronto para anunciar' : faltas.join(', ')}</td>
                   <td className={estilo.numeroDaTabela}>
-                    <Link href={`/catalogo/${c.id}?plataforma=${plataforma}`}>
-                      Preço nesta loja
-                    </Link>
+                    <Link href={caminhoDoSimulador(c.id, plataforma)}>Preço nesta loja</Link>
                     {' · '}
-                    <Link href={`/anuncios?sku=${c.id}&plataforma=${plataforma}`}>
+                    <Link href={caminhoParaMontar({ skuId: c.id, plataforma })}>
                       Montar anúncio
                     </Link>
                   </td>

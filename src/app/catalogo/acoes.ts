@@ -20,10 +20,11 @@ import { z } from 'zod';
 import { lerAmbiente } from '@/config/ambiente';
 import { RepositorioDeSku, esquemaNovoSku } from '@/dominio/catalogo/sku';
 import { carregarPerfil } from '@/dominio/perfil';
+import { ehPlataforma } from '@/dominio/precificacao/tipos';
 import { banco } from '@/infra/banco/cliente';
 import { criarRegistrador, nivelDoAmbiente } from '@/infra/log';
 import { lerReaisDigitados } from '@/lib/dinheiro';
-import type { CodigoDeAviso } from './apresentacao';
+import { caminhoDoProdutoCriado, type CodigoDeAviso } from './apresentacao';
 import { CAMINHO } from './constantes';
 
 const log = criarRegistrador({
@@ -95,8 +96,11 @@ export async function criarProduto(dados: FormData): Promise<void> {
   }
 
   revalidatePath(CAMINHO);
-  // Leva para o produto: o passo seguinte é informar o custo, e ele é lá.
-  redirect(paraProduto(id, 'criado'));
+  // Leva para o produto: o passo seguinte é informar o custo, e ele é lá. Quando o
+  // cadastro veio do "Publicar em" do garimpo, a loja escolhida vai junto, e a ficha
+  // abre com o simulador nela (ADR 0009).
+  const loja = dados.get('plataforma');
+  redirect(caminhoDoProdutoCriado(id, ehPlataforma(loja) ? loja : undefined, 'criado'));
 }
 
 const esquemaDoId = z.string().trim().uuid();

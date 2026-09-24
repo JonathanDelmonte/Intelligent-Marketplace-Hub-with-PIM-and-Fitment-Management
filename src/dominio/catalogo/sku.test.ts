@@ -149,6 +149,18 @@ describe.skipIf(!temBancoDeTeste())('RepositorioDeSku (contra Postgres real)', (
       expect(await repo.buscarPorEan(perfilB, '7896541200121')).toBeNull();
     });
 
+    it('buscar por nome ignora maiúscula e espaço, e respeita o perfil', async () => {
+      const criado = await repo.criar({
+        perfil: perfilA,
+        dados: { tituloInterno: 'Refil  de purificador PA21G' },
+      });
+      expect((await repo.buscarPorTitulo(perfilA, ' refil de PURIFICADOR pa21g '))?.id).toBe(
+        criado.id,
+      );
+      expect(await repo.buscarPorTitulo(perfilA, 'Refil PA21G')).toBeNull();
+      expect(await repo.buscarPorTitulo(perfilB, 'Refil de purificador PA21G')).toBeNull();
+    });
+
     it('o mesmo EAN pode existir nos dois perfis', async () => {
       // São dois negócios diferentes vendendo o mesmo produto: legítimo.
       await repo.criar({

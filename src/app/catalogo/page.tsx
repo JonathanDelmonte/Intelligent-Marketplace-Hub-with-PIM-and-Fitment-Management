@@ -13,15 +13,29 @@
  * com custo velho ela mente devagar, sem peso ela erra o frete.
  */
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { lerAmbiente } from '@/config/ambiente';
 import { custoDefasado } from '@/dominio/catalogo/custo';
 import { RepositorioDeSku } from '@/dominio/catalogo/sku';
+import { RepositorioDePares } from '@/dominio/identidade/pares';
 import { carregarPerfil } from '@/dominio/perfil';
 import { banco } from '@/infra/banco/cliente';
+import { naLoja } from '../ui/rotulos';
 import estilo from './catalogo.module.css';
-import { descreverAviso, resumoDoCatalogo } from './apresentacao';
-import { AvisoDaAcao, Desativados, FormularioDeProduto, Produtos } from './componentes';
-import { LIMITE_DO_CATALOGO } from './constantes';
+import {
+  caminhoDoSimulador,
+  descreverAviso,
+  lerProdutoNovo,
+  resumoDoCatalogo,
+} from './apresentacao';
+import {
+  AtalhoParaJuntar,
+  AvisoDaAcao,
+  Desativados,
+  FormularioDeProduto,
+  Produtos,
+} from './componentes';
+import { CAMINHO, LIMITE_DO_CATALOGO } from './constantes';
 
 export const metadata: Metadata = { title: 'Catálogo' };
 
@@ -39,9 +53,19 @@ export default async function PaginaDeCatalogo({
   const agora = new Date();
 
   const repo = new RepositorioDeSku(db);
-  const [produtos, desativados] = await Promise.all([
+  // O produto novo pedido por outra tela — o "Publicar em" do garimpo. Se o nome já está
+  // no catálogo, a tela leva ao que existe em vez de deixar cadastrar de novo.
+  const pedido = lerProdutoNovo(parametros);
+  const [produtos, desativados, jaExiste, pendentes] = await Promise.all([
     repo.listar(perfil.id, { limite: LIMITE_DO_CATALOGO }),
     repo.desativados(perfil.id),
+    pedido === null ? Promise.resolve(null) : repo.buscarPorTitulo(perfil.id, pedido.titulo),
+    // A contagem é um enfeite do atalho: se falhar, o atalho aparece sem ela, e o
+    // catálogo abre do mesmo jeito.
+    new RepositorioDePares(db)
+      .contarPorStatus()
+      .then((c) => c.pendente)
+      .catch(() => null),
   ]);
 
   const semCusto = produtos.filter((p) => p.custoAtual === null).length;
@@ -61,6 +85,7 @@ export default async function PaginaDeCatalogo({
         <p className={estilo.resumo}>
           {resumoDoCatalogo({ total: produtos.length, semCusto, defasados })}
         </p>
+        <AtalhoParaJuntar pendentes={pendentes} />
       </header>
 
       {aviso !== null && <AvisoDaAcao aviso={aviso} />}
@@ -81,11 +106,36 @@ export default async function PaginaDeCatalogo({
         <h2 className={estilo.secaoTitulo} id="novo-titulo">
           Acrescentar produto
         </h2>
-        <p className={estilo.dica}>
-          Produto também entra pela tela de juntar iguais, quando duas ocorrências viram o mesmo
-          item. Aqui é para o que você já conhece e quer cadastrar direto.
-        </p>
-        <FormularioDeProduto />
+        {pedido === null ? (
+          <p className={estilo.dica}>
+            Produto também entra pela tela de juntar iguais, quando duas ocorrências viram o mesmo
+            item. Aqui é para o que você já conhece e quer cadastrar direto.
+          </p>
+        ) : (
+          <p className={estilo.dica}>
+            Veio do garimpo
+            {pedido.plataforma === undefined ? '' : `, para publicar ${naLoja(pedido.plataforma)}`}.
+            Confira o nome antes de acrescentar: é por ele que você vai reconhecer a peça, e ele não
+            muda depois.
+          </p>
+        )}
+        {jaExiste === null ? null : (
+          <p className={estilo.dica} role="status">
+            Já existe no catálogo um produto com esse nome:{' '}
+            <Link
+              className={estilo.link}
+              href={
+                pedido?.plataforma === undefined
+                  ? `${CAMINHO}/${jaExiste.id}`
+                  : caminhoDoSimulador(jaExiste.id, pedido.plataforma)
+              }
+            >
+              {jaExiste.tituloInterno}
+            </Link>
+            . Abra ele para publicar, em vez de cadastrar de novo.
+          </p>
+        )}
+        <FormularioDeProduto plataforma={pedido?.plataforma} tituloInicial={pedido?.titulo ?? ''} />
       </section>
     </main>
   );

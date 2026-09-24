@@ -269,6 +269,31 @@ export class RepositorioDeSku {
     return linha === undefined ? null : paraSku(linha);
   }
 
+  /**
+   * O produto com este nome, sem diferença de maiúscula nem de espaço repetido.
+   *
+   * Existe para o "Publicar em" do garimpo não cadastrar duas vezes o mesmo alvo: o
+   * formulário de produto novo, aberto com o nome do alvo, avisa quando o nome já está no
+   * catálogo e leva ao que existe. Ativo vem antes de desativado — é o que se quer abrir.
+   */
+  async buscarPorTitulo(perfil: PerfilId, titulo: string): Promise<SkuGravado | null> {
+    const linhas = await this.db
+      .select()
+      .from(sku)
+      .where(
+        and(
+          eq(sku.perfilId, perfil),
+          // `[[:space:]]`, e não `\s`: dentro do `sql` (template do JavaScript), a barra
+          // some e o Postgres recebia `s+` — trocava letras "s" em vez de espaços.
+          sql`lower(regexp_replace(trim(${sku.tituloInterno}), '[[:space:]]+', ' ', 'g')) = lower(regexp_replace(trim(${titulo}), '[[:space:]]+', ' ', 'g'))`,
+        ),
+      )
+      .orderBy(desc(sku.ativo))
+      .limit(1);
+    const linha = linhas[0];
+    return linha === undefined ? null : paraSku(linha);
+  }
+
   async listar(
     perfil: PerfilId,
     opcoes: { readonly apenasAtivos?: boolean; readonly limite?: number } = {},

@@ -5,6 +5,7 @@ import {
   absoluto,
   aplicarPontosBase,
   centavos,
+  centavosParaDigitar,
   centavosParaReais,
   formatarBRL,
   formatarPontosBase,
@@ -312,6 +313,18 @@ describe('lerPercentualDigitado', () => {
     expect(lerPercentualDigitado('-6')).toBeNull();
     expect(lerPercentualDigitado('150')).toBeNull();
     expect(lerPercentualDigitado('1000')).toBeNull();
+  });
+});
+
+describe('centavosParaDigitar', () => {
+  it('escreve como se digita, e a leitura devolve o mesmo valor', () => {
+    expect(centavosParaDigitar(centavos(8990))).toBe('89,90');
+    expect(centavosParaDigitar(centavos(5))).toBe('0,05');
+    expect(centavosParaDigitar(centavos(123_456))).toBe('1234,56');
+    expect(centavosParaDigitar(centavos(-500))).toBe('-5,00');
+    for (const valor of [0, 1, 99, 100, 8990, 123_456, 999_999_99]) {
+      expect(lerReaisDigitados(centavosParaDigitar(centavos(valor)))).toBe(valor);
+    }
   });
 });
 

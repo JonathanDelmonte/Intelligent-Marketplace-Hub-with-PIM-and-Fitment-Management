@@ -14,6 +14,7 @@ import {
   PLATAFORMAS,
   TIPOS_ANUNCIO_ML,
   type Aviso as AvisoDeMargem,
+  type Plataforma,
   type ResultadoDeMargem,
 } from '@/dominio/precificacao/tipos';
 import { centavos, centavosParaReais, formatarBRL } from '@/lib/dinheiro';
@@ -24,6 +25,9 @@ import {
   ROTULO_DO_TIPO_ANUNCIO_ML,
 } from '../ui/rotulos';
 import { CAMINHO as CAMINHO_FISCAL } from '../fiscal/constantes';
+import { CAMINHO as CAMINHO_DE_JUNTAR } from '../juntar-iguais/constantes';
+import { IDENTIDADE_DA_LOJA } from '../lojas/identidade';
+import { Selo } from '../lojas/selo';
 import { formatarRelativo } from '../ui/tempo';
 import { criarProduto, desativarProduto, reativarProduto, salvarCusto, salvarFicha } from './acoes';
 import {
@@ -35,6 +39,7 @@ import {
   ordenarAvisos,
   TOM_DA_SEVERIDADE,
   type Aviso,
+  type LojaParaPublicar,
   type ParametrosDoSimulador,
 } from './apresentacao';
 import { CAMINHO } from './constantes';
@@ -122,13 +127,30 @@ export function Produtos({
   );
 }
 
-export function FormularioDeProduto() {
+/**
+ * O formulário de produto novo.
+ *
+ * `tituloInicial` e `plataforma` chegam quando outra tela pede o cadastro — o "Publicar
+ * em" do garimpo. A loja vai escondida e volta na ficha do produto criado, já com o
+ * simulador nela: é o passo seguinte de quem escolheu onde vender.
+ */
+export function FormularioDeProduto({
+  tituloInicial = '',
+  plataforma,
+}: {
+  readonly tituloInicial?: string;
+  readonly plataforma?: Plataforma | undefined;
+} = {}) {
   return (
     <form action={criarProduto} className={estilo.formulario}>
+      {plataforma === undefined ? null : (
+        <input name="plataforma" type="hidden" value={plataforma} />
+      )}
       <label className={estilo.campoLargo}>
         O que é
         <input
           className={estilo.entrada}
+          defaultValue={tituloInicial}
           maxLength={200}
           name="titulo"
           placeholder="Refil de purificador de água PA21G"
@@ -725,5 +747,57 @@ export function Desativados({ produtos }: { readonly produtos: readonly SkuGrava
         ))}
       </ul>
     </details>
+  );
+}
+
+/**
+ * "Publicar em": uma linha por loja, com o simulador dela e a montagem do anúncio.
+ *
+ * A mesma ficha serve a todas as lojas (ADR 0009) — o que muda de uma para outra é o
+ * preço, porque a comissão muda, e por isso cada linha tem o seu simulador.
+ */
+export function PublicarEm({ lojas }: { readonly lojas: readonly LojaParaPublicar[] }) {
+  return (
+    <ul className={estilo.publicar}>
+      {lojas.map((loja) => (
+        <li className={estilo.publicarLoja} key={loja.plataforma}>
+          <Selo identidade={IDENTIDADE_DA_LOJA[loja.plataforma]} tamanho={32} />
+          <span className={estilo.publicarTextos}>
+            <span className={estilo.publicarNome}>{ROTULO_DA_PLATAFORMA[loja.plataforma]}</span>
+            <span className={estilo.publicarNota}>{loja.nota}</span>
+          </span>
+          <span className={estilo.publicarAcoes}>
+            <Link className={estilo.link} href={loja.simular}>
+              Simular preço
+            </Link>
+            <Link className={estilo.botaoSecundario} href={loja.montar}>
+              Montar anúncio
+            </Link>
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * O atalho para juntar iguais, que mora dentro do catálogo (ADR 0009): é manutenção do
+ * catálogo — duas ocorrências que são o mesmo produto viram um item só.
+ *
+ * `pendentes` nulo é contagem que não deu para ler: o link aparece mesmo assim, sem o
+ * número, porque a tela de juntar funciona sem ele.
+ */
+export function AtalhoParaJuntar({ pendentes }: { readonly pendentes: number | null }) {
+  return (
+    <p className={estilo.atalho}>
+      <Link className={estilo.link} href={CAMINHO_DE_JUNTAR}>
+        Juntar iguais
+      </Link>
+      {pendentes === null
+        ? ' — ocorrências de loja e de fornecedor que podem ser o mesmo produto.'
+        : pendentes === 0
+          ? ' — nenhum par esperando decisão.'
+          : ` — ${contagem(pendentes, 'par esperando', 'pares esperando')} a sua decisão: é o mesmo produto ou não?`}
+    </p>
   );
 }

@@ -9,8 +9,11 @@ import type { Conferencia, Exigencia } from '@/dominio/anuncios/atributos';
 import type { AvaliacaoDeCatalogo } from '@/dominio/anuncios/catalogo';
 import type { TituloGerado } from '@/dominio/anuncios/titulo';
 import type { CandidatoAAnuncio } from '@/dominio/anuncios/repositorio';
+import { PLATAFORMAS } from '@/dominio/precificacao/tipos';
 import { contagem } from '@/lib/texto';
 import { formatarPontosBase } from '@/lib/dinheiro';
+import { caminhoDoSimulador, type LojaParaPublicar } from '../catalogo/apresentacao';
+import { caminhoParaMontar, type ParametrosDaMontagem } from './parametros';
 
 export type Tom = 'alerta' | 'atencao' | 'neutro';
 
@@ -169,4 +172,25 @@ export function avisoDeCamposInvalidos(campos: readonly string[]): Aviso {
     titulo: 'Escolha que não dá para usar',
     corpo: `Confira: ${campos.join(', ')}. O preço vai como 89 ou 89,90, e a quantidade é inteiro positivo.`,
   };
+}
+
+/**
+ * As outras lojas, para montar o mesmo anúncio nelas (ADR 0009).
+ *
+ * Produto, quantidade e tipo vão junto; **o preço não**. A comissão de cada loja é
+ * outra, e o preço que dá margem numa pode dar prejuízo na outra — por isso cada linha
+ * tem também o simulador da ficha do produto, na loja dela.
+ */
+export function outrasLojas(parametros: ParametrosDaMontagem): readonly LojaParaPublicar[] {
+  return PLATAFORMAS.filter((p) => p !== parametros.plataforma).map((plataforma) => ({
+    plataforma,
+    nota: 'o preço fica em branco: a comissão desta loja é outra, e o preço também',
+    montar: caminhoParaMontar({
+      skuId: parametros.skuId,
+      plataforma,
+      quantidade: parametros.quantidade,
+      tipoProduto: parametros.tipoProduto,
+    }),
+    simular: caminhoDoSimulador(parametros.skuId, plataforma),
+  }));
 }

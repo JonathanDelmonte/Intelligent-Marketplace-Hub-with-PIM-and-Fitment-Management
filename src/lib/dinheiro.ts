@@ -168,6 +168,23 @@ export function lerReaisDigitados(texto: string | null | undefined): Centavos | 
   }
 }
 
+/**
+ * O valor como uma pessoa o digitaria: `8990` → `89,90`. É o inverso de
+ * `lerReaisDigitados`, e existe para um preço calculado numa tela chegar a outra pela
+ * URL — o simulador do catálogo mandando o preço para a montagem do anúncio.
+ *
+ * Sem separador de milhar, porque a leitura o recusa; e com conta de inteiro, sem passar
+ * por `number` com casa decimal: `8990 / 100` vira `89.9`, e o caminho de volta é onde o
+ * centavo some.
+ */
+export function centavosParaDigitar(valor: Centavos): string {
+  const sinal = valor < 0 ? '-' : '';
+  const absolutoEmCentavos = Math.abs(valor);
+  const reais = Math.trunc(absolutoEmCentavos / 100);
+  const resto = absolutoEmCentavos % 100;
+  return `${sinal}${String(reais)},${String(resto).padStart(2, '0')}`;
+}
+
 /** Até três dígitos inteiros e duas casas: o bastante para 100,00, e nada além. */
 const PERCENTUAL_DIGITADO = /^\d{1,3}(?:[.,]\d{1,2})?$/;
 

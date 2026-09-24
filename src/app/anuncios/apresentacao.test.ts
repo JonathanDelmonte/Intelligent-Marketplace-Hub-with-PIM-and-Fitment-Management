@@ -7,11 +7,13 @@ import { TOTAL_BP } from '@/dominio/compatibilidade/resolucao';
 import type { Evidencia } from '@/dominio/compatibilidade/evidencia';
 import type { TituloGerado } from '@/dominio/anuncios/titulo';
 import type { CandidatoAAnuncio } from '@/dominio/anuncios/repositorio';
+import { centavos } from '@/lib/dinheiro';
 import {
   CODIGOS_DE_AVISO,
   avisoDeCamposInvalidos,
   descreverAviso,
   descreverCandidato,
+  outrasLojas,
   resumoDaConferencia,
   resumoDoTitulo,
   rotuloDaExigencia,
@@ -235,5 +237,25 @@ describe('avisos', () => {
     const a = avisoDeCamposInvalidos(['preco', 'qtd']);
     expect(a.corpo).toContain('preco');
     expect(a.corpo).toContain('89,90');
+  });
+});
+
+describe('outrasLojas', () => {
+  it('oferece as outras lojas com produto, quantidade e tipo — e sem o preço', () => {
+    const lojas = outrasLojas({
+      skuId: '0f8fad5b-d9cb-469f-a165-70867728950e',
+      plataforma: 'ml',
+      preco: centavos(8990),
+      precoComoTexto: '89,90',
+      quantidade: 2,
+      tipoProduto: 'refil',
+    });
+    expect(lojas.map((l) => l.plataforma)).toEqual(['shopee', 'amazon']);
+    expect(lojas[0]?.montar).toBe(
+      '/anuncios?sku=0f8fad5b-d9cb-469f-a165-70867728950e&plataforma=shopee&qtd=2&tipo=refil',
+    );
+    expect(lojas[0]?.simular).toBe(
+      '/catalogo/0f8fad5b-d9cb-469f-a165-70867728950e?plataforma=shopee#preco-titulo',
+    );
   });
 });
