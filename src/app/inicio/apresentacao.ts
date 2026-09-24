@@ -12,7 +12,13 @@
  * sabe é o jeito de alguém deixar de conferir o que precisava conferir.
  */
 import { DIAS_QUE_JA_SAO_AGORA } from '@/dominio/fiscal/prazos';
+import type { EstadoDaLoja } from '@/dominio/lojas/estado';
+import type { Painel } from '@/dominio/lojas/painel';
+import type { Plataforma } from '@/dominio/precificacao/tipos';
+import { formatarBRL, formatarPontosBase, pontosBase } from '@/lib/dinheiro';
 import { contagem } from '@/lib/texto';
+import { margemEmTexto } from '../lojas/apresentacao';
+import { ROTULO_DA_PLATAFORMA } from '../ui/rotulos';
 
 /** Ordem de atenção: `agora` é dinheiro parado ou vazando hoje. */
 export const TONS = ['agora', 'atencao', 'calmo'] as const;
@@ -258,4 +264,73 @@ export function separarCalmas(itens: readonly Pendencia[]): Separacao {
     ativas: itens.filter((i) => !estaCalma(i)),
     calmas: itens.filter(estaCalma),
   };
+}
+
+// ─── As lojas, lado a lado (ADR 0009) ────────────────────────────────────────
+
+/** O que a visão geral lê de uma loja: o estado e os números da janela. */
+export interface LeituraDaLoja {
+  readonly plataforma: Plataforma;
+  readonly estado: EstadoDaLoja;
+  readonly painel: Painel;
+}
+
+export interface CartaoDaLoja {
+  readonly plataforma: Plataforma;
+  readonly nome: string;
+  readonly legenda: string;
+  readonly semDados: boolean;
+  /** `null` na loja sem dados: o cartão diz o caminho, e não um zero. */
+  readonly faturamento: string | null;
+  readonly detalhe: string | null;
+  /** A fatia da loja no faturamento de todas, em pontos-base, para a barra. */
+  readonly participacaoBp: number | null;
+  readonly participacao: string | null;
+}
+
+/**
+ * Um cartão por loja, com a fatia de cada uma no faturamento somado.
+ *
+ * A fatia só existe quando há faturamento na soma: "0% de R$ 0" não é uma fatia. Loja
+ * sem dados não vira cartão com zeros — zero é afirmação, e ali o que se sabe é que
+ * ainda não entrou nada.
+ */
+export function cartoesDasLojas(lojas: readonly LeituraDaLoja[]): readonly CartaoDaLoja[] {
+  const total = lojas.reduce((soma, l) => soma + l.painel.faturamento, 0);
+
+  return lojas.map((l) => {
+    const base = {
+      plataforma: l.plataforma,
+      nome: ROTULO_DA_PLATAFORMA[l.plataforma],
+      legenda: l.estado.legenda,
+    };
+    if (l.estado.tipo === 'sem_dados') {
+      return {
+        ...base,
+        semDados: true,
+        faturamento: null,
+        detalhe: null,
+        participacaoBp: null,
+        participacao: null,
+      };
+    }
+
+    const participacaoBp = total === 0 ? null : Math.round((l.painel.faturamento * 10_000) / total);
+    const margem =
+      l.painel.margemBp === null
+        ? 'margem sem custo'
+        : `margem ${margemEmTexto(l.painel.margemBp)}`;
+
+    return {
+      ...base,
+      semDados: false,
+      faturamento: formatarBRL(l.painel.faturamento),
+      detalhe: `${contagem(l.painel.pedidos, 'pedido', 'pedidos')} · ${margem}`,
+      participacaoBp,
+      participacao:
+        participacaoBp === null
+          ? null
+          : `${formatarPontosBase(pontosBase(participacaoBp), 0)} do faturamento`,
+    };
+  });
 }

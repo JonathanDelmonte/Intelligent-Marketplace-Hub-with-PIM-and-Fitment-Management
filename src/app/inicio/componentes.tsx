@@ -6,8 +6,12 @@
  * `inicio.module.css`.
  */
 import Link from 'next/link';
-import { portasPorGrupo } from '../navegacao';
-import type { Pendencia, Tom } from './apresentacao';
+import { CAMINHO as CAMINHO_DO_ASSISTENTE, PERGUNTAS_PRONTAS } from '../assistente/constantes';
+import { IconeDaPorta } from '../icones';
+import { IDENTIDADE_DA_LOJA } from '../lojas/identidade';
+import { Selo } from '../lojas/selo';
+import { CAMINHO_DAS_LOJAS, caminhoDaLoja, portasPorGrupo } from '../navegacao';
+import type { CartaoDaLoja, Pendencia, Tom } from './apresentacao';
 import estilo from './inicio.module.css';
 
 const CLASSE_DO_CARTAO: Readonly<Record<Tom, string>> = {
@@ -134,5 +138,112 @@ export function Portas() {
         </section>
       ))}
     </>
+  );
+}
+
+/**
+ * A caixa do assistente, no alto da visão geral.
+ *
+ * Um formulário GET para `/assistente`: a pergunta viaja na URL e o assistente responde
+ * lá. As perguntas prontas são links, e nenhuma gasta a cota de IA.
+ */
+export function PergunteAIA() {
+  return (
+    <section aria-labelledby="pergunte-titulo" className={estilo.pergunte}>
+      <h2 className={estilo.pergunteTitulo} id="pergunte-titulo">
+        <IconeDaPorta nome="assistente" tamanho={20} />
+        Pergunte à IA
+      </h2>
+      <form action={CAMINHO_DO_ASSISTENTE} className={estilo.pergunteLinha} method="get">
+        <label className="sr-only" htmlFor="pergunta-inicio">
+          Sua pergunta
+        </label>
+        <input
+          className={estilo.pergunteCampo}
+          id="pergunta-inicio"
+          name="pergunta"
+          placeholder="Ex.: qual foi meu faturamento na Shopee?"
+          type="text"
+        />
+        <button className={estilo.pergunteBotao} type="submit">
+          Perguntar
+        </button>
+      </form>
+      <ul aria-label="Perguntas prontas" className={estilo.prontas}>
+        {PERGUNTAS_PRONTAS.map((p) => (
+          <li key={p.id}>
+            <Link className={estilo.pronta} href={`${CAMINHO_DO_ASSISTENTE}?pronta=${p.id}`}>
+              {p.rotulo}
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <p className={estilo.pergunteNota}>
+        Os números saem do seu banco. A IA só entende a pergunta, e as prontas nem precisam dela.
+      </p>
+    </section>
+  );
+}
+
+/** Um cartão por loja, e o de adicionar loja no fim. */
+export function Lojas({ cartoes }: { readonly cartoes: readonly CartaoDaLoja[] }) {
+  return (
+    <ul className={estilo.lojas}>
+      {cartoes.map((c) => (
+        <li key={c.plataforma}>
+          {c.semDados ? (
+            <div className={estilo.loja}>
+              <div className={estilo.lojaCabecalho}>
+                <Selo identidade={IDENTIDADE_DA_LOJA[c.plataforma]} tamanho={34} />
+                <span>
+                  <Link className={estilo.lojaNome} href={caminhoDaLoja(c.plataforma)}>
+                    {c.nome}
+                  </Link>
+                  <span className={estilo.lojaLegenda}>{c.legenda}</span>
+                </span>
+              </div>
+              <p className={estilo.lojaDetalhe}>
+                Importe a planilha de pedidos, e os números aparecem aqui.
+              </p>
+              <Link className={estilo.lojaAcao} href={`/importar?loja=${c.plataforma}`}>
+                Importar planilha
+              </Link>
+            </div>
+          ) : (
+            <Link className={estilo.loja} href={caminhoDaLoja(c.plataforma)}>
+              <div className={estilo.lojaCabecalho}>
+                <Selo identidade={IDENTIDADE_DA_LOJA[c.plataforma]} tamanho={34} />
+                <span>
+                  <span className={estilo.lojaNome}>{c.nome}</span>
+                  <span className={estilo.lojaLegenda}>{c.legenda}</span>
+                </span>
+              </div>
+              <span className={estilo.lojaValor}>{c.faturamento}</span>
+              <span className={estilo.lojaDetalhe}>{c.detalhe}</span>
+              {c.participacaoBp !== null && (
+                <>
+                  <span aria-hidden="true" className={estilo.fatia}>
+                    <span
+                      className={estilo.fatiaCheia}
+                      style={{ width: `${String(c.participacaoBp / 100)}%` }}
+                    />
+                  </span>
+                  <span className={estilo.lojaDetalhe}>{c.participacao}</span>
+                </>
+              )}
+            </Link>
+          )}
+        </li>
+      ))}
+      <li>
+        <Link className={estilo.adicionarLoja} href={CAMINHO_DAS_LOJAS}>
+          <IconeDaPorta nome="adicionar" tamanho={20} />
+          <span className={estilo.lojaNome}>Adicionar loja</span>
+          <span className={estilo.lojaDetalhe}>
+            Shein, AliExpress, Magalu, TikTok Shop: o que falta para cada uma entrar.
+          </span>
+        </Link>
+      </li>
+    </ul>
   );
 }

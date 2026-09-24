@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { DIAS_QUE_JA_SAO_AGORA } from '@/dominio/fiscal/prazos';
 import { hrefAtual } from '../navegacao';
+import { PAINEL_VAZIO } from '@/dominio/lojas/painel';
+import { centavos, pontosBase } from '@/lib/dinheiro';
 import {
   NAO_DEU_PARA_LER,
+  cartoesDasLojas,
   estaCalma,
   montarPendencias,
   resumoDaCasa,
@@ -208,5 +211,59 @@ describe('separarCalmas', () => {
 
     const falhou = montarPendencias(leituras({ postagem: null }));
     expect(falhou.filter((i) => i.chave === 'postagem').every(estaCalma)).toBe(false);
+  });
+});
+
+describe('cartoesDasLojas', () => {
+  const planilha = {
+    tipo: 'planilha' as const,
+    legenda: 'Por planilha · até 22/09',
+    frase: 'os números vão até 22/09.',
+  };
+  const semDados = { tipo: 'sem_dados' as const, legenda: 'Sem dados', frase: 'nenhum pedido.' };
+
+  it('cada loja com a fatia dela no faturamento somado', () => {
+    const cartoes = cartoesDasLojas([
+      {
+        plataforma: 'ml',
+        estado: planilha,
+        painel: {
+          ...PAINEL_VAZIO,
+          pedidos: 121,
+          faturamento: centavos(823_000),
+          margemBp: pontosBase(2300),
+        },
+      },
+      {
+        plataforma: 'shopee',
+        estado: planilha,
+        painel: { ...PAINEL_VAZIO, pedidos: 65, faturamento: centavos(391_000) },
+      },
+      { plataforma: 'amazon', estado: semDados, painel: PAINEL_VAZIO },
+    ]);
+
+    expect(cartoes.map((c) => [c.nome, c.participacaoBp])).toEqual([
+      ['Mercado Livre', 6779],
+      ['Shopee', 3221],
+      ['Amazon', null],
+    ]);
+    expect(cartoes[0]?.detalhe).toBe('121 pedidos · margem 23%');
+    expect(cartoes[0]?.participacao).toBe('68% do faturamento');
+    expect(cartoes[1]?.detalhe).toBe('65 pedidos · margem sem custo');
+  });
+
+  it('loja sem dados não vira cartão de zeros', () => {
+    const [cartao] = cartoesDasLojas([
+      { plataforma: 'amazon', estado: semDados, painel: PAINEL_VAZIO },
+    ]);
+    expect(cartao).toMatchObject({ semDados: true, faturamento: null, participacao: null });
+  });
+
+  it('sem faturamento na soma não há fatia', () => {
+    const [cartao] = cartoesDasLojas([
+      { plataforma: 'ml', estado: planilha, painel: PAINEL_VAZIO },
+    ]);
+    expect(cartao?.participacaoBp).toBeNull();
+    expect(cartao?.faturamento).toBe('R$\u00a00,00');
   });
 });

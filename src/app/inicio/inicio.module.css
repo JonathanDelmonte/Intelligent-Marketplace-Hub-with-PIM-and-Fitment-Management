@@ -82,78 +82,6 @@
   white-space: nowrap;
 }
 
-/* ── Pílulas de momento ──────────────────────────────────────────────────── */
-
-.momentos {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--espaco-2);
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.momento {
-  align-items: center;
-  background: var(--cor-superficie);
-  border: 1px solid var(--cor-borda);
-  border-radius: 999px;
-  color: var(--cor-texto-fraco);
-  display: inline-flex;
-  font-size: var(--texto-menor);
-  gap: var(--espaco-2);
-  padding: var(--espaco-1) var(--espaco-3);
-  text-decoration: none;
-  /* Sem isto, "Fornecedor e obrigação" quebra em três linhas dentro da pílula. */
-  white-space: nowrap;
-}
-
-.momento:hover {
-  border-color: var(--cor-borda-forte);
-  color: var(--cor-texto);
-}
-
-/*
- * O momento escolhido, marcado por contorno mais escuro e não por cor de marca.
- *
- * Fundo na cor da marca aqui competiria com a régua de severidade dos cartões — e entre
- * "qual filtro está ligado" e "o que é urgente", o segundo tem de ganhar.
- */
-.momentoAtual {
-  background: var(--cor-texto);
-  border-color: var(--cor-texto);
-  color: var(--cor-superficie);
-  font-weight: 600;
-}
-
-.momentoAtual:hover {
-  color: var(--cor-superficie);
-}
-
-/* A contagem dentro da pílula. Tabular para não dançar entre 9 e 10. */
-.contagemDoMomento {
-  font-size: var(--texto-miudo);
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-}
-
-/* Bolinha de gravidade na pílula: diz que ali dentro tem coisa urgente. */
-.pontoDoMomento {
-  border-radius: 50%;
-  flex: none;
-  height: 0.4375rem;
-  width: 0.4375rem;
-}
-
-.pontoAgora {
-  background: var(--cor-erro);
-}
-
-.pontoAtencao {
-  background: var(--cor-aviso);
-}
-
 /* ── Cartões do que precisa de você ──────────────────────────────────────── */
 
 .cartoes {
@@ -311,6 +239,193 @@
   font-weight: 600;
 }
 
+/* ── Pergunte à IA ───────────────────────────────────────────────────────── */
+
+/*
+ * A caixa do assistente fica logo abaixo do título: é a porta da IA geral (ADR 0009), e
+ * pergunta em português é o jeito mais curto de chegar a um número de qualquer loja.
+ */
+.pergunte {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra-cartao);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-3);
+  padding: var(--espaco-4) var(--espaco-5);
+}
+
+.pergunteTitulo {
+  align-items: center;
+  color: var(--cor-primaria);
+  display: flex;
+  font-size: var(--texto-base);
+  font-weight: 650;
+  gap: var(--espaco-2);
+  margin: 0;
+}
+
+.pergunteLinha {
+  display: flex;
+  gap: var(--espaco-2);
+}
+
+.pergunteCampo {
+  composes: entrada from '../ui/comum.module.css';
+  flex: 1;
+  min-height: 2.75rem;
+  min-width: 0;
+}
+
+.pergunteBotao {
+  composes: botao from '../ui/comum.module.css';
+}
+
+.prontas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pronta {
+  background: var(--cor-superficie-baixa);
+  border-radius: 999px;
+  color: var(--cor-texto);
+  display: inline-flex;
+  font-size: var(--texto-menor);
+  min-height: 2rem;
+  align-items: center;
+  padding: 0 var(--espaco-3);
+  text-decoration: none;
+}
+
+.pronta:hover {
+  background: var(--cor-borda);
+}
+
+.pergunteNota {
+  color: var(--cor-texto-fraco);
+  font-size: var(--texto-miudo);
+  margin: 0;
+}
+
+/* ── As lojas ────────────────────────────────────────────────────────────── */
+
+.lojas {
+  display: grid;
+  gap: var(--espaco-4);
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.loja {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra-cartao);
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-2);
+  height: 100%;
+  padding: var(--espaco-4);
+  text-decoration: none;
+}
+
+a.loja:hover {
+  border-color: var(--cor-borda-forte);
+}
+
+.lojaCabecalho {
+  align-items: center;
+  display: flex;
+  gap: var(--espaco-3);
+  margin-bottom: var(--espaco-1);
+}
+
+.lojaNome {
+  color: var(--cor-texto);
+  display: block;
+  font-size: var(--texto-base);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.lojaLegenda {
+  color: var(--cor-texto-fraco);
+  display: block;
+  font-size: var(--texto-miudo);
+}
+
+.lojaValor {
+  font-size: var(--texto-titulo);
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.lojaDetalhe {
+  color: var(--cor-texto-fraco);
+  font-size: var(--texto-menor);
+  margin: 0;
+}
+
+.lojaAcao {
+  composes: botao from '../ui/comum.module.css';
+  align-self: flex-start;
+  margin-top: auto;
+  text-decoration: none;
+}
+
+/* A fatia da loja no faturamento de todas: a barra diz de relance o que o número diz. */
+.fatia {
+  background: var(--cor-superficie-baixa);
+  border-radius: 3px;
+  display: block;
+  height: 6px;
+  margin-top: var(--espaco-1);
+  overflow: hidden;
+}
+
+.fatiaCheia {
+  background: var(--cor-primaria);
+  display: block;
+  height: 100%;
+}
+
+.adicionarLoja {
+  border: 1.5px dashed var(--cor-borda-forte);
+  border-radius: var(--raio);
+  color: var(--cor-texto-fraco);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-2);
+  height: 100%;
+  justify-content: center;
+  padding: var(--espaco-4);
+  text-decoration: none;
+}
+
+.adicionarLoja:hover {
+  border-color: var(--cor-primaria);
+}
+
+.avisoDeLeitura {
+  composes: aviso avisoAtencao from '../ui/comum.module.css';
+}
+
+.secao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-3);
+}
+
 /* ── Índice de telas ─────────────────────────────────────────────────────── */
 
 /*
@@ -405,25 +520,6 @@
   .pagina {
     gap: var(--espaco-5);
     padding: var(--espaco-4);
-  }
-
-  /*
-   * No telefone as pílulas rolam em uma linha, em vez de quebrar em duas.
-   *
-   * Quatro pílulas quebradas em duas linhas empurram o primeiro cartão para baixo da
-   * dobra, e o primeiro cartão é o mais urgente — é exatamente o que não pode sair de
-   * vista numa tela de 844px.
-   */
-  .momentos {
-    flex-wrap: nowrap;
-    margin: 0 calc(-1 * var(--espaco-4));
-    overflow-x: auto;
-    padding: 0 var(--espaco-4) var(--espaco-1);
-    scrollbar-width: none;
-  }
-
-  .momento {
-    flex: none;
   }
 
   .numero {
