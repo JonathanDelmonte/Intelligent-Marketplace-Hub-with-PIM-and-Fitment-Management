@@ -223,6 +223,74 @@ describe('ChamadorOpenRouter — recusas', () => {
   });
 });
 
+describe('ChamadorOpenRouter — embedding', () => {
+  const MODELO_DE_EMBEDDING = 'liquid/lfm-2.5-embedding-350m:free';
+
+  function respostaDeEmbedding(dados: readonly { embedding: number[]; index: number }[]): Response {
+    return Response.json({
+      model: MODELO_DE_EMBEDDING,
+      data: dados,
+      usage: { prompt_tokens: 12, cost: 0 },
+    });
+  }
+
+  it('manda todos os textos num pedido só, na rota de embeddings', async () => {
+    const { buscar, enviados } = fetchFalso(() =>
+      respostaDeEmbedding([
+        { embedding: [0.1, 0.2], index: 0 },
+        { embedding: [0.3, 0.4], index: 1 },
+      ]),
+    );
+    const cota = new CotaGratuita(0);
+    await new ChamadorOpenRouter({ chave: CHAVE, centavosPorDolar: 600, buscar, cota }).embeddings({
+      modelo: MODELO_DE_EMBEDDING,
+      textos: ['refil electrolux efelx21', 'vedacao electrolux vd10'],
+    });
+
+    expect(enviados).toHaveLength(1);
+    expect(enviados[0]?.url).toBe(`${ENDERECO_DO_OPENROUTER}/embeddings`);
+    expect(corpoEnviado(enviados[0])).toEqual({
+      model: MODELO_DE_EMBEDDING,
+      input: ['refil electrolux efelx21', 'vedacao electrolux vd10'],
+    });
+  });
+
+  it('põe os vetores na ordem do índice, que é o que liga cada um ao seu texto', async () => {
+    const { buscar } = fetchFalso(() =>
+      respostaDeEmbedding([
+        { embedding: [0.3, 0.4], index: 1 },
+        { embedding: [0.1, 0.2], index: 0 },
+      ]),
+    );
+    const resposta = await new ChamadorOpenRouter({
+      chave: CHAVE,
+      centavosPorDolar: 600,
+      buscar,
+      cota: new CotaGratuita(0),
+    }).embeddings({ modelo: MODELO_DE_EMBEDDING, textos: ['a', 'b'] });
+
+    expect(resposta.vetores).toEqual([
+      [0.1, 0.2],
+      [0.3, 0.4],
+    ]);
+    expect(resposta).toMatchObject({ tokensEntrada: 12, custoCentavos: 0 });
+  });
+
+  it('a cota do gratuito vale para embedding também: esgotada, o pedido nem sai', async () => {
+    const volta = Date.now() + 60 * 60 * 1000;
+    const cota = new CotaGratuita(0);
+    cota.bloquear(new Date(volta), 'acabou a cota diária');
+    const { buscar, enviados } = fetchFalso(() => respostaDeEmbedding([]));
+
+    const erro = await new ChamadorOpenRouter({ chave: CHAVE, centavosPorDolar: 600, buscar, cota })
+      .embeddings({ modelo: MODELO_DE_EMBEDDING, textos: ['a'] })
+      .catch((e: unknown) => e);
+
+    expect(erro).toBeInstanceOf(LimiteDoProvedor);
+    expect(enviados).toHaveLength(0);
+  });
+});
+
 describe('peças puras', () => {
   it('centavosDoCusto arredonda para cima sem cobrar o erro de ponto flutuante', () => {
     expect(centavosDoCusto(0.01, 600)).toBe(6);
@@ -441,6 +509,64 @@ describe.skipIf(!temBancoDeTeste())('ChamadorOpenRouter com o ServicoDeLlm', () 
 
   afterAll(async () => {
     await conexao?.encerrar();
+  });
+
+  it('embedding fica em llm_call com um resumo, e não com os vetores', async () => {
+    const { buscar } = fetchFalso(() =>
+      Response.json({
+        model: 'liquid/lfm-2.5-embedding-350m',
+        data: [
+          { embedding: [0.1, 0.2, 0.3], index: 0 },
+          { embedding: [0.4, 0.5, 0.6], index: 1 },
+        ],
+        usage: { prompt_tokens: 8, cost: 0 },
+      }),
+    );
+    const servico = new ServicoDeLlm(conexao.db, chamador(buscar), new Orcamento(500, 10));
+
+    const resultado = await servico.gerarEmbeddings({
+      modelo: 'liquid/lfm-2.5-embedding-350m:free',
+      textos: ['a', 'b'],
+    });
+
+    expect(resultado).toMatchObject({
+      tipo: 'ok',
+      vetores: [
+        [0.1, 0.2, 0.3],
+        [0.4, 0.5, 0.6],
+      ],
+    });
+    const [linha] = await conexao.db.select().from(llmCall);
+    expect(linha).toMatchObject({
+      proposito: 'embedding',
+      saida: { vetores: 2, dimensoes: 3 },
+      modeloServido: 'liquid/lfm-2.5-embedding-350m',
+    });
+    expect(servico.gasto.chamadas).toBe(1);
+  });
+
+  it('vetores a menos que textos é erro, e não vetor no produto errado', async () => {
+    const { buscar } = fetchFalso(() => Response.json({ data: [{ embedding: [0.1], index: 0 }] }));
+    const servico = new ServicoDeLlm(conexao.db, chamador(buscar), new Orcamento(500, 10));
+
+    const resultado = await servico.gerarEmbeddings({ modelo: 'm', textos: ['a', 'b'] });
+
+    expect(resultado).toMatchObject({ tipo: 'erro' });
+    expect(resultado.tipo === 'erro' ? resultado.mensagem : '').toContain(
+      '1 vetores para 2 textos',
+    );
+  });
+
+  it('provedor sem embedding diz que não suporta, sem gastar nada', async () => {
+    const servico = new ServicoDeLlm(
+      conexao.db,
+      { nome: 'so-chat', chamar: () => Promise.reject(new Error('não usado')) },
+      new Orcamento(500, 10),
+    );
+    expect(await servico.gerarEmbeddings({ modelo: 'm', textos: ['a'] })).toEqual({
+      tipo: 'nao_suportado',
+    });
+    expect(servico.gasto.chamadas).toBe(0);
   });
 
   it('grava custo e tokens informados pelo OpenRouter em llm_call', async () => {

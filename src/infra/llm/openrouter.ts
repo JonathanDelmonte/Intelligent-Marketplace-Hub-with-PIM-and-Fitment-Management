@@ -46,6 +46,8 @@ import {
   RespostaInutilizavel,
   type Chamador,
   type PedidoAoModelo,
+  type PedidoDeEmbedding,
+  type RespostaDeEmbedding,
   type RespostaDoModelo,
 } from './index';
 
@@ -151,6 +153,25 @@ const esquemaDaResposta = z.object({
     .object({
       prompt_tokens: z.number().int().nonnegative().optional(),
       completion_tokens: z.number().int().nonnegative().optional(),
+      cost: z.number().nonnegative().optional(),
+    })
+    .optional(),
+});
+
+/** A resposta de embedding, no formato da OpenAI que o OpenRouter segue. */
+const esquemaDoEmbedding = z.object({
+  model: z.string().optional(),
+  data: z
+    .array(
+      z.object({
+        embedding: z.array(z.number()),
+        index: z.number().int().nonnegative().optional(),
+      }),
+    )
+    .min(1),
+  usage: z
+    .object({
+      prompt_tokens: z.number().int().nonnegative().optional(),
       cost: z.number().nonnegative().optional(),
     })
     .optional(),
@@ -381,8 +402,12 @@ export class ChamadorOpenRouter implements Chamador {
     this.cota = opcoes.cota ?? COTA_GRATUITA_DO_PROCESSO;
   }
 
-  async chamar(pedido: PedidoAoModelo): Promise<RespostaDoModelo> {
-    const gratuito = ehModeloGratuito(pedido.modelo);
+  /**
+   * O POST ao OpenRouter, com o que chat e embedding têm em comum: a cota do gratuito, a
+   * falha de rede e as recusas. Devolve o corpo de uma resposta de sucesso.
+   */
+  private async enviar(caminho: string, modelo: string, corpo: unknown): Promise<string> {
+    const gratuito = ehModeloGratuito(modelo);
     if (gratuito) {
       // Cota sabida esgotada: recusa aqui, sem pedido — pedido recusado também conta.
       const bloqueio = this.cota.vigente();
@@ -392,33 +417,38 @@ export class ChamadorOpenRouter implements Chamador {
 
     let resposta: Response;
     try {
-      resposta = await this.buscar(`${this.endereco}/chat/completions`, {
+      resposta = await this.buscar(`${this.endereco}${caminho}`, {
         method: 'POST',
         headers: {
           authorization: `Bearer ${this.opcoes.chave.trim()}`,
           'content-type': 'application/json',
         },
-        body: JSON.stringify({
-          model: pedido.modelo,
-          messages: mensagensDoPedido(pedido),
-          // Classificação e julgamento, não redação: a mesma pergunta deve ter a
-          // mesma resposta, que é também o que torna o cache honesto.
-          temperature: 0,
-          max_tokens: MAX_TOKENS_DA_RESPOSTA,
-        }),
+        body: JSON.stringify(corpo),
         signal: AbortSignal.timeout(this.tempoLimiteMs),
       });
     } catch (erro) {
       throw new Error(descreverFalhaDeRede(erro, this.tempoLimiteMs));
     }
 
-    const corpo = await resposta.text();
+    const texto = await resposta.text();
     if (resposta.status === 429) {
-      const limite = lerLimite(corpo, Date.now());
+      const limite = lerLimite(texto, Date.now());
       if (gratuito) this.cota.bloquear(limite.ate, limite.mensagem);
       throw new LimiteDoProvedor(limite.mensagem, limite.ate, true);
     }
-    if (!resposta.ok) throw new Error(mensagemDeRecusa(resposta.status, corpo));
+    if (!resposta.ok) throw new Error(mensagemDeRecusa(resposta.status, texto));
+    return texto;
+  }
+
+  async chamar(pedido: PedidoAoModelo): Promise<RespostaDoModelo> {
+    const corpo = await this.enviar('/chat/completions', pedido.modelo, {
+      model: pedido.modelo,
+      messages: mensagensDoPedido(pedido),
+      // Classificação e julgamento, não redação: a mesma pergunta deve ter a mesma
+      // resposta, que é também o que torna o cache honesto.
+      temperature: 0,
+      max_tokens: MAX_TOKENS_DA_RESPOSTA,
+    });
 
     let bruto: unknown;
     try {
@@ -449,6 +479,47 @@ export class ChamadorOpenRouter implements Chamador {
       saida: lerJsonDaResposta(texto),
       tokensEntrada: uso?.prompt_tokens,
       tokensSaida: uso?.completion_tokens,
+      custoCentavos:
+        uso?.cost === undefined
+          ? undefined
+          : centavosDoCusto(uso.cost, this.opcoes.centavosPorDolar),
+      modeloServido: lido.data.model,
+    };
+  }
+
+  /**
+   * Vetores de vários textos num pedido só — o `input` do OpenRouter aceita lista, e é
+   * isso que faz o embedding caber na cota gratuita.
+   */
+  async embeddings(pedido: PedidoDeEmbedding): Promise<RespostaDeEmbedding> {
+    const corpo = await this.enviar('/embeddings', pedido.modelo, {
+      model: pedido.modelo,
+      input: [...pedido.textos],
+    });
+
+    let bruto: unknown;
+    try {
+      bruto = JSON.parse(corpo);
+    } catch {
+      throw new Error('o OpenRouter respondeu algo que não é JSON.');
+    }
+
+    const lido = esquemaDoEmbedding.safeParse(bruto);
+    if (!lido.success) {
+      const detalhe = lerMensagemDoProvedor(corpo);
+      throw new Error(
+        detalhe === undefined
+          ? 'a resposta de embedding do OpenRouter veio sem o formato esperado.'
+          : `o OpenRouter devolveu erro: ${detalhe}`,
+      );
+    }
+
+    // Na ordem do `index` quando ele vem: é o que liga cada vetor ao seu texto.
+    const dados = [...lido.data.data].sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+    const uso = lido.data.usage;
+    return {
+      vetores: dados.map((d) => d.embedding),
+      tokensEntrada: uso?.prompt_tokens,
       custoCentavos:
         uso?.cost === undefined
           ? undefined

@@ -79,16 +79,32 @@ export interface RespostaDoModelo {
   readonly modeloServido?: string | undefined;
 }
 
+/** Textos para virar vetor, num pedido só. */
+export interface PedidoDeEmbedding {
+  readonly modelo: string;
+  readonly textos: readonly string[];
+}
+
+export interface RespostaDeEmbedding {
+  /** Um vetor por texto, na ordem dos textos. */
+  readonly vetores: readonly (readonly number[])[];
+  readonly tokensEntrada?: number | undefined;
+  readonly custoCentavos?: number | undefined;
+  readonly modeloServido?: string | undefined;
+}
+
 /**
  * A porta para um provedor.
  *
- * Deliberadamente pequena: um método. Trocar de provedor, ou pôr um dublê em
- * teste, é implementar isto — e é assim que a suíte exercita cache, orçamento e
- * validação sem gastar um centavo nem depender de rede.
+ * Deliberadamente pequena: um método, e um segundo opcional. Trocar de provedor, ou pôr
+ * um dublê em teste, é implementar isto — e é assim que a suíte exercita cache,
+ * orçamento e validação sem gastar um centavo nem depender de rede.
  */
 export interface Chamador {
   readonly nome: string;
   chamar(pedido: PedidoAoModelo): Promise<RespostaDoModelo>;
+  /** Embedding em lote. Opcional: provedor que não tem, não declara, e o serviço diz. */
+  embeddings?(pedido: PedidoDeEmbedding): Promise<RespostaDeEmbedding>;
 }
 
 export class SemChaveDeLlm extends Error {
@@ -105,6 +121,9 @@ export class SemChaveDeLlm extends Error {
 export class ChamadorAusente implements Chamador {
   readonly nome = 'ausente';
   chamar(): Promise<RespostaDoModelo> {
+    return Promise.reject(new SemChaveDeLlm());
+  }
+  embeddings(): Promise<RespostaDeEmbedding> {
     return Promise.reject(new SemChaveDeLlm());
   }
 }
@@ -282,6 +301,12 @@ export type ResultadoDoPedido<T> =
       readonly natureza: 'provedor' | 'resposta';
     };
 
+export type ResultadoDeEmbedding =
+  | { readonly tipo: 'ok'; readonly vetores: readonly (readonly number[])[] }
+  | { readonly tipo: 'sem_chave' }
+  | { readonly tipo: 'nao_suportado' }
+  | { readonly tipo: 'erro'; readonly mensagem: string };
+
 export interface ParametrosDoPedido<T> {
   readonly proposito: Proposito;
   readonly modelo: string;
@@ -431,6 +456,79 @@ export class ServicoDeLlm {
     });
 
     return this.validar(resposta.saida, params.esquema, false);
+  }
+
+  /**
+   * Vetores para uma lista de textos, num pedido só.
+   *
+   * Mesma disciplina do `pedir`: teto verificado antes, cota do provedor interrompe, e
+   * toda chamada fica em `llm_call` — com um resumo na saída, e não os vetores: mil e
+   * poucos números por texto encheriam a tabela de custo com o que já mora na tabela de
+   * embedding. O cache aqui não é o `llm_call`: é a própria tabela de embedding, que o
+   * chamador consulta por texto antes de pedir.
+   */
+  async gerarEmbeddings(params: {
+    readonly modelo: string;
+    readonly textos: readonly string[];
+    readonly jobId?: string | undefined;
+  }): Promise<ResultadoDeEmbedding> {
+    if (this.chamador.embeddings === undefined) return { tipo: 'nao_suportado' };
+    if (params.textos.length === 0) return { tipo: 'ok', vetores: [] };
+
+    this.orcamento.exigirFolga();
+
+    const hashEntrada = hashDeEntrada({ textos: params.textos });
+    const entradaGravada = { pergunta: { textos: params.textos }, contexto: null, instrucoes: '' };
+    const comecou = Date.now();
+
+    let resposta: RespostaDeEmbedding;
+    try {
+      resposta = await this.chamador.embeddings({ modelo: params.modelo, textos: params.textos });
+    } catch (erro) {
+      if (erro instanceof SemChaveDeLlm) return { tipo: 'sem_chave' };
+      const houveChamada = !(erro instanceof LimiteDoProvedor) || erro.houveChamada;
+      if (houveChamada) {
+        this.orcamento.registrar(undefined);
+        await this.registrarChamada({
+          proposito: 'embedding',
+          modelo: params.modelo,
+          hashEntrada,
+          entrada: entradaGravada,
+          saida: null,
+          erro: erro instanceof Error ? erro.message : String(erro),
+          latenciaMs: Date.now() - comecou,
+          jobId: params.jobId,
+        });
+      }
+      if (erro instanceof LimiteDoProvedor) throw erro;
+      return { tipo: 'erro', mensagem: erro instanceof Error ? erro.message : String(erro) };
+    }
+
+    this.orcamento.registrar(resposta.custoCentavos);
+    const quantosBatem = resposta.vetores.length === params.textos.length;
+    const mensagem = quantosBatem
+      ? null
+      : `o provedor devolveu ${String(resposta.vetores.length)} vetores para ${String(params.textos.length)} textos.`;
+
+    await this.registrarChamada({
+      proposito: 'embedding',
+      modelo: params.modelo,
+      hashEntrada,
+      entrada: entradaGravada,
+      saida: quantosBatem
+        ? { vetores: resposta.vetores.length, dimensoes: resposta.vetores[0]?.length ?? 0 }
+        : null,
+      erro: mensagem,
+      latenciaMs: Date.now() - comecou,
+      jobId: params.jobId,
+      tokensEntrada: resposta.tokensEntrada,
+      custoCentavos: resposta.custoCentavos,
+      modeloServido: resposta.modeloServido,
+    });
+
+    return mensagem === null
+      ? { tipo: 'ok', vetores: resposta.vetores }
+      : { tipo: 'erro', mensagem };
   }
 
   private validar<T>(
