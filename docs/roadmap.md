@@ -258,6 +258,7 @@ o que comparar. As duas fases se completam, e é por isso que esta vem depois.
 | 5.9 | Tela de revisão em `/juntar-iguais`, de dois cliques                        | ✅     |
 | 5.10 | Job de resolução na fila, consumido pelo poller junto com a ingestão    | ✅     |
 | 5.11 | Criar SKU a partir de um par, com título proposto e editável            | ✅     |
+| 5.12 | Provedor de LLM (OpenRouter): custo em centavos, instruções por finalidade | ✅   |
 
 **Entrega:** o grafo de identidade começa a existir. Qual fornecedor é mais
 barato, a que preço o mercado vende, e qual é a margem real.
@@ -531,6 +532,10 @@ curto para a devolução que a fase 6 existe para evitar.
 **Por que tem prazo:** esse cadastro com 20 SKUs é uma tarde; com 200 no meio da
 operação é uma semana perdida em janeiro.
 
+**A 9.1 está ligada ao OpenRouter desde 24/09 (5.12)**, e continua 🚧 até a primeira
+sugestão de verdade, que depende de o dono colar a chave no `.env`. As opções de emissor
+para a 9.5 estão na [pendência 1.5](./pendencias.md).
+
 **A fase 9 fechou o que dá para fechar sem chave de LLM e sem emissor de NF-e.**
 Quatro entregas ✅, a 9.1 em 🚧 pelo mesmo motivo das de M3, e a 9.5 🔒. O prazo de
 janeiro deixou de ser uma data no papel: há tela que
@@ -725,6 +730,7 @@ Não é fase da especificação: é o que o dono pediu para depois das fases, e 
 | C.15 | Seletor de produto e download na ficha de compatibilidade                 | ✅   |
 | C.16 | Diferença de repasse pode ser dada por conferida, com volta               | ✅   |
 | C.17 | Desenho novo: casca com lateral agrupada e tela inicial por gravidade     | 🚧   |
+| C.18 | Desativar e reativar produto; dados fiscais a partir do produto           | ✅   |
 
 **Entrega:** o sistema para de falar o nome das próprias tabelas, a navegação diz
 onde você está, e a tela inicial responde "o que eu faço agora" em vez de listar

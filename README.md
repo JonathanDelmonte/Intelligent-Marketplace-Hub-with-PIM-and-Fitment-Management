@@ -89,6 +89,9 @@ responde.
   o Docker Desktop instalado **ou** a URL do banco na nuvem (Neon). Sem Docker, deixe o
   primeiro clique criar o `.env`, troque nele a linha `DATABASE_URL` pela URL do Neon e
   clique de novo — o `.env` não vem no clone, porque guarda senha.
+- **IA, opcional:** a chave do OpenRouter vai na linha `LLM_API_KEY` do `.env`. O sistema lê
+  o `.env` ao subir, então feche a janela e clique de novo depois de colar. Sem chave nada
+  quebra: o que depende de IA diz "ninguém sugeriu".
 - **Primeira vez:** alguns minutos. **Depois:** cerca de três segundos.
 - **Clicar de novo com tudo rodando** só abre o navegador.
 - **Fechar a janela preta** desliga o servidor e a fila juntos.

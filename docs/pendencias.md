@@ -11,7 +11,7 @@ o que fazer no próximo fim de semana.
 
 Organizado por **quem destrava**, não por módulo: é o eixo que muda a ação.
 
-Atualizado em 2026-09-15.
+Atualizado em 2026-09-24.
 
 ---
 
@@ -24,68 +24,74 @@ a 🔒 porque nenhuma delas pode começar neste ambiente, e "não começou" suge
 questão de tempo. As causas são as desta seção mais a rede (1.6) — e o que está em 🚧 é
 entrega cujo miolo está pronto e testado, esperando só a chamada externa.
 
-### 1.1 Chave de LLM — trava a fase 5 quase inteira
+### 1.1 Chave de LLM — o provedor está ligado, falta colar a chave
 
-`LLM_API_KEY` está vazia em `.env.example` e não há provedor configurado.
+**Mudou em 24/09.** O dono criou uma chave no OpenRouter, e o provedor existe: com
+`LLM_API_KEY` preenchida no `.env`, o sistema fala com o OpenRouter
+(`src/infra/llm/openrouter.ts`), com um modelo padrão por finalidade — Sonnet 5 para
+julgamento e fiscal, Haiku 4.5 para extração, `text-embedding-3-small` para embedding — e
+cada um trocável por uma linha no `.env`. A chave é do dono e vive só no `.env` da máquina
+dele; nada no repositório a conhece.
 
-**O que fica parado, e é menos do que parecia:** a **chamada** de extração de
-registro estruturado (5.1), a **geração** de embedding (5.2), a **execução** do
-julgamento binário (5.4) e a **sugestão** de NCM/CEST (9.1). Também os extratores de
-ingestão 3.2 a 3.6 — anúncio, listagem, catálogo de distribuidor, PDF de tabela de
-preços e imagem de tabela.
+**O que acende quando a chave entra:** a sugestão de NCM/CEST da tela Fiscal (9.1) e o
+julgamento de par na resolução de identidade (5.4), que a fila passa a chamar com orçamento
+novo a cada job. Se a chamada falha — chave recusada, conta sem crédito, modelo com nome
+errado —, a tela Fiscal diz o motivo em vez de "não deu".
 
-Também a **leitura** do monitor (M15 — 11.1): a detecção, a severidade e o agrupamento
-estão prontos, e a combinação conhecida já sai com leitura determinística. O que falta é
-a hipótese específica de cada caso — ligar eventos de fontes diferentes com julgamento,
-que é o que a especificação chama de inteligência em vez de alerta.
+**O que continua parado mesmo com a chave, porque falta código e não chave:** a extração de
+registro estruturado (5.1) e a geração de embedding (5.2), os extratores de ingestão 3.2 a
+3.6, a leitura do monitor (11.1) e o raciocínio do prospector (M6). O assento está pronto
+para todos; falta, em cada um, o lugar que chama. **A 5.1 é a próxima:** sem ela, planilha
+sem EAN e catálogo de distribuidor não ligam a nada (ver 3.2).
 
-Também o **executor do prospector** (M6): a máquina de fronteira está pronta e testada,
-e o que falta é o laço que, a cada passo, pede ao LLM que atribua valor, levante
-hipótese e decida em quem acreditar. `dominio/prospector` não conhece LLM de propósito
-— é o que permitiu testar a parada com dezenas de cenários sem rede.
-
-A 9.1 é o caso mais fácil de ligar: o classificador está completo e testado, e onde
-ele senta é `infra/llm/ambiente.ts` — o **único** arquivo que precisa saber que
-provedor existe. Sem chave, a tela fiscal diz "ninguém sugeriu" e o campo continua
-preenchível à mão: nada no cadastro fiscal depende disso para ficar pronto.
+**Não verificado contra o OpenRouter de verdade:** a política de rede deste ambiente
+bloqueia o site. O pedido foi conferido com o `fetch` real contra um servidor local que
+imita a API, e o formato do custo (`usage.cost`, em dólar, em toda resposta) contra a
+documentação do OpenRouter. A primeira chamada com a chave do dono é o teste que falta.
 
 **O que não depende dela, e por isso está pronto e testado:** o contrato do registro
 extraído com a regra de `null` em vez de invenção, a forma canônica, o reconhecedor de
 código de fabricante, o casamento por GTIN e por marca com código de peça, a busca de
-vizinhos por `pgvector` (5.3, exercitada com vetor sintético), o roteamento por
-limiar, a fila de revisão com tela, o exemplo few-shot equilibrado (5.6), o cache por
-conteúdo (5.7) e o registro de custo com teto de orçamento.
+vizinhos por `pgvector` (5.3, exercitada com vetor sintético), o roteamento por limiar, a
+fila de revisão com tela, o exemplo few-shot equilibrado (5.6), o cache por conteúdo (5.7)
+e o registro de custo com teto de orçamento.
 
-O assento onde o LLM senta existe e é exercitado por um chamador falso: `ChamadorAusente`
-devolve `sem_chave` sem gastar orçamento nem sujar o registro de custo, e a resolução
-trata isso como caminho previsto — o par vai para a fila com "sem chave de LLM, então
-ninguém julgou" escrito. Ligar a chave é implementar `Chamador` e apontar
-`LLM_MODELO_JULGAMENTO`. Ver `src/infra/llm/` e `src/dominio/identidade/`.
-
-**O que não dá para calibrar sem ela:** `DISTANCIA_MAXIMA_PADRAO = 0.35` (o corte de
+**O que não dá para calibrar sem uso:** `DISTANCIA_MAXIMA_PADRAO = 0.35` (o corte de
 vizinhança), `VIZINHOS_PADRAO = 20` e o mapeamento `CONFIANCA_POR_CERTEZA`
-(alta/média/baixa → 9 000/7 000/5 000 pontos-base). São números escolhidos, não
-medidos, e cada um mora numa constante nomeada em um lugar só justamente para ser
-ajustado quando houver base com embedding de verdade. `par_identidade.distancia_bp`
-guarda a distância de cada par decidido — é com algumas centenas dessas linhas que o
-corte sai de palpite para medida.
+(alta/média/baixa → 9 000/7 000/5 000 pontos-base). São números escolhidos, não medidos, e
+cada um mora numa constante nomeada em um lugar só justamente para ser ajustado quando
+houver base com embedding de verdade. `par_identidade.distancia_bp` guarda a distância de
+cada par decidido — é com algumas centenas dessas linhas que o corte sai de palpite para
+medida.
 
-**Quanto custa decidir:** a disciplina do ADR 0005 exige teto de orçamento por
-execução. O padrão está em `LLM_ORCAMENTO_PADRAO_CENTAVOS=500`, R$ 5 por execução
-de agente. Escolher provedor e modelo é decisão de custo, não técnica.
+**Quanto custa:** a disciplina do ADR 0005 exige teto de orçamento por execução. O padrão
+está em `LLM_ORCAMENTO_PADRAO_CENTAVOS=500`, R$ 5 por execução. O OpenRouter cobra em
+dólar, e o custo de cada chamada vira centavos de real por `LLM_COTACAO_DOLAR_CENTAVOS=600`
+— cotação configurada acima da corrente, para o erro ser gastar menos que o teto, e
+arredondada para cima por chamada.
 
-### 1.2 App no Mercado Livre — trava a sonda de capacidades (2.5 🚧)
+### 1.2 APIs das plataformas — adiado pelo dono
 
-A sonda roda sem credencial e relata o estado declarado, mas **não bate em endpoint
-nenhum**, porque o app em `developers.mercadolivre.com.br` não existe. Sem ele a
-matriz da seção 2.2 continua sendo expectativa, não fato — e o próprio arquivo diz
-isso, em vez de fingir que testou.
+**Decisão do dono, em 24/09: depois.** As três plataformas têm API — Mercado Livre, Shopee
+(Open Platform) e Amazon (SP-API) —, e a diferença entre elas é a porta de entrada: o app
+do Mercado Livre se cria sozinho, em minutos, em `developers.mercadolivre.com.br`; a Shopee
+e a Amazon pedem cadastro de desenvolvedor aprovado pela plataforma. É por isso que a sonda
+de capacidades (2.5 🚧) começou pelo Mercado Livre, e o roadmap deixa as outras duas para a
+fase 12, "quando o volume justificar a burocracia de aprovação".
 
-**O que destrava:** criar o app, gerar token, rodar `npm run sondar:capacidades`.
-A partir daí a matriz passa a ter dado real e a coluna `presumido` vira
-`disponivel` ou `bloqueado`.
+Sem API, nada para: a importação por planilha (M1) cobre as três, e o caminho padrão de
+publicar continua sendo gerar arquivo de importação (CLAUDE.md, 3.3).
+
+**O que destrava, quando for a hora:** criar o app do ML, gerar token e rodar
+`npm run sondar:capacidades` — a matriz da seção 2.2 passa de expectativa a fato. Três
+entregas esperam a API do ML: a sonda (2.5), a etiqueta do dropship (8.8) e o envio da
+resposta ao comprador (11.3), que a especificação já mandava fazer à mão no começo.
 
 ### 1.3 Base de GTIN com NCM — trava a 4.4 (🔒)
+
+**Decisão do dono, em 24/09: por último.** O leitor de código de barras é útil, mas não vai
+ser usado tão cedo; a conta na Cosmos espera junto com ele. O que está abaixo fica como
+registro do levantamento, para quando a hora chegar.
 
 Não existe base pública, gratuita e **sem credencial** que devolva NCM de GTIN
 brasileiro. Levantamento: Cosmos (Bluesoft) tem descrição, marca e NCM, e exige
@@ -124,27 +130,48 @@ dono.
 
 ---
 
-### 1.5 Emissor de NF-e — trava a 9.5 (🔒)
+### 1.5 Emissor de NF-e — trava a 9.5 (🔒), com as opções levantadas
 
-A especificação é explícita: "integrar emissor existente, **não escrever**. Começar
-pelo emissor gratuito da SEFAZ do estado."
+A especificação é explícita: "integrar emissor existente, **não escrever**. Começar pelo
+emissor gratuito da SEFAZ do estado."
 
-**O que falta é decisão e credencial, não código:** qual emissor, e o certificado
-digital A1 ou A3 da empresa. Nenhum dos dois existe neste ambiente, e nenhum dos dois
-é escolha de quem programa — emissor errado é retrabalho de semanas, e certificado é
-documento do dono.
+**O que é um emissor, para decidir.** A nota fiscal eletrônica é um arquivo XML no leiaute
+da SEFAZ, assinado com o certificado digital da empresa e transmitido ao serviço da SEFAZ do
+estado, que devolve a autorização; o DANFE é a impressão dele. O emissor é o programa que
+faz isso — monta, assina, transmite, cancela, corrige, guarda por cinco anos e cobre a
+contingência quando a SEFAZ cai. Escrever um é possível, porque o leiaute é público, e é um
+projeto próprio com manutenção sem fim: o leiaute está mudando agora, com os grupos de
+IBS/CBS da reforma. Integrar custo por nota; escrever custo semanas, e depois toda nota
+técnica nova.
 
-**O que já está pronto do lado de cá:** o cadastro por item que a nota exige (NCM,
-CST, cClassTrib), com validação de forma e a lista de pendência por SKU. É o
-pré-requisito real da emissão, e é o que tem prazo — a integração pode entrar depois
-da virada sem prejuízo; o cadastro, não.
+**Por que a decisão ficou urgente.** Pela LC 214/2025, a partir de 2027 o MEI preenche IBS e
+CBS na nota, e o marketplace responde pelo imposto quando o vendedor não emite — ou seja, nota
+em toda venda deixa de ser opcional na prática. O cadastro por item (9.2) é o pré-requisito, e
+está pronto.
 
-**O aviso que vale registrar:** escrever emissor de NF-e é um projeto próprio, com
-homologação em ambiente da SEFAZ, contingência e versionamento de layout. O ADR de
-capacidades vale aqui como em plataforma: integrar o que existe, e tratar a ausência
-como estado normal.
+**As opções, levantadas em 24/09/2026:**
 
----
+| Opção | Custo | Cobre | Com o sistema |
+| --- | --- | --- | --- |
+| Emissor integrado do Mercado Livre | grátis | só vendas do Mercado Livre | não precisa: emite na venda |
+| Emissor gratuito do Sebrae, ou o app Nota Fiscal Fácil | grátis | qualquer venda, digitada à mão | não |
+| Hub com emissor (Bling e parecidos) | R$ 55 a R$ 650 por mês, pelo volume de notas e integrações | Mercado Livre, Shopee e Amazon, emissão automática | por API, quando valer |
+| API de emissão (Focus NFe, Nuvem Fiscal, PlugNotas, NFE.io) | por nota ou por plano | o que o sistema mandar | é o caminho para o próprio sistema emitir |
+| Escrever o próprio | semanas, e manutenção permanente | — | — |
+
+**Pré-requisitos de qualquer opção:** CNPJ habilitado na SEFAZ do estado — inscrição estadual
+para quem vende mercadoria, e alguns estados exigem credenciamento antes da primeira nota — e
+certificado digital e-CNPJ A1, de R$ 130 a R$ 235 por ano, com validade de um ano. Desde
+1º/04/2025 a nota de MEI leva CRT 4.
+
+**Recomendação provisória:** com a maior parte das vendas no Mercado Livre, começar pelo
+emissor integrado dele, que é grátis, e emitir as vendas das outras plataformas no emissor
+gratuito do Sebrae enquanto forem poucas. Quando Shopee e Amazon pesarem, passar para um hub
+que emite sozinho nas três. Nos três casos o sistema faz a parte difícil — NCM, CST e
+cClassTrib certos por produto —, e a 9.5 vira mandar esse cadastro ao emissor escolhido.
+
+**O que falta do dono para fechar:** o estado (UF), quantas vendas por mês em cada
+plataforma, e se já há certificado A1 e inscrição estadual.
 
 ### 1.6 Rede de saída — trava a 10.4 (🔒) e o prospector com ferramenta de web
 
@@ -204,6 +231,8 @@ com o endpoint de taxas reais por preço.
 
 ### 2.3 O leitor precisa de base para valer
 
+**Decisão do dono, em 24/09: o leitor fica por último** (ver 1.3).
+
 O leitor de código de barras compara o custo com o preço praticado que o sistema
 conhece. Sem planilha importada, ele lê o código e não tem com o que comparar — o
 veredito sai `sem_dado`, que é correto e inútil.
@@ -212,20 +241,27 @@ veredito sai `sem_dado`, que é correto e inútil.
 
 ---
 
-## 3. Não está travado — só não foi construído ainda
+## 3. O que falta, por fase
 
-Ordem do roadmap, que é por utilidade e não por arquitetura. Nada aqui espera nada.
+A tabela desta seção estava parada numa foto antiga — dizia que as fases 5 a 12 não tinham
+sido construídas, com a maior parte delas pronta. Refeita em 24/09 a partir do estado de cada
+entrega no roadmap: o que falta em cada fase, e o que trava. O que tem trava aponta para a
+seção 1 ou 2; o resto é código por escrever.
 
-| Fase | O que falta | Observação |
+| Fase | O que falta | Trava |
 | --- | --- | --- |
-| 5 | M3 — resolução de identidade | Determinístico, fila de revisão e tela prontos; a **chamada** de LLM espera 1.1 |
-| 6 | M4 — compatibilidade | **O fosso.** Não depende de API de plataforma nenhuma, e é o de maior retorno |
-| 7 | M5 fornecedores + M7 scanner | Depende do grafo da fase 5 para "qual fornecedor é mais barato" |
-| 8 | M9 anúncios, M10 pedidos, M11 consignação | A metade de higiene. Commodity, e é onde o dia a dia sai da planilha |
-| 9 | M12 fiscal | **Tem prazo: antes de dezembro.** NF-e rejeita sem `cClassTrib` em 04/01/2027 |
-| 10 | M6 prospector | O mais ambicioso, e por isso vem depois |
-| 11 | M15 monitor, M16 pós-venda, M13 afiliados | |
-| 12 | Adaptadores de Shopee e Amazon por API | Espera 1.2 e as credenciais equivalentes |
+| 2 | Sonda de capacidades batendo em endpoint (2.5); OAuth (2.6b) | APIs adiadas pelo dono (1.2) |
+| 3 | Extratores de anúncio, listagem, catálogo, PDF e imagem (3.2 a 3.6); colunas confirmadas das planilhas (3.7) | Rede (1.6), a extração por LLM, e uma exportação de cada painel (2.1) |
+| 4 | Base pública de GTIN com NCM (4.4) | Leitor por último, por decisão (1.3) |
+| 5 | Extração por LLM (5.1) e geração de embedding (5.2) | Código — é o próximo passo com a chave (1.1) |
+| 6 | Manual, página oficial, fórum e distribuidor como fontes de evidência (6.10, 6.11) | Rede (1.6) |
+| 7 | Verificação de fornecedor por nome e CNPJ (7.3); confiabilidade por atraso real (7.5) | Rede (1.6); pedidos com data prometida e real |
+| 8 | Etiqueta e envio ao fornecedor no dropship (8.8) | API do ML (1.2) |
+| 9 | Emissor de NF-e (9.5) | Decisão do dono (1.5) |
+| 10 | Cinco das sete ferramentas do garimpo, entre elas o PNCP (10.4) | Rede (1.6) e LLM (1.1) |
+| 11 | Leitura do monitor por LLM (11.1); envio da resposta ao comprador (11.3) | Código com a chave; API do ML |
+| 12 | Adaptadores de Shopee e Amazon por API | Adiado pelo dono (1.2) |
+| Casa | Desenho novo nas outras catorze telas (C.17) | Retorno do dono sobre o piloto |
 
 ### 3.1 Telas que não existem
 
@@ -251,11 +287,14 @@ A de identidade fechou o próprio laço: decide pares, **propaga** para um SKU q
 exista e **cria** SKU a partir de um par quando nenhum dos dois lados tem um — com o
 título preenchido por proposta e editável, porque criar SKU é decisão humana.
 
-O que continua só por código: **desativar** SKU (o repositório desativa em vez de apagar,
-porque pedido antigo ainda precisa resolver para o SKU) e editar os campos fiscais fora
-da tela de fiscal. A proposta de SKU continua deliberadamente sem presumir custo: preço
-de anúncio é o que outro cobra, e presumir um pelo outro erraria a margem para o lado
-otimista — a tela diz isso quando o custo está ausente, em vez de inventar um.
+**Nada mais fica só por código, desde 24/09.** Desativar produto tem botão no fim do
+detalhe, com a volta no mesmo lugar — o repositório desativa em vez de apagar, porque pedido
+antigo ainda precisa resolver para o produto —, e os desativados ficam recolhidos no fim da
+lista do catálogo. Os dados fiscais aparecem no detalhe do produto, com um botão que abre a
+tela Fiscal focada nele e volta para lá. A proposta de SKU continua deliberadamente sem
+presumir custo: preço de anúncio é o que outro cobra, e presumir um pelo outro erraria a
+margem para o lado otimista — a tela diz isso quando o custo está ausente, em vez de
+inventar um.
 
 A ordem foi deliberada: a tela de importação veio primeiro porque sem ela nada do que a
 ingestão faz é auditável, e o leitor veio depois porque é a primeira função que gera
@@ -440,8 +479,8 @@ fiscal desde então, e nunca chegava a `montarAnuncio` — o alerta de anúncio 
 categoria regulada decidia sempre sobre `null`. Ver o diário de 16/09; é o segundo caso
 do mesmo tipo, e os dois eram parâmetro opcional que o compilador não cobra.
 
-**O que continua por código:** desativar SKU, e os campos fiscais fora da tela de fiscal
-(ver 3.1).
+**O que continuava por código** — desativar produto, e os campos fiscais fora da tela
+Fiscal — ganhou tela em 24/09 (ver 3.1).
 
 ---
 

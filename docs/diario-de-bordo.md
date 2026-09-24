@@ -26,6 +26,105 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-24 — A IA ligada pelo OpenRouter, e as lacunas do produto
+
+O dono criou uma chave no OpenRouter e pediu para ser avisado de quando colar. Pediu também
+as lacunas pequenas fechadas, as pendências em dia e ajuda para decidir o emissor de nota
+fiscal. E decidiu duas coisas: as APIs das plataformas ficam para depois, e o leitor de
+código de barras por último (pendências 1.2 e 1.3).
+
+### 🔀 O formato da resposta vai escrito nas instruções, e não como saída estruturada
+
+O OpenRouter aceita `response_format` com JSON Schema, e cada modelo do catálogo o trata de
+um jeito: há os que ignoram, e o modo estrito recusa restrições que os schemas daqui usam —
+tamanho mínimo de texto, quantidade de itens. O formato vai por extenso no papel de sistema,
+como JSON Schema gerado do mesmo Zod que valida a volta (`z.toJSONSchema`, pelo lado da
+entrada), e quem garante o formato continua sendo o Zod. Funciona igual com qualquer modelo
+que o dono escolher no `.env`.
+
+### 🔀 Resposta que nem JSON é vira erro, e não "fora do formato"
+
+A diferença é o cache. Resposta fora do schema é gravada como saída e vira cache — perguntar
+de novo devolve a mesma resposta ruim, e a fila de revisão existe para isso. Prosa, ou
+resposta cortada no limite de tokens, é acidente: como erro, não vira cache, e a tentativa
+seguinte pergunta de novo. Testado com o serviço de verdade, contra o banco: a primeira
+chamada falha, a segunda vai ao provedor outra vez.
+
+### 🔀 Instrução fica fora do hash de cache
+
+Os módulos não mandavam instrução nenhuma: o assento do LLM foi construído com pergunta e
+contexto, e o texto do que fazer não tinha onde morar. Agora cada módulo manda o seu, ao lado
+do schema, e ele fica fora do hash como o contexto — é a forma de perguntar, e não a pergunta.
+Melhorar o texto não pode custar perguntar de novo tudo o que já foi perguntado. Vai gravado
+em `llm_call.entrada`, para a chamada continuar reproduzível.
+
+### 🔀 Custo em dólar vira centavo de real, pessimista
+
+O `usage.cost` vem em dólar em toda resposta. Vira centavos por `LLM_COTACAO_DOLAR_CENTAVOS`
+(padrão 600, acima da cotação corrente) e é arredondado para cima por chamada, com um
+bilionésimo descontado antes do teto: `0.01 * 600` dá `6.000000000000001` em ponto
+flutuante, e o teto disso cobraria sete centavos por uma chamada de seis.
+
+### ⚠️ Modelo padrão no código, porque o `.env` do dono tem as linhas vazias
+
+O `.env` da máquina do dono nasceu do exemplo antigo, com `LLM_MODELO_FISCAL=` e as outras
+em branco. Com o padrão morando só no `.env.example`, colar a chave não bastaria — seria
+preciso descobrir e escrever o nome de três modelos. Linha vazia é linha ausente, e o padrão
+vem do código.
+
+### ⚠️ O critério de "mesmo produto" é o da especificação, e ele surpreende
+
+O exemplo dela diz que "Refil Filtro Purificador Electrolux PA21G PA26G PE11B Original",
+"Elemento Filtrante Acquaclean p/ purificador Electrolux" e "EF-ELX-21" são o mesmo produto.
+Por isso as instruções tratam "original" no título como palavra de busca e mandam decidir
+pela peça. O critério fino é do dono, e entra pelas decisões dele na tela de juntar iguais,
+que viram exemplo das chamadas seguintes.
+
+### 🐛 A falha da sugestão fiscal dizia "Não deu para gravar"
+
+O aviso era o mesmo da gravação, e mandava procurar o motivo no log. Com a IA ligada, os
+motivos que importam — chave recusada, conta sem crédito, modelo com nome errado — só quem
+usa resolve. Aviso próprio, com a frase do motivo. Na mesma ação havia um `redirect` dentro
+do `try`: o de produto fora do perfil era engolido pelo `catch` e virava "falha". É a regra
+que o cabeçalho de cada arquivo de ações repete, e esta ação escapou dela.
+
+### 🔀 Os dados fiscais do produto abrem a tela Fiscal focada, e não um segundo formulário
+
+Repetir o formulário no detalhe do produto era o caminho curto, e duas cópias divergiriam na
+primeira mudança de validação. O botão abre `/fiscal?produto=<id>`: só o cartão dele e o
+caminho de volta, e gravar, sugerir e errar o formato voltam ainda focados.
+
+### 🔀 Desativar produto sem pedir confirmação
+
+A volta custa o mesmo clique e fica no topo da página seguinte. Confirmação para ação
+reversível ensina a clicar sem ler. O primeiro desenho mostrava dois avisos seguidos dizendo
+a mesma coisa depois de desativar — o de confirmação encolheu para só apontar o botão de
+desfazer.
+
+### ❓ O OpenRouter não foi alcançado daqui
+
+A política de rede bloqueia o site, e também a documentação dele (a busca de página recusa
+o domínio). O pedido foi conferido com o `fetch` real contra um servidor local que imita a
+API; nomes e preços dos modelos e o `usage.cost` vieram da busca. No teste de tela, a chave
+falsa recebeu 403 do bloqueio da rede, e o aviso mostrou esse motivo. A primeira chamada com
+a chave do dono é o teste que falta.
+
+### 🧹 A chave sozinha não acende a extração
+
+A 5.1 (extração de registro por LLM) e a 5.2 (embedding) têm contrato pronto e ninguém que as
+chame. É o próximo passo, e é o que dá valor ao resto: sem extração, planilha sem EAN e
+catálogo de distribuidor não ligam a nada.
+
+### 🔀 Emissor de NF-e: as opções estão na pendência 1.5
+
+Levantamento de 24/09: emissor integrado do Mercado Livre (grátis, só vendas do ML), emissor
+do Sebrae e app Nota Fiscal Fácil (grátis, à mão), hub como o Bling (R$ 55 a R$ 650 por mês,
+as três plataformas), API de emissão, e escrever o próprio (não). O que mudou a urgência: pela
+LC 214/2025, em 2027 o MEI preenche IBS e CBS, e o marketplace responde pelo imposto de quem
+não emite.
+
+---
+
 ## 2026-09-23 — Porta ocupada: o atalho usa a próxima livre
 
 O primeiro registro que chegou do Windows do dono (Node 24.15, win32 x64) parou no passo
