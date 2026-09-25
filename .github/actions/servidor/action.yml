@@ -20,6 +20,12 @@ inputs:
     description: O usuário do servidor. O padrão é o da imagem Ubuntu da Oracle.
     required: false
     default: ubuntu
+  exigir-preparo:
+    description: >-
+      Conferir que o servidor já tem Docker e a pasta /opt/hub. O job que prepara o
+      servidor desliga, porque é ele quem instala.
+    required: false
+    default: 'true'
 
 runs:
   using: composite
@@ -30,6 +36,7 @@ runs:
         CHAVE: ${{ inputs.chave }}
         CHAVE_DO_HOST: ${{ inputs.chave-do-host }}
         USUARIO: ${{ inputs.usuario }}
+        EXIGIR_PREPARO: ${{ inputs.exigir-preparo }}
       run: |
         set -euo pipefail
         if [ -z "$CHAVE" ]; then
@@ -56,10 +63,14 @@ runs:
           ServerAliveInterval 30
           ConnectTimeout 20
         EOF
-        # O servidor precisa ter passado pelo roteiro de instalação: Docker, e a pasta
-        # /opt/hub com dono. Sem isso, o erro daqui diz o que falta, em vez de um
-        # "permission denied" no meio da publicação.
-        if ! ssh servidor 'docker info >/dev/null 2>&1 && test -w /opt/hub'; then
-          echo "::error::O servidor responde, mas não está preparado: falta o Docker ou a pasta /opt/hub. É o roteiro de instalação (servidor/cloud-init.yaml) — ver docs/hospedagem.md."
+        if ! ssh servidor true; then
+          echo "::error::O servidor não aceitou a conexão. Confira o IP (SERVIDOR_ENDERECO), a chave (SERVIDOR_CHAVE_SSH) e a porta 22 aberta — docs/hospedagem.md."
+          exit 1
+        fi
+        # Docker e a pasta /opt/hub quem instala é a publicação, no job que prepara o
+        # servidor (servidor/instalar.sh). Sem eles, o erro daqui diz o que falta, em vez
+        # de um "permission denied" no meio do caminho.
+        if [ "$EXIGIR_PREPARO" = true ] && ! ssh servidor 'docker info >/dev/null 2>&1 && test -w /opt/hub'; then
+          echo "::error::O servidor ainda não foi preparado: falta o Docker ou a pasta /opt/hub. A primeira publicação prepara — rode o workflow 'verificar' em main (docs/hospedagem.md)."
           exit 1
         fi

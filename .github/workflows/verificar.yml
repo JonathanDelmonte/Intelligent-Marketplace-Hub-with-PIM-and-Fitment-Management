@@ -108,7 +108,7 @@ jobs:
       # Os scripts do servidor rodam sem ninguém olhando, e é no bash que um erro
       # passa calado.
       - name: Scripts do servidor (shellcheck)
-        run: docker run --rm -v "$PWD/servidor:/s:ro" koalaman/shellcheck:stable -x /s/publicar.sh /s/backup.sh
+        run: docker run --rm -v "$PWD/servidor:/s:ro" koalaman/shellcheck:stable -x /s/publicar.sh /s/backup.sh /s/instalar.sh /s/montar-config.sh
 
       - name: Montar a imagem
         run: docker build --progress=plain --build-arg VERSAO="$GITHUB_SHA" -t hub:ci .
@@ -168,6 +168,13 @@ jobs:
           endereco: ${{ vars.SERVIDOR_ENDERECO }}
           chave: ${{ secrets.SERVIDOR_CHAVE_SSH }}
           chave-do-host: ${{ vars.SERVIDOR_CHAVE_HOST }}
+          exigir-preparo: 'false'
+
+      # A máquina se prepara sozinha: Docker, a pasta /opt/hub, as portas 80 e 443, o
+      # fuso (servidor/instalar.sh). Na primeira publicação instala; nas outras confere,
+      # não mexe em nada e leva um segundo.
+      - name: Preparar o servidor
+        run: ssh servidor 'sudo bash -s' < servidor/instalar.sh
 
       # O servidor recebe só o que está no commit (`git archive`), e monta a imagem
       # ali mesmo, na arquitetura dele (ARM). Nenhum registro de imagem no meio.
