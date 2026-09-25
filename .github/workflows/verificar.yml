@@ -102,6 +102,22 @@ jobs:
   # público não é cobrado.
   imagem:
     runs-on: ubuntu-latest
+    # O banco do ensaio do Render, no último passo. Postgres 17, e não 18 como no resto
+    # do CI: é a versão dos projetos novos do Supabase (ADR 0013), e o que migra no 17
+    # migra no 18.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: hub
+          POSTGRES_PASSWORD: hub
+          POSTGRES_DB: hub
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
@@ -128,7 +144,7 @@ jobs:
             -e DATABASE_URL=postgres://ninguem:nada@127.0.0.1:1/nada \
             -e CREDENCIAL_CHAVE_MESTRA="$(openssl rand -base64 32)" \
             -e BANCADA_PERFIL_PADRAO=ci \
-            hub:ci
+            hub:ci node server.js
           for _ in $(seq 1 60); do
             saude=$(curl -s -o saude.json -w '%{http_code}' http://127.0.0.1:3000/saude || true)
             [ "$saude" = 503 ] && break
@@ -143,6 +159,33 @@ jobs:
           grep -q "\"$GITHUB_SHA\"" saude.json
           test "$entrar" = 200
           test "$catalogo" = 307
+
+      # O que o Render roda (render.yaml): a imagem sem comando, que migra, semeia e sobe
+      # site e fila num contêiner só. O Render só publica o commit que passa aqui
+      # (`autoDeployTrigger: checksPass`). No fim, o pedido de parar, que o Render manda
+      # a cada troca de versão: o contêiner tem de sair sozinho, e com 0.
+      - name: O contêiner do Render sobe inteiro, e para quando pedem
+        run: |
+          docker run -d --name hub-render --network host \
+            -e DATABASE_URL=postgres://hub:hub@127.0.0.1:5432/hub \
+            -e CREDENCIAL_CHAVE_MESTRA="$(openssl rand -base64 32)" \
+            -e BANCADA_PERFIL_PADRAO=ci \
+            -e PORT=10000 \
+            hub:ci
+          for _ in $(seq 1 90); do
+            saude=$(curl -s -o saude.json -w '%{http_code}' http://127.0.0.1:10000/saude || true)
+            [ "$saude" = 200 ] && break
+            sleep 1
+          done
+          echo "saude=$saude $(cat saude.json)"
+          docker stop --time 70 hub-render
+          saida=$(docker inspect --format '{{.State.ExitCode}}' hub-render)
+          docker logs hub-render 2>&1 | tail -30
+          echo "saída=$saida"
+          test "$saude" = 200
+          grep -q '"funcionando"' saude.json
+          grep -q "\"$GITHUB_SHA\"" saude.json
+          test "$saida" = 0
 
   # ── Publicação automática (ADR 0010) ──────────────────────────────────────────
   #

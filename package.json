@@ -30,7 +30,7 @@
     "db:studio": "drizzle-kit studio",
     "poller": "node --env-file-if-exists=.env --import tsx scripts/poller.ts",
     "poller:uma-vez": "node --env-file-if-exists=.env --import tsx scripts/poller.ts --uma-vez",
-    "montar:tarefas": "esbuild scripts/poller.ts src/infra/banco/migrar.ts src/infra/banco/semear.ts --bundle --platform=node --format=esm --target=node22 --packages=external --entry-names=[name] --out-extension:.js=.mjs --outdir=tarefas --log-level=warning",
+    "montar:tarefas": "esbuild scripts/poller.ts scripts/conteiner.ts src/infra/banco/migrar.ts src/infra/banco/semear.ts --bundle --platform=node --format=esm --target=node22 --packages=external --entry-names=[name] --out-extension:.js=.mjs --outdir=tarefas --log-level=warning",
     "sondar:capacidades": "node --env-file-if-exists=.env --import tsx scripts/sondar-capacidades.ts",
     "verify:authors": "node scripts/verify-authors.mjs",
     "prepare": "node scripts/instalar-hooks.mjs && npm run copiar:wasm",

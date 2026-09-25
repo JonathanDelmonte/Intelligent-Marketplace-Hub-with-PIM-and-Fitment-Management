@@ -1,14 +1,16 @@
 # syntax=docker/dockerfile:1
 #
-# A imagem do sistema no servidor (ADR 0010).
+# A imagem do sistema (ADR 0010 e 0013).
 #
-# Uma imagem só, para as três funções. A composição de produção
-# (`servidor/compose.yaml`) escolhe a função pelo comando:
+# Uma imagem só, para todas as funções. Sem comando, ela sobe o sistema inteiro num
+# contêiner só, que é como o Render a roda. A composição do servidor próprio
+# (`servidor/compose.yaml`) separa as funções pelo comando:
 #
-#   node server.js            o site
-#   node tarefas/poller.mjs   a fila (importação, extração, compatibilidade…)
-#   node tarefas/migrar.mjs   as migrações, que a publicação roda antes de trocar
-#   node tarefas/semear.mjs   o primeiro perfil, na primeira publicação
+#   node tarefas/conteiner.mjs  tudo junto — migra, semeia e sobe site e fila (o padrão)
+#   node server.js              o site
+#   node tarefas/poller.mjs     a fila (importação, extração, compatibilidade…)
+#   node tarefas/migrar.mjs     as migrações, que a publicação roda antes de trocar
+#   node tarefas/semear.mjs     o primeiro perfil, na primeira publicação
 #
 # Quatro estágios, para a imagem final levar só o que roda: as dependências completas
 # (o build precisa das de desenvolvimento), o build, as dependências de produção e a
@@ -85,4 +87,6 @@ COPY --from=build /app/src/infra/banco/migrations ./src/infra/banco/migrations
 
 USER node
 EXPOSE 3000
-CMD ["node", "server.js"]
+# Na forma de lista, sem shell no meio: o pedido de parar chega direto ao Node, que o
+# repassa ao site e à fila (`scripts/conteiner.ts`).
+CMD ["node", "tarefas/conteiner.mjs"]

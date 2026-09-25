@@ -8,6 +8,8 @@ export default tseslint.config(
       '.next/**',
       'node_modules/**',
       'coverage/**',
+      // O que `npm run montar:tarefas` empacota para a imagem: gerado, como o `.next`.
+      'tarefas/**',
       'src/infra/banco/migrations/**',
       // Service worker: JavaScript de navegador, com globais que não existem no
       // programa do tsconfig (`self`, `caches`, `clients`). Verificá-lo com as

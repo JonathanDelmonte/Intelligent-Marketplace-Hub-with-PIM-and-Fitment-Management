@@ -61,6 +61,8 @@ services:
 
   web:
     image: hub:${VERSAO:?falta VERSAO no .env}
+    # Só o site: a imagem, sem comando, sobe tudo junto (é o Render, ADR 0013).
+    command: ['node', 'server.js']
     restart: unless-stopped
     env_file: [app.env, config.env]
     depends_on:

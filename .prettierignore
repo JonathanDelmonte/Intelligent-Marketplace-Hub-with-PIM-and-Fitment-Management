@@ -1,6 +1,7 @@
 node_modules/
 .next/
 coverage/
+tarefas/
 dist/
 package-lock.json
 src/infra/banco/migrations/
