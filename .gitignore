@@ -12,8 +12,6 @@ dist/
 /tarefas/
 *.tsbuildinfo
 next-env.d.ts
-# o que o Python compila de servidor/criar-maquina.py
-__pycache__/
 
 # teste
 coverage/

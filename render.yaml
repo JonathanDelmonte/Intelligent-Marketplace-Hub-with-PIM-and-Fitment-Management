@@ -1,0 +1,60 @@
+# O sistema no Render gratuito (ADR 0013). O passo a passo está em docs/hospedagem.md.
+#
+# Um serviço só, com site e fila no mesmo contêiner: a imagem, sem comando, migra o banco,
+# semeia o primeiro perfil e sobe os dois (`scripts/conteiner.ts`). O banco e os arquivos
+# ficam no Supabase, na mesma região (Virginia): uma tela faz dezenas de consultas, e
+# banco longe do site soma segundos a cada uma.
+#
+# Cada push no `main` vai para o ar sozinho, depois que o CI passa.
+#
+# Os valores marcados `sync: false` são pedidos pelo Render na criação e ficam só lá,
+# nunca aqui: este arquivo é público.
+
+services:
+  - type: web
+    name: hub
+    runtime: docker
+    plan: free
+    region: virginia
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /saude
+    autoDeployTrigger: checksPass
+    # O plano gratuito tem 500 minutos de montagem por mês. Mudança só em documento, em
+    # teste ou no que não entra na imagem (ver .dockerignore) não gasta nenhum.
+    buildFilter:
+      ignoredPaths:
+        - '**/*.md'
+        - '**/*.test.ts'
+        - docs/**
+        - servidor/**
+        - .github/**
+        - Atalhos/**
+    envVars:
+      # O endereço do "Session pooler" do Supabase, com a senha no lugar de
+      # [YOUR-PASSWORD]. O TLS entra sozinho (src/infra/conteiner/ambiente.ts).
+      - key: DATABASE_URL
+        sync: false
+      # O código da tela "Criar conta" (ADR 0011).
+      - key: CADASTRO_CODIGO
+        sync: false
+      # O identificador do primeiro perfil, criado na primeira subida.
+      - key: BANCADA_PERFIL_PADRAO
+        sync: false
+      # A chave do OpenRouter. Em branco, o sistema funciona e só a IA fica desligada.
+      - key: LLM_API_KEY
+        sync: false
+      # Os arquivos no Supabase Storage: o endereço S3 e o par de chaves.
+      - key: ARMAZENAMENTO_S3_ENDPOINT
+        sync: false
+      - key: ARMAZENAMENTO_S3_CHAVE
+        sync: false
+      - key: ARMAZENAMENTO_S3_SEGREDO
+        sync: false
+      - key: ARMAZENAMENTO_S3_REGIAO
+        value: us-east-1
+      # Nasce no Render, uma vez, e protege as sessões e as credenciais guardadas.
+      - key: CREDENCIAL_CHAVE_MESTRA
+        generateValue: true
+      # O Supabase gratuito divide umas quinze conexões; site e fila, cinco cada.
+      - key: BANCO_CONEXOES
+        value: '5'

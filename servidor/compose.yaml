@@ -8,8 +8,6 @@
 #   fila     a mesma imagem, rodando a fila (`node tarefas/poller.mjs`)
 #   caddy    as portas 80 e 443: HTTPS automático, e repassa ao site
 #   backup   a cópia do banco todo dia, e do armazenamento de conteúdo (`backup.sh`)
-#   reserva  segura 25% da memória, para a Oracle não ver a máquina como ociosa
-#            (`reserva.mjs`, ADR 0012)
 #
 # A pasta do servidor (/opt/hub) guarda, além dos arquivos desta pasta, o que não é
 # versionado e não chega pela imagem:
@@ -136,23 +134,6 @@ services:
     depends_on:
       banco:
         condition: service_healthy
-    logging: *logs
-
-  # A conta da Oracle fica no plano gratuito (ADR 0012), e nele a máquina que passa 7
-  # dias "ociosa" — processador, rede e memória abaixo de 20% — pode ser recolhida. A
-  # reserva segura 25% da memória, que sobra, e a máquina deixa de se encaixar na regra.
-  # Não usa processador nem rede.
-  reserva:
-    image: node:22-bookworm-slim
-    restart: unless-stopped
-    user: node
-    command: ['node', '/servidor/reserva.mjs']
-    environment:
-      # Aqui, e não no `.env`, que a publicação reescreve. `'0'` desliga — numa conta
-      # paga, por exemplo, onde a regra não vale.
-      RESERVA_FRACAO: '0.25'
-    volumes:
-      - ./reserva.mjs:/servidor/reserva.mjs:ro
     logging: *logs
 
 volumes:

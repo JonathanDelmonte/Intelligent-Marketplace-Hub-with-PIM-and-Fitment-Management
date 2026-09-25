@@ -126,11 +126,6 @@ jobs:
       - name: Scripts do servidor (shellcheck)
         run: docker run --rm -v "$PWD/servidor:/s:ro" koalaman/shellcheck:stable -x /s/publicar.sh /s/backup.sh /s/instalar.sh /s/montar-config.sh
 
-      # O que pede a máquina à Oracle roda por horas, sem ninguém olhando; ao menos
-      # tem de compilar.
-      - name: Script que cria a máquina (compila)
-        run: python3 -m py_compile servidor/criar-maquina.py
-
       - name: Montar a imagem
         run: docker build --progress=plain --build-arg VERSAO="$GITHUB_SHA" -t hub:ci .
 
@@ -187,9 +182,11 @@ jobs:
           grep -q "\"$GITHUB_SHA\"" saude.json
           test "$saida" = 0
 
-  # ── Publicação automática (ADR 0010) ──────────────────────────────────────────
+  # ── Publicação no servidor próprio (ADR 0010), guardada ──────────────────────
   #
-  # Todo push em `main` vai para o servidor, em dois tempos:
+  # Hoje quem põe no ar é o Render (ADR 0013, render.yaml): ele espera este workflow
+  # passar, monta a imagem e troca a versão. Os dois jobs abaixo são do servidor
+  # próprio, para quando valer pagar um, e publicam em dois tempos:
   #
   #   preparar   monta a imagem no servidor, em paralelo com a verificação
   #   publicar   espera a verificação e a imagem passarem, e troca a versão no ar
@@ -302,7 +299,7 @@ jobs:
           bash servidor/montar-config.sh > "$config"
           ssh servidor 'umask 077; cat > /opt/hub/config.env' < "$config"
           rm -f "$config"
-          tar -cf - -C servidor compose.yaml Caddyfile backup.sh publicar.sh reserva.mjs |
+          tar -cf - -C servidor compose.yaml Caddyfile backup.sh publicar.sh |
             ssh servidor 'tar -xf - -C /opt/hub'
 
       - name: Trocar a versão no ar
