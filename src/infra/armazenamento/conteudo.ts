@@ -18,8 +18,7 @@
  * com cem mil arquivos é lento de listar em qualquer sistema de arquivos.
  */
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { type Deposito, DepositoEmDisco } from './deposito';
 
 export class ConteudoNaoEncontrado extends Error {
   override readonly name = 'ConteudoNaoEncontrado';
@@ -46,19 +45,19 @@ export function calcularHash(bytes: Uint8Array): string {
 }
 
 export class ArmazenamentoDeConteudo {
-  private readonly raiz: string;
+  private readonly deposito: Deposito;
 
-  constructor(diretorio: string) {
-    this.raiz = resolve(diretorio);
+  /** Um diretório é o depósito em disco; o resto vem pronto (ver `deposito.ts`). */
+  constructor(destino: string | Deposito) {
+    this.deposito = typeof destino === 'string' ? new DepositoEmDisco(destino) : destino;
   }
 
-  /**
-   * Guarda o conteúdo e devolve o hash.
-   *
-   * Escrita atômica: grava num arquivo temporário e renomeia. Sem isso, um
-   * processo morto no meio da escrita deixaria um arquivo truncado **com o hash
-   * de um conteúdo completo** — e toda leitura seguinte confiaria nele.
-   */
+  /** Onde o conteúdo mora, para o log — sem segredo. */
+  get descricao(): string {
+    return this.deposito.descricao;
+  }
+
+  /** Guarda o conteúdo e devolve o hash. */
   async guardar(bytes: Uint8Array): Promise<string> {
     if (bytes.byteLength === 0) {
       throw new ConteudoInvalido('não há conteúdo vazio a guardar');
@@ -70,28 +69,18 @@ export class ArmazenamentoDeConteudo {
     }
 
     const hash = calcularHash(bytes);
-    const destino = this.caminhoDe(hash);
 
     // Já existe: o conteúdo é idêntico por definição, então não reescreve.
     if (await this.existe(hash)) return hash;
 
-    await mkdir(dirname(destino), { recursive: true });
-    const temporario = `${destino}.${String(process.pid)}.parcial`;
-    await writeFile(temporario, bytes);
-
-    const { rename } = await import('node:fs/promises');
-    await rename(temporario, destino);
-
+    await this.deposito.gravar(chaveDe(hash), bytes);
     return hash;
   }
 
   async ler(hash: string): Promise<Uint8Array> {
-    validarHash(hash);
-    try {
-      return new Uint8Array(await readFile(this.caminhoDe(hash)));
-    } catch {
-      throw new ConteudoNaoEncontrado(hash);
-    }
+    const bytes = await this.deposito.ler(chaveDe(hash));
+    if (bytes === null) throw new ConteudoNaoEncontrado(hash);
+    return bytes;
   }
 
   /** Lê como texto UTF-8, para conteúdo que é CSV, HTML ou texto colado. */
@@ -100,35 +89,27 @@ export class ArmazenamentoDeConteudo {
   }
 
   async existe(hash: string): Promise<boolean> {
-    validarHash(hash);
-    try {
-      const info = await stat(this.caminhoDe(hash));
-      return info.isFile();
-    } catch {
-      return false;
-    }
+    return (await this.deposito.tamanho(chaveDe(hash))) !== null;
   }
 
   async tamanho(hash: string): Promise<number> {
-    validarHash(hash);
-    try {
-      return (await stat(this.caminhoDe(hash))).size;
-    } catch {
-      throw new ConteudoNaoEncontrado(hash);
-    }
+    const tamanho = await this.deposito.tamanho(chaveDe(hash));
+    if (tamanho === null) throw new ConteudoNaoEncontrado(hash);
+    return tamanho;
   }
+}
 
-  /**
-   * Caminho do conteúdo.
-   *
-   * `validarHash` antes de montar o caminho não é zelo excessivo: o hash chega do
-   * payload de um job, e um valor como `../../etc/passwd` viraria leitura de
-   * caminho arbitrário.
-   */
-  private caminhoDe(hash: string): string {
-    validarHash(hash);
-    return join(this.raiz, hash.slice(0, 2), hash.slice(2));
-  }
+/**
+ * A chave do conteúdo no depósito: o hash, fragmentado pelos dois primeiros
+ * caracteres.
+ *
+ * `validarHash` antes de montar a chave não é zelo excessivo: o hash chega do
+ * payload de um job, e um valor como `../../etc/passwd` viraria leitura de
+ * caminho arbitrário.
+ */
+function chaveDe(hash: string): string {
+  validarHash(hash);
+  return `${hash.slice(0, 2)}/${hash.slice(2)}`;
 }
 
 function validarHash(hash: string): void {

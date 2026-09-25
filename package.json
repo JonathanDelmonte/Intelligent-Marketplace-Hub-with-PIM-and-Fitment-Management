@@ -37,6 +37,7 @@
     "verify:fontes": "node scripts/verificar-fontes-texto.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1141.0",
     "drizzle-orm": "0.45.2",
     "exceljs": "4.4.0",
     "next": "16.3.5",

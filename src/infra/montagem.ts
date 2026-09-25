@@ -54,8 +54,10 @@ import type { OpcoesDaRede } from '@/infra/web/rede';
 import { investigadoresDaInstalacao } from '@/dominio/prospector/registro';
 import { RepositorioDeDossies } from '@/dominio/prospector/repositorio';
 import { ExecutorDoProspector, tarefaDoProspector } from '@/dominio/prospector/tarefa';
-import { lerAmbiente } from '@/config/ambiente';
+import { type Ambiente, lerAmbiente } from '@/config/ambiente';
 import { ArmazenamentoDeConteudo } from './armazenamento/conteudo';
+import type { Deposito } from './armazenamento/deposito';
+import { DepositoS3 } from './armazenamento/deposito-s3';
 import { banco, type Banco } from './banco/cliente';
 import { Fila } from './fila/fila';
 import { tarefasEmOrdem, type Tarefa } from './fila/poller';
@@ -185,12 +187,12 @@ export async function drenar(tarefa: Tarefa, limite: number): Promise<number> {
  */
 export function montarNucleoCom(
   db: Banco,
-  diretorioDeConteudo: string,
+  destinoDeConteudo: string | Deposito,
   resolverPerfil: ResolverPerfil,
   opcoes: OpcoesDaMontagem = {},
 ): Nucleo {
   const fila = new Fila(db);
-  const armazenamento = new ArmazenamentoDeConteudo(diretorioDeConteudo);
+  const armazenamento = new ArmazenamentoDeConteudo(destinoDeConteudo);
   // O ingestor avisa o monitor quando o preço de uma recaptura muda. É a única
   // ligação entre a fase 3 e a fase 11, e ela mora aqui porque é montagem — nem a
   // ingestão nem o monitor precisam conhecer o outro.
@@ -336,6 +338,22 @@ export function montarNucleoCom(
 }
 
 /**
+ * Onde o conteúdo mora: no S3 quando há endereço (o Render gratuito, ADR 0013), senão
+ * em disco. A validação do ambiente já garantiu chave e segredo junto do endereço.
+ */
+function destinoDoConteudo(ambiente: Ambiente): string | Deposito {
+  const endpoint = ambiente.ARMAZENAMENTO_S3_ENDPOINT;
+  if (endpoint === undefined) return ambiente.ARMAZENAMENTO_DIR;
+  return new DepositoS3({
+    endpoint,
+    regiao: ambiente.ARMAZENAMENTO_S3_REGIAO,
+    chave: ambiente.ARMAZENAMENTO_S3_CHAVE ?? '',
+    segredo: ambiente.ARMAZENAMENTO_S3_SEGREDO ?? '',
+    balde: ambiente.ARMAZENAMENTO_S3_BALDE,
+  });
+}
+
+/**
  * Monta o núcleo do processo.
  *
  * **Não guarda instância, e isso é uma correção.** A versão anterior guardava o
@@ -358,7 +376,7 @@ export function montarNucleo(): Nucleo {
   const db = banco();
   return montarNucleoCom(
     db,
-    ambiente.ARMAZENAMENTO_DIR,
+    destinoDoConteudo(ambiente),
     async () => {
       const perfil = await carregarPerfil(db, ambiente.BANCADA_PERFIL_PADRAO);
       return perfil.id;

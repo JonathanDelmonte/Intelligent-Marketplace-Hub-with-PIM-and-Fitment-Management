@@ -124,7 +124,7 @@ async function principal(): Promise<number> {
   log.info('processo.iniciou', {
     // O nome do sistema vem de configuração até no log (ADR 0003).
     sistema: ambiente.BANCADA_NOME_SISTEMA,
-    armazenamento: ambiente.ARMAZENAMENTO_DIR,
+    armazenamento: nucleo.armazenamento.descricao,
     pid: process.pid,
   });
 

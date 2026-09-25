@@ -93,6 +93,40 @@ describe('validarAmbiente', () => {
     expect(vazio.VERSAO_EM).toBeUndefined();
     expect(() => validarAmbiente({ ...minimo, VERSAO: 'main; rm -rf /' })).toThrow(/hash/);
   });
+
+  it('aceita a chave mestra em base64 de URL, que é o que alguns geradores dão', () => {
+    const urlSegura = Buffer.alloc(32, 0xfb).toString('base64url');
+    expect(urlSegura).toMatch(/[-_]/);
+    expect(validarAmbiente({ ...minimo, CREDENCIAL_CHAVE_MESTRA: urlSegura })).toBeDefined();
+  });
+
+  it('sem endereço S3, o conteúdo fica em disco e as chaves não são pedidas', () => {
+    const a = validarAmbiente({ ...minimo, ARMAZENAMENTO_S3_ENDPOINT: '' });
+    expect(a.ARMAZENAMENTO_S3_ENDPOINT).toBeUndefined();
+    expect(a.ARMAZENAMENTO_S3_BALDE).toBe('conteudo');
+    expect(a.ARMAZENAMENTO_S3_REGIAO).toBe('us-east-1');
+  });
+
+  it('com endereço S3, chave e segredo são obrigatórios — na subida, não no primeiro envio', () => {
+    const endereco = { ARMAZENAMENTO_S3_ENDPOINT: 'https://ref.supabase.co/storage/v1/s3' };
+    expect(() => validarAmbiente({ ...minimo, ...endereco })).toThrow(/ARMAZENAMENTO_S3_CHAVE/);
+    expect(() => validarAmbiente({ ...minimo, ...endereco, ARMAZENAMENTO_S3_CHAVE: 'k' })).toThrow(
+      /ARMAZENAMENTO_S3_SEGREDO/,
+    );
+    const a = validarAmbiente({
+      ...minimo,
+      ...endereco,
+      ARMAZENAMENTO_S3_CHAVE: 'k',
+      ARMAZENAMENTO_S3_SEGREDO: 's',
+    });
+    expect(a.ARMAZENAMENTO_S3_ENDPOINT).toBe(endereco.ARMAZENAMENTO_S3_ENDPOINT);
+  });
+
+  it('o limite de conexões por processo tem padrão e teto', () => {
+    expect(validarAmbiente(minimo).BANCO_CONEXOES).toBe(10);
+    expect(validarAmbiente({ ...minimo, BANCO_CONEXOES: '5' }).BANCO_CONEXOES).toBe(5);
+    expect(() => validarAmbiente({ ...minimo, BANCO_CONEXOES: '0' })).toThrow(AmbienteInvalido);
+  });
 });
 
 describe('montarMarca', () => {
