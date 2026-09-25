@@ -26,6 +26,42 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-25 — A conta da Oracle fica no plano gratuito (ADR 0012)
+
+### 🔀 Nenhum upgrade: risco de cobrança zero
+
+O guia mandava passar a conta para Pay As You Go, para a Oracle não recolher a máquina
+ociosa. O dono, na hora de fazer, preferiu risco de cobrança nenhum — e é a leitura certa
+da regra "gratuito primeiro". No plano gratuito a Oracle não cobra: o que não é gratuito
+não funciona. O que se perdeu, a proteção contra recolhimento, voltou por outro caminho
+(abaixo). O guia agora manda **não** clicar em _Upgrade your account_.
+
+### 🐛 O guia levou a uma pré-autorização de mais de R$ 500
+
+A tela de upgrade só libera o botão depois de cadastrar um meio de pagamento, e cadastrar
+o meio de pagamento já fez uma pré-autorização de mais de R$ 500 no cartão do dono — que
+voltou em seguida, mas veio sem aviso. O guia avisava da pré-autorização "na troca", não
+no cadastro do meio de pagamento, que é o passo anterior. Agora o passo 2 diz para não
+cadastrar meio de pagamento nenhum além do cartão do cadastro.
+
+### 🔀 A máquina segura 25% da memória para não contar como ociosa
+
+A regra que a Oracle publica considera ociosa a máquina com processador, rede **e**
+memória abaixo de 20% por sete dias. O serviço `reserva` escreve 25% da memória e toca
+nela a cada cinco minutos (página parada é a primeira a ir para a swap). No teste: 3,9 GB
+de 15,7 GB seguros, processador em 0% depois de cheia. Encher leva segundos, e a
+primeira versão ficava surda a um pedido de parar durante isso — o Docker esperava 10
+segundos e matava; enche em pedaços agora, e para em menos de um segundo.
+
+### ❓ A regra de ociosidade não foi conferida na fonte
+
+O site da Oracle é bloqueado no ambiente de desenvolvimento. A regra no ADR 0012 é a que
+a Oracle publica e que a comunidade cita, com o "e" entre as três condições — é esse "e"
+que faz a reserva funcionar. Se a Oracle mandar aviso de ociosidade, é o sinal de que a
+regra mudou.
+
+---
+
 ## 2026-09-25 — O sistema no ar, de graça (ADR 0010)
 
 O pedido: usar de qualquer computador, de graça, e toda mudança ir para o ar sozinha. Entrou

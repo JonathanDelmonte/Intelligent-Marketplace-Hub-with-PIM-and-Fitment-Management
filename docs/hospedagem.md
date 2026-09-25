@@ -32,8 +32,8 @@ push no main ──► GitHub verifica (tipos, testes, build)  ─┐
 ## O que você vai precisar
 
 - A conta do GitHub, que você já tem, com acesso de administrador a este repositório.
-- Um cartão de crédito, só para a Oracle confirmar que você é uma pessoa. Dentro do
-  plano gratuito nada é cobrado — e o passo 2 põe um alarme para garantir isso.
+- Um cartão, só para a Oracle confirmar que você é uma pessoa. No plano gratuito nada
+  é cobrado — é por isso que o passo 2 manda **não** fazer o upgrade.
 - O computador com Windows, Mac ou Linux, para gerar a chave de acesso ao servidor.
 
 ---
@@ -79,34 +79,28 @@ push no main ──► GitHub verifica (tipos, testes, build)  ─┐
 > numa janela anônima; usar outra rede (os dados do celular, em vez do Wi-Fi). Depois de
 > várias tentativas seguidas, esperar algumas horas também ajuda.
 
-## Passo 2 — Passar a conta para "Pay As You Go" e pôr um alarme de gasto
+## Passo 2 — Um alarme de gasto, e nada de "Upgrade"
 
-Parece contraditório, mas é o que deixa o servidor gratuito **estável**:
+A conta fica no plano gratuito (_Free Tier_), e **nesse plano a Oracle não cobra nada**:
+o que não é gratuito simplesmente não funciona. É assim que este sistema usa a Oracle
+(ADR 0012).
 
-- Numa conta só gratuita, a Oracle pode **recolher** uma máquina que ficou ociosa por
-  sete dias — e um sistema de uso pessoal fica ocioso quase o tempo todo.
-- Numa conta Pay As You Go, os recursos Always Free **continuam de graça**, a máquina
-  não é recolhida, e criar a máquina ARM gratuita dá erro de "sem capacidade" bem menos.
+1. **Não clique em _Upgrade your account_ nem em _Add Payment Method_** (em
+   **Billing & Cost Management → Upgrade and Manage Payment**). O upgrade para
+   "Pay As You Go" é o que abre a porta para cobrança. E só cadastrar um meio de
+   pagamento já faz uma pré-autorização grande no cartão — mais de R$ 500, no caso do
+   dono —, que volta sozinha, mas assusta. O cartão do cadastro basta: ele serviu para
+   provar que você é uma pessoa, e o plano gratuito não precisa dele de novo.
+2. **O alarme (opcional, dois minutos).** No menu (☰), **Billing & Cost Management →
+   Budgets → Create Budget**: nome e descrição quaisquer, valor `1`, alerta em `1`% do
+   orçamento sobre o gasto real (_Actual spend_), com o seu e-mail. No plano gratuito
+   ele nunca deveria disparar; se disparar, é sinal de que algo mudou na conta.
 
-O risco de pagar sem querer é o que o alarme resolve — e ele vale a pena mesmo sem a
-troca, então vem primeiro:
-
-1. **O alarme.** No menu (☰), **Billing & Cost Management → Budgets → Create Budget**:
-   o valor mais baixo que o formulário aceitar (1, na moeda da conta), alerta em **1%**
-   do orçamento sobre o gasto real (_Actual spend_), com o seu e-mail. Qualquer centavo
-   cobrado vira um e-mail na hora.
-2. **A troca.** No menu (☰), **Billing & Cost Management → Upgrade and Manage Payment**,
-   e escolha **Pay As You Go**. A confirmação chega por e-mail, às vezes horas depois;
-   enquanto isso, siga para o passo 3.
-
-**Antes da troca, veja que cartão está na conta.** Na troca, a Oracle costuma fazer uma
-pré-autorização bem maior que a do cadastro — há relatos na casa de US$ 100 —, devolvida
-depois de alguns dias. No cartão de crédito isso só reserva limite. **No de débito, o
-dinheiro sai da conta até ser devolvido**: nesse caso, deixe a troca para depois.
-
-> Sem a troca, o resto do guia funciona igual. Faça-a quando uma destas acontecer: criar
-> a máquina (passo 4) der "Out of capacity", ou a Oracle avisar por e-mail que vai
-> recolher a máquina por ociosidade.
+**O único cuidado do plano gratuito:** a Oracle pode recolher uma máquina que passa sete
+dias ociosa — processador, rede e memória abaixo de 20%. O servidor já vem preparado
+para isso: ele segura 25% da memória (que sobra) e deixa de se encaixar na regra
+(`servidor/reserva.mjs`). Se mesmo assim a máquina for recolhida um dia, os dados estão
+na cópia do Neon (passo 10), e o [recomeço](#quando-algo-dá-errado) leva uns 20 minutos.
 
 ## Passo 3 — Gerar a chave de acesso ao servidor (no seu computador)
 
@@ -153,8 +147,8 @@ Saem dois arquivos na pasta `.ssh` do seu usuário:
 8. Na página da máquina, copie o **Public IP address** — é o endereço do servidor.
 
 > **"Out of capacity"**: a Oracle está sem máquina ARM gratuita livre em São Paulo
-> naquele momento. Tente de novo mais tarde (de madrugada costuma haver), ou faça o
-> passo 2, que dá prioridade.
+> naquele momento. Tente de novo mais tarde — de madrugada costuma haver. Não é motivo
+> para fazer upgrade (passo 2).
 
 ## Passo 5 — Abrir as portas 80 e 443 na rede da Oracle
 
@@ -329,6 +323,12 @@ são as portas do passo 5. Se estiverem certas, pode ser o certificado: rode
 passe para o DuckDNS.
 
 **Criar a máquina dá "Out of capacity".** Ver o passo 4.
+
+**A Oracle avisou que a máquina está ociosa.** Rode **manutenção → diagnostico**. Em
+"contêineres", o `reserva` tem de estar `running`; em "disco e memória", a coluna
+`used` da linha `Mem:` tem de passar de um quarto do `total`. Se os dois estiverem
+certos e o aviso veio mesmo assim, a Oracle mudou a regra, e a reserva precisa ser
+revista (ADR 0012).
 
 **Nunca apague `/opt/hub/banco.env` nem `/opt/hub/app.env` no servidor.** O primeiro
 tem a senha do banco, que já existe com ela; o segundo, a chave que protege as sessões

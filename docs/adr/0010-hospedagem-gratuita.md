@@ -1,6 +1,7 @@
 # ADR 0010 — Um servidor gratuito, e cada push no ar em cinco minutos
 
-**Estado:** Aceito · **Data:** 2026-09-25 · Pedido e aprovação do dono
+**Estado:** Aceito — a passagem da conta para Pay As You Go foi substituída pelo
+[ADR 0012](./0012-conta-oracle-sem-upgrade.md) · **Data:** 2026-09-25 · Pedido e aprovação do dono
 
 ## Contexto
 

@@ -254,7 +254,7 @@ jobs:
           bash servidor/montar-config.sh > "$config"
           ssh servidor 'umask 077; cat > /opt/hub/config.env' < "$config"
           rm -f "$config"
-          tar -cf - -C servidor compose.yaml Caddyfile backup.sh publicar.sh |
+          tar -cf - -C servidor compose.yaml Caddyfile backup.sh publicar.sh reserva.mjs |
             ssh servidor 'tar -xf - -C /opt/hub'
 
       - name: Trocar a versão no ar
