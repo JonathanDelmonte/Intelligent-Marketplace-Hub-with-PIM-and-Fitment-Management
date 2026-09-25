@@ -50,21 +50,27 @@ push no main ──► GitHub verifica (tipos, testes, build)  ─┐
    só que a cota gratuita é da conta, e eles a dividem.
 4. Em **Home Region**, escolha **Brazil East (Sao Paulo)**. **Atenção: a região não
    muda depois**, e os recursos gratuitos só existem nela.
-5. Endereço e, em seguida, o cartão de crédito (no seu nome, com o mesmo endereço).
-   A Oracle faz uma verificação de valor pequeno e devolve. O formulário é exigente com
-   o formato, e o botão **Continuar** fica cinza enquanto houver campo em vermelho:
+5. **Endereço**, o mesmo da fatura do cartão do item 6. O formulário é exigente com o
+   formato, e o botão **Continuar** fica cinza enquanto houver campo em vermelho:
    - **CEP** com o tracinho: `12345-678`, e não `12345678`.
    - **Telefone** só com números, DDD e celular (`11987654321`): sem `+55` — ele vem da
      bandeira ao lado —, sem parênteses, espaço ou tracinho.
-6. Espere o e-mail de conta pronta (de minutos a algumas horas) e entre no painel por
+6. **Verificação de pagamento.** É obrigatória — sem ela a conta não é criada —, e é só
+   verificação: o plano gratuito não cobra. Em **Adicionar método de verificação de
+   pagamento**, use um cartão com bandeira (Visa, Mastercard…), de crédito ou de débito
+   que não peça senha, e **o número do cartão físico**: cartão virtual (o do aplicativo
+   do banco), pré-pago ou de uso único é recusado. Aparece uma cobrança temporária de
+   valor simbólico, que é estornada sozinha. Se o banco recusar, confira no aplicativo
+   dele se compras online estão liberadas. Depois, marque o **Contrato** e clique em
+   **Iniciar minha avaliação gratuita**.
+7. Espere o e-mail de conta pronta (de minutos a algumas horas) e entre no painel por
    <https://cloud.oracle.com>, com o Cloud Account Name do item 3.
 
 > **Erro "status=403" ou "falha na ligação ao servidor" no cadastro.** A Oracle bloqueia
 > o cadastro quando desconfia da conexão. Na ordem, o que costuma resolver: desligar VPN
 > e extensões de bloqueio de anúncio/privacidade; usar outro navegador (Chrome ou Edge)
-> numa janela anônima; usar outra rede (os dados do celular, em vez do Wi-Fi). Cartão
-> pré-pago ou virtual costuma ser recusado. Depois de várias tentativas seguidas, esperar
-> algumas horas também ajuda.
+> numa janela anônima; usar outra rede (os dados do celular, em vez do Wi-Fi). Depois de
+> várias tentativas seguidas, esperar algumas horas também ajuda.
 
 ## Passo 2 — Passar a conta para "Pay As You Go" e pôr um alarme de gasto
 
