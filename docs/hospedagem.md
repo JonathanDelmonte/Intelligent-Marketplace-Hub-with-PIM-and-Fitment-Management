@@ -55,7 +55,11 @@ pare: é sinal de que o plano mudou, e vale reavaliar antes de cadastrar.
      Notas. Use senha só de letras e números: `@`, `#`, `/`, `?` e `%` quebram o endereço
      do banco.
    - **Region**: **East US (North Virginia)** — a mesma região do Render. Banco longe do
-     site deixa toda tela lenta.
+     site deixa toda tela lenta. Duas armadilhas: "Americas" é um grupo, e o Supabase
+     escolhe por você (escolheu Oregon); e São Paulo parece melhor para quem está no
+     Brasil, mas o banco não conversa com você, conversa com o site — e o Render não tem
+     servidor no Brasil. Depois de criado, o card do projeto tem de dizer `us-east-1`: a
+     região não muda depois.
    - Se o formulário oferecer desligar a **Data API**, pode desligar: o sistema não a usa
      (e fecha as tabelas para ela de todo jeito).
    - **Create new project**, e espere uns dois minutos.
