@@ -24,11 +24,20 @@ import { urlParaODriver } from './url';
  */
 export const TIPOS_DO_DRIVER = { bigint: postgres.BigInt } as const;
 
+/** Quanto uma conexão fica parada antes de fechar (ver `criarBancoCom`). */
+const SEGUNDOS_PARADA = 60;
+
 /**
  * Abre uma conexão com a configuração canônica.
  *
  * A URL passa por `urlParaODriver`, que tira o `channel_binding` da string do painel do
  * Neon: o driver o repassaria ao servidor, e a conexão cairia.
+ *
+ * Conexão parada fecha sozinha. O Supabase gratuito (ADR 0013) divide umas quinze
+ * conexões entre todos os processos, e na troca de versão a velha e a nova rodam juntas
+ * por um minuto: conexão que a velha só guardava é conexão que falta à nova. E conexão
+ * parada por muito tempo, do outro lado da internet, pode ter sido derrubada no caminho
+ * sem aviso — e quem descobre é a próxima consulta.
  */
 export function criarBancoCom(
   url: string,
@@ -36,6 +45,7 @@ export function criarBancoCom(
 ) {
   const conexao = postgres(urlParaODriver(url), {
     max: opcoes.max ?? 10,
+    idle_timeout: SEGUNDOS_PARADA,
     types: TIPOS_DO_DRIVER,
     ...(opcoes.silenciarAvisos === true ? { onnotice: () => undefined } : {}),
   });
@@ -70,7 +80,8 @@ interface GlobalComBanco {
 
 function conexao(): Conexao {
   const global = globalThis as GlobalComBanco;
-  global[CHAVE_GLOBAL] ??= criarBancoCom(lerAmbiente().DATABASE_URL);
+  const ambiente = lerAmbiente();
+  global[CHAVE_GLOBAL] ??= criarBancoCom(ambiente.DATABASE_URL, { max: ambiente.BANCO_CONEXOES });
   return global[CHAVE_GLOBAL];
 }
 
