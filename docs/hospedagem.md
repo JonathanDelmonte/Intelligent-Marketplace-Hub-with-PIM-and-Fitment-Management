@@ -63,6 +63,13 @@ push no main ──► GitHub verifica (tipos, testes, build)  ─┐
    valor simbólico, que é estornada sozinha. Se o banco recusar, confira no aplicativo
    dele se compras online estão liberadas. Depois, marque o **Contrato** e clique em
    **Iniciar minha avaliação gratuita**.
+
+   O nome do botão engana: o cadastro dá **dois** presentes. Um é a avaliação — US$ 300
+   de crédito para gastar em 30 dias no que quiser. O outro é o **Always Free**, sem
+   prazo: a máquina ARM, o disco e a rede que este sistema usa. Quando os 30 dias
+   acabam, some só o que foi pago com o crédito; o Always Free continua — a própria tela
+   do cadastro diz que, sem passar para o nível pago, "você continuará a ter acesso aos
+   serviços Always Free".
 7. Espere o e-mail de conta pronta (de minutos a algumas horas) e entre no painel por
    <https://cloud.oracle.com>, com o Cloud Account Name do item 3.
 
@@ -126,7 +133,9 @@ Saem dois arquivos na pasta `.ssh` do seu usuário:
    - **Image → Change image → Ubuntu**, e escolha **Canonical Ubuntu 24.04** (a comum,
      não a "Minimal").
    - **Shape → Change shape → Ampere → VM.Standard.A1.Flex**, com **2 OCPUs** e
-     **12 GB** de memória. O painel mostra a etiqueta _Always Free-eligible_.
+     **12 GB** de memória. O painel mostra a etiqueta _Always Free-eligible_. **Sem
+     essa etiqueta, não crie:** nos primeiros 30 dias o painel deixa criar coisa paga
+     com o crédito da avaliação, e ela é desligada quando o crédito acaba.
 4. **Networking**: deixe criar uma rede nova (_Create new virtual cloud network_), numa
    sub-rede pública, com **Automatically assign public IPv4 address** marcado.
 5. **Add SSH keys → Upload public key files (.pub)** e escolha o `servidor-hub.pub`.
