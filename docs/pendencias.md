@@ -347,6 +347,22 @@ para quando escalar ([hospedagem-servidor.md](./hospedagem-servidor.md)).
 e a primeira planilha enviada no ar é a prova (diário, 25/09). Sem cópia de segurança
 nesta fase, por decisão do dono: dado de verdade traz a cópia de volta ao plano.
 
+**Para depois de estar no ar — o computador do dono no lugar da nuvem.** Pedido do dono
+em 25/09: o que puder ficar no computador de quem usa, fica lá, para a cota gratuita
+render mais. Combinado tratar quando o sistema estiver no ar, nesta ordem:
+
+1. **A planilha na nuvem vira temporária.** O original já está no computador de quem
+   enviou; a cópia no Supabase Storage pode ser apagada sozinha uns 7 dias depois de
+   processada, e reprocessar depois disso pede o arquivo de novo. Muda o ADR 0002 ("nunca
+   jogar a entrada fora"): entra por ADR novo, com a decisão do dono.
+2. **A cópia do banco baixada para o computador.** Um botão que gera a cópia e baixa. É a
+   cópia de segurança que o Supabase gratuito não tem, e sem custo.
+3. **O princípio vale para o que vier.** O que o sistema gera — arquivo de importação,
+   ficha, relatório — já é baixado, e não fica guardado. Processar a planilha no próprio
+   navegador foi avaliado e não compensa agora: poupa processamento do servidor, mas não
+   o banco, que é o que enche primeiro (os dados extraídos vão para ele de todo jeito).
+   Reavaliar se a máquina do Render ficar pequena.
+
 O que vem abaixo é a análise de antes, que levou à decisão, e continua valendo como
 registro: o banco sem SDK de provedor, o armazenamento em disco que tirou o serverless
 da mesa, e o login que faltava.
