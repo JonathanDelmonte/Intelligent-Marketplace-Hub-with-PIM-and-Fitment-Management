@@ -3,6 +3,14 @@ import { MAX_UPLOAD_BYTES } from './src/config/limites';
 
 const config: NextConfig = {
   reactStrictMode: true,
+  /**
+   * Na imagem Docker (ADR 0010), o build sai em modo `standalone`: o servidor vem num
+   * `server.js` com esta configuração embutida, e a imagem não precisa do TypeScript nem
+   * deste arquivo para subir. O `Dockerfile` liga o modo pela variável; no computador
+   * fica o modo comum, porque o atalho sobe o sistema com `next start`, e o `next start`
+   * avisa que não serve para `standalone`.
+   */
+  ...(process.env['SAIDA_DO_NEXT'] === 'standalone' ? { output: 'standalone' } : {}),
   // O domínio inteiro é TypeScript estrito e testado; um build que passa com
   // erro de tipo esconde exatamente a classe de bug que `strict` existe para
   // pegar. Ver CLAUDE.md, seção 4.

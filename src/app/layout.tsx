@@ -8,6 +8,17 @@ import estilo from './casca.module.css';
 import './globals.css';
 
 /**
+ * Toda tela é montada na hora do pedido, nenhuma no build.
+ *
+ * Quase todas já eram, porque leem o banco. As poucas que não liam — criar conta, a
+ * página de endereço inexistente — seriam montadas uma vez no build, com a marca e a
+ * versão do ambiente do build: na imagem Docker (ADR 0010) esse ambiente é vazio, e a
+ * marca do servidor nunca chegaria nelas. Com o porteiro (ADR 0011) na frente de tudo,
+ * uma tela pronta de antemão também não economizava nada.
+ */
+export const dynamic = 'force-dynamic';
+
+/**
  * O título e o autor vêm de configuração, nunca de literal — é a regra da seção
  * 1.2 da especificação aplicada até no `<head>`.
  */

@@ -1,0 +1,141 @@
+# A composição de produção (ADR 0010): o que roda no servidor.
+#
+# Não é o `compose.yaml` da raiz, que é só o banco para quem desenvolve. Este sobe o
+# sistema inteiro, num servidor só:
+#
+#   banco    Postgres 18 com pgvector — a mesma imagem do CI e do computador
+#   web      o site: a imagem do `Dockerfile`, com `node server.js`
+#   fila     a mesma imagem, rodando a fila (`node tarefas/poller.mjs`)
+#   caddy    as portas 80 e 443: HTTPS automático, e repassa ao site
+#   backup   a cópia do banco todo dia, e do armazenamento de conteúdo (`backup.sh`)
+#
+# A pasta do servidor (/opt/hub) guarda, além dos arquivos desta pasta, o que não é
+# versionado e não chega pela imagem:
+#
+#   .env         VERSAO e SITE_ENDERECO; a publicação reescreve a cada troca
+#   banco.env    a senha do Postgres, gerada uma vez no servidor e nunca sobrescrita
+#   app.env      DATABASE_URL e a chave mestra, também gerados uma vez no servidor
+#   config.env   o resto (código de cadastro, chave da IA, marca), que a publicação
+#                escreve a partir dos segredos e variáveis do GitHub
+#   backups/     as cópias
+#
+# `publicar.sh` é quem mexe aqui. À mão, de dentro de /opt/hub:
+#
+#   docker compose ps              o que está rodando
+#   docker compose logs -f web     o que o site está dizendo
+#   docker compose restart fila    reinicia a fila
+
+name: hub
+
+# Log de contêiner sem teto enche o disco em silêncio: três arquivos de 10 MB cada.
+x-logs: &logs
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: '3'
+
+services:
+  banco:
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    env_file: [banco.env]
+    environment:
+      POSTGRES_USER: hub
+      POSTGRES_DB: hub
+      TZ: America/Sao_Paulo
+    volumes:
+      # No Postgres 18 o volume vai na pasta de cima: os dados moram em
+      # /var/lib/postgresql/18/docker, e a próxima versão ganha a pasta dela ao lado.
+      - banco:/var/lib/postgresql
+    # O padrão do Docker (64 MB) é pouco para o Postgres, e o sintoma é erro de
+    # memória compartilhada numa consulta grande.
+    shm_size: 256m
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U hub -d hub']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging: *logs
+
+  web:
+    image: hub:${VERSAO:?falta VERSAO no .env}
+    restart: unless-stopped
+    env_file: [app.env, config.env]
+    depends_on:
+      banco:
+        condition: service_healthy
+    volumes:
+      - conteudo:/app/.dados
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/saude').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging: *logs
+
+  fila:
+    image: hub:${VERSAO:?falta VERSAO no .env}
+    command: ['node', 'tarefas/poller.mjs']
+    restart: unless-stopped
+    env_file: [app.env, config.env]
+    depends_on:
+      banco:
+        condition: service_healthy
+    volumes:
+      - conteudo:/app/.dados
+    # A fila termina o item que está processando antes de sair. Todo job é retomável,
+    # mas terminar é melhor que retomar.
+    stop_grace_period: 60s
+    logging: *logs
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      SITE_ENDERECO: ${SITE_ENDERECO:?falta SITE_ENDERECO no .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # O certificado mora aqui. Sem volume, cada reinício pediria outro, e o Let's
+      # Encrypt limita quantos um endereço pode pedir por semana.
+      - caddy_dados:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+    logging: *logs
+
+  backup:
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    # O usuário padrão do Ubuntu do servidor: as cópias saem com dono que dá para ler
+    # sem `sudo`.
+    user: '1000:1000'
+    entrypoint: ['bash', '/servidor/backup.sh']
+    env_file: [banco.env, config.env]
+    environment:
+      PGHOST: banco
+      PGUSER: hub
+      PGDATABASE: hub
+      TZ: America/Sao_Paulo
+    volumes:
+      - ./backup.sh:/servidor/backup.sh:ro
+      - ./backups:/backups
+      - conteudo:/dados:ro
+    depends_on:
+      banco:
+        condition: service_healthy
+    logging: *logs
+
+volumes:
+  banco:
+  conteudo:
+  caddy_dados:
+  caddy_config:

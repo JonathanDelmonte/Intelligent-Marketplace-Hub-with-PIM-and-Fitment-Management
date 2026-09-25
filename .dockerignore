@@ -1,0 +1,32 @@
+# O que não entra no contexto da imagem (ver Dockerfile).
+#
+# Segredo primeiro: o `.env` é do computador de quem desenvolve, e a configuração do
+# servidor chega quando o contêiner sobe, nunca pela imagem.
+.env
+.env.*
+!.env.example
+
+# Gerado ou baixado: o build refaz dentro da imagem.
+node_modules
+.next
+coverage
+tarefas
+public/wasm
+*.tsbuildinfo
+next-env.d.ts
+
+# Dado local, que não é da imagem.
+.dados
+.cache
+tmp-extracao
+
+# O que não roda no servidor.
+.git
+.githooks
+.github
+.claude
+Atalhos
+docs
+servidor
+Dockerfile
+.dockerignore

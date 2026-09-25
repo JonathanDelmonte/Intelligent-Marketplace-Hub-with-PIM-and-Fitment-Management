@@ -12,6 +12,9 @@ import type { MetadataRoute } from 'next';
 import { lerAmbiente } from '@/config/ambiente';
 import { montarMarca } from '@/config/marca';
 
+/** Montado a cada pedido, pelo mesmo motivo do layout: a marca é do servidor, não do build. */
+export const dynamic = 'force-dynamic';
+
 export default function manifest(): MetadataRoute.Manifest {
   const marca = montarMarca(lerAmbiente());
 

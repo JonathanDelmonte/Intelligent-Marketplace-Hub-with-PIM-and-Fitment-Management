@@ -1,0 +1,30 @@
+# A porta de entrada do servidor (ADR 0010).
+#
+# O Caddy atende em 80 e 443, pede e renova o certificado HTTPS sozinho (Let's
+# Encrypt) e repassa tudo ao site. O endereço vem do `.env` da pasta do servidor: no
+# começo, o IP pelo sslip.io (`129-151-10-20.sslip.io`), que é de graça e dispensa
+# comprar domínio; com domínio próprio, troca-se só a variável.
+#
+# O Caddy também escreve o `X-Forwarded-For` e o `X-Forwarded-Proto` que o site lê, e
+# descarta os que o navegador mandar com esses nomes — é por isso que o site pode
+# confiar neles (ADR 0011).
+
+{$SITE_ENDERECO} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# O arquivo maior que o sistema aceita é de 32 MB (src/config/limites.ts); o
+	# formulário leva um pouco mais que o arquivo.
+	request_body {
+		max_size 40MB
+	}
+
+	reverse_proxy web:3000
+}

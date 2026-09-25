@@ -12,10 +12,10 @@ jobs:
     services:
       # O schema usa pgvector, então o serviço precisa da extensão disponível.
       #
-      # A versão acompanha o banco gerenciado onde o projeto roda (Postgres 18 no
-      # Neon). Manter as três iguais — nuvem, CI e `compose.yaml` — é o que evita
-      # "passa aqui e falha lá", e vale mais que ficar numa versão antiga por
-      # precaução.
+      # A versão acompanha o banco do servidor (`servidor/compose.yaml`, ADR 0010):
+      # Postgres 18 com pgvector. Manter as três iguais — servidor, CI e o
+      # `compose.yaml` de quem desenvolve — é o que evita "passa aqui e falha lá", e
+      # vale mais que ficar numa versão antiga por precaução.
       postgres:
         image: pgvector/pgvector:pg18
         env:
@@ -90,3 +90,41 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  # A imagem de produção (ADR 0010), montada a cada push, em paralelo com a
+  # verificação: um Dockerfile quebrado aparece no push que o quebrou, e não na
+  # publicação. O repositório é público, e minuto de GitHub Actions em repositório
+  # público não é cobrado.
+  imagem:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Montar a imagem
+        run: docker build --progress=plain --build-arg VERSAO="$GITHUB_SHA" -t hub:ci .
+
+      # Sem banco de propósito: o que se confere é que a imagem sobe, que a
+      # configuração chega pelo ambiente e que o porteiro está no build. A saúde
+      # tem de dizer "sem banco" (503), a tela de entrar abre, e o resto manda
+      # para ela.
+      - name: A imagem sobe e responde
+        run: |
+          docker run -d --name hub-ci -p 3000:3000 \
+            -e DATABASE_URL=postgres://ninguem:nada@127.0.0.1:1/nada \
+            -e CREDENCIAL_CHAVE_MESTRA="$(openssl rand -base64 32)" \
+            -e BANCADA_PERFIL_PADRAO=ci \
+            hub:ci
+          for _ in $(seq 1 60); do
+            saude=$(curl -s -o saude.json -w '%{http_code}' http://127.0.0.1:3000/saude || true)
+            [ "$saude" = 503 ] && break
+            sleep 1
+          done
+          entrar=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/entrar)
+          catalogo=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/catalogo)
+          echo "saude=$saude $(cat saude.json) entrar=$entrar catalogo=$catalogo"
+          docker logs hub-ci 2>&1 | tail -20
+          test "$saude" = 503
+          grep -q '"sem banco"' saude.json
+          grep -q "\"$GITHUB_SHA\"" saude.json
+          test "$entrar" = 200
+          test "$catalogo" = 307
