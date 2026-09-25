@@ -45,11 +45,17 @@ push no main ──► GitHub verifica (tipos, testes, build)  ─┐
    suporte, que não serve para isto.
 2. Preencha país (**Brazil**), nome e e-mail, e clique no link que chega no e-mail.
 3. Crie a senha. Em **Customer type**, escolha **Individual**. O **Cloud Account Name**
-   é um apelido sem espaço (por exemplo `minhaloja`); ele entra no endereço de login.
+   é um apelido sem espaço (por exemplo `minhaloja`); ele entra no endereço de login. É
+   o nome da conta inteira, não deste sistema: outros projetos cabem na mesma conta —
+   só que a cota gratuita é da conta, e eles a dividem.
 4. Em **Home Region**, escolha **Brazil East (Sao Paulo)**. **Atenção: a região não
    muda depois**, e os recursos gratuitos só existem nela.
 5. Endereço e, em seguida, o cartão de crédito (no seu nome, com o mesmo endereço).
-   A Oracle faz uma verificação de valor pequeno e devolve.
+   A Oracle faz uma verificação de valor pequeno e devolve. O formulário é exigente com
+   o formato, e o botão **Continuar** fica cinza enquanto houver campo em vermelho:
+   - **CEP** com o tracinho: `12345-678`, e não `12345678`.
+   - **Telefone** só com números, DDD e celular (`11987654321`): sem `+55` — ele vem da
+     bandeira ao lado —, sem parênteses, espaço ou tracinho.
 6. Espere o e-mail de conta pronta (de minutos a algumas horas) e entre no painel por
    <https://cloud.oracle.com>, com o Cloud Account Name do item 3.
 
