@@ -26,6 +26,64 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-25 — A máquina da Oracle: sem vaga, e o GitHub pedindo por nós
+
+### ⚠️ "Out of capacity" em São Paulo não é questão de horário
+
+A conta e a rede saíram; a máquina ARM gratuita, não. O painel respondeu "Out of capacity"
+em toda tentativa, às seis da manhã de uma sexta — e o motivo não é o horário: muita gente
+tem programa pedindo essa máquina a cada minuto, e a vaga que abre some em segundos. Tentar
+à mão raramente acerta. São Paulo tem um availability domain só, então a sugestão da própria
+mensagem (trocar de AD) não se aplica. O dono recusou a máquina menor (1 OCPU, 6 GB), que
+acha vaga mais fácil.
+
+### 🔀 Pedir pela API, do GitHub, em vez de clicar no navegador
+
+Primeiro foi um clique automático no PowerShell, no botão "Create", a cada 30 segundos, que
+só clicava com a página de criar máquina na frente. Durou umas quatro horas: a tela de login
+apareceu, e ele parou de clicar, como devia. O navegador tem esse teto — sessão que cai, tela
+que bloqueia, computador que dorme —, e o Cloud Shell da Oracle tem o seu (fecha depois de um
+tempo sem interação). O caminho que não depende de nada disso é a API: `servidor/criar-maquina.py`,
+chamado pelo workflow **criar máquina**, pede uma vez por minuto por pouco mais de cinco horas,
+e o agendamento chama a execução seguinte a cada seis horas. O pago (Pay As You Go, que
+dá prioridade de vaga, ou um servidor de outra empresa) fica para se isto não der certo,
+e a decisão é do dono: o ADR 0012 manda gratuito.
+
+Com a máquina de pé, o mesmo script abre as portas 80 e 443 (TCP) e 443 (UDP) na security
+list da sub-rede, pega a identidade do servidor com `ssh-keyscan`, confere que a chave SSH
+entra, e o workflow abre uma issue mencionando o dono — é a menção que faz o GitHub mandar
+e-mail — e desliga o próprio agendamento. A chave SSH pública sai da privada
+(`ssh-keygen -y`), para o GitHub não guardar um segredo a mais.
+
+### ❓ Ensaiado contra uma Oracle de mentira
+
+Não há como testar contra a Oracle daqui sem a chave do dono. O script foi ensaiado com o
+SDK oficial (`oci` 2.187.0) apontado para um servidor local que imita as rotas usadas: três
+"Out of host capacity", um 429, a vaga, a máquina passando a RUNNING, a VNIC com IP, a
+security list — e um `sshd` de verdade no lugar da máquina. Conferido no que chegou ao
+servidor falso: a imagem "Minimal" descartada, 2 OCPUs e 12 GB, IP público, só as regras de
+entrada no PUT (as de saída intocadas), as regras antigas mantidas, `If-Match` com o etag.
+Também: máquina já existente (não pede outra nem mexe nas portas), rede ausente, chave
+recusada (401), sem vaga até o limite (sai sem erro), erro 500 numa lista, segredos colados
+pela metade. A mensagem de falta de vaga ("Out of host capacity", status 500) é a que a
+Oracle documenta e a comunidade relata; a primeira execução de verdade é a prova.
+
+### ⚠️ Três armadilhas do painel novo da Oracle
+
+- **Criar a rede junto com a máquina deixa o IP público travado.** Com "Create new public
+  subnet", a chave "Automatically assign public IPv4 address" não liga — a tela diz que a
+  sub-rede não é pública. A saída é criar a rede antes, pelo Start VCN Wizard (dentro de
+  **Actions** na lista de redes), e escolher a existente.
+- **A lista de imagens Ubuntu começa pela 20.04**, que já não recebe correção. O dono
+  escolheu a primeira da lista e só a Review mostrou.
+- **OCPUs e memória da forma flexível ficam escondidos** atrás de uma setinha ao lado do
+  nome.
+
+O guia (passo 4) agora tem a rede primeiro, o caminho pelo painel com essas três coisas, e o
+caminho pelo GitHub.
+
+---
+
 ## 2026-09-25 — A conta da Oracle fica no plano gratuito (ADR 0012)
 
 ### 🔀 Nenhum upgrade: risco de cobrança zero

@@ -110,6 +110,11 @@ jobs:
       - name: Scripts do servidor (shellcheck)
         run: docker run --rm -v "$PWD/servidor:/s:ro" koalaman/shellcheck:stable -x /s/publicar.sh /s/backup.sh /s/instalar.sh /s/montar-config.sh
 
+      # O que pede a máquina à Oracle roda por horas, sem ninguém olhando; ao menos
+      # tem de compilar.
+      - name: Script que cria a máquina (compila)
+        run: python3 -m py_compile servidor/criar-maquina.py
+
       - name: Montar a imagem
         run: docker build --progress=plain --build-arg VERSAO="$GITHUB_SHA" -t hub:ci .
 

@@ -130,29 +130,80 @@ Saem dois arquivos na pasta `.ssh` do seu usuário:
 
 ## Passo 4 — Criar a máquina
 
-1. No menu (☰), vá em **Compute → Instances → Create instance**.
-2. **Name**: o que quiser, por exemplo `hub`.
-3. **Image and shape**:
-   - **Image → Change image → Ubuntu**, e escolha **Canonical Ubuntu 24.04** (a comum,
-     não a "Minimal").
-   - **Shape → Change shape → Ampere → VM.Standard.A1.Flex**, com **2 OCPUs** e
-     **12 GB** de memória. O painel mostra a etiqueta _Always Free-eligible_. **Sem
-     essa etiqueta, não crie:** nos primeiros 30 dias o painel deixa criar coisa paga
-     com o crédito da avaliação, e ela é desligada quando o crédito acaba.
-4. **Networking**: deixe criar uma rede nova (_Create new virtual cloud network_), numa
-   sub-rede pública, com **Automatically assign public IPv4 address** marcado.
-5. **Add SSH keys → Upload public key files (.pub)** e escolha o `servidor-hub.pub`.
-6. **Boot volume**: o padrão (47 GB) basta.
-7. **Create**. Em um ou dois minutos o estado passa a **Running**.
-8. Na página da máquina, copie o **Public IP address** — é o endereço do servidor.
+A máquina ARM gratuita de São Paulo é disputada: o mais comum é o painel responder **"Out
+of capacity"**, sem vaga — e a vaga que abre some em segundos, porque muita gente tem
+programa pedindo o tempo todo. Por isso há dois caminhos para criar a máquina: pelo painel
+(4.2), que serve quando há vaga, e pelo GitHub (4.3), que pede sozinho até sair. Os dois
+começam pela rede.
 
-> **"Out of capacity"**: a Oracle está sem máquina ARM gratuita livre em São Paulo
-> naquele momento. Tente de novo mais tarde — de madrugada costuma haver. Não é motivo
-> para fazer upgrade (passo 2).
+### 4.1 — A rede, uma vez só
+
+O painel de criar máquina oferece criar a rede junto, mas aí a chave do IP público fica
+travada. Crie a rede antes:
+
+1. Abra <https://cloud.oracle.com/networking/vcns?region=sa-saopaulo-1>.
+2. **Actions → Start VCN Wizard → Create VCN with Internet Connectivity → Start VCN
+   Wizard**.
+3. **VCN name**: `rede-hub` — o nome importa, é por ele que o GitHub acha a rede. O resto,
+   como vier. **Next → Create**.
+
+### 4.2 — Pelo painel
+
+1. No menu (☰), **Compute → Instances → Create instance**.
+2. **Name**: `hub`.
+3. **Change shape → Ampere → VM.Standard.A1.Flex**. A setinha (▸) ao lado do nome abre os
+   campos: **2** OCPUs e **12** GB. Tem de aparecer a etiqueta _Always Free-eligible_ —
+   **sem ela, não crie**: nos primeiros 30 dias o painel deixa criar coisa paga com o
+   crédito da avaliação, e ela é desligada quando o crédito acaba. A forma vem antes da
+   imagem para a lista de imagens já mostrar as versões ARM.
+4. **Change image → Ubuntu → Canonical Ubuntu 24.04**. A 20.04 vem primeiro na lista e
+   não recebe mais correção de segurança; a "Minimal" também não serve.
+5. **Advanced options**: como vier. Em especial o **Oracle Cloud Agent**, que é por onde a
+   Oracle mede o uso da máquina (passo 2).
+6. **Next** até **Networking**: **Select existing virtual cloud network** → `rede-hub`;
+   **Select existing subnet** → `public subnet-rede-hub`; e ligue **Automatically assign
+   public IPv4 address**.
+7. **Add SSH keys → Upload public key file (.pub)** → `servidor-hub.pub`. No Windows, ele
+   aparece com o ícone do Microsoft Publisher, por causa do `.pub`: é ele mesmo.
+8. **Storage**: como vier. Na **Review**, confira três coisas: Canonical Ubuntu 24.04,
+   _Public IPv4 address: Yes_ e _SSH keys: ssh-ed25519…_. **Create**.
+9. Em um ou dois minutos o estado passa a **Running**. Copie o **Public IP address** — é
+   o endereço do servidor.
+
+> **"Out of capacity"**: sem vaga naquele momento. Tentar à mão raramente acerta o
+> segundo em que ela abre, e não é motivo para fazer upgrade (passo 2): use o 4.3.
+
+### 4.3 — Pelo GitHub, até sair vaga
+
+O workflow **criar máquina** pede a mesma máquina do 4.2 pela API da Oracle, uma vez por
+minuto, dia e noite, e para sozinho quando consegue. Com ela de pé, abre as portas do
+passo 5, pega a identidade do passo 6 e abre uma issue no repositório com o IP e o que
+colar no passo 7 — e o GitHub avisa por e-mail.
+
+1. **A chave de API da Oracle.** No painel, o bonequinho no canto superior direito →
+   **User settings** (ou **My profile**) → **Tokens and keys** → **API keys → Add API
+   key**. Deixe **Generate API key pair**, clique em **Download private key** (baixa um
+   arquivo `.pem`) e só então em **Add**. Aparece o quadro **Configuration file preview**:
+   **Copy**.
+2. **Os segredos**, em **Settings → Secrets and variables → Actions → Secrets**:
+
+   | Nome                 | O que colar                                                                          |
+   | -------------------- | ------------------------------------------------------------------------------------ |
+   | `OCI_CONFIG`         | O quadro inteiro, de `[DEFAULT]` até `key_file=…`.                                   |
+   | `OCI_CHAVE`          | O `.pem`, aberto no Bloco de Notas, inclusive as linhas `-----BEGIN…` e `-----END…`. |
+   | `SERVIDOR_CHAVE_SSH` | O mesmo do passo 7: o arquivo `servidor-hub`, o privado.                             |
+
+3. **Actions → criar máquina → Run workflow**. Cada execução pede por pouco mais de cinco
+   horas, e a seguinte começa sozinha, a cada seis horas. O resumo de cada uma diz quantas
+   vezes pediu.
+
+Quando a issue chegar, os passos 5 e 6 já estão feitos: siga do 7. A chave de API não é
+mais necessária — apague os segredos `OCI_CONFIG` e `OCI_CHAVE` e a chave no painel.
 
 ## Passo 5 — Abrir as portas 80 e 443 na rede da Oracle
 
-A rede da Oracle deixa entrar só o SSH. O site precisa das portas da web:
+Se a máquina veio pelo 4.3, já está feito. A rede da Oracle deixa entrar só o SSH, e o
+site precisa das portas da web:
 
 1. Na página da máquina, clique no nome da **Subnet**.
 2. Em **Security Lists**, abra a **Default Security List**.
@@ -166,8 +217,9 @@ O firewall da própria máquina, a publicação abre sozinha.
 
 ## Passo 6 — Pegar a identidade do servidor
 
-É o que deixa o GitHub ter certeza de que está falando com o **seu** servidor, e não com
-alguém no meio do caminho. No PowerShell (ou Terminal), com o IP do passo 4:
+Se a máquina veio pelo 4.3, a linha está na issue. É o que deixa o GitHub ter certeza de
+que está falando com o **seu** servidor, e não com alguém no meio do caminho. No
+PowerShell (ou Terminal), com o IP do passo 4:
 
 ```sh
 ssh-keyscan -t ed25519 129.151.10.20
@@ -322,7 +374,11 @@ são as portas do passo 5. Se estiverem certas, pode ser o certificado: rode
 **manutenção → diagnostico** e, se o `caddy` estiver de pé, espere alguns minutos ou
 passe para o DuckDNS.
 
-**Criar a máquina dá "Out of capacity".** Ver o passo 4.
+**Criar a máquina dá "Out of capacity".** Ver o passo 4.3.
+
+**O workflow "criar máquina" termina em erro.** A mensagem diz o que conferir: quase
+sempre um segredo colado pela metade (o quadro sem uma linha, o `.pem` sem o `-----END…`),
+ou a rede com outro nome que não `rede-hub`. Corrija e rode de novo.
 
 **A Oracle avisou que a máquina está ociosa.** Rode **manutenção → diagnostico**. Em
 "contêineres", o `reserva` tem de estar `running`; em "disco e memória", a coluna

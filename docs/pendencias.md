@@ -336,9 +336,10 @@ cada mudança publicada sozinha — e com tela de cadastro e login. Entrou:
 - **A publicação**: todo push no `main` vai para o ar em uns cinco minutos, com volta
   automática se a versão nova não subir, e os botões de manutenção no GitHub.
 
-**O que falta é do dono:** criar a conta e a máquina na Oracle, e guardar os segredos no
-GitHub — o [passo a passo](./hospedagem.md) leva uns 40 minutos. A primeira publicação
-prepara a máquina sozinha.
+**O que falta é do dono:** a conta na Oracle está criada, no plano gratuito (ADR 0012), e
+a rede também. Falta a máquina, que esbarra no "Out of capacity" de São Paulo: o workflow
+**criar máquina** pede sozinho até sair vaga ([passo 4.3](./hospedagem.md)). Depois,
+guardar os segredos no GitHub; a primeira publicação prepara a máquina sozinha.
 
 O que vem abaixo é a análise de antes, que levou à decisão, e continua valendo como
 registro: o banco sem SDK de provedor, o armazenamento em disco que tirou o serverless
