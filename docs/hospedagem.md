@@ -1,405 +1,245 @@
 # Hospedagem: o sistema no ar, de graça
 
-Este é o passo a passo para pôr o sistema na internet, num servidor gratuito da Oracle,
-com endereço `https://` e atualização automática: toda mudança que entra no `main` vai
-para o ar em cerca de cinco minutos, sem você ligar nada no seu computador. A decisão
-e o porquê de cada peça estão no [ADR 0010](./adr/0010-hospedagem-gratuita.md).
+Este é o passo a passo para pôr o sistema na internet com três serviços gratuitos, com
+endereço `https://` e atualização automática: toda mudança que entra no `main` vai para o
+ar sozinha, depois que o CI passa, sem você ligar nada no seu computador. O porquê de
+cada peça, e do que ficou de fora, está no [ADR 0013](./adr/0013-hospedagem-gratuita-em-pecas.md).
 
-Você faz isto **uma vez**. Leva uns 40 minutos, quase todos esperando a Oracle.
+Você faz isto **uma vez**. Leva uns 30 minutos, quase todos esperando a primeira
+montagem.
 
-Os nomes dos menus abaixo são os do painel da Oracle em inglês, como estavam em
-setembro de 2026. Se algum tiver mudado de lugar, a busca do topo do painel acha pelo
-nome.
+É um arranjo para testar, e foi escolhido assim: tudo de graça, sem cópia de segurança, e
+quando o banco encher, apaga e recomeça. Quando o sistema for usado de verdade, o caminho
+é pagar — um servidor próprio ([hospedagem-servidor.md](./hospedagem-servidor.md)) ou os
+planos pagos destes mesmos serviços.
+
+Os nomes dos menus abaixo são os dos painéis em inglês, como estavam em setembro de 2026.
+Se algum tiver mudado de lugar, a busca do painel acha pelo nome.
 
 ## Como funciona
 
 ```
-push no main ──► GitHub verifica (tipos, testes, build)  ─┐
-             └─► o servidor monta a versão nova          ─┴─► troca ─► confere ─► no ar
+push no main ─► GitHub verifica (tipos, testes, e o contêiner sobe) ─► Render monta ─► no ar
+
+UptimeRobot ─► /saude a cada 5 minutos ─► o Render não dorme, e o banco não para
 ```
 
-- **O servidor** é uma máquina da Oracle Cloud (plano Always Free) em São Paulo, com o
-  banco, o sistema, a fila, o HTTPS e as cópias de segurança, cada um num contêiner.
-- **A publicação** é o próprio GitHub Actions: a cada push, ele manda o código para o
-  servidor por SSH, a máquina monta a versão nova enquanto os testes rodam, e só depois
-  de tudo passar a versão é trocada.
-- **Se algo der errado**, a versão anterior continua no ar (ou volta sozinha, se a nova
-  não responder), e o GitHub manda um e-mail dizendo que a publicação falhou.
-- **O endereço** é o IP do servidor pelo sslip.io — `https://129-151-10-20.sslip.io` —,
-  que é de graça e dispensa comprar domínio. Dá para trocar por um nome mais bonito,
-  também grátis (ver [Endereço com nome](#endereço-com-nome-grátis)).
+- **Render** (render.com) roda o sistema: o site e a fila, num contêiner só, com o
+  endereço `https://…onrender.com`. O plano gratuito tem 512 MB de memória e dorme depois
+  de 15 minutos sem visita.
+- **Supabase** (supabase.com) guarda os dados: o banco (Postgres) e os arquivos enviados
+  (planilhas, PDFs). O plano gratuito tem 500 MB de banco e 1 GB de arquivos.
+- **UptimeRobot** (uptimerobot.com) visita o sistema a cada 5 minutos. É isso que não
+  deixa o Render dormir — e, se o sistema cair, ele manda e-mail.
+- **A publicação**: a cada push no `main`, o GitHub verifica tudo, inclusive se o
+  contêiner sobe e responde; o Render espera essa verificação, monta a versão nova e só
+  a põe no ar quando ela responde. Se algo der errado, a anterior continua.
 
 ## O que você vai precisar
 
 - A conta do GitHub, que você já tem, com acesso de administrador a este repositório.
-- Um cartão, só para a Oracle confirmar que você é uma pessoa. No plano gratuito nada
-  é cobrado — é por isso que o passo 2 manda **não** fazer o upgrade.
-- O computador com Windows, Mac ou Linux, para gerar a chave de acesso ao servidor.
+- Um e-mail.
+- O Bloco de Notas aberto, para guardar os valores que o Supabase vai dar.
+
+Nenhum passo deste guia precisa de cartão. Se algum painel pedir cartão para continuar,
+pare: é sinal de que o plano mudou, e vale reavaliar antes de cadastrar.
 
 ---
 
-## Passo 1 — Criar a conta na Oracle Cloud
+## Passo 1 — O banco e os arquivos, no Supabase
 
-1. Entre direto em <https://signup.cloud.oracle.com/>. É a única página de cadastro da
-   nuvem. **Não** é o `profile.oracle.com`: aquele cria a "Oracle Account" de download e
-   suporte, que não serve para isto.
-2. Preencha país (**Brazil**), nome e e-mail, e clique no link que chega no e-mail.
-3. Crie a senha. Em **Customer type**, escolha **Individual**. O **Cloud Account Name**
-   é um apelido sem espaço (por exemplo `minhaloja`); ele entra no endereço de login. É
-   o nome da conta inteira, não deste sistema: outros projetos cabem na mesma conta —
-   só que a cota gratuita é da conta, e eles a dividem.
-4. Em **Home Region**, escolha **Brazil East (Sao Paulo)**. **Atenção: a região não
-   muda depois**, e os recursos gratuitos só existem nela.
-5. **Endereço**, o mesmo da fatura do cartão do item 6. O formulário é exigente com o
-   formato, e o botão **Continuar** fica cinza enquanto houver campo em vermelho:
-   - **CEP** com o tracinho: `12345-678`, e não `12345678`.
-   - **Telefone** só com números, DDD e celular (`11987654321`): sem `+55` — ele vem da
-     bandeira ao lado —, sem parênteses, espaço ou tracinho.
-6. **Verificação de pagamento.** É obrigatória — sem ela a conta não é criada —, e é só
-   verificação: o plano gratuito não cobra. Em **Adicionar método de verificação de
-   pagamento**, use um cartão com bandeira (Visa, Mastercard…), de crédito ou de débito
-   que não peça senha, e **o número do cartão físico**: cartão virtual (o do aplicativo
-   do banco), pré-pago ou de uso único é recusado. Aparece uma cobrança temporária de
-   valor simbólico, que é estornada sozinha. Se o banco recusar, confira no aplicativo
-   dele se compras online estão liberadas. Depois, marque o **Contrato** e clique em
-   **Iniciar minha avaliação gratuita**.
+1. Entre em <https://supabase.com> e crie a conta (dá para entrar com o GitHub).
+2. **New project**:
+   - **Name**: `hub`.
+   - **Database Password**: clique em **Generate a password** e copie para o Bloco de
+     Notas. Use senha só de letras e números: `@`, `#`, `/`, `?` e `%` quebram o endereço
+     do banco.
+   - **Region**: **East US (North Virginia)** — a mesma região do Render. Banco longe do
+     site deixa toda tela lenta.
+   - Se o formulário oferecer desligar a **Data API**, pode desligar: o sistema não a usa
+     (e fecha as tabelas para ela de todo jeito).
+   - **Create new project**, e espere uns dois minutos.
+3. **O lugar dos arquivos.** No menu da esquerda, **Storage → New bucket**: nome
+   `conteudo`, com **Public bucket** desligado. **Create**.
+4. **A chave dos arquivos.** Ainda em **Storage**, abra **S3 Configuration**:
+   - Em **Connection**, copie o **Endpoint** (`https://….supabase.co/storage/v1/s3`).
+   - Em **Access keys**, **New access key**, com qualquer descrição. Copie o **Access key
+     ID** e o **Secret access key** — o segredo aparece **só agora**.
+5. **O endereço do banco.** No topo da página do projeto, **Connect**. Escolha a aba de
+   _connection string_, tipo **URI**, e o **Session pooler** — o endereço que termina em
+   `pooler.supabase.com:5432/postgres`. Copie e, no Bloco de Notas, troque
+   `[YOUR-PASSWORD]` pela senha do item 2, **sem os colchetes**.
 
-   O nome do botão engana: o cadastro dá **dois** presentes. Um é a avaliação — US$ 300
-   de crédito para gastar em 30 dias no que quiser. O outro é o **Always Free**, sem
-   prazo: a máquina ARM, o disco e a rede que este sistema usa. Quando os 30 dias
-   acabam, some só o que foi pago com o crédito; o Always Free continua — a própria tela
-   do cadastro diz que, sem passar para o nível pago, "você continuará a ter acesso aos
-   serviços Always Free".
-7. Espere o e-mail de conta pronta (de minutos a algumas horas) e entre no painel por
-   <https://cloud.oracle.com>, com o Cloud Account Name do item 3.
+   O _Session pooler_ é o endereço que funciona do Render. O _Direct connection_ não
+   serve: no plano gratuito ele só atende por IPv6.
 
-> **Erro "status=403" ou "falha na ligação ao servidor" no cadastro.** A Oracle bloqueia
-> o cadastro quando desconfia da conexão. Na ordem, o que costuma resolver: desligar VPN
-> e extensões de bloqueio de anúncio/privacidade; usar outro navegador (Chrome ou Edge)
-> numa janela anônima; usar outra rede (os dados do celular, em vez do Wi-Fi). Depois de
-> várias tentativas seguidas, esperar algumas horas também ajuda.
+No Bloco de Notas ficam quatro valores: o endereço do banco (com a senha dentro), o
+Endpoint, o Access key ID e o Secret access key.
 
-## Passo 2 — Um alarme de gasto, e nada de "Upgrade"
+## Passo 2 — O sistema, no Render
 
-A conta fica no plano gratuito (_Free Tier_), e **nesse plano a Oracle não cobra nada**:
-o que não é gratuito simplesmente não funciona. É assim que este sistema usa a Oracle
-(ADR 0012).
+1. Entre em <https://render.com> com a conta do GitHub (**Get Started → GitHub**).
+2. **New → Blueprint**. Na primeira vez, o Render pede acesso ao GitHub: escolha **Only
+   select repositories**, marque este repositório e confirme.
+3. Escolha o repositório. O Render lê o arquivo `render.yaml` e mostra o serviço `hub`,
+   no plano **Free**, pedindo estes valores:
 
-1. **Não clique em _Upgrade your account_ nem em _Add Payment Method_** (em
-   **Billing & Cost Management → Upgrade and Manage Payment**). O upgrade para
-   "Pay As You Go" é o que abre a porta para cobrança. E só cadastrar um meio de
-   pagamento já faz uma pré-autorização grande no cartão — mais de R$ 500, no caso do
-   dono —, que volta sozinha, mas assusta. O cartão do cadastro basta: ele serviu para
-   provar que você é uma pessoa, e o plano gratuito não precisa dele de novo.
-2. **O alarme (opcional, dois minutos).** No menu (☰), **Billing & Cost Management →
-   Budgets → Create Budget**: nome e descrição quaisquer, valor `1`, alerta em `1`% do
-   orçamento sobre o gasto real (_Actual spend_), com o seu e-mail. No plano gratuito
-   ele nunca deveria disparar; se disparar, é sinal de que algo mudou na conta.
+   | Campo                       | O que colar                                                                                            |
+   | --------------------------- | ------------------------------------------------------------------------------------------------------ |
+   | `DATABASE_URL`              | O endereço do banco do passo 1, com a senha no lugar de `[YOUR-PASSWORD]`.                             |
+   | `CADASTRO_CODIGO`           | O código que a tela "Criar conta" vai pedir: o do seu `.env`, ou outro com 8 letras e números ou mais. |
+   | `BANCADA_PERFIL_PADRAO`     | O identificador da loja, o mesmo do seu `.env` (por exemplo, `essencial-emporium`).                    |
+   | `LLM_API_KEY`               | A chave do OpenRouter, a mesma do seu `.env`. Sem ela, o sistema funciona e só a IA fica desligada.    |
+   | `ARMAZENAMENTO_S3_ENDPOINT` | O Endpoint do passo 1.                                                                                 |
+   | `ARMAZENAMENTO_S3_CHAVE`    | O Access key ID.                                                                                       |
+   | `ARMAZENAMENTO_S3_SEGREDO`  | O Secret access key.                                                                                   |
 
-**O único cuidado do plano gratuito:** a Oracle pode recolher uma máquina que passa sete
-dias ociosa — processador, rede e memória abaixo de 20%. O servidor já vem preparado
-para isso: ele segura 25% da memória (que sobra) e deixa de se encaixar na regra
-(`servidor/reserva.mjs`). Se mesmo assim a máquina for recolhida um dia, os dados estão
-na cópia do Neon (passo 10), e o [recomeço](#quando-algo-dá-errado) leva uns 20 minutos.
+   O resto vem pronto do `render.yaml`. A `CREDENCIAL_CHAVE_MESTRA`, que protege as
+   sessões e as credenciais guardadas, o Render gera sozinho.
 
-## Passo 3 — Gerar a chave de acesso ao servidor (no seu computador)
+4. **Deploy Blueprint**. A primeira montagem leva uns dez minutos. Quando terminar, o
+   serviço `hub` aparece como **Live**, com o endereço no topo — algo como
+   `https://hub-xxxx.onrender.com`. Guarde: é o endereço do sistema.
 
-A chave é um par de arquivos: um **público**, que vai para o servidor, e um **privado**,
-que vai para o GitHub e mais nenhum lugar.
+Os valores ficam só no painel do Render (em **hub → Environment**, onde dá para trocar
+depois). Nada disso vai para o repositório.
 
-**Windows** — abra o **PowerShell** e cole:
-
-```powershell
-mkdir -Force "$env:USERPROFILE\.ssh" | Out-Null
-ssh-keygen -t ed25519 -C servidor-hub -f "$env:USERPROFILE\.ssh\servidor-hub"
-```
-
-**Mac ou Linux** — abra o Terminal e cole:
-
-```sh
-ssh-keygen -t ed25519 -C servidor-hub -f ~/.ssh/servidor-hub
-```
-
-Quando ele pedir uma senha (_passphrase_), **aperte Enter duas vezes, sem digitar
-nada**: com senha, o GitHub não conseguiria usar a chave sozinho.
-
-Saem dois arquivos na pasta `.ssh` do seu usuário:
-
-- `servidor-hub.pub` — o público (vai no passo 4);
-- `servidor-hub` — o privado (vai no passo 7). **Não mande para ninguém.**
-
-## Passo 4 — Criar a máquina
-
-A máquina ARM gratuita de São Paulo é disputada: o mais comum é o painel responder **"Out
-of capacity"**, sem vaga — e a vaga que abre some em segundos, porque muita gente tem
-programa pedindo o tempo todo. Por isso há dois caminhos para criar a máquina: pelo painel
-(4.2), que serve quando há vaga, e pelo GitHub (4.3), que pede sozinho até sair. Os dois
-começam pela rede.
-
-### 4.1 — A rede, uma vez só
-
-O painel de criar máquina oferece criar a rede junto, mas aí a chave do IP público fica
-travada. Crie a rede antes:
-
-1. Abra <https://cloud.oracle.com/networking/vcns?region=sa-saopaulo-1>.
-2. **Actions → Start VCN Wizard → Create VCN with Internet Connectivity → Start VCN
-   Wizard**.
-3. **VCN name**: `rede-hub` — o nome importa, é por ele que o GitHub acha a rede. O resto,
-   como vier. **Next → Create**.
-
-### 4.2 — Pelo painel
-
-1. No menu (☰), **Compute → Instances → Create instance**.
-2. **Name**: `hub`.
-3. **Change shape → Ampere → VM.Standard.A1.Flex**. A setinha (▸) ao lado do nome abre os
-   campos: **2** OCPUs e **12** GB. Tem de aparecer a etiqueta _Always Free-eligible_ —
-   **sem ela, não crie**: nos primeiros 30 dias o painel deixa criar coisa paga com o
-   crédito da avaliação, e ela é desligada quando o crédito acaba. A forma vem antes da
-   imagem para a lista de imagens já mostrar as versões ARM.
-4. **Change image → Ubuntu → Canonical Ubuntu 24.04**. A 20.04 vem primeiro na lista e
-   não recebe mais correção de segurança; a "Minimal" também não serve.
-5. **Advanced options**: como vier. Em especial o **Oracle Cloud Agent**, que é por onde a
-   Oracle mede o uso da máquina (passo 2).
-6. **Next** até **Networking**: **Select existing virtual cloud network** → `rede-hub`;
-   **Select existing subnet** → `public subnet-rede-hub`; e ligue **Automatically assign
-   public IPv4 address**.
-7. **Add SSH keys → Upload public key file (.pub)** → `servidor-hub.pub`. No Windows, ele
-   aparece com o ícone do Microsoft Publisher, por causa do `.pub`: é ele mesmo.
-8. **Storage**: como vier. Na **Review**, confira três coisas: Canonical Ubuntu 24.04,
-   _Public IPv4 address: Yes_ e _SSH keys: ssh-ed25519…_. **Create**.
-9. Em um ou dois minutos o estado passa a **Running**. Copie o **Public IP address** — é
-   o endereço do servidor.
-
-> **"Out of capacity"**: sem vaga naquele momento. Tentar à mão raramente acerta o
-> segundo em que ela abre, e não é motivo para fazer upgrade (passo 2): use o 4.3.
-
-### 4.3 — Pelo GitHub, até sair vaga
-
-O workflow **criar máquina** pede a mesma máquina do 4.2 pela API da Oracle, uma vez por
-minuto, dia e noite, e para sozinho quando consegue. Com ela de pé, abre as portas do
-passo 5, pega a identidade do passo 6 e abre uma issue no repositório com o IP e o que
-colar no passo 7 — e o GitHub avisa por e-mail.
-
-1. **A chave de API da Oracle.** No painel, o bonequinho no canto superior direito →
-   **User settings** (ou **My profile**) → **Tokens and keys** → **API keys → Add API
-   key**. Deixe **Generate API key pair**, clique em **Download private key** (baixa um
-   arquivo `.pem`) e só então em **Add**. Aparece o quadro **Configuration file preview**:
-   **Copy**.
-2. **Os segredos**, em **Settings → Secrets and variables → Actions → Secrets**:
-
-   | Nome                 | O que colar                                                                          |
-   | -------------------- | ------------------------------------------------------------------------------------ |
-   | `OCI_CONFIG`         | O quadro inteiro, de `[DEFAULT]` até `key_file=…`.                                   |
-   | `OCI_CHAVE`          | O `.pem`, aberto no Bloco de Notas, inclusive as linhas `-----BEGIN…` e `-----END…`. |
-   | `SERVIDOR_CHAVE_SSH` | O mesmo do passo 7: o arquivo `servidor-hub`, o privado.                             |
-
-3. **Actions → criar máquina → Run workflow**. Cada execução pede por pouco mais de cinco
-   horas, e a seguinte começa sozinha, a cada seis horas. O resumo de cada uma diz quantas
-   vezes pediu.
-
-Quando a issue chegar, os passos 5 e 6 já estão feitos: siga do 7. A chave de API não é
-mais necessária — apague os segredos `OCI_CONFIG` e `OCI_CHAVE` e a chave no painel.
-
-## Passo 5 — Abrir as portas 80 e 443 na rede da Oracle
-
-Se a máquina veio pelo 4.3, já está feito. A rede da Oracle deixa entrar só o SSH, e o
-site precisa das portas da web:
-
-1. Na página da máquina, clique no nome da **Subnet**.
-2. Em **Security Lists**, abra a **Default Security List**.
-3. **Add Ingress Rules**:
-   - **Source CIDR**: `0.0.0.0/0`
-   - **IP Protocol**: TCP
-   - **Destination Port Range**: `80,443`
-4. **Add Ingress Rules** para salvar.
-
-O firewall da própria máquina, a publicação abre sozinha.
-
-## Passo 6 — Pegar a identidade do servidor
-
-Se a máquina veio pelo 4.3, a linha está na issue. É o que deixa o GitHub ter certeza de
-que está falando com o **seu** servidor, e não com alguém no meio do caminho. No
-PowerShell (ou Terminal), com o IP do passo 4:
-
-```sh
-ssh-keyscan -t ed25519 129.151.10.20
-```
-
-Ele devolve uma linha que começa com o IP e tem `ssh-ed25519 AAAA…`. Copie a linha
-inteira.
-
-Para conferir que a chave funciona (opcional):
-
-```sh
-ssh -i ~/.ssh/servidor-hub ubuntu@129.151.10.20
-```
-
-Se entrar, digite `exit`. No Windows, troque `~/.ssh` por `$env:USERPROFILE\.ssh`.
-
-## Passo 7 — Guardar os segredos e as variáveis no GitHub
-
-No repositório, vá em **Settings → Secrets and variables → Actions**.
-
-Na aba **Secrets**, clique em **New repository secret** para cada um:
-
-| Nome                 | O que colar                                                                                                                                                                                    |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SERVIDOR_CHAVE_SSH` | O conteúdo inteiro do arquivo `servidor-hub` (o **privado**). Abra no Bloco de Notas e copie tudo, inclusive as linhas `-----BEGIN…` e `-----END…`.                                            |
-| `CADASTRO_CODIGO`    | O código que a tela "Criar conta" vai pedir. Pode ser o mesmo do seu `.env` (a linha `CADASTRO_CODIGO`), ou um novo com 12 letras e números ou mais. Guarde: ele também troca senha esquecida. |
-| `LLM_API_KEY`        | _(opcional)_ A chave do OpenRouter, a mesma do seu `.env`. Sem ela, o sistema funciona e só a IA fica desligada.                                                                               |
-| `BACKUP_NEON_URL`    | _(opcional)_ A cópia fora do servidor — ver o passo 10.                                                                                                                                        |
-
-Na aba **Variables**, clique em **New repository variable** para cada uma:
-
-| Nome                  | O que colar                                                                                    |
-| --------------------- | ---------------------------------------------------------------------------------------------- |
-| `SERVIDOR_ENDERECO`   | O IP do passo 4, por exemplo `129.151.10.20`.                                                  |
-| `SERVIDOR_CHAVE_HOST` | A linha do passo 6.                                                                            |
-| `SITE_ENDERECO`       | _(opcional)_ Um endereço com nome — ver [Endereço com nome](#endereço-com-nome-grátis).        |
-
-As variáveis da marca e do perfil (`BANCADA_NOME_SISTEMA`, `BANCADA_PERFIL_PADRAO` e as
-outras do `.env.example`) são opcionais: sem elas, o servidor usa as mesmas do
-`.env.example`.
-
-## Passo 8 — A primeira publicação
-
-1. No repositório, abra a aba **Actions**, clique em **verificar** na lista da esquerda,
-   e depois em **Run workflow → Branch: main → Run workflow**.
-2. Espere. A primeira vez leva de 10 a 15 minutos: o servidor instala o Docker e monta
-   o sistema do zero. As próximas levam uns cinco.
-3. Quando os quatro quadrados ficarem verdes, abra o job **publicar**: no resumo aparece
-   **✅ No ar em https://…**. Esse é o endereço do sistema.
-
-Se o último passo ("Conferir de fora") falhar logo na primeira vez, o mais comum é o
-certificado HTTPS ainda estar sendo emitido: espere uns minutos e abra o endereço. Se
-continuar sem abrir, confira as portas do passo 5.
-
-## Passo 9 — Criar a sua conta
+## Passo 3 — Criar a sua conta
 
 Abra o endereço, clique em **Criar conta** e preencha nome, e-mail, uma senha de dez
-caracteres ou mais e o código de cadastro (o `CADASTRO_CODIGO` do passo 7). Pronto: o
+caracteres ou mais e o código de cadastro (o `CADASTRO_CODIGO` do passo 2). Pronto: o
 sistema está no ar, e só entra quem tem conta.
 
 No celular, o menu do navegador tem **Adicionar à tela inicial**: o leitor de código de
 barras vira um ícone, como um aplicativo.
 
-## Passo 10 (opcional) — A cópia fora do servidor, no Neon
+## Passo 4 — O UptimeRobot, para o sistema não dormir
 
-O servidor copia o banco todo dia às 03:00 e guarda sete dias. Isso protege contra erro
-— apagar o que não devia —, mas não contra perder a máquina. Para isso existe a cópia
-no Neon, um Postgres gratuito em outra empresa:
+1. Crie a conta em <https://uptimerobot.com> (plano Free).
+2. **New monitor**:
+   - **Monitor type**: HTTP(s).
+   - **URL**: o endereço do passo 2 com `/saude` no fim —
+     `https://hub-xxxx.onrender.com/saude`.
+   - **Monitoring interval**: 5 minutes.
+   - Avisos: o seu e-mail.
+3. **Create monitor**. Em alguns minutos ele mostra **Up**.
 
-1. Crie a conta em <https://neon.com> (plano Free).
-2. **Create project**: Postgres **18** (ou 17, se o 18 não estiver na lista), região
-   **AWS São Paulo** se houver.
-3. No painel do projeto, **Connect**, e copie a _connection string_ (começa com
-   `postgresql://`).
-4. No GitHub, crie o segredo `BACKUP_NEON_URL` com ela, e rode a publicação de novo
-   (passo 8, ou qualquer push).
+Sem este passo o sistema funciona, mas dorme depois de 15 minutos sem visita: a primeira
+tela depois disso leva quase um minuto, e a fila para até alguém abrir o sistema. A visita
+do UptimeRobot também mantém o banco em uso, e o Supabase gratuito pausa o banco que passa
+uma semana parado.
 
-A partir daí, a cópia das 03:00 também vai para o Neon. Para conferir quando quiser:
-**Actions → manutenção → Run workflow → testar-backup**. Toda segunda de manhã esse
-teste roda sozinho, e o GitHub manda e-mail se falhar.
+## Passo 5 (opcional) — Fechar o cadastro
+
+Depois de criar a sua conta, no Render, **hub → Environment**, apague o
+`CADASTRO_CODIGO` e salve: o sistema reinicia, e ninguém mais cria conta. O "esqueci a
+senha" usa o mesmo código e fecha junto — para reabrir, ponha o código de volta.
 
 ---
 
 ## No dia a dia
 
-- **Mudança**: entrou no `main`, vai para o ar em uns cinco minutos. O rodapé de toda
-  tela diz a versão no ar — "atualizado em 25/09/2026 às 14:05 (3f9c2a1)" —, então dá
-  para saber se a mudança já chegou.
-- **Publicação que falhou**: o GitHub manda e-mail, e a versão anterior continua no ar.
-  O log da aba Actions diz em que passo parou.
-- **Os botões do servidor** ficam em **Actions → manutenção → Run workflow**:
-
-  | Botão           | O que faz                                                                          |
-  | --------------- | ---------------------------------------------------------------------------------- |
-  | `diagnostico`   | Versão no ar, contêineres, saúde, disco, erros do dia e a lista de cópias.         |
-  | `reiniciar`     | Reinicia o site e a fila.                                                          |
-  | `backup-agora`  | Uma cópia do banco na hora.                                                        |
-  | `testar-backup` | Abre a cópia mais nova num banco à parte e conta o que tem nela.                   |
-  | `restaurar`     | Volta o banco para uma cópia. Pede o nome da cópia e a palavra `RESTAURAR`.        |
-
-- **Fechar o cadastro**: depois de criar a sua conta, você pode apagar o segredo
-  `CADASTRO_CODIGO`; na próxima publicação ninguém mais cria conta. O "esqueci a senha"
-  usa o mesmo código e fecha junto.
+- **Mudança**: entrou no `main`, o CI verifica (uns quatro minutos), e o Render monta e
+  troca a versão (uns dez). O rodapé de toda tela diz a versão no ar — "atualizado em
+  25/09/2026 às 14:05 (3f9c2a1)" —, então dá para saber se a mudança já chegou.
+- **Mudança só em documento ou em teste** não vai para o Render: não muda nada no ar, e
+  poupa os minutos de montagem do mês (ver [Quanto custa](#quanto-custa)).
+- **Publicação que falhou**: o Render manda e-mail, e a versão anterior continua no ar. O
+  motivo está em **hub → Events**, no deploy que falhou.
+- **O que o sistema está dizendo**: **hub → Logs**. Só você vê.
+- **Voltar uma versão**: **hub → Events**, no deploy que funcionava, **Rollback**.
+- **Reiniciar**: **hub → Manual Deploy → Restart service**.
 
 ## Quanto custa
 
-| Peça                                   | Custo                                                                |
-| -------------------------------------- | -------------------------------------------------------------------- |
-| Servidor (Oracle Always Free)          | R$ 0 — 2 OCPUs ARM, 12 GB de memória, até 200 GB de disco            |
-| Publicação (GitHub Actions)            | R$ 0 — repositório público não paga minuto                           |
-| Endereço (sslip.io ou DuckDNS)         | R$ 0                                                                 |
-| Cópia fora do servidor (Neon)          | R$ 0 — plano Free                                                    |
-| **Mais tarde, se quiser**: domínio próprio `.com.br` | uns R$ 40 por ano                                      |
+| Peça                         | Custo | O limite do plano gratuito                                                     |
+| ---------------------------- | ----- | ------------------------------------------------------------------------------ |
+| Site e fila (Render)         | R$ 0  | 512 MB de memória; 750 horas por mês; 500 minutos de montagem por mês          |
+| Banco e arquivos (Supabase)  | R$ 0  | 500 MB de banco; 1 GB de arquivos; 5 GB de tráfego; **sem cópia de segurança** |
+| Vigia (UptimeRobot)          | R$ 0  | uma visita a cada 5 minutos                                                    |
+| Verificação (GitHub Actions) | R$ 0  | repositório público não paga minuto                                            |
 
-**Sobre o repositório ser público**: qualquer pessoa pode ler o código — é isso que
-deixa o GitHub Actions de graça sem limite de minutos. Nenhum segredo e nenhum dado
-estão no repositório: segredos ficam em _Secrets_, dados ficam no servidor. O log das
-publicações também é público, e por isso o servidor nunca devolve dado de negócio nele,
-só estado e contagem.
+As 750 horas são por conta, não por serviço: um serviço ligado o mês inteiro usa até 744,
+e cabe — um segundo serviço ligado, não. **Mais tarde, se quiser**: um domínio `.com.br`
+custa uns R$ 40 por ano, e o Render o aceita de graça (**hub → Settings → Custom
+Domains**).
 
-## Endereço com nome (grátis)
+Passar do limite **para, não cobra** — é o que acontece sem cartão cadastrado. Se os
+minutos de montagem do mês acabarem, o sistema continua no ar com a última versão, e as
+mudanças voltam a subir no mês seguinte. Se o banco encher, ele passa a só ler: é a hora
+de apagar e recomeçar (abaixo).
 
-O endereço do sslip.io funciona, mas é o IP com tracinhos. Para um nome como
-`minhaloja.duckdns.org`, também de graça:
+**Sobre o repositório ser público**: qualquer pessoa pode ler o código — é isso que deixa
+o GitHub Actions de graça sem limite de minutos. Nenhum segredo e nenhum dado estão no
+repositório: os segredos ficam no painel do Render, os dados no Supabase. O log do CI
+também é público, e por isso ele nunca imprime dado.
 
-1. Entre em <https://www.duckdns.org> com a conta do Google ou do GitHub.
-2. Crie o subdomínio (`minhaloja`) e, no campo **current ip**, ponha o IP do servidor.
-3. No GitHub, crie a variável `SITE_ENDERECO` = `minhaloja.duckdns.org` e rode a
-   publicação.
+## Quando o banco encher
 
-Há um motivo técnico a mais para o DuckDNS: o certificado HTTPS gratuito (Let's Encrypt)
-tem um limite semanal por domínio, e todos os usuários do sslip.io do mundo dividem o
-limite de `sslip.io`. O projeto do sslip.io conseguiu limites maiores, e o Caddy tenta
-um segundo emissor gratuito (ZeroSSL) quando o primeiro recusa — mas se um dia o
-certificado não sair, o DuckDNS resolve, porque cada nome dele conta como domínio
-próprio.
+A decisão para esta fase é apagar tudo e recomeçar. O Supabase avisa por e-mail quando o
+banco chega perto do limite, e o uso fica na página **Usage** da organização.
 
-Com domínio próprio comprado, é a mesma coisa: aponte o domínio para o IP (registro
-`A`) e ponha o nome em `SITE_ENDERECO`.
+1. No Supabase, **SQL Editor**, cole e rode (**Run**):
+
+   ```sql
+   do $$
+   declare t record;
+   begin
+     for t in select tablename from pg_tables where schemaname = 'public' loop
+       execute format('truncate table public.%I restart identity cascade', t.tablename);
+     end loop;
+   end $$;
+   ```
+
+   Isso esvazia todas as tabelas do sistema e mantém a estrutura. Não tem volta.
+
+2. No Render, **hub → Manual Deploy → Restart service**: na subida, o sistema recria o
+   perfil da loja.
+3. Crie a sua conta de novo (passo 3), com o `CADASTRO_CODIGO` — se você tiver fechado o
+   cadastro, reabra antes (passo 5).
+4. _(Opcional)_ Os arquivos enviados continuam no Storage, ocupando espaço: em **Storage →
+   conteudo**, selecione tudo e apague.
 
 ## Quando algo dá errado
 
-**O job `preparar` diz "O servidor não aceitou a conexão".** Confira o IP em
-`SERVIDOR_ENDERECO`, se o segredo `SERVIDOR_CHAVE_SSH` tem o arquivo **privado**
-inteiro, e se a máquina está _Running_ no painel da Oracle.
+**A publicação falhou, e o log diz `Ambiente inválido`.** A mensagem lista o que falta ou
+está errado, pelo nome da variável. Corrija em **hub → Environment** e salve: o Render
+tenta de novo.
 
-**"Host key verification failed".** A variável `SERVIDOR_CHAVE_HOST` não bate com o
-servidor — acontece quando a máquina é recriada. Refaça o passo 6.
-
-**O site não abre, mas a publicação passou até "Trocar a versão no ar".** Quase sempre
-são as portas do passo 5. Se estiverem certas, pode ser o certificado: rode
-**manutenção → diagnostico** e, se o `caddy` estiver de pé, espere alguns minutos ou
-passe para o DuckDNS.
-
-**Criar a máquina dá "Out of capacity".** Ver o passo 4.3.
-
-**O workflow "criar máquina" termina em erro.** A mensagem diz o que conferir: quase
-sempre um segredo colado pela metade (o quadro sem uma linha, o `.pem` sem o `-----END…`),
-ou a rede com outro nome que não `rede-hub`. Corrija e rode de novo.
-
-**A Oracle avisou que a máquina está ociosa.** Rode **manutenção → diagnostico**. Em
-"contêineres", o `reserva` tem de estar `running`; em "disco e memória", a coluna
-`used` da linha `Mem:` tem de passar de um quarto do `total`. Se os dois estiverem
-certos e o aviso veio mesmo assim, a Oracle mudou a regra, e a reserva precisa ser
-revista (ADR 0012).
-
-**Nunca apague `/opt/hub/banco.env` nem `/opt/hub/app.env` no servidor.** O primeiro
-tem a senha do banco, que já existe com ela; o segundo, a chave que protege as sessões
-e as credenciais guardadas.
-
-**Recomeçar num servidor novo** (a máquina foi recolhida, ou você recriou): crie a
-máquina de novo (passos 4 a 6), atualize `SERVIDOR_ENDERECO` e `SERVIDOR_CHAVE_HOST`, e
-rode a publicação. O sistema sobe vazio. Para trazer os dados de volta a partir do
-Neon, entre no servidor por SSH (passo 6) e rode:
+**O log diz que a `CREDENCIAL_CHAVE_MESTRA` não tem 32 bytes.** Gere uma no seu
+computador e cole no lugar, em **Environment**:
 
 ```sh
-cd /opt/hub && docker compose run --rm --no-deps -T --entrypoint bash backup -c \
-  'pg_dump "$BACKUP_NEON_URL" --format=custom --no-owner --file=/backups/banco-$(date +%Y-%m-%d_%H%M%S).dump'
-ls backups
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
 
-Depois, em **manutenção → restaurar**, use o nome do arquivo que apareceu e a palavra
-`RESTAURAR`.
+Depois que o sistema estiver no ar, **nunca troque nem apague essa chave**: trocada, todo
+mundo sai da conta, e as credenciais guardadas deixam de abrir.
+
+**O log diz `password authentication failed` ou `Tenant or user not found`.** O endereço
+do banco está errado. Confira se a senha entrou sem os colchetes, se é o endereço do
+_Session pooler_ (porta 5432) e se o usuário é `postgres.` seguido do código do projeto,
+como o painel deu. Esqueceu a senha? **Project Settings → Database → Reset database
+password**, e troque no `DATABASE_URL`.
+
+**O log diz `Max client connections reached`.** O banco gratuito atende umas quinze
+conexões de uma vez, e o sistema usa até dez. Acontece quando outro programa usa o mesmo
+banco — o seu computador com o mesmo `DATABASE_URL`, por exemplo. Feche o outro, ou baixe
+o `BANCO_CONEXOES` para `4` em **Environment**.
+
+**O UptimeRobot diz Down, e o site não abre.**
+
+- No Render, veja se o serviço está **Live**. Se a última publicação falhou, o motivo está
+  em **Events**.
+- No Supabase, veja se o projeto está pausado (**Paused**). Se estiver, **Restore
+  project**; em alguns minutos o sistema volta sozinho.
+- Se o Render mostrar o serviço suspenso, é limite do mês (tráfego ou horas): ele volta no
+  mês seguinte.
+
+**Enviar planilha dá erro no armazenamento.** Confira os três `ARMAZENAMENTO_S3_…`: o
+Endpoint termina em `/storage/v1/s3`, e a chave e o segredo são do mesmo par. O bucket
+tem de se chamar `conteudo`.
+
+**A mudança não chegou.** Confira no GitHub se o CI do commit passou — o Render só
+publica commit verde. Mudança só em documento ou teste não vai para o ar, de propósito. E
+se os minutos de montagem do mês acabaram, o painel do Render mostra em **Billing**.

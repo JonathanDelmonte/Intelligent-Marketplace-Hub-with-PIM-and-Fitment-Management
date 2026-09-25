@@ -324,22 +324,28 @@ vinte títulos por pedido, com o que já tem marca e modelo resolvido antes, sem
 quando a extração passa por ele — sozinha, com a chave, e parando quando a cota do dia
 acaba. A tela de juntar iguais diz quantas ofertas esperam essa leitura.
 
-### 3.3 Hospedar fora da máquina — feito; falta criar o servidor
+### 3.3 Hospedar fora da máquina — feito; falta criar as contas
 
 **Fechada em 25/09, do lado do código.** O dono pediu o sistema no ar, de graça, com
 cada mudança publicada sozinha — e com tela de cadastro e login. Entrou:
 
 - **Contas de acesso** (ADR 0011): login, cadastro fechado por código, sessão no banco e
   um porteiro na frente de toda rota. Permissões ficam para quando escalar.
-- **O servidor** (ADR 0010): Oracle Always Free em São Paulo, com banco, site, fila,
-  HTTPS e cópia diária, tudo em Docker; endereço gratuito pelo sslip.io.
-- **A publicação**: todo push no `main` vai para o ar em uns cinco minutos, com volta
-  automática se a versão nova não subir, e os botões de manutenção no GitHub.
+- **A hospedagem gratuita em peças** (ADR 0013): o Render roda site e fila num contêiner
+  só; o Supabase guarda o banco e os arquivos, pela API S3; o UptimeRobot não deixa o
+  Render dormir. Substituiu o servidor da Oracle (ADR 0010 e 0012), que não passou do
+  "Out of capacity" de São Paulo.
+- **A publicação**: todo push no `main` vai para o ar depois do CI, e o CI sobe o
+  contêiner do jeito que o Render sobe, contra o Postgres da versão do Supabase.
 
-**O que falta é do dono:** a conta na Oracle está criada, no plano gratuito (ADR 0012), e
-a rede também. Falta a máquina, que esbarra no "Out of capacity" de São Paulo: o workflow
-**criar máquina** pede sozinho até sair vaga ([passo 4.3](./hospedagem.md)). Depois,
-guardar os segredos no GitHub; a primeira publicação prepara a máquina sozinha.
+**O que falta é do dono:** criar as três contas e seguir o [guia](./hospedagem.md) — o
+projeto do Supabase (banco, bucket e chave S3), o Blueprint do Render (colando os
+valores) e o monitor do UptimeRobot. O servidor próprio, com cópia todo dia, fica guardado
+para quando escalar ([hospedagem-servidor.md](./hospedagem-servidor.md)).
+
+**Aberto, e se resolve no primeiro uso:** o S3 do Supabase foi ensaiado contra imitações,
+e a primeira planilha enviada no ar é a prova (diário, 25/09). Sem cópia de segurança
+nesta fase, por decisão do dono: dado de verdade traz a cópia de volta ao plano.
 
 O que vem abaixo é a análise de antes, que levou à decisão, e continua valendo como
 registro: o banco sem SDK de provedor, o armazenamento em disco que tirou o serverless

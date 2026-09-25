@@ -78,13 +78,15 @@ que é a única parte insubstituível do sistema.
 
 ## Começar
 
-### No ar, num servidor gratuito
+### No ar, de graça
 
-O sistema roda num servidor gratuito da Oracle, em `https`, e todo push no `main` vai para
-o ar sozinho em uns cinco minutos — o rodapé de cada tela diz a versão no ar. Para montar
-o servidor (uma vez, uns 40 minutos), siga o [passo a passo](./docs/hospedagem.md); o
-porquê de cada peça está no [ADR 0010](./docs/adr/0010-hospedagem-gratuita.md). Toda
-tela pede conta: o primeiro acesso é **Criar conta**, com o código de cadastro
+O sistema roda de graça em três peças — o Render (site e fila), o Supabase (banco e
+arquivos) e o UptimeRobot (que não o deixa dormir) —, em `https`, e todo push no `main`
+vai para o ar sozinho depois que o CI passa — o rodapé de cada tela diz a versão no ar.
+Para montar (uma vez, uns 30 minutos), siga o [passo a passo](./docs/hospedagem.md); o
+porquê de cada peça está no [ADR 0013](./docs/adr/0013-hospedagem-gratuita-em-pecas.md).
+É um arranjo para testar: sem cópia de segurança, e com os limites dos planos gratuitos.
+Toda tela pede conta: o primeiro acesso é **Criar conta**, com o código de cadastro
 ([ADR 0011](./docs/adr/0011-contas-de-acesso.md)).
 
 ### No Windows, com um clique
@@ -120,8 +122,8 @@ responde.
   `Atalhos/iniciar.log`, refeito a cada clique. É o arquivo para mandar a quem mantém o
   sistema. A URL do banco nunca entra nele, só host e porta.
 - **Só neste computador:** o servidor escuta em `127.0.0.1`. Celular e outros aparelhos
-  da rede não alcançam o sistema, de propósito. Para usar de qualquer lugar, há o
-  servidor gratuito (acima).
+  da rede não alcançam o sistema, de propósito. Para usar de qualquer lugar, há a versão
+  no ar (acima).
 - **Porta ocupada:** se outro programa estiver na 3000, o sistema sobe na próxima livre
   (3001, 3002…) e a janela diz qual. Quem roda vários projetos pode fixar uma porta só
   deste com `PORT=3100` no `.env`: o navegador guarda dados por endereço, e porta fixa é

@@ -1,6 +1,7 @@
 # ADR 0012 — A conta da Oracle fica no plano gratuito, e o servidor não parece ocioso
 
-**Estado:** Aceito · **Data:** 2026-09-25 · Decisão do dono · Substitui a parte do
+**Estado:** Substituído pelo [ADR 0013](./0013-hospedagem-gratuita-em-pecas.md) — a
+Oracle ficou para trás · **Data:** 2026-09-25 · Decisão do dono · Substitui a parte do
 ADR 0010 que passava a conta para Pay As You Go
 
 ## Contexto

@@ -178,21 +178,30 @@ até a hora que o provedor diz, sem insistir (pedido recusado também conta na c
 
 ## 3.8 O que entra no `main` vai para o ar
 
-Desde 25/09/2026 (ADR 0010), todo push no `main` que passa no CI é publicado no servidor
-em uns cinco minutos. O `npm run check` antes de todo commit (seção 2) deixou de ser só
-boa prática: é o que separa um commit do sistema de quem usa.
+Desde 25/09/2026, todo push no `main` que passa no CI vai para o ar: hoje pelo Render
+(ADR 0013), que espera o CI, monta a imagem e troca a versão em uns dez minutos. O
+`npm run check` antes de todo commit (seção 2) deixou de ser só boa prática: é o que
+separa um commit do sistema de quem usa.
 
 - **Migração só acrescenta.** A versão anterior roda com o banco já migrado — durante a
   troca e, se a nova não subir, depois dela. Apagar ou renomear coluna ou tabela se faz
   em duas publicações: a primeira para de usar, a segunda apaga.
+- **Tabela nova sai fechada** para a API do Supabase: toda migração liga o RLS nas
+  tabelas do `public` (`src/infra/banco/fechar-tabelas.ts`). View no `public` passaria
+  por cima — se precisar de uma, com `security_invoker`.
 - **Nada de dado no log do GitHub.** O repositório é público, e o log do Actions também.
-  Script do servidor não imprime log da aplicação, segredo nem dado de negócio: estado e
-  contagem, sim.
-- **Variável de ambiente nova que o servidor precisa** entra em
-  `servidor/montar-config.sh` e no job `publicar` do `verificar.yml`; senão ela existe no
-  computador e falta no ar.
-- O passo a passo do servidor, e o que fazer quando algo falha, está em
-  `docs/hospedagem.md`.
+  O CI e os scripts de servidor não imprimem segredo nem dado de negócio — estado e
+  contagem, sim. O log do contêiner que o CI mostra é de um banco vazio, criado ali.
+- **Variável de ambiente nova que o sistema precisa no ar** entra no `render.yaml` — se
+  for segredo, com `sync: false`, e o valor é posto à mão no painel do Render. Senão ela
+  existe no computador e falta no ar. (No servidor próprio, guardado para quando escalar,
+  o lugar é `servidor/montar-config.sh` e o job `publicar` do `verificar.yml`.)
+- **Push por tarefa, não por commit.** O Render gratuito tem 500 minutos de montagem por
+  mês, e cada push que muda a imagem gasta alguns. Commit pequeno continua a regra; o
+  push junta os de uma tarefa terminada. Push só de documento ou teste não monta
+  (`buildFilter` no `render.yaml`).
+- O passo a passo, e o que fazer quando algo falha, está em `docs/hospedagem.md`; o do
+  servidor próprio, em `docs/hospedagem-servidor.md`.
 
 ---
 
@@ -221,7 +230,7 @@ npm run check          # typecheck + lint + test  (rodar antes de commitar)
 npm run db:generate    # gerar migration a partir do schema
 npm run db:migrate     # aplicar migrations
 npm run verify:authors # conferir autoria de todos os commits
-npm run montar:tarefas # empacota fila, migração e semente para a imagem Docker
+npm run montar:tarefas # empacota a subida do contêiner, fila, migração e semente para a imagem
 ```
 
 ### O banco dos testes é outro, sempre

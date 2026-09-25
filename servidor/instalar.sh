@@ -84,7 +84,7 @@ fi
 
 # ── 4. firewall da máquina ─────────────────────────────────────────────────────
 # A imagem Ubuntu da Oracle fecha, no próprio servidor, tudo menos o SSH — além da
-# lista de segurança da rede, que se abre no painel da Oracle (docs/hospedagem.md).
+# lista de segurança da rede, que se abre no painel da Oracle (docs/hospedagem-servidor.md).
 # Aqui se abrem 80 e 443, e sai o REJECT da cadeia FORWARD, que é da imagem e barraria
 # o tráfego dos contêineres: o Docker cuida dessa cadeia sozinho.
 if command -v iptables >/dev/null && iptables -S >/dev/null 2>&1; then

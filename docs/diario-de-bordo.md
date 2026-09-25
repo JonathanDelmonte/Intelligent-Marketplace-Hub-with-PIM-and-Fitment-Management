@@ -26,6 +26,140 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-25 — A Oracle fica para trás: Render, Supabase e UptimeRobot (ADR 0013)
+
+### 🔀 Desistir da Oracle, e o que entrou no lugar
+
+A máquina não saiu: "Out of capacity" em toda tentativa, por horas. O dono recusou a
+máquina menor e recusou continuar disputando vaga. A pesquisa achou mais um motivo: em
+julho de 2026 a Oracle cortou pela metade o Always Free das contas gratuitas (2 núcleos e
+12 GB, contra 4 e 24 de quem é Pay As You Go, que também tem a prioridade na fila). O
+workflow **criar máquina** não chegou a rodar nenhuma vez.
+
+A proposta nova junta três planos gratuitos: Render (site e fila), Supabase (banco e
+arquivos) e UptimeRobot (a visita que não deixa o Render dormir). O que ficou de fora, e
+por quê, está no ADR 0013: Vercel só aceita uso não comercial, Netlify e Cloudflare não
+comportam a planilha de 8 MB nem a fila, Koyeb fechou o gratuito, Fly e Railway não têm, o
+Neon não aguenta a fila acordada o mês todo, e o Postgres do Render expira em 30 dias.
+Para testar, por decisão do dono: sem cópia, e "quando encher, apaga".
+
+### 🔀 Um contêiner só, e o comando é o da imagem
+
+O Render gratuito é um serviço. `scripts/conteiner.ts` faz o papel da composição: migra,
+semeia e sobe site e fila em processos separados, com teto de memória (256 e 192 MB de
+heap, nos 512 da máquina), repassa o pedido de parar e derruba o outro se um cair.
+
+Ele é o comando padrão da imagem, e não o campo de comando do Render: a documentação do
+Render manda passar vários comandos por `/bin/sh -c`, e há relato de que o campo já roda
+por um shell. Com shell no meio, o SIGTERM da troca de versão para nele e não chega ao
+Node. Na forma de lista do `CMD`, o Node é o processo 1. A composição do servidor próprio
+passou a dizer `node server.js` no serviço `web`.
+
+O nome ia ser `scripts/iniciar.ts`, ao lado do `scripts/iniciar.mjs` que já existe — o do
+atalho do Windows. Dois "iniciar" com funções diferentes é convite a mexer no errado:
+virou `conteiner.ts`.
+
+### 🐛 O arranque saía com 0 quando o site morria
+
+O ensaio derrubou o site à força (SIGKILL) e o contêiner saiu com 0, como numa parada
+pedida — o Render não o subiria de novo. Dois erros juntos: o `exit` do filho era escutado
+só na hora de esperar, e o site já tinha morrido, então a promessa nunca resolvia e o Node
+saía com o laço de eventos vazio; e morte por sinal (`código null`) virava 0. Agora o fim
+é escutado no instante em que o processo nasce, e morte por sinal conta como 1. Ensaiado
+de novo: site derrubado, saída 1 com `conteiner.caiu`; parada pedida, 75 ms e saída 0.
+
+### 🔀 Os arquivos no S3, com o disco como padrão
+
+O disco do Render se perde a cada reinício, e o conteúdo enviado é a fonte de reprocessar
+(ADR 0002). `ArmazenamentoDeConteudo` continua com as regras — hash, limite, idempotência
+— e passa os bytes a um `Deposito`: em disco, no mesmo desenho de pastas de antes (então
+nada do que já está guardado muda), ou no S3 (`@aws-sdk/client-s3` 3.1141.0, dependência
+nova). Sem `ARMAZENAMENTO_S3_ENDPOINT`, é disco: o computador e o servidor próprio seguem
+iguais.
+
+Três cuidados do lado S3: endereço por caminho (`forcePathStyle`), que é o que o Supabase
+aceita; soma de verificação só quando a operação exige — desde a 3.729 o SDK manda CRC32
+em todo envio, e serviço "compatível com S3" nem sempre aceita; e o balde é criado no
+primeiro envio, se faltar. Objeto que não existe volta `null`, e o resto do erro sobe.
+
+### ❓ O S3 do Supabase foi ensaiado contra imitações
+
+A imagem do MinIO não está no espelho do ambiente, e o site de download é bloqueado. O
+teste sobe um servidor S3 falso, com o prefixo `/storage/v1/s3` do Supabase, e confere
+chave no caminho, assinatura SigV4, nenhum cabeçalho `x-amz-checksum-*`, balde criado
+sozinho, 404 como ausência e AccessDenied como erro. O ensaio do contêiner usou o `moto`.
+A primeira planilha enviada no ar é a prova de verdade.
+
+### ⚠️ O Supabase publica as tabelas numa API, e a porta foi fechada
+
+O Supabase serve o schema `public` pela API REST dele, a quem tiver a chave pública do
+projeto, e dá acesso a toda tabela nova. `usuario`, `sessao` e `credencial` estariam ali.
+O sistema não usa essa API: `fecharTabelasParaQuemNaoEDono`, no fim de toda migração, liga
+o RLS sem política nenhuma em cada tabela do `public` que é de quem migra. O dono não passa
+pelo RLS, e o sistema entra como dono. Ensaiado: 27 tabelas fechadas na primeira vez,
+nenhuma na segunda, e o sistema inteiro funcionando depois. Uma view no `public` passaria
+por cima, porque view roda como o dono dela — ficou como regra no CLAUDE.md.
+
+### ⚠️ Quinze conexões para duas versões ao mesmo tempo
+
+No _Session pooler_ do Supabase, cada cliente prende uma conexão enquanto estiver
+conectado, e o plano gratuito tem quinze; o décimo sexto espera até um minuto e falha. Na
+troca de versão, a velha e a nova rodam juntas. Daí `BANCO_CONEXOES=5` por processo no
+`render.yaml`, e o `idle_timeout` de 60 segundos no `postgres.js`, que por padrão nunca
+fecha conexão parada. Serve também contra conexão que um NAT derrubou em silêncio.
+
+### 🔀 O CI sobe o contêiner do Render, com Postgres 17
+
+O job `imagem` agora também sobe a imagem sem comando, como o Render, contra um Postgres
+17 — o padrão dos projetos novos do Supabase; o resto do CI segue no 18 —, espera a saúde
+responder com o commit, pede para parar e exige saída 0. Com o Render publicando só commit
+verde (`checksPass`), é este passo que impede um arranque quebrado de chegar ao ar.
+
+### ⚠️ 500 minutos de montagem por mês
+
+O plano gratuito do Render tem 500 minutos de montagem por mês. Aqui, com cache, a imagem
+monta em menos de um minuto; no Render, o número real só a primeira publicação diz. Push
+só de documento, teste ou arquivo do servidor não monta (`buildFilter`), e a regra do
+CLAUDE.md passou a ser push por tarefa, não por commit.
+
+### ❓ O que só a primeira publicação no Render confirma
+
+- **A chave mestra que o Render gera** (`generateValue`) tem de dar 32 bytes em base64. A
+  validação passou a aceitar também o base64 de URL; se ainda assim recusar, o guia
+  ensina a gerar uma e colar.
+- **O `checksPass` com jobs pulados.** `preparar` e `publicar` aparecem como pulados em
+  todo push, porque o servidor próprio está parado. Pulado não é falha no GitHub, e o
+  esperado é o Render tratar igual; se ele nunca publicar, o `autoDeployTrigger` vira
+  `commit`.
+- **A porta.** A imagem diz 3000, e o Render costuma dar 10000 em `PORT`; o ensaio rodou
+  com 10000, e o Render acha a porta aberta de um jeito ou de outro.
+
+### 🧹 O que saiu com a Oracle, e o que ficou guardado
+
+Saíram `servidor/criar-maquina.py`, o workflow **criar máquina**, a reserva de memória
+(`reserva.mjs` e o serviço `reserva`) e o passo do CI que compilava o script. Ficaram,
+parados, a composição, os jobs `preparar` e `publicar` (que só rodam com
+`SERVIDOR_ENDERECO`), a manutenção e o guia, agora `docs/hospedagem-servidor.md`. Ele
+ainda descreve a Oracle: num servidor pago, os passos da máquina e das portas mudam, e
+esse caminho não foi ensaiado em outro provedor.
+
+### 🐛 Dividir um arquivo entre commits com `git apply --unidiff-zero` desloca a inserção
+
+Para separar os commits, pus no índice só alguns pedaços da diferença de um arquivo,
+gerados com `-U0`. Num pedaço de inserção, a linha entrou na posição do arquivo **novo**:
+o pedaço anterior, que apagava duas linhas, tinha ficado de fora, e a inserção subiu duas
+linhas. O `command: node server.js` do site caiu dentro do serviço do banco, na composição
+do servidor. A conferência do commit pegou antes do push, e o commit foi refeito. Para
+dividir um arquivo, o caminho seguro é montar o conteúdo de cada etapa e pô-lo no índice
+(`git hash-object -w` e `git update-index --cacheinfo`), conferindo `git show :arquivo`
+antes de commitar.
+
+Na mesma arrumação, `git mv -f` para cima de um arquivo que ainda não estava no git o
+apagou sem aviso — era o guia do servidor, já editado. Ele foi refeito a partir do commit
+anterior, com as mesmas edições.
+
+---
+
 ## 2026-09-25 — A máquina da Oracle: sem vaga, e o GitHub pedindo por nós
 
 ### ⚠️ "Out of capacity" em São Paulo não é questão de horário

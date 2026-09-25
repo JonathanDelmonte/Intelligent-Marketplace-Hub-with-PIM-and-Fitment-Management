@@ -193,7 +193,7 @@ jobs:
   #
   # Só com o servidor configurado (a variável SERVIDOR_ENDERECO). Sem ela, os dois jobs
   # aparecem como pulados, e o resto do CI segue igual. O passo a passo do servidor e
-  # dos segredos está em docs/hospedagem.md.
+  # dos segredos está em docs/hospedagem-servidor.md.
   #
   # O repositório é público, e o log destes jobs também: nada aqui imprime segredo, e o
   # servidor não devolve log da aplicação (ver servidor/publicar.sh).
@@ -327,5 +327,5 @@ jobs:
             fi
             sleep 5
           done
-          echo "::error::O sistema subiu no servidor, mas não responde em https://$SITE. Confira as portas 80 e 443 (docs/hospedagem.md)."
+          echo "::error::O sistema subiu no servidor, mas não responde em https://$SITE. Confira as portas 80 e 443 (docs/hospedagem-servidor.md)."
           exit 1

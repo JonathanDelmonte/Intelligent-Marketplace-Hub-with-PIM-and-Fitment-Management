@@ -1,7 +1,10 @@
 # ADR 0010 — Um servidor gratuito, e cada push no ar em cinco minutos
 
-**Estado:** Aceito — a passagem da conta para Pay As You Go foi substituída pelo
-[ADR 0012](./0012-conta-oracle-sem-upgrade.md) · **Data:** 2026-09-25 · Pedido e aprovação do dono
+**Estado:** Substituído pelo [ADR 0013](./0013-hospedagem-gratuita-em-pecas.md) — a
+hospedagem saiu da Oracle; vale ainda a obrigação de a migração só acrescentar, e o
+servidor próprio fica guardado para quando escalar. A passagem da conta para Pay As You Go
+já tinha sido substituída pelo [ADR 0012](./0012-conta-oracle-sem-upgrade.md) ·
+**Data:** 2026-09-25 · Pedido e aprovação do dono
 
 ## Contexto
 
