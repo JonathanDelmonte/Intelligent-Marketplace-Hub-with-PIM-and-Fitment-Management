@@ -40,11 +40,25 @@ push no main ──► GitHub verifica (tipos, testes, build)  ─┐
 
 ## Passo 1 — Criar a conta na Oracle Cloud
 
-1. Entre em <https://www.oracle.com/cloud/free/> e clique em **Start for free**.
-2. Preencha os dados. Em **Home Region**, escolha **Brazil East (Sao Paulo)**.
-   **Atenção: a região não muda depois**, e os recursos gratuitos só existem nela.
-3. Confirme o cartão. A Oracle faz uma verificação de valor pequeno e devolve.
-4. Espere o e-mail de conta pronta (às vezes leva alguns minutos) e entre no painel.
+1. Entre direto em <https://signup.cloud.oracle.com/>. É a única página de cadastro da
+   nuvem. **Não** é o `profile.oracle.com`: aquele cria a "Oracle Account" de download e
+   suporte, que não serve para isto.
+2. Preencha país (**Brazil**), nome e e-mail, e clique no link que chega no e-mail.
+3. Crie a senha. Em **Customer type**, escolha **Individual**. O **Cloud Account Name**
+   é um apelido sem espaço (por exemplo `minhaloja`); ele entra no endereço de login.
+4. Em **Home Region**, escolha **Brazil East (Sao Paulo)**. **Atenção: a região não
+   muda depois**, e os recursos gratuitos só existem nela.
+5. Endereço e, em seguida, o cartão de crédito (no seu nome, com o mesmo endereço).
+   A Oracle faz uma verificação de valor pequeno e devolve.
+6. Espere o e-mail de conta pronta (de minutos a algumas horas) e entre no painel por
+   <https://cloud.oracle.com>, com o Cloud Account Name do item 3.
+
+> **Erro "status=403" ou "falha na ligação ao servidor" no cadastro.** A Oracle bloqueia
+> o cadastro quando desconfia da conexão. Na ordem, o que costuma resolver: desligar VPN
+> e extensões de bloqueio de anúncio/privacidade; usar outro navegador (Chrome ou Edge)
+> numa janela anônima; usar outra rede (os dados do celular, em vez do Wi-Fi). Cartão
+> pré-pago ou virtual costuma ser recusado. Depois de várias tentativas seguidas, esperar
+> algumas horas também ajuda.
 
 ## Passo 2 — Passar a conta para "Pay As You Go" e pôr um alarme de gasto
 
