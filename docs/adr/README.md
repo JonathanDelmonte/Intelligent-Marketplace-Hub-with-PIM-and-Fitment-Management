@@ -15,4 +15,5 @@ histórico da decisão vale mais que a limpeza do diretório.
 | [0007](./0007-credenciais-em-tabela-cifrada.md) | Credenciais em tabela cifrada, não em `.env`            | Aceito |
 | [0008](./0008-modo-m4-fora-de-escopo.md)        | Extensão de navegador sob login fora de escopo          | Aceito |
 | [0009](./0009-navegacao-por-loja.md)            | Navegação por loja; o que serve a todas aparece uma vez | Aceito |
+| [0010](./0010-hospedagem-gratuita.md)           | Um servidor gratuito; cada push no ar                   | Aceito |
 | [0011](./0011-contas-de-acesso.md)              | Conta com senha; cadastro fechado por código            | Aceito |

@@ -30,7 +30,8 @@ frase longa é mais forte que símbolo, e regra de símbolo produz `Senha@123`.
 
 **2. O cadastro é fechado por um código** (`CADASTRO_CODIGO`). Sem permissões, toda
 conta vê tudo; cadastro aberto num endereço público seria porta aberta. O código é
-gerado por `npm run iniciar` no computador e fica nos segredos do GitHub para o servidor.
+gerado pelo atalho (`Atalhos/Iniciar.bat`, ou `npm run preparar:env`) no `.env` do
+computador, e fica nos segredos do GitHub para o servidor.
 Sem código configurado, o cadastro fica **fechado**, nunca aberto.
 
 **3. A sessão mora no banco, e o cookie só aponta para ela.** O cookie `sessao` é
@@ -80,7 +81,7 @@ igual no computador e no servidor. Sessão encerrada vale na hora, em todo apare
   continuam no aparelho depois de "Sair". O aparelho é do dono; com mais pessoas, sair
   passa a limpar esse cache.
 - Instalação que já existia pede cadastro no primeiro acesso depois desta mudança. O
-  `npm run iniciar` gera o código no `.env` e diz onde ele está.
+  atalho gera o código no `.env` e diz onde ele está.
 
 **Obrigação para quem mantém:** caminho público novo é decisão, entra aqui e no teste
 de `caminhos.test.ts`, que confere a lista exata. Tela lê a conta só por `contaAtual()`,

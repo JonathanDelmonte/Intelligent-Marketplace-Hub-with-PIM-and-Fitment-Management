@@ -324,7 +324,27 @@ vinte títulos por pedido, com o que já tem marca e modelo resolvido antes, sem
 quando a extração passa por ele — sozinha, com a chave, e parando quando a cota do dia
 acaba. A tela de juntar iguais diz quantas ofertas esperam essa leitura.
 
-### 3.3 O que falta para hospedar fora da máquina
+### 3.3 Hospedar fora da máquina — feito; falta criar o servidor
+
+**Fechada em 25/09, do lado do código.** O dono pediu o sistema no ar, de graça, com
+cada mudança publicada sozinha — e com tela de cadastro e login. Entrou:
+
+- **Contas de acesso** (ADR 0011): login, cadastro fechado por código, sessão no banco e
+  um porteiro na frente de toda rota. Permissões ficam para quando escalar.
+- **O servidor** (ADR 0010): Oracle Always Free em São Paulo, com banco, site, fila,
+  HTTPS e cópia diária, tudo em Docker; endereço gratuito pelo sslip.io.
+- **A publicação**: todo push no `main` vai para o ar em uns cinco minutos, com volta
+  automática se a versão nova não subir, e os botões de manutenção no GitHub.
+
+**O que falta é do dono:** criar a conta e a máquina na Oracle, e guardar os segredos no
+GitHub — o [passo a passo](./hospedagem.md) leva uns 40 minutos. A primeira publicação
+prepara a máquina sozinha.
+
+O que vem abaixo é a análise de antes, que levou à decisão, e continua valendo como
+registro: o banco sem SDK de provedor, o armazenamento em disco que tirou o serverless
+da mesa, e o login que faltava.
+
+---
 
 Pergunta do dono, e a resposta merece ficar escrita: o que este sistema precisa para
 sair do laptop.

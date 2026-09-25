@@ -26,6 +26,111 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-25 — O sistema no ar, de graça (ADR 0010)
+
+O pedido: usar de qualquer computador, de graça, e toda mudança ir para o ar sozinha. Entrou
+o servidor inteiro — imagem Docker, composição de produção, publicação pelo GitHub Actions,
+cópia de segurança e os botões de manutenção — e o [passo a passo](./hospedagem.md) para o
+dono criar a máquina. Nada disso tinha servidor para testar, então o ciclo inteiro foi
+ensaiado aqui contra uma máquina falsa: um contêiner Ubuntu com SSH e Docker, recebendo os
+passos do workflow com o mesmo texto do YAML.
+
+### 🔀 Um servidor Oracle com tudo dentro, e não site sem servidor com banco gerenciado
+
+O conteúdo enviado mora em disco e é dividido entre o site e a fila; plataforma sem servidor
+apaga o disco entre pedidos. E o Neon gratuito não segura o banco principal: o poller e as
+conexões persistentes o mantêm acordado o dia todo, perto de 180 horas de computação por mês
+contra 100 do plano. A máquina ARM gratuita da Oracle roda as quatro partes como o
+computador roda. O Neon ficou com o que faz bem de graça: guardar a cópia de fora.
+
+### 🔀 A imagem é montada no próprio servidor
+
+Sem registro de imagem: o job manda o `git archive` do commit por SSH, e o servidor monta na
+arquitetura dele (ARM). Não há credencial de registro para guardar, nem imagem de uma
+arquitetura rodando em outra. O repositório é público, e o GitHub dá máquina ARM de graça a
+repositório público — montar lá e publicar num registro é a alternativa, se a montagem
+começar a pesar no servidor.
+
+### 🔀 O servidor se prepara sozinho, sem roteiro para colar na criação
+
+O plano era um script de inicialização (cloud-init) colado no formulário da Oracle. Virou
+`servidor/instalar.sh`, que a publicação roda por SSH com `sudo` a cada push: numa máquina
+nova instala Docker, pasta, portas e fuso; numa pronta, confere e não mexe (dois segundos).
+Um passo manual a menos, e a instalação passa a ser versionada, conferida pelo `shellcheck`
+do CI e ensaiada.
+
+### 🔀 Toda tela é montada na hora do pedido
+
+A imagem é montada sem ambiente nenhum — a configuração só chega quando o contêiner sobe. As
+telas que o Next montava no build (criar conta, endereço inexistente, o manifesto) sairiam
+com a marca e a versão do ambiente do build. `dynamic = 'force-dynamic'` no layout e no
+manifesto; com o porteiro na frente de tudo, tela pronta de antemão não economizava nada.
+
+### 🐛 A cópia de segurança de antes de restaurar apagava a cópia a restaurar
+
+O ensaio pegou. `restaurar` tira uma cópia do banco antes de mexer, por garantia — e o nome
+do arquivo tinha só hora e minuto. No mesmo minuto da cópia escolhida, a de segurança saía
+com o **mesmo nome** e a sobrescrevia: a restauração devolvia o estado que se queria
+desfazer. E ainda mandava esse estado para o Neon, por cima da cópia boa de fora. O nome
+ganhou segundos, a restauração lê de uma cópia própria do arquivo, e a cópia de antes de
+restaurar fica só no servidor.
+
+### 🐛 A lista de pacotes vazia antes do fail2ban
+
+Também do ensaio: numa máquina que já tinha Docker, o instalador pulava o `apt-get update`
+e ia direto instalar o fail2ban — que não existe numa lista de pacotes vazia ou velha, como a
+de uma máquina recém-criada. Atualiza antes.
+
+### ⚠️ O repositório é público, e o log do GitHub Actions também
+
+É o que deixa os minutos do Actions de graça. E é por isso que o servidor nunca devolve log
+da aplicação para o GitHub: log de importação pode ter nome e endereço de comprador, vindos
+de planilha de pedidos. O diagnóstico devolve estado, contagem e o **nome** dos eventos de
+erro; a publicação que falha devolve só as linhas de arranque, que não são JSON. Regra no
+CLAUDE.md, 3.8.
+
+### ⚠️ O sslip.io divide o limite do Let's Encrypt com o mundo inteiro
+
+Conferido na Public Suffix List: `sslip.io` não está nela, então todo `*.sslip.io` conta no
+mesmo limite semanal de certificados. O projeto diz ter limites ampliados pelo Let's Encrypt,
+e o Caddy tenta o ZeroSSL quando o Let's Encrypt recusa. Se um dia não bastar,
+`duckdns.org` **está** na lista — cada nome dele tem limite próprio —, e o guia ensina a
+trocar pela variável `SITE_ENDERECO`.
+
+### ⚠️ O Docker oficial já instala o Compose 5
+
+O primeiro ensaio usou o Compose 2.40; o repositório oficial do Docker, que é o que o
+servidor instala, entrega o 5.5.1. O ensaio foi refeito inteiro com ele. Os scripts usam só
+comando estável (`up --wait`, `run --rm --no-deps`, `exec -T`, `logs`, `ps`).
+
+### ❓ O que não deu para conferir daqui
+
+As regras da Oracle: o limite atual da máquina ARM gratuita para conta nova (2 núcleos e
+12 GB), o recolhimento de máquina ociosa em conta só gratuita e a isenção em Pay As You Go.
+O guia manda fazer a troca para Pay As You Go com alerta de gasto, e diz o que fazer se a
+Oracle avisar que vai recolher.
+
+### 🧹 O conteúdo enviado não tem cópia fora do servidor
+
+A cópia no Neon é do banco. As planilhas e os PDFs originais ficam espelhados no mesmo disco
+do servidor — protegem de apagar sem querer, não de perder a máquina. O banco guarda o que
+foi extraído deles; o original serve para reprocessar. Object storage gratuito resolveria, e
+não entrou.
+
+### 🧹 A publicação deixa o site fora do ar por alguns segundos
+
+O contêiner novo sobe no lugar do velho. Sem interrupção pediria dois sites e o Caddy
+alternando entre eles — trabalho que não se paga com uma pessoa usando.
+
+### 🐛 O teste do instalador mexeu no firewall desta máquina de desenvolvimento
+
+Registro de método: o instalador foi testado num contêiner `--privileged --network host`, e o
+`iptables-restore` com as regras da Oracle rodou **nas tabelas desta máquina**, apagando as
+cadeias do Docker daqui. Restaurado reiniciando o Docker. Teste de firewall vai em contêiner
+com rede própria, nunca com a do hospedeiro.
+
+---
+
 ## 2026-09-25 — Contas de acesso (ADR 0011)
 
 O dono decidiu pôr o sistema no ar, de graça, com atualização automática a cada mudança,

@@ -129,6 +129,12 @@ Carregam `perfil_id` (operacional): `sku`, `anuncio`, `pedido`, `consignacao`,
 **Não** carregam (base de conhecimento compartilhada entre perfis):
 `produto_externo`, `fornecedor`, `aparelho`, `compatibilidade`, `oportunidade`.
 
+**Contas de acesso existem** (ADR 0011, decisão do dono em 25/09/2026): login e cadastro
+fechado por código, porque o sistema está no ar. Toda conta vê todos os perfis; papéis e
+permissões ficam para quando escalar, e entram por ADR novo. `usuario` e `sessao` são
+infraestrutura e não carregam `perfil_id`. Caminho que abre sem conta é decisão, e está
+listado em `src/app/acesso/constantes.ts`, com teste que confere a lista.
+
 ### 3.5 IA onde é IA
 
 LLM entra só onde a entrada é texto livre heterogêneo ou a decisão exige
@@ -170,6 +176,26 @@ até a hora que o provedor diz, sem insistir (pedido recusado também conta na c
 
 ---
 
+## 3.8 O que entra no `main` vai para o ar
+
+Desde 25/09/2026 (ADR 0010), todo push no `main` que passa no CI é publicado no servidor
+em uns cinco minutos. O `npm run check` antes de todo commit (seção 2) deixou de ser só
+boa prática: é o que separa um commit do sistema de quem usa.
+
+- **Migração só acrescenta.** A versão anterior roda com o banco já migrado — durante a
+  troca e, se a nova não subir, depois dela. Apagar ou renomear coluna ou tabela se faz
+  em duas publicações: a primeira para de usar, a segunda apaga.
+- **Nada de dado no log do GitHub.** O repositório é público, e o log do Actions também.
+  Script do servidor não imprime log da aplicação, segredo nem dado de negócio: estado e
+  contagem, sim.
+- **Variável de ambiente nova que o servidor precisa** entra em
+  `servidor/montar-config.sh` e no job `publicar` do `verificar.yml`; senão ela existe no
+  computador e falta no ar.
+- O passo a passo do servidor, e o que fazer quando algo falha, está em
+  `docs/hospedagem.md`.
+
+---
+
 ## 4. Convenções de código
 
 - TypeScript `strict`, sem `any` implícito, sem `as` para calar o compilador.
@@ -195,6 +221,7 @@ npm run check          # typecheck + lint + test  (rodar antes de commitar)
 npm run db:generate    # gerar migration a partir do schema
 npm run db:migrate     # aplicar migrations
 npm run verify:authors # conferir autoria de todos os commits
+npm run montar:tarefas # empacota fila, migração e semente para a imagem Docker
 ```
 
 ### O banco dos testes é outro, sempre

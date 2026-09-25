@@ -63,6 +63,7 @@ estaria morto. Ver [ADR 0001](./docs/adr/0001-capacidades-nao-plataformas.md),
 | [ADRs](./docs/adr/)                                   | as decisões de arquitetura e o porquê de cada uma    |
 | [Diário de bordo](./docs/diario-de-bordo.md)          | bugs, armadilhas e decisões pequenas, em ordem       |
 | [Pendências](./docs/pendencias.md)                    | tudo que falta, agrupado por quem destrava           |
+| [Hospedagem](./docs/hospedagem.md)                    | o sistema no ar, de graça: o passo a passo           |
 | [Matriz de capacidades](./docs/matriz-capacidades.md) | o que cada plataforma responde de verdade            |
 | [CLAUDE.md](./CLAUDE.md)                              | convenções obrigatórias para quem mexe no código     |
 
@@ -76,6 +77,15 @@ aprendendo ferramenta é tempo não gasto construindo o fosso de compatibilidade
 que é a única parte insubstituível do sistema.
 
 ## Começar
+
+### No ar, num servidor gratuito
+
+O sistema roda num servidor gratuito da Oracle, em `https`, e todo push no `main` vai para
+o ar sozinho em uns cinco minutos — o rodapé de cada tela diz a versão no ar. Para montar
+o servidor (uma vez, uns 40 minutos), siga o [passo a passo](./docs/hospedagem.md); o
+porquê de cada peça está no [ADR 0010](./docs/adr/0010-hospedagem-gratuita.md). Toda
+tela pede conta: o primeiro acesso é **Criar conta**, com o código de cadastro
+([ADR 0011](./docs/adr/0011-contas-de-acesso.md)).
 
 ### No Windows, com um clique
 
@@ -101,6 +111,8 @@ responde.
 - **Internet, sem chave nenhuma:** ler link colado, o garimpo (buscador, páginas, CNPJ e
   compras públicas) e a conferência de fornecedor usam serviços gratuitos e abertos.
 - **Primeira vez:** alguns minutos. **Depois:** cerca de três segundos.
+- **A primeira tela pede conta:** clique em **Criar conta** e use o código de cadastro, que
+  o atalho gera no `.env`, na linha `CADASTRO_CODIGO` (ADR 0011). Depois é só entrar.
 - **Clicar de novo com tudo rodando** só abre o navegador.
 - **Fechar a janela preta** desliga o servidor e a fila juntos.
 - **A janela sempre espera uma tecla no fim**, e nunca fecha sozinha. Se algo der errado,
@@ -108,7 +120,8 @@ responde.
   `Atalhos/iniciar.log`, refeito a cada clique. É o arquivo para mandar a quem mantém o
   sistema. A URL do banco nunca entra nele, só host e porta.
 - **Só neste computador:** o servidor escuta em `127.0.0.1`. Celular e outros aparelhos
-  da rede não alcançam o sistema, de propósito, porque ainda não há login (pendência 3.3).
+  da rede não alcançam o sistema, de propósito. Para usar de qualquer lugar, há o
+  servidor gratuito (acima).
 - **Porta ocupada:** se outro programa estiver na 3000, o sistema sobe na próxima livre
   (3001, 3002…) e a janela diz qual. Quem roda vários projetos pode fixar uma porta só
   deste com `PORT=3100` no `.env`: o navegador guarda dados por endereço, e porta fixa é
