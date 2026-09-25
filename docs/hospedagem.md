@@ -88,16 +88,25 @@ Parece contraditório, mas é o que deixa o servidor gratuito **estável**:
 - Numa conta Pay As You Go, os recursos Always Free **continuam de graça**, a máquina
   não é recolhida, e criar a máquina ARM gratuita dá erro de "sem capacidade" bem menos.
 
-O risco de pagar sem querer é o que o alarme resolve:
+O risco de pagar sem querer é o que o alarme resolve — e ele vale a pena mesmo sem a
+troca, então vem primeiro:
 
-1. No menu (☰), vá em **Billing & Cost Management → Upgrade and Manage Payment** e
-   escolha **Pay As You Go**.
-2. Depois, em **Billing & Cost Management → Budgets → Create Budget**: valor de
-   **US$ 1**, alerta em **1%** do orçamento, com o seu e-mail. Qualquer centavo cobrado
-   vira um e-mail na hora.
+1. **O alarme.** No menu (☰), **Billing & Cost Management → Budgets → Create Budget**:
+   o valor mais baixo que o formulário aceitar (1, na moeda da conta), alerta em **1%**
+   do orçamento sobre o gasto real (_Actual spend_), com o seu e-mail. Qualquer centavo
+   cobrado vira um e-mail na hora.
+2. **A troca.** No menu (☰), **Billing & Cost Management → Upgrade and Manage Payment**,
+   e escolha **Pay As You Go**. A confirmação chega por e-mail, às vezes horas depois;
+   enquanto isso, siga para o passo 3.
 
-> Se preferir não fazer a troca agora, o resto do guia funciona igual. Só fique de
-> olho: se a Oracle avisar por e-mail que vai recolher a máquina, faça este passo.
+**Antes da troca, veja que cartão está na conta.** Na troca, a Oracle costuma fazer uma
+pré-autorização bem maior que a do cadastro — há relatos na casa de US$ 100 —, devolvida
+depois de alguns dias. No cartão de crédito isso só reserva limite. **No de débito, o
+dinheiro sai da conta até ser devolvido**: nesse caso, deixe a troca para depois.
+
+> Sem a troca, o resto do guia funciona igual. Faça-a quando uma destas acontecer: criar
+> a máquina (passo 4) der "Out of capacity", ou a Oracle avisar por e-mail que vai
+> recolher a máquina por ociosidade.
 
 ## Passo 3 — Gerar a chave de acesso ao servidor (no seu computador)
 
