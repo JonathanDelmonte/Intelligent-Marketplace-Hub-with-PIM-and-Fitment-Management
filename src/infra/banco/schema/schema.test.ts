@@ -60,6 +60,10 @@ const INFRAESTRUTURA = [
   // `par_identidade` é a decisão de identidade e a fila de revisão. Sem `perfil_id`
   // pelo mesmo motivo de `produto_externo`: o grafo é compartilhado entre perfis.
   'par_identidade',
+  // Contas de acesso (ADR 0011). Sem `perfil_id`: quem entra não é um perfil de
+  // vendedor, e toda conta vê os mesmos perfis enquanto não houver permissões.
+  'usuario',
+  'sessao',
 ] as const;
 
 /** A raiz do multi-perfil. Não carrega `perfil_id` porque *é* o perfil. */

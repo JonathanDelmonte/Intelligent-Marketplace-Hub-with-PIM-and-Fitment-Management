@@ -77,6 +77,7 @@ import { fileURLToPath } from 'node:url';
 // **antes** de a primeira linha rodar, e aí um Node antigo veria um SyntaxError em vez
 // da frase do passo 1 dizendo qual versão instalar. `parseEnv` existe desde o 20.12.
 import * as util from 'node:util';
+import { gerarCodigoDeCadastro } from './gerar-codigo.mjs';
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 process.chdir(RAIZ);
@@ -292,6 +293,31 @@ function carregarEnv() {
   for (const [chave, valor] of Object.entries(util.parseEnv(texto))) {
     if (process.env[chave] === undefined) process.env[chave] = valor;
   }
+}
+
+/**
+ * O código de cadastro no `.env` de quem já tinha um antes das contas de acesso.
+ *
+ * Sem ele a tela de criar conta fica fechada — e, com o login exigido desde as contas
+ * (ADR 0011), o sistema local ficaria sem porta de entrada. O código é acrescentado ao
+ * fim do `.env`, sem mexer no resto, e a janela diz onde ele está; o código em si não
+ * aparece na janela, porque tudo o que ela mostra vai para o `iniciar.log`, que é o
+ * arquivo que se manda para quem mantém o sistema.
+ */
+function garantirCodigoDeCadastro() {
+  if ((process.env['CADASTRO_CODIGO'] ?? '').trim() !== '') return;
+  const codigo = gerarCodigoDeCadastro();
+  const atual = readFileSync('.env', 'utf8');
+  // `[ \t]*`, e não `\s*`: com `m`, `\s` atravessa a quebra de linha e engoliria a
+  // linha em branco seguinte.
+  const temLinhaVazia = /^CADASTRO_CODIGO=[ \t]*$/m.test(atual);
+  const novo = temLinhaVazia
+    ? atual.replace(/^CADASTRO_CODIGO=[ \t]*$/m, `CADASTRO_CODIGO=${codigo}`)
+    : `${atual.replace(/\s*$/, '')}\n\n# Código da tela de criar conta (ADR 0011).\nCADASTRO_CODIGO=${codigo}\n`;
+  writeFileSync('.env', novo, 'utf8');
+  process.env['CADASTRO_CODIGO'] = codigo;
+  aviso('Criei o código de cadastro: ele está no .env, na linha CADASTRO_CODIGO.');
+  aviso('A tela "Criar conta" pede esse código.');
 }
 
 /**
@@ -660,6 +686,7 @@ async function principal() {
     aviso('troque a linha DATABASE_URL do .env e clique de novo.');
   }
   carregarEnv();
+  garantirCodigoDeCadastro();
   aviso('Lida.');
 
   const preferida = lerPorta();
@@ -770,6 +797,8 @@ async function principal() {
       escrever('');
       escrever('  ─────────────────────────────────────────────────────────');
       escrever(`   Pronto: ${endereco}`);
+      escrever('   Primeira vez? Clique em "Criar conta" e use o código de cadastro,');
+      escrever('   que está no .env, na linha CADASTRO_CODIGO.');
       escrever('   Para desligar, feche esta janela.');
       escrever('  ─────────────────────────────────────────────────────────');
       escrever('');

@@ -18,6 +18,7 @@
  * ```
  */
 import { randomBytes } from 'node:crypto';
+import { gerarCodigoDeCadastro } from './gerar-codigo.mjs';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -117,6 +118,10 @@ let conteudo = readFileSync(exemplo, 'utf8');
 const chave = randomBytes(32).toString('base64');
 conteudo = conteudo.replace(/^CREDENCIAL_CHAVE_MESTRA=.*$/m, `CREDENCIAL_CHAVE_MESTRA=${chave}`);
 
+// O código de cadastro também nasce aqui: sem ele a tela de criar conta fica fechada, e
+// a primeira coisa que se faz num sistema novo é criar a própria conta (ADR 0011).
+conteudo = conteudo.replace(/^CADASTRO_CODIGO=.*$/m, `CADASTRO_CODIGO=${gerarCodigoDeCadastro()}`);
+
 const urlInformada = argumento('database-url');
 const urlDeTesteInformada = argumento('database-url-teste');
 const avisos = [];
@@ -162,6 +167,7 @@ const mascarada = (conteudo.match(/^DATABASE_URL=.*$/m) ?? [''])[0].replace(
 
 console.log('.env criado.');
 console.log(`  chave mestra gerada (32 bytes em base64)`);
+console.log('  código de cadastro gerado: está no .env, na linha CADASTRO_CODIGO');
 console.log(`  ${mascarada}`);
 for (const aviso of avisos) console.log(`  aviso: ${aviso}`);
 if (urlInformada === undefined) {

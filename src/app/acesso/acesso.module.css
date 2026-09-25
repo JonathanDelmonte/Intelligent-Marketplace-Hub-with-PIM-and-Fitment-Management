@@ -1,0 +1,125 @@
+/*
+ * As telas de acesso (ADR 0011): entrar, criar conta, trocar a senha.
+ *
+ * Um cartão só, no meio da tela e sem a barra lateral — quem ainda não entrou não tem
+ * para onde navegar. Os campos e o botão são os mesmos do resto do sistema
+ * (`ui/comum.module.css`), para a primeira tela vista não ter cara de outro programa.
+ *
+ * Cores só de variável de tema, nunca literal (ADR 0003).
+ */
+
+.tela {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  padding: var(--espaco-7) var(--espaco-4);
+}
+
+.cartao {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra-suspensa);
+  display: flex;
+  flex-direction: column;
+  max-width: 26rem;
+  padding: var(--espaco-6);
+  width: 100%;
+}
+
+.sistema {
+  color: var(--cor-primaria);
+  font-size: var(--texto-menor);
+  font-weight: 600;
+  margin: 0 0 var(--espaco-3);
+}
+
+.titulo {
+  font-size: var(--texto-titulo);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.subtitulo {
+  color: var(--cor-texto-fraco);
+  font-size: var(--texto-menor);
+  line-height: 1.5;
+  margin: var(--espaco-2) 0 var(--espaco-5);
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-4);
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--texto-menor);
+  font-weight: 500;
+  gap: var(--espaco-1);
+}
+
+.entrada {
+  composes: entrada from '../ui/comum.module.css';
+  font-weight: 400;
+  min-height: 2.75rem;
+}
+
+.ajuda {
+  color: var(--cor-texto-fraco);
+  font-size: var(--texto-miudo);
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+/*
+ * O erro fica logo acima do botão, e não no topo do cartão: é onde o olho está quando
+ * o clique não deu certo.
+ */
+.erro {
+  background: var(--tinta-agora);
+  border-left: 3px solid var(--cor-erro);
+  border-radius: var(--raio-pequeno);
+  color: var(--cor-erro);
+  font-size: var(--texto-menor);
+  margin: 0;
+  padding: var(--espaco-2) var(--espaco-3);
+}
+
+.botao {
+  composes: botao from '../ui/comum.module.css';
+  width: 100%;
+}
+
+.botao:disabled {
+  cursor: progress;
+  opacity: 0.75;
+}
+
+.alternativas {
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--texto-menor);
+  gap: var(--espaco-2) var(--espaco-5);
+  justify-content: center;
+  margin: 0;
+}
+
+.alternativas a {
+  color: var(--cor-primaria);
+}
+
+@media (max-width: 30rem) {
+  .tela {
+    align-items: flex-start;
+    padding: var(--espaco-5) var(--espaco-3);
+  }
+
+  .cartao {
+    padding: var(--espaco-5) var(--espaco-4);
+  }
+}

@@ -6,6 +6,8 @@
 declare const estilo: {
   readonly casca: string;
   readonly colunaLateral: string;
+  readonly conta: string;
+  readonly contaNome: string;
   readonly contagem: string;
   readonly conteudo: string;
   readonly destaque: string;
@@ -28,6 +30,7 @@ declare const estilo: {
   readonly portaRotulo: string;
   readonly portas: string;
   readonly rodape: string;
+  readonly sair: string;
   readonly seloComPonto: string;
   readonly sigla: string;
 };

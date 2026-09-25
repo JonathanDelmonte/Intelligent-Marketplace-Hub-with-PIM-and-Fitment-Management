@@ -39,6 +39,20 @@ const esquemaAmbiente = z.object({
   BANCADA_ANO_COPYRIGHT: z.coerce.number().int().min(2000).max(2200).default(2026),
   BANCADA_PAPEL: z.enum(PAPEIS).default('interno'),
   BANCADA_PERFIL_PADRAO: z.string().min(1),
+  /**
+   * O código que a tela de cadastro pede (ADR 0011).
+   *
+   * Sem permissões, toda conta vê os mesmos dados; então criar conta num endereço
+   * público não pode ser aberto a quem achar a tela. Quem tem o código cria conta, e
+   * recupera a senha. Vazio fecha o cadastro — que é o estado certo de um servidor que
+   * ainda não recebeu o código.
+   */
+  CADASTRO_CODIGO: z
+    .string()
+    .trim()
+    .min(8, 'CADASTRO_CODIGO precisa de 8 caracteres ou mais')
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
 
   // LLM — ver ADR 0005. A chave é do OpenRouter; modelo vazio usa o padrão de
   // `infra/llm/ambiente.ts`.

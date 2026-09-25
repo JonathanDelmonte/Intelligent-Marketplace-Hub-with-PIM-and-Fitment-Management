@@ -26,6 +26,62 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-25 — Contas de acesso (ADR 0011)
+
+O dono decidiu pôr o sistema no ar, de graça, com atualização automática a cada mudança,
+e pediu cadastro e login — uso pessoal por enquanto, permissões quando escalar. A primeira
+entrega é a porta: conta com senha, cadastro fechado por código, sessão no banco e um
+porteiro na frente de toda rota.
+
+### 🔀 O porteiro vai ao banco em todo pedido
+
+Conferir só a assinatura do cookie seria mais barato, mas aí "Sair" e "trocar a senha" não
+valeriam até o cookie vencer — 30 dias. Com a sessão no banco, encerrar vale na hora. O
+custo é uma consulta por chave primária num banco que mora no mesmo servidor, cerca de um
+milissegundo; o porteiro confere a assinatura antes, e cookie forjado nem chega ao banco.
+
+### 🔀 Cadastro fechado por código, e não aberto nem por convite
+
+Aberto, num endereço público e sem permissões, qualquer pessoa que achasse a tela veria
+tudo. Convite pede serviço de e-mail, que é pago ou é mais uma conta para configurar. O
+código resolve com um segredo que já tem onde morar: o `.env` no computador e os segredos
+do GitHub no servidor. Sem código configurado o cadastro fica fechado — o erro seguro.
+
+### ⚠️ O redirecionamento de ação de servidor usa um cabeçalho interno do Next
+
+Quando a sessão acaba e a pessoa clica num botão de ação de servidor, o porteiro responde
+com `x-action-redirect`, que é o cabeçalho que o cliente do Next lê para navegar. Não é API
+documentada: se uma versão nova do Next mudar o nome, o clique passa a mostrar "resposta
+inesperada do servidor" em vez de abrir a tela de entrar. O teste do porteiro confere o
+cabeçalho; o comportamento do cliente só se confere no navegador. Rever ao atualizar o Next.
+
+### 🐛 A ajuda dentro do rótulo virava parte do nome do campo
+
+O texto de ajuda da senha estava dentro do `<label>`, e o nome acessível do campo virava
+"Senha Dez caracteres ou mais. Uma frase…". O leitor de tela lia tudo, e o teste de
+navegador não achava o campo "Senha". A ajuda saiu do rótulo e é ligada por
+`aria-describedby`.
+
+### 🐛 O teste de navegador achava o alerta errado
+
+O Next põe na página um anunciador de rota com `role="alert"`, que anuncia o título da tela.
+Um `getByRole('alert')` achava o anunciador, e não o erro do formulário — e passava na hora,
+antes de o erro existir. O seletor certo é o do formulário: `form p[role=alert]`.
+
+### 🐛 Acento combinante literal no teste de senha
+
+O teste de "mesma senha em formas Unicode diferentes" tinha o `e` seguido do acento
+combinante como byte. A verificação de fontes (`verify:fontes`) barrou: acento solto
+escrito cru é invisível no editor e vira confusão no diff. Escrito como `\u0301`.
+
+### 🧹 O limite de tentativas mora em memória
+
+Cinco falhas em 15 minutos, por e-mail e por endereço, num `Map` do processo. Reiniciar
+zera a contagem, e dois processos teriam duas contagens. Vale enquanto o servidor roda um
+processo só; quando não for assim, o limite vai para o banco.
+
+---
+
 ## 2026-09-24 — Navegação por loja (ADR 0009)
 
 O dono pediu a navegação reorganizada: cada loja com a área e o painel dela, conectar fácil,

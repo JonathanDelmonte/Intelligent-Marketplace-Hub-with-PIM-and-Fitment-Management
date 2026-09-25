@@ -41,6 +41,7 @@ describe('montarEstadoDaBarra', () => {
         item('shopee', 'sem_prazo'),
         item('shopee', 'depois'),
       ]),
+      null,
     );
     expect(estado.postarHoje).toBe(3);
     expect(estado.lojas.map((l) => [l.plataforma, l.paraPostar, l.tipo])).toEqual([
@@ -53,8 +54,20 @@ describe('montarEstadoDaBarra', () => {
 
 describe('lerEstadoDaBarra', () => {
   it('aceita o que a rota devolve, ida e volta pelo JSON', () => {
-    const estado = montarEstadoDaBarra([numeros('ml', 3)], fila([item('ml', 'hoje')]));
+    const estado = montarEstadoDaBarra([numeros('ml', 3)], fila([item('ml', 'hoje')]), {
+      nome: 'Maria',
+    });
     expect(lerEstadoDaBarra(JSON.parse(JSON.stringify(estado)))).toEqual(estado);
+  });
+
+  it('conta torta ou ausente vira barra sem nome, com os números', () => {
+    const semConta = { postarHoje: 0, lojas: [] };
+    expect(lerEstadoDaBarra(semConta)).toEqual({ ...semConta, conta: null });
+    expect(lerEstadoDaBarra({ ...semConta, conta: { nome: 7 } })).toEqual({
+      ...semConta,
+      conta: null,
+    });
+    expect(lerEstadoDaBarra({ ...semConta, conta: 'Maria' })).toEqual({ ...semConta, conta: null });
   });
 
   it('resposta torta vira barra sem números, e não barra quebrada', () => {

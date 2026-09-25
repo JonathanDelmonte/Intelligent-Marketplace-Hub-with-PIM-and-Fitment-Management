@@ -17,12 +17,18 @@
  *
  * Nome do sistema vem por propriedade, do servidor: marca é configuração, e este
  * arquivo não pode ler `.env` (ADR 0003).
+ *
+ * Nas telas de acesso (entrar, criar conta) a barra não aparece: quem ainda não entrou
+ * não tem para onde ir (ADR 0011). O nome de quem entrou vem com o estado da barra, e o
+ * botão de sair fica embaixo dele — sempre, mesmo quando a leitura falha.
  */
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { sair } from './acesso/acoes';
+import { ehCaminhoPublico } from './acesso/caminhos';
 import {
   CAMINHO_DO_ESTADO_DA_BARRA,
   lerEstadoDaBarra,
@@ -121,12 +127,27 @@ function LinhaDaLoja({
   );
 }
 
+function Conta({ nome }: { readonly nome: string | null }) {
+  return (
+    <form action={sair} className={estilo.conta}>
+      <span className={estilo.contaNome} title={nome ?? undefined}>
+        {nome ?? ''}
+      </span>
+      <button className={estilo.sair} type="submit">
+        Sair
+      </button>
+    </form>
+  );
+}
+
 export function Lateral({ nomeSistema }: { readonly nomeSistema: string }) {
   const caminho = usePathname();
   const atual = hrefAtual(caminho);
+  const publico = ehCaminhoPublico(caminho);
   const [estado, setEstado] = useState<EstadoDaBarra | null>(null);
 
   useEffect(() => {
+    if (publico) return;
     const controle = new AbortController();
     void fetch(CAMINHO_DO_ESTADO_DA_BARRA, { cache: 'no-store', signal: controle.signal })
       .then((resposta): Promise<unknown> | null => (resposta.ok ? resposta.json() : null))
@@ -139,7 +160,9 @@ export function Lateral({ nomeSistema }: { readonly nomeSistema: string }) {
     return () => {
       controle.abort();
     };
-  }, [caminho]);
+  }, [caminho, publico]);
+
+  if (publico) return null;
 
   const estadoDaLoja = (loja: PortaDeLoja) =>
     estado?.lojas.find((l) => l.plataforma === loja.plataforma);
@@ -201,6 +224,8 @@ export function Lateral({ nomeSistema }: { readonly nomeSistema: string }) {
             </div>
           ))}
         </nav>
+
+        <Conta nome={estado?.conta?.nome ?? null} />
       </aside>
     </div>
   );

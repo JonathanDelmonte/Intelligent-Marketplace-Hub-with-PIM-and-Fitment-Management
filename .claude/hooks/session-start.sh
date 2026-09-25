@@ -22,6 +22,11 @@ if [[ ! -f .env ]]; then
     # A chave mestra é de desenvolvimento e nasce descartável.
     sed -i "s|^CREDENCIAL_CHAVE_MESTRA=.*|CREDENCIAL_CHAVE_MESTRA=${chave}|" .env 2>/dev/null || true
   fi
+  codigo=$(node --input-type=module -e "import('./scripts/gerar-codigo.mjs').then((m) => console.log(m.gerarCodigoDeCadastro()))" 2>/dev/null)
+  if [[ -n "${codigo:-}" ]]; then
+    # O código da tela de criar conta (ADR 0011), também descartável aqui.
+    sed -i "s|^CADASTRO_CODIGO=.*|CADASTRO_CODIGO=${codigo}|" .env 2>/dev/null || true
+  fi
 fi
 
 exit 0

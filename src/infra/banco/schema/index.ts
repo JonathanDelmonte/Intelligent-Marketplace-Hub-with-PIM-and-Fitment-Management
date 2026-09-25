@@ -14,7 +14,8 @@
  *   `aparelho`, `compatibilidade`, `oportunidade`, `dossie`, `afiliado_oferta`,
  *   `monitor_evento`.
  *
- * **Infraestrutura.** `job`, `llm_call`, `embedding`, `exemplo_identidade`.
+ * **Infraestrutura.** `job`, `llm_call`, `embedding`, `exemplo_identidade`, e as contas
+ * de acesso: `usuario` e `sessao` (ADR 0011).
  */
 export * from './comum';
 export * from './perfil';
@@ -24,3 +25,4 @@ export * from './compatibilidade';
 export * from './operacao';
 export * from './inteligencia';
 export * from './infra';
+export * from './acesso';

@@ -35,14 +35,21 @@ export interface EstadoDaLojaNaBarra {
   readonly paraPostar: number;
 }
 
+/** Quem está usando (ADR 0011): o nome vai ao pé da barra, junto do botão de sair. */
+export interface ContaNaBarra {
+  readonly nome: string;
+}
+
 export interface EstadoDaBarra {
   readonly postarHoje: number;
   readonly lojas: readonly EstadoDaLojaNaBarra[];
+  readonly conta: ContaNaBarra | null;
 }
 
 export function montarEstadoDaBarra(
   numeros: readonly NumerosDaLoja[],
   fila: FilaDoDia,
+  conta: ContaNaBarra | null,
   fuso?: string,
 ): EstadoDaBarra {
   const urgentes = fila.itens.filter((i) => URGENTES.includes(i.urgencia));
@@ -55,7 +62,7 @@ export function montarEstadoDaBarra(
       paraPostar: urgentes.filter((i) => i.plataforma === n.plataforma).length,
     };
   });
-  return { postarHoje: urgentes.length, lojas };
+  return { postarHoje: urgentes.length, lojas, conta };
 }
 
 function ehTipoDeEstado(valor: unknown): valor is TipoDeEstadoDaLoja {
@@ -80,6 +87,13 @@ function lerLoja(valor: unknown): EstadoDaLojaNaBarra | null {
   };
 }
 
+/** O nome é enfeite: conta torta vira barra sem nome, e os números continuam. */
+function lerConta(valor: unknown): ContaNaBarra | null {
+  if (typeof valor !== 'object' || valor === null) return null;
+  if (!('nome' in valor) || typeof valor.nome !== 'string' || valor.nome === '') return null;
+  return { nome: valor.nome };
+}
+
 /** Confere a resposta da rota. Qualquer campo torto devolve `null`, e a barra fica sem números. */
 export function lerEstadoDaBarra(valor: unknown): EstadoDaBarra | null {
   if (typeof valor !== 'object' || valor === null) return null;
@@ -93,5 +107,6 @@ export function lerEstadoDaBarra(valor: unknown): EstadoDaBarra | null {
     if (loja === null) return null;
     lojas.push(loja);
   }
-  return { postarHoje: valor.postarHoje, lojas };
+  const conta = 'conta' in valor ? lerConta(valor.conta) : null;
+  return { postarHoje: valor.postarHoje, lojas, conta };
 }

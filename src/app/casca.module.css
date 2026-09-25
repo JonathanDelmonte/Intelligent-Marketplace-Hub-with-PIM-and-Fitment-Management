@@ -32,6 +32,18 @@
   min-height: 100dvh;
 }
 
+/*
+ * As telas de acesso não têm lateral (ADR 0011), e a casca vira uma coluna só.
+ *
+ * Pelo atributo que a tela põe (`data-tela-de-acesso`), e não pelo caminho: o layout
+ * de servidor não sabe o caminho, e a lateral, que sabe, só pode sumir — não pode mudar
+ * o grid em que ela mesma está.
+ */
+.casca:has([data-tela-de-acesso]) {
+  grid-template-areas: 'conteudo';
+  grid-template-columns: minmax(0, 1fr);
+}
+
 /* ── Lateral ─────────────────────────────────────────────────────────────── */
 
 /*
@@ -64,6 +76,8 @@
    * para voltar ao topo e trocar de tela é atrito em cima de atrito.
    */
   max-height: 100dvh;
+  /* Da altura da janela, para a conta ficar no pé mesmo com poucas portas. */
+  min-height: 100dvh;
   overflow-y: auto;
   padding: var(--espaco-4) var(--espaco-3) var(--espaco-5);
   position: sticky;
@@ -287,6 +301,52 @@
   white-space: nowrap;
 }
 
+/*
+ * Quem está usando, e o botão de sair (ADR 0011). No pé da barra, discreto: é a porta
+ * que menos se usa, e sair sem querer custa digitar a senha de novo.
+ */
+.conta {
+  align-items: center;
+  border-top: 1px solid var(--lateral-realce);
+  display: flex;
+  gap: var(--espaco-2);
+  margin: auto 0 0;
+  padding: var(--espaco-3) var(--espaco-2) 0;
+}
+
+.contaNome {
+  color: var(--lateral-texto-fraco);
+  flex: 1;
+  font-size: var(--texto-miudo);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sair {
+  background: transparent;
+  border: 1px solid var(--lateral-contagem);
+  border-radius: 999px;
+  color: var(--lateral-texto);
+  cursor: pointer;
+  flex: none;
+  font: inherit;
+  font-size: var(--texto-miudo);
+  min-height: 1.75rem;
+  padding: 0 var(--espaco-3);
+}
+
+.sair:hover {
+  background: var(--lateral-realce);
+  color: var(--lateral-texto-forte);
+}
+
+.sair:focus-visible {
+  outline: var(--foco);
+  outline-offset: var(--foco-deslocamento);
+}
+
 /* ── Conteúdo ────────────────────────────────────────────────────────────── */
 
 .conteudo {
@@ -324,6 +384,7 @@
   .lateral {
     gap: var(--espaco-2);
     max-height: none;
+    min-height: 0;
     overflow-y: visible;
     padding: var(--espaco-3) var(--espaco-4);
     position: static;
@@ -373,6 +434,12 @@
 
   .lojaLegenda {
     display: none;
+  }
+
+  .conta {
+    border-top: 0;
+    margin: 0;
+    padding: 0;
   }
 
   .rodape {
