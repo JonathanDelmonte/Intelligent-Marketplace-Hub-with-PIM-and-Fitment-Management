@@ -16,6 +16,10 @@
 #
 #   backup.sh          espera a hora e copia, para sempre (o comando do contêiner)
 #   backup.sh agora    copia na hora e sai (o botão "backup agora" do GitHub)
+#
+# A cópia de segurança que a restauração faz antes de mexer no banco vem com
+# BACKUP_NEON_URL vazio: ela guarda o estado que se está desfazendo, e esse estado não
+# pode tomar o lugar da cópia boa que está fora do servidor.
 
 set -euo pipefail
 
@@ -27,7 +31,10 @@ log() { printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
 
 copiar() {
   local arquivo
-  arquivo="/backups/banco-$(date '+%Y-%m-%d_%H%M').dump"
+  # Com segundos: duas cópias no mesmo minuto (a de segurança, antes de uma
+  # restauração, e a que vai ser restaurada) teriam o mesmo nome, e a nova apagaria a
+  # velha.
+  arquivo="/backups/banco-$(date '+%Y-%m-%d_%H%M%S').dump"
 
   log "backup: copiando o banco para ${arquivo}"
   # Grava com outro nome e renomeia no fim: uma cópia interrompida não pode ficar com

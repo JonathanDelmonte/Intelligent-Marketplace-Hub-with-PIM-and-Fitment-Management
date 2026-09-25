@@ -4,6 +4,11 @@ on:
   push:
     branches: ['**']
   pull_request:
+  # O botão "Run workflow": publica o `main` como está, sem precisar de commit novo.
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   verificar:
@@ -100,6 +105,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Os scripts do servidor rodam sem ninguém olhando, e é no bash que um erro
+      # passa calado.
+      - name: Scripts do servidor (shellcheck)
+        run: docker run --rm -v "$PWD/servidor:/s:ro" koalaman/shellcheck:stable -x /s/publicar.sh /s/backup.sh
+
       - name: Montar a imagem
         run: docker build --progress=plain --build-arg VERSAO="$GITHUB_SHA" -t hub:ci .
 
@@ -128,3 +138,142 @@ jobs:
           grep -q "\"$GITHUB_SHA\"" saude.json
           test "$entrar" = 200
           test "$catalogo" = 307
+
+  # ── Publicação automática (ADR 0010) ──────────────────────────────────────────
+  #
+  # Todo push em `main` vai para o servidor, em dois tempos:
+  #
+  #   preparar   monta a imagem no servidor, em paralelo com a verificação
+  #   publicar   espera a verificação e a imagem passarem, e troca a versão no ar
+  #
+  # Só com o servidor configurado (a variável SERVIDOR_ENDERECO). Sem ela, os dois jobs
+  # aparecem como pulados, e o resto do CI segue igual. O passo a passo do servidor e
+  # dos segredos está em docs/hospedagem.md.
+  #
+  # O repositório é público, e o log destes jobs também: nada aqui imprime segredo, e o
+  # servidor não devolve log da aplicação (ver servidor/publicar.sh).
+  preparar:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.SERVIDOR_ENDERECO != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Um push mais novo cancela a montagem do anterior, que já não seria publicado.
+    concurrency:
+      group: preparar
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/servidor
+        with:
+          endereco: ${{ vars.SERVIDOR_ENDERECO }}
+          chave: ${{ secrets.SERVIDOR_CHAVE_SSH }}
+          chave-do-host: ${{ vars.SERVIDOR_CHAVE_HOST }}
+
+      # O servidor recebe só o que está no commit (`git archive`), e monta a imagem
+      # ali mesmo, na arquitetura dele (ARM). Nenhum registro de imagem no meio.
+      - name: Montar a imagem no servidor
+        run: |
+          quando=$(git log -1 --format=%cI)
+          # shellcheck disable=SC2029 # commit e hora vão daqui para o servidor, de propósito
+          git archive --format=tar HEAD |
+            ssh servidor "docker build --progress=plain --build-arg VERSAO=$GITHUB_SHA --build-arg VERSAO_EM=$quando -t hub:$GITHUB_SHA -"
+
+  publicar:
+    needs: [verificar, imagem, preparar]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.SERVIDOR_ENDERECO != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Uma publicação de cada vez, na ordem. O mesmo grupo da manutenção: restaurar o
+    # banco no meio de uma troca de versão não pode acontecer.
+    concurrency:
+      group: publicar
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      # Se outro push chegou enquanto este verificava, ele é que vai para o ar. Sem
+      # isto, um commit mais velho que terminasse o CI depois poderia tomar o lugar
+      # do mais novo.
+      - name: Ainda é o commit mais novo?
+        id: vez
+        run: |
+          atual=$(git ls-remote origin refs/heads/main | cut -f1)
+          if [ "$atual" != "$GITHUB_SHA" ]; then
+            echo "pular=true" >> "$GITHUB_OUTPUT"
+            echo "Há um commit mais novo em main (${atual:0:7}), e é ele que vai para o ar." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: ./.github/actions/servidor
+        if: steps.vez.outputs.pular != 'true'
+        with:
+          endereco: ${{ vars.SERVIDOR_ENDERECO }}
+          chave: ${{ secrets.SERVIDOR_CHAVE_SSH }}
+          chave-do-host: ${{ vars.SERVIDOR_CHAVE_HOST }}
+
+      # O endereço do site: o domínio próprio (SITE_ENDERECO), se houver; senão o IP
+      # pelo sslip.io, que é de graça — 129.151.10.20 vira 129-151-10-20.sslip.io.
+      - name: Endereço do site
+        id: site
+        if: steps.vez.outputs.pular != 'true'
+        env:
+          SERVIDOR_ENDERECO: ${{ vars.SERVIDOR_ENDERECO }}
+          SITE_ENDERECO: ${{ vars.SITE_ENDERECO }}
+        run: echo "site=${SITE_ENDERECO:-${SERVIDOR_ENDERECO//./-}.sslip.io}" >> "$GITHUB_OUTPUT"
+
+      - name: Enviar a configuração e os arquivos do servidor
+        if: steps.vez.outputs.pular != 'true'
+        env:
+          CADASTRO_CODIGO: ${{ secrets.CADASTRO_CODIGO }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          BACKUP_NEON_URL: ${{ secrets.BACKUP_NEON_URL }}
+          BANCADA_NOME_SISTEMA: ${{ vars.BANCADA_NOME_SISTEMA }}
+          BANCADA_CONSTRUTOR: ${{ vars.BANCADA_CONSTRUTOR }}
+          BANCADA_ANO_COPYRIGHT: ${{ vars.BANCADA_ANO_COPYRIGHT }}
+          BANCADA_PAPEL: ${{ vars.BANCADA_PAPEL }}
+          BANCADA_PERFIL_PADRAO: ${{ vars.BANCADA_PERFIL_PADRAO }}
+          LLM_MODELO_EXTRACAO: ${{ vars.LLM_MODELO_EXTRACAO }}
+          LLM_MODELO_JULGAMENTO: ${{ vars.LLM_MODELO_JULGAMENTO }}
+          LLM_MODELO_EMBEDDING: ${{ vars.LLM_MODELO_EMBEDDING }}
+          LLM_MODELO_FISCAL: ${{ vars.LLM_MODELO_FISCAL }}
+          LLM_MODELO_VISAO: ${{ vars.LLM_MODELO_VISAO }}
+          AFILIADO_TAG_ML: ${{ vars.AFILIADO_TAG_ML }}
+          AFILIADO_TAG_SHOPEE: ${{ vars.AFILIADO_TAG_SHOPEE }}
+          AFILIADO_TAG_AMAZON: ${{ vars.AFILIADO_TAG_AMAZON }}
+        run: |
+          if [ -z "$CADASTRO_CODIGO" ]; then
+            echo "::warning::Sem o segredo CADASTRO_CODIGO, ninguém consegue criar conta nem trocar a senha esquecida."
+          fi
+          config="${RUNNER_TEMP:-/tmp}/config.env"
+          bash servidor/montar-config.sh > "$config"
+          ssh servidor 'umask 077; cat > /opt/hub/config.env' < "$config"
+          rm -f "$config"
+          tar -cf - -C servidor compose.yaml Caddyfile backup.sh publicar.sh |
+            ssh servidor 'tar -xf - -C /opt/hub'
+
+      - name: Trocar a versão no ar
+        if: steps.vez.outputs.pular != 'true'
+        env:
+          SITE: ${{ steps.site.outputs.site }}
+        run: |
+          # shellcheck disable=SC2029 # commit e endereço vão daqui para o servidor, de propósito
+          ssh servidor "bash /opt/hub/publicar.sh trocar $GITHUB_SHA $SITE"
+
+      # A troca já conferiu de dentro do servidor. Isto confere o caminho de quem usa:
+      # endereço, certificado HTTPS e portas abertas. Na primeira publicação o Caddy
+      # ainda está pedindo o certificado, e por isso a espera.
+      - name: Conferir de fora
+        if: steps.vez.outputs.pular != 'true'
+        env:
+          SITE: ${{ steps.site.outputs.site }}
+        run: |
+          resposta="${RUNNER_TEMP:-/tmp}/saude.json"
+          for _ in $(seq 1 40); do
+            if curl -fsS --max-time 10 "https://$SITE/saude" -o "$resposta" 2>/dev/null &&
+              grep -q "\"$GITHUB_SHA\"" "$resposta"; then
+              echo "✅ No ar em https://$SITE — versão ${GITHUB_SHA:0:7}" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::O sistema subiu no servidor, mas não responde em https://$SITE. Confira as portas 80 e 443 (docs/hospedagem.md)."
+          exit 1

@@ -1,0 +1,93 @@
+name: manutenção
+
+# Os botões do servidor (ADR 0010), na aba Actions do GitHub → "manutenção" → "Run
+# workflow". Cada um chama `servidor/publicar.sh` por SSH:
+#
+#   diagnostico     versão no ar, contêineres, saúde, disco, erros do dia, cópias
+#   reiniciar       reinicia o site e a fila
+#   backup-agora    uma cópia do banco na hora
+#   testar-backup   abre a cópia mais nova num banco à parte e conta o que tem nela
+#   restaurar       volta o banco para uma cópia — pede o nome da cópia e a palavra
+#                   RESTAURAR, porque o que entrou depois dela se perde
+#
+# Toda segunda de manhã o teste do backup roda sozinho: se falhar, o GitHub manda
+# e-mail. Cópia que ninguém abre é cópia que ninguém sabe se funciona.
+#
+# O log daqui é público, como o repositório: o servidor responde com estado e
+# contagem, nunca com dado de negócio (ver servidor/publicar.sh).
+
+on:
+  workflow_dispatch:
+    inputs:
+      acao:
+        description: O que fazer no servidor
+        type: choice
+        options:
+          - diagnostico
+          - reiniciar
+          - backup-agora
+          - testar-backup
+          - restaurar
+        default: diagnostico
+      copia:
+        description: 'Só para restaurar: o nome da cópia, como o diagnóstico lista (banco-2026-09-25_030000.dump)'
+        required: false
+        default: ''
+      confirmacao:
+        description: 'Só para restaurar: escreva RESTAURAR. O que entrou no banco depois da cópia se perde.'
+        required: false
+        default: ''
+  schedule:
+    # Segunda-feira, 06:23 em Brasília (09:23 UTC), depois da cópia das 03:00.
+    - cron: '23 9 * * 1'
+
+permissions:
+  contents: read
+
+# O mesmo grupo da publicação: uma manutenção nunca roda no meio de uma troca de versão.
+concurrency:
+  group: publicar
+  cancel-in-progress: false
+
+jobs:
+  manutencao:
+    if: vars.SERVIDOR_ENDERECO != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/servidor
+        with:
+          endereco: ${{ vars.SERVIDOR_ENDERECO }}
+          chave: ${{ secrets.SERVIDOR_CHAVE_SSH }}
+          chave-do-host: ${{ vars.SERVIDOR_CHAVE_HOST }}
+
+      - name: Executar
+        env:
+          ACAO: ${{ github.event_name == 'schedule' && 'testar-backup' || inputs.acao }}
+          COPIA: ${{ inputs.copia }}
+          CONFIRMACAO: ${{ inputs.confirmacao }}
+        run: |
+          case "$ACAO" in
+            restaurar)
+              if [ "$CONFIRMACAO" != "RESTAURAR" ]; then
+                echo "::error::Para restaurar, escreva RESTAURAR no campo de confirmação."
+                exit 1
+              fi
+              if ! [[ "$COPIA" =~ ^banco-[0-9_-]+\.dump$ ]]; then
+                echo "::error::O nome da cópia é como o diagnóstico lista: banco-2026-09-25_030000.dump"
+                exit 1
+              fi
+              # shellcheck disable=SC2029 # o nome da cópia vai daqui para o servidor, de propósito
+              ssh servidor "bash /opt/hub/publicar.sh restaurar $COPIA"
+              ;;
+            diagnostico | reiniciar | backup-agora | testar-backup)
+              # shellcheck disable=SC2029 # a ação vai daqui para o servidor, de propósito
+              ssh servidor "bash /opt/hub/publicar.sh $ACAO"
+              ;;
+            *)
+              echo "::error::Ação desconhecida: $ACAO"
+              exit 1
+              ;;
+          esac

@@ -1,0 +1,65 @@
+name: Conectar ao servidor
+description: >-
+  Prepara o SSH para o servidor (ADR 0010). Depois deste passo, `ssh servidor` funciona
+  no job. A chave vem de um segredo e nunca aparece no log.
+
+inputs:
+  endereco:
+    description: O IP do servidor (variável SERVIDOR_ENDERECO).
+    required: true
+  chave:
+    description: A chave SSH privada (segredo SERVIDOR_CHAVE_SSH).
+    required: true
+  chave-do-host:
+    description: >-
+      A identidade do servidor, as linhas que `ssh-keyscan` devolve (variável
+      SERVIDOR_CHAVE_HOST). Sem ela, a conexão confia em quem responder no endereço.
+    required: false
+    default: ''
+  usuario:
+    description: O usuário do servidor. O padrão é o da imagem Ubuntu da Oracle.
+    required: false
+    default: ubuntu
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        ENDERECO: ${{ inputs.endereco }}
+        CHAVE: ${{ inputs.chave }}
+        CHAVE_DO_HOST: ${{ inputs.chave-do-host }}
+        USUARIO: ${{ inputs.usuario }}
+      run: |
+        set -euo pipefail
+        if [ -z "$CHAVE" ]; then
+          echo "::error::Falta o segredo SERVIDOR_CHAVE_SSH (docs/hospedagem.md)."
+          exit 1
+        fi
+        install -d -m 700 ~/.ssh
+        printf '%s\n' "$CHAVE" > ~/.ssh/servidor
+        chmod 600 ~/.ssh/servidor
+        if [ -n "$CHAVE_DO_HOST" ]; then
+          printf '%s\n' "$CHAVE_DO_HOST" > ~/.ssh/known_hosts
+          verificar=yes
+        else
+          echo "::warning::Sem a variável SERVIDOR_CHAVE_HOST, a conexão confia em quem responder no endereço do servidor (docs/hospedagem.md)."
+          verificar=accept-new
+        fi
+        cat > ~/.ssh/config <<EOF
+        Host servidor
+          HostName $ENDERECO
+          User $USUARIO
+          IdentityFile ~/.ssh/servidor
+          IdentitiesOnly yes
+          StrictHostKeyChecking $verificar
+          ServerAliveInterval 30
+          ConnectTimeout 20
+        EOF
+        # O servidor precisa ter passado pelo roteiro de instalação: Docker, e a pasta
+        # /opt/hub com dono. Sem isso, o erro daqui diz o que falta, em vez de um
+        # "permission denied" no meio da publicação.
+        if ! ssh servidor 'docker info >/dev/null 2>&1 && test -w /opt/hub'; then
+          echo "::error::O servidor responde, mas não está preparado: falta o Docker ou a pasta /opt/hub. É o roteiro de instalação (servidor/cloud-init.yaml) — ver docs/hospedagem.md."
+          exit 1
+        fi
