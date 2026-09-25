@@ -53,6 +53,20 @@ const esquemaAmbiente = z.object({
     .min(8, 'CADASTRO_CODIGO precisa de 8 caracteres ou mais')
     .optional()
     .or(z.literal('').transform(() => undefined)),
+  /**
+   * A versão no ar: o commit publicado e a hora dele (ADR 0010). Vêm gravados na imagem
+   * pela publicação; no computador ficam vazios, e o rodapé não mostra versão.
+   */
+  VERSAO: z
+    .string()
+    .trim()
+    .regex(/^[0-9a-f]{7,40}$/, 'VERSAO é o hash de um commit')
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
+  VERSAO_EM: z.iso
+    .datetime({ offset: true })
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
 
   // LLM — ver ADR 0005. A chave é do OpenRouter; modelo vazio usa o padrão de
   // `infra/llm/ambiente.ts`.

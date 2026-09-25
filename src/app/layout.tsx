@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { lerAmbiente } from '@/config/ambiente';
 import { montarMarca, variaveisCssDaMarca } from '@/config/marca';
 import { Lateral } from './lateral';
+import { descreverVersao } from './versao';
 import estilo from './casca.module.css';
 import './globals.css';
 
@@ -28,7 +29,9 @@ export function generateMetadata(): Metadata {
 }
 
 export default function RootLayout({ children }: { readonly children: ReactNode }) {
-  const marca = montarMarca(lerAmbiente());
+  const ambiente = lerAmbiente();
+  const marca = montarMarca(ambiente);
+  const versao = descreverVersao(ambiente.VERSAO, ambiente.VERSAO_EM);
 
   return (
     <html lang="pt-BR" style={variaveisCssDaMarca(marca.visual)}>
@@ -46,6 +49,7 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
             <footer className={estilo.rodape}>
               {marca.copyright}
               {marca.creditoRodape !== null ? ` · ${marca.creditoRodape}` : ''}
+              {versao !== null ? ` · ${versao}` : ''}
             </footer>
           </div>
         </div>

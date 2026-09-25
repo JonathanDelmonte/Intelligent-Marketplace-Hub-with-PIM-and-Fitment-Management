@@ -70,6 +70,29 @@ describe('validarAmbiente', () => {
     const a = validarAmbiente({ ...minimo, LLM_ORCAMENTO_PADRAO_CENTAVOS: '1500' });
     expect(a.LLM_ORCAMENTO_PADRAO_CENTAVOS).toBe(1500);
   });
+
+  it('código de cadastro vazio fecha o cadastro; curto demais é recusado (ADR 0011)', () => {
+    expect(validarAmbiente(minimo).CADASTRO_CODIGO).toBeUndefined();
+    expect(validarAmbiente({ ...minimo, CADASTRO_CODIGO: '' }).CADASTRO_CODIGO).toBeUndefined();
+    expect(
+      validarAmbiente({ ...minimo, CADASTRO_CODIGO: ' ABCD-EFGH-JKMN ' }).CADASTRO_CODIGO,
+    ).toBe('ABCD-EFGH-JKMN');
+    expect(() => validarAmbiente({ ...minimo, CADASTRO_CODIGO: 'abc' })).toThrow(/8 caracteres/);
+  });
+
+  it('versão publicada: hash de commit e hora ISO, ou nada (ADR 0010)', () => {
+    const a = validarAmbiente({
+      ...minimo,
+      VERSAO: '3f9c2a1b7e4d5c6a8b9f0e1d2c3b4a5f6e7d8c9b',
+      VERSAO_EM: '2026-09-25T14:05:00-03:00',
+    });
+    expect(a.VERSAO).toBe('3f9c2a1b7e4d5c6a8b9f0e1d2c3b4a5f6e7d8c9b');
+    expect(a.VERSAO_EM).toBe('2026-09-25T14:05:00-03:00');
+    const vazio = validarAmbiente({ ...minimo, VERSAO: '', VERSAO_EM: '' });
+    expect(vazio.VERSAO).toBeUndefined();
+    expect(vazio.VERSAO_EM).toBeUndefined();
+    expect(() => validarAmbiente({ ...minimo, VERSAO: 'main; rm -rf /' })).toThrow(/hash/);
+  });
 });
 
 describe('montarMarca', () => {
