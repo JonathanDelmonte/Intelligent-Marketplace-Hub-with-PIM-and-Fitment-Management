@@ -18,6 +18,7 @@ import { carregarEnv } from '../../config/carregar-env';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { sql } from 'drizzle-orm';
 import { criarBancoCom } from './cliente';
+import { fecharTabelasParaQuemNaoEDono } from './fechar-tabelas';
 import { lerAmbiente } from '@/config/ambiente';
 
 carregarEnv();
@@ -31,6 +32,13 @@ async function principal(): Promise<void> {
 
   console.log('Aplicando migrations…');
   await migrate(db, { migrationsFolder: './src/infra/banco/migrations' });
+
+  const fechadas = await fecharTabelasParaQuemNaoEDono(db);
+  if (fechadas > 0) {
+    console.log(
+      `RLS ligado em ${fechadas} ${fechadas === 1 ? 'tabela' : 'tabelas'} (ver fechar-tabelas.ts).`,
+    );
+  }
 
   console.log('Banco atualizado.');
   await encerrar();
