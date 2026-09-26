@@ -79,3 +79,75 @@
   overflow-x: auto;
   padding: 0.5rem 0.75rem;
 }
+
+/* ─── Restaurar ─────────────────────────────────────────────────────────── */
+
+.aviso {
+  composes: aviso from '../ui/comum.module.css';
+}
+
+.avisoAtencao {
+  composes: aviso avisoAtencao from '../ui/comum.module.css';
+}
+
+.avisoErro {
+  composes: aviso avisoErro from '../ui/comum.module.css';
+}
+
+.avisoTitulo {
+  composes: avisoTitulo from '../ui/comum.module.css';
+}
+
+.avisoCorpo {
+  composes: avisoCorpo from '../ui/comum.module.css';
+}
+
+.campo {
+  composes: campo from '../ui/comum.module.css';
+  --largura-campo: 100%;
+}
+
+.restaurar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin-top: 0.875rem;
+}
+
+.arquivo {
+  font: inherit;
+}
+
+/* O que a cópia escolhida tem, e a confirmação: um cartão, porque é a decisão da tela. */
+.confirmacao {
+  composes: cartao from '../ui/comum.module.css';
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.resumoDaCopia {
+  line-height: 1.5;
+  margin: 0;
+}
+
+.caixa {
+  align-items: flex-start;
+  cursor: pointer;
+  display: flex;
+  gap: 0.5rem;
+  line-height: 1.45;
+}
+
+.caixa input {
+  margin-top: 0.2rem;
+}
+
+/* A ação da restauração: o botão principal, que só acende depois da confirmação. */
+.botaoDeAcao {
+  composes: botao from '../ui/comum.module.css';
+}
+
+.botaoDeAcao:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
