@@ -1,4 +1,6 @@
+import { eq } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { job as tabelaJob } from '../banco/schema';
 import {
   abrirBancoDeTeste,
   limparTabelas,
@@ -469,6 +471,89 @@ describe.skipIf(!temBancoDeTeste())('Fila (contra Postgres real)', () => {
       await expect(fila.adiar('00000000-0000-4000-8000-000000000000')).rejects.toThrow(
         /não existe/,
       );
+    });
+  });
+  describe('o arquivo que saiu da nuvem (ADR 0016)', () => {
+    const HASH = 'a'.repeat(64);
+    const OUTRO = 'b'.repeat(64);
+
+    async function mover(id: string, quando: Date): Promise<void> {
+      await conexao.db.update(tabelaJob).set({ atualizadoEm: quando }).where(eq(tabelaJob.id, id));
+    }
+
+    it('revisão que espera um arquivo guarda o hash, e reenviá-lo devolve o job à fila', async () => {
+      const { job } = await fila.enfileirar({ tipo: 't', chaveIdempotencia: 'c', entrada: {} });
+      await fila.reivindicar({ tipos: ['t'] });
+      await fila.mandarParaRevisao(job.id, 'o arquivo saiu', { aguardandoConteudo: HASH });
+
+      expect(await fila.reenfileirarOsQueAguardam(OUTRO)).toEqual([]);
+      expect(await fila.reenfileirarOsQueAguardam(HASH)).toEqual([job.id]);
+
+      const devolvido = await fila.buscarDetalhado(job.id);
+      expect(devolvido).toMatchObject({ status: 'pendente', tentativas: 0, erro: null });
+      // O hash sai junto: reenviar de novo não mexe num job que já voltou.
+      expect(await fila.reenfileirarOsQueAguardam(HASH)).toEqual([]);
+    });
+
+    it('só devolve o que parou: job concluído ou rodando com o mesmo hash fica como está', async () => {
+      const a = await fila.enfileirar({ tipo: 't', chaveIdempotencia: 'a', entrada: {} });
+      await fila.reivindicar({ tipos: ['t'] });
+      await fila.mandarParaRevisao(a.job.id, 'o arquivo saiu', { aguardandoConteudo: HASH });
+      await fila.concluir(a.job.id, { ok: true });
+
+      expect(await fila.reenfileirarOsQueAguardam(HASH)).toEqual([]);
+      expect((await fila.buscarPorId(a.job.id))?.status).toBe('concluido');
+    });
+
+    it('revisão comum não espera arquivo nenhum, e reenfileirar à mão esquece o que esperava', async () => {
+      const comum = await fila.enfileirar({ tipo: 't', chaveIdempotencia: 'a', entrada: {} });
+      await fila.mandarParaRevisao(comum.job.id, 'classificação fraca');
+      const esperando = await fila.enfileirar({ tipo: 't', chaveIdempotencia: 'b', entrada: {} });
+      await fila.mandarParaRevisao(esperando.job.id, 'o arquivo saiu', {
+        aguardandoConteudo: HASH,
+      });
+
+      await fila.reenfileirar(esperando.job.id);
+      await fila.mandarParaRevisao(esperando.job.id, 'outro motivo');
+
+      expect(await fila.reenfileirarOsQueAguardam(HASH)).toEqual([]);
+      expect((await fila.buscarPorId(comum.job.id))?.status).toBe('pendente_revisao');
+    });
+
+    it('uso por campo da entrada: ativo se algum ainda vai rodar, e o último movimento', async () => {
+      const antigo = new Date('2026-09-01T10:00:00Z');
+      const recente = new Date('2026-09-10T10:00:00Z');
+
+      const concluido = await fila.enfileirar({
+        tipo: 't',
+        chaveIdempotencia: 'a',
+        entrada: { hashConteudo: HASH },
+      });
+      await fila.concluir(concluido.job.id, {});
+      await mover(concluido.job.id, antigo);
+      const revisao = await fila.enfileirar({
+        tipo: 'u',
+        chaveIdempotencia: 'b',
+        entrada: { hashConteudo: HASH },
+      });
+      await fila.mandarParaRevisao(revisao.job.id, 'x');
+      await mover(revisao.job.id, recente);
+
+      const pendente = await fila.enfileirar({
+        tipo: 't',
+        chaveIdempotencia: 'c',
+        entrada: { hashConteudo: OUTRO },
+        agendadoPara: new Date('2027-01-01T00:00:00Z'),
+      });
+      await mover(pendente.job.id, antigo);
+      await fila.enfileirar({ tipo: 't', chaveIdempotencia: 'd', entrada: { url: 'x' } });
+
+      const uso = await fila.usoPorCampoDaEntrada('hashConteudo');
+
+      expect([...uso.keys()].sort()).toEqual([HASH, OUTRO]);
+      expect(uso.get(HASH)).toEqual({ ativo: false, ultimoMovimento: recente });
+      // Pendente para daqui a meses ainda é ativo: o arquivo tem de estar lá quando rodar.
+      expect(uso.get(OUTRO)).toEqual({ ativo: true, ultimoMovimento: antigo });
     });
   });
 });

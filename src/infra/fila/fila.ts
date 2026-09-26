@@ -17,7 +17,7 @@
  * A reivindicação usa `FOR UPDATE SKIP LOCKED`, então dois processos podem rodar
  * a fila sem pegar o mesmo job — e sem precisar de Redis.
  */
-import { and, asc, desc, eq, lte, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, lte, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Banco } from '../banco/cliente';
 import { job } from '../banco/schema';
@@ -61,6 +61,14 @@ export interface JobDetalhado extends JobEnfileirado {
 
 export class FilaError extends Error {
   override readonly name = 'FilaError';
+}
+
+/** O que a fila diz sobre os jobs que têm um mesmo valor num campo da entrada. */
+export interface UsoNaFila {
+  /** Algum deles ainda vai rodar: pendente, mesmo que agendado para depois, ou rodando. */
+  readonly ativo: boolean;
+  /** O último movimento de qualquer um deles. */
+  readonly ultimoMovimento: Date;
 }
 
 /**
@@ -276,12 +284,84 @@ export class Fila {
    * veio com confiança baixa. **Não é falha e não consome tentativa**: é o
    * caminho que a especificação exige em vez de descartar o registro.
    */
-  async mandarParaRevisao(id: string, motivo: string): Promise<void> {
+  async mandarParaRevisao(
+    id: string,
+    motivo: string,
+    opcoes: {
+      /** O hash do arquivo que faltou: enviá-lo de novo devolve o job à fila. */
+      readonly aguardandoConteudo?: string;
+    } = {},
+  ): Promise<void> {
     const agora = new Date();
     await this.db
       .update(job)
-      .set({ status: 'pendente_revisao', erro: motivo, terminadoEm: agora, atualizadoEm: agora })
+      .set({
+        status: 'pendente_revisao',
+        erro: motivo,
+        terminadoEm: agora,
+        atualizadoEm: agora,
+        ...(opcoes.aguardandoConteudo === undefined
+          ? {}
+          : { aguardandoConteudo: opcoes.aguardandoConteudo }),
+      })
       .where(eq(job.id, id));
+  }
+
+  /**
+   * Devolve à fila os jobs que pararam esperando este arquivo, e devolve os ids.
+   *
+   * É a outra ponta da revisão com `aguardandoConteudo`: o arquivo saiu da nuvem, o job
+   * parou dizendo para enviá-lo de novo, e enviá-lo basta — ninguém precisa achar o job e
+   * apertar "tentar de novo" (ADR 0016).
+   */
+  async reenfileirarOsQueAguardam(hash: string): Promise<readonly string[]> {
+    const agora = new Date();
+    const devolvidos = await this.db
+      .update(job)
+      .set({
+        status: 'pendente',
+        tentativas: 0,
+        erro: null,
+        aguardandoConteudo: null,
+        agendadoPara: agora,
+        iniciadoEm: null,
+        terminadoEm: null,
+        atualizadoEm: agora,
+      })
+      .where(
+        and(eq(job.aguardandoConteudo, hash), inArray(job.status, ['pendente_revisao', 'falhou'])),
+      )
+      .returning({ id: job.id });
+    return devolvidos.map((d) => d.id);
+  }
+
+  /**
+   * Para cada valor que `campo` tem na entrada dos jobs: se algum deles ainda vai rodar,
+   * e o último movimento de todos.
+   *
+   * É a pergunta da limpeza do conteúdo antes de apagar um arquivo da nuvem (ADR 0016):
+   * o de job que ainda vai rodar fica; o dos outros sai depois de uns dias parado.
+   * Agrupa pela posição (`group by 1`) porque o campo vai como parâmetro, e o Postgres
+   * não reconhece `entrada ->> $1` e `entrada ->> $2` como a mesma expressão.
+   */
+  async usoPorCampoDaEntrada(campo: string): Promise<ReadonlyMap<string, UsoNaFila>> {
+    const valor = sql<string>`${job.entrada} ->> ${campo}`;
+    const linhas = await this.db
+      .select({
+        valor,
+        ativo: sql<boolean>`bool_or(${job.status} in ('pendente', 'rodando'))`,
+        ultimoMovimento: sql<Date>`max(${job.atualizadoEm})`,
+      })
+      .from(job)
+      .where(sql`${job.entrada} ->> ${campo} is not null`)
+      .groupBy(sql`1`);
+
+    return new Map(
+      linhas.map((l) => [
+        l.valor,
+        { ativo: l.ativo, ultimoMovimento: new Date(l.ultimoMovimento) },
+      ]),
+    );
   }
 
   /** Os últimos N jobs, mais recentes primeiro. É a tela de observabilidade. */
@@ -398,6 +478,7 @@ export class Fila {
         status: 'pendente',
         tentativas: 0,
         erro: null,
+        aguardandoConteudo: null,
         agendadoPara: agora,
         iniciadoEm: null,
         terminadoEm: null,

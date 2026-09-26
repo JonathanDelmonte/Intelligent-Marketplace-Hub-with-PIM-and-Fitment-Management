@@ -84,6 +84,12 @@ export const job = pgTable(
     agendadoPara: timestamp('agendado_para', { withTimezone: true }).notNull().defaultNow(),
     iniciadoEm: timestamp('iniciado_em', { withTimezone: true }),
     terminadoEm: timestamp('terminado_em', { withTimezone: true }),
+    /**
+     * O hash do arquivo que o job espera, quando parou porque ele não estava guardado —
+     * na nuvem, o arquivo sai uns dias depois de processado (ADR 0016). Enviar o mesmo
+     * arquivo de novo devolve à fila o job que esperava por ele.
+     */
+    aguardandoConteudo: text('aguardando_conteudo'),
     ...auditoria,
   },
   (t) => [
