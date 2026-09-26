@@ -15,6 +15,9 @@ import { z } from 'zod';
 export const PAPEIS = ['interno', 'cliente', 'produto'] as const;
 export type Papel = (typeof PAPEIS)[number];
 
+/** O perfil de quando `BANCADA_PERFIL_PADRAO` não é configurado. */
+export const PERFIL_SEM_CONFIGURACAO = 'principal';
+
 const esquemaAmbiente = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -41,14 +44,24 @@ const esquemaAmbiente = z
     BANCADA_CONSTRUTOR: z.string().min(1).default('Zirtuno'),
     BANCADA_ANO_COPYRIGHT: z.coerce.number().int().min(2000).max(2200).default(2026),
     BANCADA_PAPEL: z.enum(PAPEIS).default('interno'),
-    BANCADA_PERFIL_PADRAO: z.string().min(1),
     /**
-     * O código que a tela de cadastro pede (ADR 0011).
+     * O slug do perfil de vendedor que as telas usam. Sem ele, `principal`: um perfil só,
+     * criado na primeira subida, com o nome acertado depois na tela do negócio — o dono
+     * não precisa decidir um slug para começar. Vazio conta como ausente, porque é assim
+     * que um campo deixado em branco num painel chega.
+     */
+    BANCADA_PERFIL_PADRAO: z
+      .string()
+      .trim()
+      .optional()
+      .transform((slug) => (slug === undefined || slug === '' ? PERFIL_SEM_CONFIGURACAO : slug)),
+    /**
+     * O código que a tela de cadastro pede (ADR 0011 e 0014).
      *
-     * Sem permissões, toda conta vê os mesmos dados; então criar conta num endereço
-     * público não pode ser aberto a quem achar a tela. Quem tem o código cria conta, e
-     * recupera a senha. Vazio fecha o cadastro — que é o estado certo de um servidor que
-     * ainda não recebeu o código.
+     * Sem permissões, toda conta vê os mesmos dados. Com o código, só quem o tem cria
+     * conta, e recupera a senha. Sem ele, a primeira conta é criada sem pedir nada, e o
+     * cadastro fecha em seguida: o dono entra direto, e quem achar o endereço depois,
+     * não.
      */
     CADASTRO_CODIGO: z
       .string()

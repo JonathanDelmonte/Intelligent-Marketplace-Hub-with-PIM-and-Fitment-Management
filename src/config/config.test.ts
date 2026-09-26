@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AmbienteInvalido, PAPEIS, validarAmbiente } from './ambiente';
+import { AmbienteInvalido, PAPEIS, PERFIL_SEM_CONFIGURACAO, validarAmbiente } from './ambiente';
 import { esquemaMarcaVisual, montarMarca, variaveisCssDaMarca } from './marca';
 
 const CHAVE_VALIDA = Buffer.alloc(32, 7).toString('base64');
@@ -35,10 +35,14 @@ describe('validarAmbiente', () => {
     );
   });
 
-  it('exige perfil padrão — sem ele não há query operacional possível', () => {
-    expect(() => validarAmbiente({ ...minimo, BANCADA_PERFIL_PADRAO: undefined })).toThrow(
-      AmbienteInvalido,
+  it('sem perfil configurado, usa o perfil principal — ausente ou em branco', () => {
+    expect(
+      validarAmbiente({ ...minimo, BANCADA_PERFIL_PADRAO: undefined }).BANCADA_PERFIL_PADRAO,
+    ).toBe(PERFIL_SEM_CONFIGURACAO);
+    expect(validarAmbiente({ ...minimo, BANCADA_PERFIL_PADRAO: '  ' }).BANCADA_PERFIL_PADRAO).toBe(
+      PERFIL_SEM_CONFIGURACAO,
     );
+    expect(validarAmbiente(minimo).BANCADA_PERFIL_PADRAO).toBe('perfil-de-teste');
   });
 
   it('recusa papel desconhecido', () => {

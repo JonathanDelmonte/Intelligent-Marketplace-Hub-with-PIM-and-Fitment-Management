@@ -9,6 +9,10 @@
 #
 # Os valores marcados `sync: false` são pedidos pelo Render na criação e ficam só lá,
 # nunca aqui: este arquivo é público.
+#
+# Não há código de cadastro nem perfil a configurar para começar (ADR 0014): a primeira
+# conta é criada sem código, e o perfil se chama `principal` até ganhar nome na tela do
+# negócio. Para exigir código de quem vier depois, CADASTRO_CODIGO no painel do Render.
 
 services:
   - type: web
@@ -33,12 +37,6 @@ services:
       # O endereço do "Session pooler" do Supabase, com a senha no lugar de
       # [YOUR-PASSWORD]. O TLS entra sozinho (src/infra/conteiner/ambiente.ts).
       - key: DATABASE_URL
-        sync: false
-      # O código da tela "Criar conta" (ADR 0011).
-      - key: CADASTRO_CODIGO
-        sync: false
-      # O identificador do primeiro perfil, criado na primeira subida.
-      - key: BANCADA_PERFIL_PADRAO
         sync: false
       # A chave do OpenRouter. Em branco, o sistema funciona e só a IA fica desligada.
       - key: LLM_API_KEY
