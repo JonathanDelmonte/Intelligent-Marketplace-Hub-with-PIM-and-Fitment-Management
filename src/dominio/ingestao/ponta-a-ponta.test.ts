@@ -432,16 +432,23 @@ describe.skipIf(!temBancoDeTeste())('ingestão de ponta a ponta', () => {
       expect(await executor.processarProximo()).toEqual({ tipo: 'fila_vazia' });
     });
 
-    it('conteúdo que desapareceu do armazenamento vira falha reagendável', async () => {
-      // Erro de infraestrutura, não de conteúdo: merece nova tentativa.
+    it('conteúdo que desapareceu do armazenamento vai para revisão, e reenviar o devolve à fila', async () => {
+      // Tentar de novo não traz o arquivo de volta — na nuvem ele sai uns dias depois de
+      // processado (ADR 0016). A revisão diz o que fazer, e reenviar basta.
       const recebido = await orquestrador.receber(arquivoCsv('anuncios-mlb.csv', CSV_ML));
       if (recebido.tipo !== 'enfileirado') throw new Error('esperava enfileirado');
 
       await rm(diretorio, { recursive: true, force: true });
 
       const processado = await executor.processarProximo();
-      expect(processado.tipo).toBe('falhou');
-      if (processado.tipo === 'falhou') expect(processado.reagendado).toBe(true);
+      expect(processado.tipo).toBe('pendente_revisao');
+      if (processado.tipo === 'pendente_revisao') {
+        expect(processado.motivo).toContain('Envie o mesmo arquivo de novo na tela Importar');
+      }
+
+      const reenvio = await orquestrador.receber(arquivoCsv('anuncios-mlb.csv', CSV_ML));
+      expect(reenvio.devolvidosAFila).toEqual([recebido.job.id]);
+      expect((await executor.processarProximo()).tipo).toBe('concluido');
     });
 
     it('payload malformado vira revisão, não exceção', async () => {

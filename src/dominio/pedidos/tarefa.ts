@@ -21,7 +21,11 @@ import type { PerfilId } from '@/dominio/catalogo/sku';
 import { formatoPorNome } from '@/dominio/ingestao/planilha/leitor';
 import type { ImportadorDePlanilha } from '@/dominio/ingestao/planilha/importador';
 import { PLATAFORMAS } from '@/dominio/precificacao/tipos';
-import type { ArmazenamentoDeConteudo } from '@/infra/armazenamento/conteudo';
+import {
+  type ArmazenamentoDeConteudo,
+  ConteudoNaoEncontrado,
+  motivoDoArquivoAusente,
+} from '@/infra/armazenamento/conteudo';
 import type { Fila, JobEnfileirado } from '@/infra/fila/fila';
 import type { ResultadoDoTique, Tarefa } from '@/infra/fila/poller';
 import { registradorSilencioso, type Registrador } from '@/infra/log';
@@ -120,6 +124,13 @@ export class ExecutorDePedidos {
     try {
       return await this.importar(job, analise.data);
     } catch (erro) {
+      // O mesmo da ingestão: a planilha que saiu da nuvem não volta com o tempo, e sim
+      // quando alguém a envia de novo — o que devolve este job à fila (ADR 0016).
+      if (erro instanceof ConteudoNaoEncontrado) {
+        const motivo = motivoDoArquivoAusente(erro);
+        await this.fila.mandarParaRevisao(job.id, motivo, { aguardandoConteudo: erro.hash });
+        return { tipo: 'pendente_revisao', jobId: job.id, motivo };
+      }
       const mensagem = erro instanceof Error ? erro.message : String(erro);
       const { reagendado } = await this.fila.falhar(job.id, mensagem);
       return { tipo: 'falhou', jobId: job.id, erro: mensagem, reagendado };

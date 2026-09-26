@@ -22,7 +22,11 @@
  */
 import type { Plataforma } from '@/dominio/precificacao/tipos';
 import { TIPO_JOB_IDENTIDADE, chaveDeIdentidade } from '@/dominio/identidade/tarefa';
-import type { ArmazenamentoDeConteudo } from '@/infra/armazenamento/conteudo';
+import {
+  type ArmazenamentoDeConteudo,
+  ConteudoNaoEncontrado,
+  motivoDoArquivoAusente,
+} from '@/infra/armazenamento/conteudo';
 import type { Fila, JobEnfileirado } from '@/infra/fila/fila';
 import type { IngestorDeProdutoExterno } from './produto-externo';
 import { TIPO_JOB_INGESTAO, type EntradaDoJobDeIngestao } from './orquestrador';
@@ -160,6 +164,13 @@ export class ExecutorDeIngestao {
     try {
       return await this.processar(job);
     } catch (erro) {
+      // Arquivo que não está guardado não volta com o tempo: tentar de novo só gastaria
+      // as tentativas. Vai para revisão dizendo o que fazer, e lembrando o que espera.
+      if (erro instanceof ConteudoNaoEncontrado) {
+        const motivo = motivoDoArquivoAusente(erro);
+        await this.fila.mandarParaRevisao(job.id, motivo, { aguardandoConteudo: erro.hash });
+        return { tipo: 'pendente_revisao', jobId: job.id, motivo };
+      }
       const mensagem = erro instanceof Error ? erro.message : String(erro);
       const { reagendado } = await this.fila.falhar(job.id, mensagem);
       return { tipo: 'falhou', jobId: job.id, erro: mensagem, reagendado };

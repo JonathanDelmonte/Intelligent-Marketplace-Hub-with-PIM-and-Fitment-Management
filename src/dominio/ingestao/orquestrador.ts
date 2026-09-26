@@ -34,7 +34,7 @@ export interface EntradaDoJobDeIngestao {
   readonly texto: string | null;
 }
 
-export type ResultadoDoRecebimento =
+export type ResultadoDoRecebimento = (
   | {
       readonly tipo: 'enfileirado';
       readonly job: JobEnfileirado;
@@ -53,7 +53,14 @@ export type ResultadoDoRecebimento =
       readonly job: JobEnfileirado;
       readonly classificacao: Classificacao;
       readonly motivo: string;
-    };
+    }
+) & {
+  /**
+   * Os jobs que esperavam este arquivo e voltaram à fila: ele tinha saído da nuvem, e
+   * quem o enviou de novo não precisa achá-los (ADR 0016).
+   */
+  readonly devolvidosAFila: readonly string[];
+};
 
 /** Texto acima deste tamanho vai para o armazenamento em vez do payload. */
 export const MAX_TEXTO_NO_PAYLOAD = 8 * 1024;
@@ -85,7 +92,9 @@ export class Orquestrador {
       (params.entrada.tipo === 'texto' && params.entrada.valor.length > MAX_TEXTO_NO_PAYLOAD
         ? new TextEncoder().encode(params.entrada.valor)
         : undefined);
-    const hashConteudo = conteudo === undefined ? null : await this.armazenamento.guardar(conteudo);
+    const guardado =
+      conteudo === undefined ? null : await this.armazenamento.guardarDizendo(conteudo);
+    const hashConteudo = guardado?.hash ?? null;
 
     const payload = montarPayload({ entrada: params.entrada, classificacao, hashConteudo });
     const chave = chaveDeIdempotencia(payload);
@@ -107,11 +116,28 @@ export class Orquestrador {
         await this.fila.mandarParaRevisao(job.id, motivo);
       }
 
+      const devolvidosAFila = await this.devolverOsQueAguardavam(guardado);
       const atualizado = (await this.fila.buscarPorId(job.id)) ?? job;
-      return { tipo: 'precisa_revisao', job: atualizado, classificacao, motivo };
+      return { tipo: 'precisa_revisao', job: atualizado, classificacao, motivo, devolvidosAFila };
     }
 
-    return { tipo: 'enfileirado', job, jaExistia, classificacao };
+    const devolvidosAFila = await this.devolverOsQueAguardavam(guardado);
+    const atualizado = devolvidosAFila.includes(job.id)
+      ? ((await this.fila.buscarPorId(job.id)) ?? job)
+      : job;
+    return { tipo: 'enfileirado', job: atualizado, jaExistia, classificacao, devolvidosAFila };
+  }
+
+  /**
+   * O arquivo que não estava guardado pode ser um que saiu da nuvem e voltou: o job que
+   * parou esperando por ele volta à fila. Arquivo que já estava guardado não devolve
+   * nada — ninguém esperava por ele.
+   */
+  private async devolverOsQueAguardavam(
+    guardado: { readonly hash: string; readonly jaEstava: boolean } | null,
+  ): Promise<readonly string[]> {
+    if (guardado === null || guardado.jaEstava) return [];
+    return this.fila.reenfileirarOsQueAguardam(guardado.hash);
   }
 
   /**
