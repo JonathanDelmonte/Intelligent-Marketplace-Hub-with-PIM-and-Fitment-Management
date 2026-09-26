@@ -35,16 +35,20 @@ import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { contagem } from '@/lib/texto';
 import type { Banco } from './cliente';
+import {
+  CopiaInvalida,
+  FIM_DO_BLOCO,
+  FORMATO_DA_COPIA,
+  percorrerCopia,
+  type BlocoDaCopia,
+  type ResumoDaCopia,
+} from './formato-da-copia';
+
+// O formato é lido também pelo navegador, e mora num arquivo sem nada de servidor.
+export { CopiaInvalida, FORMATO_DA_COPIA, type ResumoDaCopia } from './formato-da-copia';
 
 /** Tabelas que não entram na cópia. Ver o cabeçalho. */
 export const TABELAS_FORA_DA_COPIA: readonly string[] = ['usuario', 'sessao'];
-
-/** Versão do formato. Muda se o arquivo mudar de um jeito que a leitura antiga não entenda. */
-export const FORMATO_DA_COPIA = 1;
-
-export class CopiaInvalida extends Error {
-  override readonly name = 'CopiaInvalida';
-}
 
 export interface TabelaDaCopia {
   readonly nome: string;
@@ -284,7 +288,9 @@ export async function* gerarCopia(
       }
       saida = null;
       totalDeLinhas += linhas;
-      yield texto.encode(`\\.\n-- ${tabela.nome}: ${contagem(linhas, 'linha', 'linhas')}\n\n`);
+      yield texto.encode(
+        `${FIM_DO_BLOCO}\n-- ${tabela.nome}: ${contagem(linhas, 'linha', 'linhas')}\n\n`,
+      );
     }
 
     await conexao.unsafe('commit');
@@ -303,28 +309,6 @@ export async function* gerarCopia(
 }
 
 // ─── Restaurar ───────────────────────────────────────────────────────────────
-
-export interface ResumoDaCopia {
-  readonly geradaEm: string | null;
-  readonly versao: string | null;
-  readonly tabelas: number;
-  readonly linhas: number;
-}
-
-const COMANDO_DE_COPIA =
-  /^COPY public\."([a-z_][a-z0-9_]*)" \(((?:"[a-z_][a-z0-9_]*", )*"[a-z_][a-z0-9_]*")\) FROM stdin;$/;
-const FIM_DA_COPIA = /^-- fim-da-copia: tabelas=(\d+) linhas=(\d+)$/;
-const METADADO = /^-- ([a-z-]+): (.*)$/;
-/** O que a cópia pode ter fora dos blocos de dados — e nada além disto é executado. */
-const LINHAS_CONHECIDAS = new Set([
-  "SET client_encoding = 'UTF8';",
-  'SET standard_conforming_strings = on;',
-  'BEGIN;',
-  'COMMIT;',
-]);
-
-/** Juntar linhas antes de escrever no `COPY`: uma escrita por linha seria lenta à toa. */
-const TAMANHO_DO_LOTE = 64 * 1024;
 
 type Conexao = Awaited<ReturnType<Banco['$client']['reserve']>>;
 
@@ -346,17 +330,19 @@ type Conexao = Awaited<ReturnType<Banco['$client']['reserve']>>;
  */
 async function copiarPara(
   conexao: Conexao,
-  tabela: TabelaDaCopia,
+  bloco: BlocoDaCopia,
   lotes: AsyncIterable<string>,
 ): Promise<void> {
-  const destino = await conexao.unsafe(comandoDeCopia(tabela, 'FROM stdin')).writable();
+  const destino = await conexao
+    .unsafe(comandoDeCopia({ nome: bloco.tabela, colunas: bloco.colunas }, 'FROM stdin'))
+    .writable();
   let falha: unknown = null;
   destino.on('error', (erro: unknown) => {
     falha ??= erro;
   });
   const recusa = () =>
     new CopiaInvalida(
-      `o banco recusou os dados da tabela ${tabela.nome}${falha instanceof Error ? ` (${falha.message})` : ''}. Nada foi mudado.`,
+      `o banco recusou os dados da tabela ${bloco.tabela}${falha instanceof Error ? ` (${falha.message})` : ''}. Nada foi mudado.`,
     );
 
   try {
@@ -396,156 +382,76 @@ const ESPERA_PELO_FIM_DO_COPY_MS = 60_000;
  * Restaura a cópia: apaga os dados das tabelas dela e põe os da cópia, **numa transação
  * só** — ou volta tudo, ou nada muda.
  *
- * Não executa o SQL do arquivo. Lê o cabeçalho e os blocos `COPY`, confere cada tabela e
- * cada coluna contra o banco de destino, e monta os comandos daqui. Arquivo com qualquer
- * outra linha é recusado: a cópia é um arquivo que passou pelo computador de alguém, e
- * "restaurar" não pode virar "executar o que estiver escrito".
+ * Não executa o SQL do arquivo. Lê o cabeçalho e os blocos `COPY` (`percorrerCopia`),
+ * confere cada tabela e cada coluna contra o banco de destino, e monta os comandos
+ * daqui. Arquivo com qualquer outra linha é recusado: a cópia é um arquivo que passou
+ * pelo computador de alguém, e "restaurar" não pode virar "executar o que estiver
+ * escrito".
  *
  * Recusa antes de apagar qualquer coisa: formato desconhecido, cópia de um banco mais
  * novo que o de destino, tabela ou coluna que o destino não tem. E recusa no fim, com a
  * transação desfeita, a cópia sem a linha de fechamento — o download interrompido.
  *
- * `conferir: true` lê o arquivo inteiro e diz o que ele tem, sem tocar no banco.
+ * `conferir: true` lê o arquivo inteiro e diz o que ele tem, conferindo contra o banco,
+ * sem mudar nada.
  */
 export async function restaurarCopia(
   db: Banco,
   linhas: AsyncIterable<string>,
   opcoes: { readonly conferir?: boolean } = {},
 ): Promise<ResumoDaCopia> {
-  const iterador = linhas[Symbol.asyncIterator]();
-  const proxima = async (): Promise<string | null> => {
-    const lida = await iterador.next();
-    return lida.done === true ? null : lida.value;
-  };
-
-  // O cabeçalho: comentários `-- chave: valor` até a primeira linha em branco.
-  const metadados = new Map<string, string>();
-  let linha = await proxima();
-  while (linha !== null && linha !== '') {
-    const achado = METADADO.exec(linha);
-    if (achado?.[1] !== undefined && achado[2] !== undefined) metadados.set(achado[1], achado[2]);
-    else if (!linha.startsWith('--')) break;
-    linha = await proxima();
-  }
-
-  if (metadados.get('copia-formato') !== String(FORMATO_DA_COPIA)) {
-    throw new CopiaInvalida('este arquivo não é uma cópia dos dados que este sistema saiba ler');
-  }
-
-  const noDestino = new Map((await tabelasDaCopia(db)).map((t) => [t.nome, new Set(t.colunas)]));
-  const daCopia = (metadados.get('tabelas') ?? '').split(' ').filter((t) => t !== '');
-  for (const tabela of daCopia) {
-    if (!noDestino.has(tabela)) {
-      throw new CopiaInvalida(`a tabela ${tabela} da cópia não existe neste banco`);
-    }
-  }
-
-  const migracaoDaCopia = Number(metadados.get('migracao'));
-  const migracaoDoDestino = await ultimaMigracao(db);
-  if (
-    Number.isFinite(migracaoDaCopia) &&
-    migracaoDoDestino !== null &&
-    migracaoDaCopia > migracaoDoDestino
-  ) {
-    throw new CopiaInvalida(
-      'a cópia é de uma versão mais nova do sistema que a deste banco: atualize o banco (npm run db:migrate) e restaure de novo',
-    );
-  }
-
-  let linhasLidas = 0;
-  /** As linhas de dados de um bloco, em lotes, até o `\.` que o fecha. */
-  async function* lotesDoBloco(): AsyncGenerator<string, void, undefined> {
-    let lote = '';
-    for (linha = await proxima(); linha !== null; linha = await proxima()) {
-      if (linha === '\\.') {
-        if (lote !== '') yield lote;
-        return;
-      }
-      linhasLidas += 1;
-      lote += `${linha}\n`;
-      if (lote.length >= TAMANHO_DO_LOTE) {
-        yield lote;
-        lote = '';
-      }
-    }
-    throw new CopiaInvalida(
-      'a cópia termina no meio de uma tabela — o download deve ter sido interrompido. Nada foi mudado: baixe a cópia de novo.',
-    );
-  }
-
   const conexao = opcoes.conferir === true ? null : await db.$client.reserve();
   let aberta = false;
+  let noDestino = new Map<string, ReadonlySet<string>>();
   try {
-    if (conexao !== null) {
-      await conexao.unsafe('begin');
-      aberta = true;
-      if (daCopia.length > 0) {
-        await conexao.unsafe(
-          `TRUNCATE TABLE ${daCopia.map((t) => `public.${identificador(t)}`).join(', ')}`,
-        );
-      }
-    }
-
-    let tabelasLidas = 0;
-    let fechamento: { tabelas: number; linhas: number } | null = null;
-
-    for (; linha !== null; linha = await proxima()) {
-      if (linha === '' || LINHAS_CONHECIDAS.has(linha) || linha.startsWith('TRUNCATE TABLE ')) {
-        continue;
-      }
-      const fim = FIM_DA_COPIA.exec(linha);
-      if (fim?.[1] !== undefined && fim[2] !== undefined) {
-        fechamento = { tabelas: Number(fim[1]), linhas: Number(fim[2]) };
-        continue;
-      }
-      if (linha.startsWith('--')) continue;
-
-      const copia = COMANDO_DE_COPIA.exec(linha);
-      const nome = copia?.[1];
-      const listaDeColunas = copia?.[2];
-      if (nome === undefined || listaDeColunas === undefined) {
-        throw new CopiaInvalida(`linha que não é de uma cópia: ${linha.slice(0, 80)}`);
-      }
-      const colunas = listaDeColunas.split(', ').map((c) => c.slice(1, -1));
-      const existentes = noDestino.get(nome);
-      if (existentes === undefined || !daCopia.includes(nome)) {
-        throw new CopiaInvalida(`a tabela ${nome} não está na lista da cópia`);
-      }
-      const faltando = colunas.filter((c) => !existentes.has(c));
-      if (faltando.length > 0) {
-        throw new CopiaInvalida(
-          `a tabela ${nome} deste banco não tem ${faltando.join(', ')}: atualize o banco (npm run db:migrate) e restaure de novo`,
-        );
-      }
-
-      if (conexao === null) {
-        for await (const lote of lotesDoBloco()) void lote;
-      } else {
-        await copiarPara(conexao, { nome, colunas }, lotesDoBloco());
-      }
-      tabelasLidas += 1;
-    }
-
-    if (
-      fechamento === null ||
-      fechamento.tabelas !== tabelasLidas ||
-      fechamento.linhas !== linhasLidas
-    ) {
-      throw new CopiaInvalida(
-        'a cópia está incompleta — o download deve ter sido interrompido. Nada foi mudado: baixe a cópia de novo.',
-      );
-    }
+    const resumo = await percorrerCopia(linhas, {
+      aoLerCabecalho: async (cabecalho) => {
+        noDestino = new Map((await tabelasDaCopia(db)).map((t) => [t.nome, new Set(t.colunas)]));
+        for (const tabela of cabecalho.tabelas) {
+          if (!noDestino.has(tabela)) {
+            throw new CopiaInvalida(`a tabela ${tabela} da cópia não existe neste banco`);
+          }
+        }
+        const migracaoDoDestino = await ultimaMigracao(db);
+        if (
+          cabecalho.migracao !== null &&
+          migracaoDoDestino !== null &&
+          cabecalho.migracao > migracaoDoDestino
+        ) {
+          throw new CopiaInvalida(
+            'a cópia é de uma versão mais nova do sistema que a deste banco: atualize o banco (npm run db:migrate) e restaure de novo',
+          );
+        }
+        if (conexao === null) return;
+        await conexao.unsafe('begin');
+        aberta = true;
+        if (cabecalho.tabelas.length > 0) {
+          await conexao.unsafe(
+            `TRUNCATE TABLE ${cabecalho.tabelas.map((t) => `public.${identificador(t)}`).join(', ')}`,
+          );
+        }
+      },
+      aoLerBloco: async (bloco, lotes) => {
+        const existentes = noDestino.get(bloco.tabela) ?? new Set<string>();
+        const faltando = bloco.colunas.filter((c) => !existentes.has(c));
+        if (faltando.length > 0) {
+          throw new CopiaInvalida(
+            `a tabela ${bloco.tabela} deste banco não tem ${faltando.join(', ')}: atualize o banco (npm run db:migrate) e restaure de novo`,
+          );
+        }
+        if (conexao === null) {
+          for await (const lote of lotes) void lote;
+        } else {
+          await copiarPara(conexao, bloco, lotes);
+        }
+      },
+    });
 
     if (conexao !== null) {
       await conexao.unsafe('commit');
       aberta = false;
     }
-    return {
-      geradaEm: metadados.get('gerada-em') ?? null,
-      versao: metadados.get('versao') ?? null,
-      tabelas: tabelasLidas,
-      linhas: linhasLidas,
-    };
+    return resumo;
   } finally {
     if (conexao !== null) {
       if (aberta) await conexao.unsafe('rollback').catch(() => undefined);
