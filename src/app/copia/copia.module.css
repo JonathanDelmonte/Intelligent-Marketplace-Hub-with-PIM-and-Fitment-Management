@@ -1,0 +1,81 @@
+/*
+ * Estilo da tela da cópia dos dados. Cores só de variável de tema (convenções, 3.1).
+ *
+ * Uma tela de leitura curta com uma ação: o que vai na cópia, o botão, e como ela volta.
+ * O que é comum a todas as telas vem de `ui/comum.module.css` por `composes`.
+ */
+
+.pagina {
+  composes: pagina from '../ui/comum.module.css';
+  --largura-pagina: 52rem;
+}
+
+.cabecalho {
+  composes: cabecalho from '../ui/comum.module.css';
+}
+
+.titulo {
+  composes: titulo from '../ui/comum.module.css';
+}
+
+.subtitulo {
+  composes: subtitulo from '../ui/comum.module.css';
+}
+
+.secao {
+  composes: secao from '../ui/comum.module.css';
+}
+
+.secaoTitulo {
+  composes: secaoTitulo from '../ui/comum.module.css';
+}
+
+.painel {
+  composes: painel from '../ui/comum.module.css';
+}
+
+.cartao {
+  composes: cartao from '../ui/comum.module.css';
+}
+
+.cartaoRotulo {
+  composes: cartaoRotulo from '../ui/comum.module.css';
+}
+
+.cartaoNumero {
+  composes: cartaoNumero from '../ui/comum.module.css';
+}
+
+.dica {
+  composes: dica from '../ui/comum.module.css';
+}
+
+/* O link de download com cara de botão: é a ação da tela. */
+.botao {
+  composes: botao from '../ui/comum.module.css';
+  align-items: center;
+  display: inline-flex;
+  margin: 1rem 0 0.5rem;
+  text-decoration: none;
+}
+
+.lista {
+  line-height: 1.55;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.lista li + li {
+  margin-top: 0.375rem;
+}
+
+.comando {
+  background: var(--cor-superficie-baixa);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pequeno);
+  display: block;
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0.75rem;
+  overflow-x: auto;
+  padding: 0.5rem 0.75rem;
+}

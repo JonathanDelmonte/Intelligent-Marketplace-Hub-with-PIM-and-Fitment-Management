@@ -76,6 +76,7 @@ export const ICONES = [
   'consignacao',
   'fiscal',
   'negocio',
+  'copia',
 ] as const;
 
 export type Icone = (typeof ICONES)[number];
@@ -225,6 +226,14 @@ export const PORTAS: readonly Porta[] = [
       'Regime, CNPJ, estado, certificado e DAS — o que muda a margem, o teto e o emissor de nota. As vendas do mês o sistema conta sozinho.',
     grupo: 'empresa',
     icone: 'negocio',
+  }),
+  porta({
+    href: '/copia',
+    rotulo: 'Cópia dos dados',
+    descricao:
+      'O banco inteiro num arquivo, guardado no seu computador — a cópia de segurança que a nuvem gratuita não faz.',
+    grupo: 'empresa',
+    icone: 'copia',
   }),
 ];
 

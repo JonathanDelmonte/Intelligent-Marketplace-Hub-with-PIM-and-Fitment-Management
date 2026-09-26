@@ -1,8 +1,8 @@
 /**
  * Os ícones da barra, desenhados em traço de 24 por 24.
  *
- * Em SVG no próprio código, e não em biblioteca: são dezesseis desenhos simples, e uma
- * dependência de ícones traria centenas para usar dezesseis. O traço herda a cor do
+ * Em SVG no próprio código, e não em biblioteca: são dezessete desenhos simples, e uma
+ * dependência de ícones traria centenas para usar dezessete. O traço herda a cor do
  * texto (`currentColor`), então a mesma peça serve na barra escura e numa tela clara.
  *
  * Todo ícone é decorativo (`aria-hidden`): o rótulo ao lado é que diz o que é. Ícone
@@ -107,6 +107,15 @@ const DESENHO: Readonly<Record<Icone, ReactNode>> = {
       <rect height="13" rx="2" width="18" x="3" y="7" />
       <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
       <path d="M3 13h18" />
+    </>
+  ),
+  copia: (
+    <>
+      <ellipse cx="11" cy="5.5" rx="7" ry="2.5" />
+      <path d="M4 5.5v10c0 1.4 3.1 2.5 7 2.5" />
+      <path d="M18 5.5V11" />
+      <path d="M4 10.5c0 1.4 3.1 2.5 7 2.5" />
+      <path d="M18 14v7M15 18l3 3 3-3" />
     </>
   ),
 };
