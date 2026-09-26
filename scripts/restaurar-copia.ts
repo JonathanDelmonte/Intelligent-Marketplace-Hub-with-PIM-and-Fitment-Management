@@ -23,6 +23,7 @@ import { open } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { createGunzip } from 'node:zlib';
 import { lerAmbiente } from '@/config/ambiente';
+import { ajustarPerfilDaInstalacao } from '@/dominio/perfil';
 import { criarBancoCom } from '@/infra/banco/cliente';
 import { CopiaInvalida, restaurarCopia, type ResumoDaCopia } from '@/infra/banco/copia';
 
@@ -83,7 +84,8 @@ async function principal(): Promise<number> {
   }
   const confirmado = argumentos.includes('--sim');
 
-  const url = lerAmbiente().DATABASE_URL;
+  const ambiente = lerAmbiente();
+  const url = ambiente.DATABASE_URL;
   const { db, encerrar } = criarBancoCom(url, { max: 2, silenciarAvisos: true });
   try {
     console.log(`Banco de destino: ${destinoLegivel(url)}`);
@@ -99,6 +101,18 @@ async function principal(): Promise<number> {
     console.log('Restaurando…');
     const resumo = await restaurarCopia(db, await linhasDoArquivo(caminho));
     console.log(`Pronto: ${descrever(resumo)}.`);
+    // A cópia da nuvem no computador, ou o contrário: o perfil da loja pode ter outro
+    // nome na cópia (ver `ajustarPerfilDaInstalacao`).
+    const perfil = await ajustarPerfilDaInstalacao(db, ambiente.BANCADA_PERFIL_PADRAO);
+    if (perfil === 'renomeado') {
+      console.log(
+        `O perfil da loja tinha outro nome na cópia, e passou a ser "${ambiente.BANCADA_PERFIL_PADRAO}", o deste sistema.`,
+      );
+    } else if (perfil === 'ausente') {
+      console.log(
+        `Atenção: a cópia não tem perfil de loja chamado "${ambiente.BANCADA_PERFIL_PADRAO}". Ajuste BANCADA_PERFIL_PADRAO no .env para o nome de um perfil da cópia.`,
+      );
+    }
     console.log('As contas de acesso não vêm na cópia: crie a sua de novo na tela de cadastro.');
     return 0;
   } catch (erro) {

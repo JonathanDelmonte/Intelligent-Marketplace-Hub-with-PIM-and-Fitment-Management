@@ -165,3 +165,39 @@ export async function carregarPerfil(
     }),
   };
 }
+
+/**
+ * O que o ajuste depois de restaurar fez com o perfil desta instalação.
+ *
+ * - `existia`: a cópia tem o perfil com o nome que esta instalação usa.
+ * - `renomeado`: a cópia tinha um perfil só, com outro nome, e ele passou a ter este.
+ * - `ausente`: a cópia não tem perfil nenhum, ou tem vários e nenhum com este nome — não
+ *   há como saber qual é o desta instalação.
+ */
+export type AjusteDoPerfil = 'existia' | 'renomeado' | 'ausente';
+
+/**
+ * Depois de restaurar a cópia de outra instalação, o perfil que esta usa pode ter outro
+ * nome na cópia: no computador, o `.env` costuma dar o nome da loja; na nuvem, sem
+ * configuração, é `principal` (ADR 0014). Sem este ajuste, restaurar a cópia da nuvem no
+ * computador — ou o contrário — deixaria toda tela sem perfil.
+ *
+ * Com um perfil só na cópia, ele passa a ter o nome que esta instalação procura: os dados
+ * e o identificador continuam os mesmos, e só a chave de busca muda. Com vários, e nenhum
+ * com este nome, não há como saber qual é o desta instalação, e nada muda.
+ */
+export async function ajustarPerfilDaInstalacao(db: Banco, slug: string): Promise<AjusteDoPerfil> {
+  const perfis = await db
+    .select({ id: perfilVendedor.id, slug: perfilVendedor.slug })
+    .from(perfilVendedor);
+  if (perfis.some((perfil) => perfil.slug === slug)) return 'existia';
+
+  const [unico, ...outros] = perfis;
+  if (unico === undefined || outros.length > 0) return 'ausente';
+
+  await db
+    .update(perfilVendedor)
+    .set({ slug, atualizadoEm: new Date() })
+    .where(eq(perfilVendedor.id, unico.id));
+  return 'renomeado';
+}

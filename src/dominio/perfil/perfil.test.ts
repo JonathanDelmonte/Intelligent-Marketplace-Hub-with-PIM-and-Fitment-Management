@@ -15,6 +15,7 @@ import {
 } from '@/infra/banco/teste';
 import {
   PerfilNaoEncontrado,
+  ajustarPerfilDaInstalacao,
   carregarPerfil,
   contextoDoVendedorDe,
   nomeLegivelDoSlug,
@@ -199,6 +200,56 @@ describe.skipIf(!temBancoDeTeste())('carregamento do perfil', () => {
     const perfil = await carregarPerfil(conexao.db, 'tema-torto');
     expect(perfil.visual).toBeNull();
     expect(perfil.nome).toBe('Tema torto');
+  });
+});
+
+describe.skipIf(!temBancoDeTeste())('ajuste do perfil depois de restaurar', () => {
+  let conexao: ConexaoDeTeste;
+
+  beforeEach(async () => {
+    conexao ??= abrirBancoDeTeste();
+    await limparTabelas(conexao.db, ['pedido', 'perfil_vendedor']);
+  });
+
+  afterAll(async () => {
+    await conexao.encerrar();
+  });
+
+  const perfil = (slug: string) =>
+    conexao.db
+      .insert(perfilVendedor)
+      .values({ slug, nome: `Loja ${slug}`, regime: 'cpf' })
+      .returning({ id: perfilVendedor.id });
+
+  it('a cópia com o perfil desta instalação fica como está', async () => {
+    await perfil('principal');
+    await perfil('outra');
+
+    expect(await ajustarPerfilDaInstalacao(conexao.db, 'principal')).toBe('existia');
+    expect((await carregarPerfil(conexao.db, 'outra')).slug).toBe('outra');
+  });
+
+  it('a cópia de outra instalação, com um perfil só, passa a ter o nome desta', async () => {
+    // A cópia veio do computador, onde o perfil se chama pelo nome da loja; a nuvem
+    // procura `principal`.
+    const [daCopia] = await perfil('loja-do-computador');
+
+    expect(await ajustarPerfilDaInstalacao(conexao.db, 'principal')).toBe('renomeado');
+
+    const carregado = await carregarPerfil(conexao.db, 'principal');
+    expect(carregado.id).toBe(daCopia?.id);
+    expect(carregado.nome).toBe('Loja loja-do-computador');
+  });
+
+  it('sem perfil, ou com vários e nenhum com este nome, não há como saber: nada muda', async () => {
+    expect(await ajustarPerfilDaInstalacao(conexao.db, 'principal')).toBe('ausente');
+
+    await perfil('uma');
+    await perfil('outra');
+    expect(await ajustarPerfilDaInstalacao(conexao.db, 'principal')).toBe('ausente');
+    await expect(carregarPerfil(conexao.db, 'principal')).rejects.toBeInstanceOf(
+      PerfilNaoEncontrado,
+    );
   });
 });
 
