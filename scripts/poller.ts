@@ -27,7 +27,7 @@ import { encerrarBanco } from '@/infra/banco/cliente';
 import { Poller, ligarSinaisDeEncerramento } from '@/infra/fila/poller';
 import { criarRegistrador, nivelDoAmbiente } from '@/infra/log';
 import type { Registrador } from '@/infra/log';
-import { montarNucleo, tarefaCompleta } from '@/infra/montagem';
+import { montarNucleo, tarefaDoProcesso } from '@/infra/montagem';
 import type { Nucleo } from '@/infra/montagem';
 
 carregarEnv();
@@ -103,9 +103,9 @@ async function principal(): Promise<number> {
 
   const ambiente = lerAmbiente();
   const nucleo = montarNucleo();
-  // A composição das três filas mora em `montagem.ts`, com a ordem de prioridade e
-  // o motivo. Este script e o botão da tela de jobs usam a mesma, de propósito.
-  const tarefa = tarefaCompleta(nucleo, log);
+  // A composição das filas mora em `montagem.ts`, com a ordem de prioridade e o motivo.
+  // Este script roda a mesma do botão da tela de jobs, mais a limpeza da nuvem no fim.
+  const tarefa = tarefaDoProcesso(nucleo, log);
 
   const limite = inteiro('limite');
   const ocioso = inteiro('ocioso');
@@ -125,6 +125,7 @@ async function principal(): Promise<number> {
     // O nome do sistema vem de configuração até no log (ADR 0003).
     sistema: ambiente.BANCADA_NOME_SISTEMA,
     armazenamento: nucleo.armazenamento.descricao,
+    retencaoDoConteudoDias: nucleo.armazenamento.retencaoDias,
     pid: process.pid,
   });
 

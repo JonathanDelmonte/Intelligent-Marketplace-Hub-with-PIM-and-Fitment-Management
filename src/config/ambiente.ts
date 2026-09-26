@@ -134,7 +134,8 @@ const esquemaAmbiente = z
      * O armazenamento de conteúdo fora do disco, num serviço compatível com S3 — o
      * Supabase Storage, no Render gratuito (ADR 0013), onde o disco some a cada
      * publicação. Com o endereço, os arquivos vão para lá e `ARMAZENAMENTO_DIR` deixa de
-     * valer; sem ele, tudo fica em disco, como no computador de quem desenvolve.
+     * valer; sem ele, tudo fica em disco, como no computador de quem desenvolve. Lá, o
+     * arquivo é temporário: sai uns dias depois de processado (ADR 0016).
      */
     ARMAZENAMENTO_S3_ENDPOINT: z
       .url('ARMAZENAMENTO_S3_ENDPOINT precisa ser um endereço https://…')

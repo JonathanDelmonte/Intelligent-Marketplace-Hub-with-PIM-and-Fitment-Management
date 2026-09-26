@@ -58,6 +58,11 @@ import { type Ambiente, lerAmbiente } from '@/config/ambiente';
 import { ArmazenamentoDeConteudo } from './armazenamento/conteudo';
 import type { Deposito } from './armazenamento/deposito';
 import { DepositoS3 } from './armazenamento/deposito-s3';
+import {
+  LimpezaDoConteudo,
+  RETENCAO_NA_NUVEM_DIAS,
+  tarefaDeLimpeza,
+} from './armazenamento/limpeza';
 import { banco, type Banco } from './banco/cliente';
 import { Fila } from './fila/fila';
 import { tarefasEmOrdem, type Tarefa } from './fila/poller';
@@ -92,12 +97,19 @@ export interface OpcoesDaMontagem {
    * de internet nem bate em serviço de terceiro.
    */
   readonly rede?: OpcoesDaRede | undefined;
+  /**
+   * Dias que o arquivo enviado fica guardado sem uso. Ausente, fica para sempre — o
+   * disco do computador de quem usa. Na nuvem, `RETENCAO_NA_NUVEM_DIAS` (ADR 0016).
+   */
+  readonly retencaoDoConteudoDias?: number | undefined;
 }
 
 export interface Nucleo {
   readonly db: Banco;
   readonly fila: Fila;
   readonly armazenamento: ArmazenamentoDeConteudo;
+  /** Apaga da nuvem o arquivo que passou do prazo (ADR 0016). Sem prazo, não faz nada. */
+  readonly limpeza: LimpezaDoConteudo;
   readonly ingestor: IngestorDeProdutoExterno;
   readonly orquestrador: Orquestrador;
   readonly executor: ExecutorDeIngestao;
@@ -128,6 +140,9 @@ export interface Nucleo {
 export const NOME_DA_TAREFA_COMPLETA =
   'ingestao+extracao+embedding+identidade+compatibilidade+pedidos+monitor+conferencia+prospector';
 
+/** Nome da tarefa do processo da fila: a completa, mais a limpeza da nuvem. */
+export const NOME_DA_TAREFA_DO_PROCESSO = `${NOME_DA_TAREFA_COMPLETA}+limpeza`;
+
 /**
  * A tarefa que o sistema roda, com as filas e as tarefas em lote na ordem de prioridade.
  *
@@ -142,7 +157,29 @@ export function tarefaCompleta(
   nucleo: Nucleo,
   registrador: Registrador = registradorSilencioso,
 ): Tarefa {
-  return tarefasEmOrdem(NOME_DA_TAREFA_COMPLETA, [
+  return tarefasEmOrdem(NOME_DA_TAREFA_COMPLETA, tarefasDaFila(nucleo, registrador));
+}
+
+/**
+ * A tarefa do processo da fila: a completa, e a limpeza da nuvem por último.
+ *
+ * A limpeza fica fora de `tarefaCompleta` porque o botão "Processar agora" também roda a
+ * completa, e apagar arquivo da nuvem não é o que se pede ao apertá-lo — nem deve contar
+ * como "processado" na resposta. A lista é uma só, estendida, e não uma composição de
+ * composições: o log de cada tique diz a tarefa de dentro que trabalhou.
+ */
+export function tarefaDoProcesso(
+  nucleo: Nucleo,
+  registrador: Registrador = registradorSilencioso,
+): Tarefa {
+  return tarefasEmOrdem(NOME_DA_TAREFA_DO_PROCESSO, [
+    ...tarefasDaFila(nucleo, registrador),
+    tarefaDeLimpeza(nucleo.limpeza, registrador),
+  ]);
+}
+
+function tarefasDaFila(nucleo: Nucleo, registrador: Registrador): Tarefa[] {
+  return [
     tarefaDeIngestao(nucleo.executor, registrador),
     // Antes da identidade: com extração pendente, a resolução espera e resolve já com
     // marca e modelo, em vez de resolver sem e ter de resolver de novo.
@@ -160,7 +197,7 @@ export function tarefaCompleta(
     // O prospector é o último da ordem de propósito: é o único que gasta dinheiro por
     // passo, e fila de dado novo não deve esperar investigação.
     tarefaDoProspector(nucleo.executorDoProspector, registrador),
-  ]);
+  ];
 }
 
 /**
@@ -192,7 +229,12 @@ export function montarNucleoCom(
   opcoes: OpcoesDaMontagem = {},
 ): Nucleo {
   const fila = new Fila(db);
-  const armazenamento = new ArmazenamentoDeConteudo(destinoDeConteudo);
+  const armazenamento = new ArmazenamentoDeConteudo(
+    destinoDeConteudo,
+    opcoes.retencaoDoConteudoDias === undefined
+      ? {}
+      : { retencaoDias: opcoes.retencaoDoConteudoDias },
+  );
   // O ingestor avisa o monitor quando o preço de uma recaptura muda. É a única
   // ligação entre a fase 3 e a fase 11, e ela mora aqui porque é montagem — nem a
   // ingestão nem o monitor precisam conhecer o outro.
@@ -319,6 +361,7 @@ export function montarNucleoCom(
     db,
     fila,
     armazenamento,
+    limpeza: new LimpezaDoConteudo(armazenamento, fila),
     ingestor,
     orquestrador,
     executor,
@@ -338,19 +381,29 @@ export function montarNucleoCom(
 }
 
 /**
- * Onde o conteúdo mora: no S3 quando há endereço (o Render gratuito, ADR 0013), senão
- * em disco. A validação do ambiente já garantiu chave e segredo junto do endereço.
+ * Onde o conteúdo mora, e por quanto tempo.
+ *
+ * No S3 quando há endereço (o Render gratuito, ADR 0013), e aí é temporário: o arquivo
+ * sai da nuvem uns dias depois de processado, porque o original está com quem o enviou
+ * (ADR 0016). Sem endereço, em disco e para sempre — é o computador de quem usa, e o
+ * espaço é dele. A validação do ambiente já garantiu chave e segredo junto do endereço.
  */
-function destinoDoConteudo(ambiente: Ambiente): string | Deposito {
+function conteudoDoAmbiente(ambiente: Ambiente): {
+  readonly destino: string | Deposito;
+  readonly retencaoDias?: number;
+} {
   const endpoint = ambiente.ARMAZENAMENTO_S3_ENDPOINT;
-  if (endpoint === undefined) return ambiente.ARMAZENAMENTO_DIR;
-  return new DepositoS3({
-    endpoint,
-    regiao: ambiente.ARMAZENAMENTO_S3_REGIAO,
-    chave: ambiente.ARMAZENAMENTO_S3_CHAVE ?? '',
-    segredo: ambiente.ARMAZENAMENTO_S3_SEGREDO ?? '',
-    balde: ambiente.ARMAZENAMENTO_S3_BALDE,
-  });
+  if (endpoint === undefined) return { destino: ambiente.ARMAZENAMENTO_DIR };
+  return {
+    destino: new DepositoS3({
+      endpoint,
+      regiao: ambiente.ARMAZENAMENTO_S3_REGIAO,
+      chave: ambiente.ARMAZENAMENTO_S3_CHAVE ?? '',
+      segredo: ambiente.ARMAZENAMENTO_S3_SEGREDO ?? '',
+      balde: ambiente.ARMAZENAMENTO_S3_BALDE,
+    }),
+    retencaoDias: RETENCAO_NA_NUVEM_DIAS,
+  };
 }
 
 /**
@@ -374,14 +427,16 @@ function destinoDoConteudo(ambiente: Ambiente): string | Deposito {
 export function montarNucleo(): Nucleo {
   const ambiente = lerAmbiente();
   const db = banco();
+  const conteudo = conteudoDoAmbiente(ambiente);
   return montarNucleoCom(
     db,
-    destinoDoConteudo(ambiente),
+    conteudo.destino,
     async () => {
       const perfil = await carregarPerfil(db, ambiente.BANCADA_PERFIL_PADRAO);
       return perfil.id;
     },
     {
+      retencaoDoConteudoDias: conteudo.retencaoDias,
       // As ferramentas do garimpo saem para a internet: buscador, páginas, CNPJ, PNCP.
       rede: {},
       // Por job, e não uma vez aqui: cada chamada monta um orçamento novo.

@@ -28,7 +28,14 @@ import {
   temBancoDeTeste,
   type ConexaoDeTeste,
 } from '@/infra/banco/teste';
-import { NOME_DA_TAREFA_COMPLETA, drenar, montarNucleoCom, tarefaCompleta } from './montagem';
+import {
+  NOME_DA_TAREFA_COMPLETA,
+  NOME_DA_TAREFA_DO_PROCESSO,
+  drenar,
+  montarNucleoCom,
+  tarefaCompleta,
+  tarefaDoProcesso,
+} from './montagem';
 
 const NL = String.fromCharCode(10);
 const EAN = '7896541200909';
@@ -207,6 +214,59 @@ describe.skipIf(!temBancoDeTeste())('tarefa completa', () => {
     const jobs = await nucleo.fila.ultimos();
     expect(jobs.some((j) => j.tipo === TIPO_JOB_PEDIDOS)).toBe(false);
     expect((await nucleo.pedidos.resumo(await resolver())).pedidos).toBe(0);
+  });
+
+  it('o processo da fila roda a completa, e a limpeza da nuvem por último', () => {
+    const nucleo = montarNucleoCom(
+      conexao.db,
+      diretorio,
+      resolvedorDePerfilDeTeste(conexao.db, 'perfil-montagem'),
+    );
+    expect(tarefaDoProcesso(nucleo).nome).toBe(NOME_DA_TAREFA_DO_PROCESSO);
+    expect(NOME_DA_TAREFA_DO_PROCESSO).toBe(`${NOME_DA_TAREFA_COMPLETA}+limpeza`);
+  });
+
+  it('o arquivo enviado só tem prazo quando a montagem dá — na nuvem', () => {
+    const resolver = resolvedorDePerfilDeTeste(conexao.db, 'perfil-montagem');
+    expect(montarNucleoCom(conexao.db, diretorio, resolver).armazenamento.retencaoDias).toBeNull();
+    const naNuvem = montarNucleoCom(conexao.db, diretorio, resolver, {
+      retencaoDoConteudoDias: 7,
+    });
+    expect(naNuvem.armazenamento.retencaoDias).toBe(7);
+  });
+
+  it('planilha que saiu da nuvem: rodar de novo pede o arquivo, e reenviá-lo basta', async () => {
+    const resolver = resolvedorDePerfilDeTeste(conexao.db, 'perfil-montagem');
+    const nucleo = montarNucleoCom(conexao.db, diretorio, resolver, {
+      retencaoDoConteudoDias: 7,
+    });
+    const planilha = {
+      entrada: { tipo: 'arquivo', nome: 'vendas_mercadolivre.csv' },
+      conteudo: new TextEncoder().encode(CSV_DE_VENDAS),
+    } as const;
+
+    expect((await nucleo.orquestrador.receber(planilha)).devolvidosAFila).toEqual([]);
+    await drenar(tarefaCompleta(nucleo), 20);
+    const importacao = (await nucleo.fila.ultimos()).find((j) => j.tipo === TIPO_JOB_PEDIDOS);
+    if (importacao === undefined) throw new Error('a planilha de venda não foi encaminhada');
+    expect(importacao.status).toBe('concluido');
+
+    // A limpeza tirou o arquivo da nuvem, e alguém pede para rodar a importação de novo.
+    const { hashConteudo } = importacao.entrada as { hashConteudo: string };
+    await nucleo.armazenamento.apagar(hashConteudo);
+    await nucleo.fila.reenfileirar(importacao.id);
+    await drenar(tarefaCompleta(nucleo), 5);
+
+    const parada = await nucleo.fila.buscarDetalhado(importacao.id);
+    expect(parada?.status).toBe('pendente_revisao');
+    expect(parada?.erro).toContain('já saiu da nuvem, onde fica 7 dias depois de processado');
+
+    // Enviar o mesmo arquivo devolve à fila o que esperava por ele, sem ninguém procurar.
+    expect((await nucleo.orquestrador.receber(planilha)).devolvidosAFila).toEqual([importacao.id]);
+    await drenar(tarefaCompleta(nucleo), 5);
+
+    expect((await nucleo.fila.buscarDetalhado(importacao.id))?.status).toBe('concluido');
+    expect((await nucleo.pedidos.resumo(await resolver())).pedidos).toBe(1);
   });
 
   it('respeita o teto, porque isso roda dentro de uma requisição', async () => {
