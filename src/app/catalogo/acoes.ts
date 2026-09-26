@@ -24,8 +24,13 @@ import { ehPlataforma } from '@/dominio/precificacao/tipos';
 import { banco } from '@/infra/banco/cliente';
 import { criarRegistrador, nivelDoAmbiente } from '@/infra/log';
 import { lerReaisDigitados } from '@/lib/dinheiro';
-import { caminhoDoProdutoCriado, type CodigoDeAviso } from './apresentacao';
-import { CAMINHO } from './constantes';
+import {
+  alvoEmPercentual,
+  caminhoDoProdutoCriado,
+  lerAlvo,
+  type CodigoDeAviso,
+} from './apresentacao';
+import { CAMINHO, CAMINHO_DO_NOVO, MARGEM_ALVO_PADRAO_BP } from './constantes';
 
 const log = criarRegistrador({
   nivelMinimo: nivelDoAmbiente(process.env['LOG_NIVEL']),
@@ -36,8 +41,44 @@ function paraLista(codigo: CodigoDeAviso): string {
   return `${CAMINHO}?${new URLSearchParams({ r: codigo }).toString()}`;
 }
 
-function paraProduto(id: string, codigo: CodigoDeAviso): string {
-  return `${CAMINHO}/${id}?${new URLSearchParams({ r: codigo }).toString()}`;
+/**
+ * A loja e o alvo que a tela mandava, para ela voltar do jeito que estava.
+ *
+ * Os dois vêm do formulário como texto, e só voltam se forem de verdade uma loja e um
+ * alvo: é endereço de redirecionamento montado com o que chegou de fora.
+ */
+function contextoDaTela(dados: FormData | undefined): URLSearchParams {
+  const busca = new URLSearchParams();
+  const loja = dados?.get('plataforma');
+  if (typeof loja === 'string' && ehPlataforma(loja)) busca.set('plataforma', loja);
+  const alvoBruto = dados?.get('alvo');
+  const alvo = typeof alvoBruto === 'string' ? lerAlvo(alvoBruto) : null;
+  if (alvo !== null && alvo !== MARGEM_ALVO_PADRAO_BP) busca.set('alvo', alvoEmPercentual(alvo));
+  return busca;
+}
+
+function paraProduto(id: string, codigo: CodigoDeAviso, dados?: FormData): string {
+  const busca = contextoDaTela(dados);
+  busca.set('r', codigo);
+  return `${CAMINHO}/${id}?${busca.toString()}`;
+}
+
+/** A linha do produto na tabela de preços, com o alvo que estava escolhido. */
+function paraLinha(id: string, codigo: CodigoDeAviso, dados: FormData): string {
+  const busca = contextoDaTela(dados);
+  busca.delete('plataforma');
+  busca.set('r', codigo);
+  return `${CAMINHO}?${busca.toString()}#p-${id}`;
+}
+
+/** O cadastro de novo, com o nome e a loja que vinham, para ninguém redigitar. */
+function paraCadastro(codigo: CodigoDeAviso, dados: FormData): string {
+  const busca = new URLSearchParams({ r: codigo });
+  const titulo = dados.get('titulo');
+  if (typeof titulo === 'string' && titulo.trim().length >= 3) busca.set('novo', titulo.trim());
+  const loja = dados.get('plataforma');
+  if (typeof loja === 'string' && ehPlataforma(loja)) busca.set('plataforma', loja);
+  return `${CAMINHO_DO_NOVO}?${busca.toString()}`;
 }
 
 async function repositorio(): Promise<{
@@ -70,7 +111,7 @@ export async function criarProduto(dados: FormData): Promise<void> {
 
   if (!lido.success) {
     log.aviso('catalogo.formulario_invalido', { erro: lido.error.message });
-    redirect(paraLista('produto_invalido'));
+    redirect(paraCadastro('produto_invalido', dados));
   }
 
   // O EAN passa pelo dígito verificador do domínio, e é lá que a mensagem certa mora.
@@ -82,7 +123,7 @@ export async function criarProduto(dados: FormData): Promise<void> {
 
   if (!novo.success) {
     log.aviso('catalogo.sku_invalido', { erro: novo.error.message });
-    redirect(paraLista('produto_invalido'));
+    redirect(paraCadastro('produto_invalido', dados));
   }
 
   let id: string;
@@ -92,19 +133,25 @@ export async function criarProduto(dados: FormData): Promise<void> {
     id = criado.id;
   } catch (erro) {
     log.erro('catalogo.criacao_falhou', { erro });
-    redirect(paraLista('falha'));
+    redirect(paraCadastro('falha', dados));
   }
 
   revalidatePath(CAMINHO);
   // Leva para o produto: o passo seguinte é informar o custo, e ele é lá. Quando o
-  // cadastro veio do "Publicar em" do garimpo, a loja escolhida vai junto, e a ficha
-  // abre com o simulador nela (ADR 0009).
+  // cadastro veio do "Publicar em" do garimpo, a loja escolhida vai junto, e a conta
+  // abre nela (ADR 0009).
   const loja = dados.get('plataforma');
   redirect(caminhoDoProdutoCriado(id, ehPlataforma(loja) ? loja : undefined, 'criado'));
 }
 
 const esquemaDoId = z.string().trim().uuid();
 
+/**
+ * Salva o custo, da tabela ou da página do produto.
+ *
+ * `volta=lista` é a tabela de preços: o custo é perguntado na própria linha, e salvar
+ * devolve para ela. Sem isso, volta para o produto, na loja e no alvo que estavam na tela.
+ */
 export async function salvarCusto(dados: FormData): Promise<void> {
   const id = esquemaDoId.safeParse(dados.get('id') ?? '');
   if (!id.success) {
@@ -112,12 +159,16 @@ export async function salvarCusto(dados: FormData): Promise<void> {
     redirect(paraLista('falha'));
   }
 
+  const naLista = dados.get('volta') === 'lista';
+  const destino = (codigo: CodigoDeAviso): string =>
+    naLista ? paraLinha(id.data, codigo, dados) : paraProduto(id.data, codigo, dados);
+
   // `FormData.get` devolve `File` ou string, e `String(File)` viraria
-  // "[object Object]" — que o leitor de reais recusaria por acidente, com a mensagem
+  // "[object Object]", que o leitor de reais recusaria por acidente, com a mensagem
   // certa pelo motivo errado.
   const bruto = dados.get('custo');
   const custo = lerReaisDigitados(typeof bruto === 'string' ? bruto : '');
-  if (custo === null) redirect(paraProduto(id.data, 'custo_invalido'));
+  if (custo === null) redirect(destino('custo_invalido'));
 
   let salvou = false;
   try {
@@ -125,11 +176,12 @@ export async function salvarCusto(dados: FormData): Promise<void> {
     salvou = await repo.atualizarCusto({ perfil: perfil.id, skuId: id.data, custo });
   } catch (erro) {
     log.erro('catalogo.custo_falhou', { erro });
-    redirect(paraProduto(id.data, 'falha'));
+    redirect(destino('falha'));
   }
 
+  revalidatePath(CAMINHO);
   revalidatePath(`${CAMINHO}/${id.data}`);
-  redirect(paraProduto(id.data, salvou ? 'custo' : 'nada'));
+  redirect(destino(salvou ? 'custo' : 'nada'));
 }
 
 /**

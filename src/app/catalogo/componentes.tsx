@@ -1,50 +1,31 @@
 /**
- * Componentes da tela de catálogo. Servidor, sem estado, sem JavaScript no cliente.
+ * As peças de servidor da Catálogo e preço: o que não precisa mudar enquanto a pessoa
+ * mexe. A tabela de preços e o cupom, que mudam, estão em `tabela-de-precos.tsx` e
+ * `conta-da-venda.tsx`.
  *
- * O simulador de preço é um formulário `GET`: os parâmetros viajam na URL, a página
- * renderiza no servidor, e o resultado é compartilhável e sobrevive a recarregar. Sem
- * JavaScript de cliente para uma tela que só precisa recalcular quando alguém pede.
+ * Formulário é ação de servidor, e funciona sem JavaScript no navegador.
  */
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import type { SkuGravado } from '@/dominio/catalogo/sku';
 import { ROTULO_DO_CAMPO, estadoFiscal } from '@/dominio/fiscal/codigos';
-import type { SimulacaoDeFaixa } from '@/dominio/precificacao/simulador';
-import {
-  MODOS_FRETE,
-  PLATAFORMAS,
-  TIPOS_ANUNCIO_ML,
-  type Aviso as AvisoDeMargem,
-  type Plataforma,
-  type ResultadoDeMargem,
-} from '@/dominio/precificacao/tipos';
-import { centavos, centavosParaReais, formatarBRL } from '@/lib/dinheiro';
+import type { Plataforma } from '@/dominio/precificacao/tipos';
+import { centavos, centavosParaDigitar, formatarBRL } from '@/lib/dinheiro';
 import { contagem } from '@/lib/texto';
-import {
-  ROTULO_DA_PLATAFORMA,
-  ROTULO_DO_MODO_FRETE,
-  ROTULO_DO_TIPO_ANUNCIO_ML,
-} from '../ui/rotulos';
 import { CAMINHO as CAMINHO_FISCAL } from '../fiscal/constantes';
 import { CAMINHO as CAMINHO_DE_JUNTAR } from '../juntar-iguais/constantes';
-import { IDENTIDADE_DA_LOJA } from '../lojas/identidade';
-import { Selo } from '../lojas/selo';
-import { formatarRelativo } from '../ui/tempo';
 import { criarProduto, desativarProduto, reativarProduto, salvarCusto, salvarFicha } from './acoes';
 import {
   alvoEmPercentual,
-  estadoDoProduto,
-  etiquetaDoProduto,
-  linhasDaDecomposicao,
-  margemLegivel,
-  ordenarAvisos,
-  TOM_DA_SEVERIDADE,
+  PERGUNTA_DO_CUSTO_VELHO,
+  textoDoCusto,
   type Aviso,
-  type LojaParaPublicar,
-  type ParametrosDoSimulador,
 } from './apresentacao';
-import { CAMINHO } from './constantes';
 import estilo from './catalogo.module.css';
+import { CAMINHO, CAMINHO_DO_NOVO } from './constantes';
+import { SinalAlerta, SinalCerto, SinalVoltar } from './sinais';
 
+/** O aviso depois de uma ação: uma linha, com o sinal do tom. */
 export function AvisoDaAcao({ aviso }: { readonly aviso: Aviso }) {
   const classe =
     aviso.tom === 'erro'
@@ -53,86 +34,122 @@ export function AvisoDaAcao({ aviso }: { readonly aviso: Aviso }) {
         ? estilo.avisoAtencao
         : estilo.aviso;
   return (
-    <div className={classe} role="status">
-      <strong className={estilo.avisoTitulo}>{aviso.titulo}</strong>
-      <span className={estilo.avisoCorpo}>{aviso.corpo}</span>
-    </div>
+    <p className={classe} role="status">
+      <span className={estilo.avisoSinal}>
+        {aviso.tom === 'ok' ? <SinalCerto /> : <SinalAlerta />}
+      </span>
+      <span>
+        <strong className={estilo.avisoTitulo}>{aviso.titulo}</strong>
+        {aviso.corpo === null ? null : <> {aviso.corpo}</>}
+      </span>
+    </p>
   );
 }
 
-/**
- * Um número em reais do jeito que se digita de volta no campo: sem "R$".
- *
- * Recebe número cru porque é o que a linha do banco devolve, e a marca `Centavos` é
- * posta na borda — aqui, com `centavos()`, e não com `as`.
- */
-function reaisNoCampo(valor: number | null): string {
-  return valor === null ? '' : centavosParaReais(centavos(valor)).toFixed(2).replace('.', ',');
-}
-
-export function Produtos({
-  produtos,
-  agora,
-}: {
-  readonly produtos: readonly SkuGravado[];
-  readonly agora: Date;
-}) {
-  if (produtos.length === 0) {
-    return (
-      <p className={estilo.vazio}>
-        Nenhum produto ainda. O catálogo é o que liga o que você compra ao que você anuncia — sem
-        ele, a margem não tem de onde sair.
-      </p>
-    );
-  }
-
+/** "‹ Catálogo e preço", o caminho de volta das telas de dentro. */
+export function Voltar() {
   return (
-    <ul className={estilo.lista}>
-      {produtos.map((produto) => {
-        const etiqueta = etiquetaDoProduto(estadoDoProduto(produto, agora));
-        const classe =
-          etiqueta.tom === 'ok'
-            ? estilo.etiquetaOk
-            : etiqueta.tom === 'alerta'
-              ? estilo.etiquetaAlerta
-              : estilo.etiquetaAtencao;
-
-        return (
-          <li className={estilo.item} key={produto.id}>
-            <div className={estilo.itemCabecalho}>
-              <div>
-                <h3 className={estilo.itemTitulo}>
-                  <Link className={estilo.link} href={`${CAMINHO}/${produto.id}`}>
-                    {produto.tituloInterno}
-                  </Link>
-                </h3>
-                <p className={estilo.itemSub}>
-                  {produto.marca ?? 'sem marca'}
-                  {produto.ean === null ? '' : ` · ${produto.ean}`}
-                  {' · '}
-                  {produto.custoAtual === null
-                    ? 'custo não informado'
-                    : `custo ${formatarBRL(centavos(produto.custoAtual))}`}
-                  {produto.custoAtualizadoEm === null
-                    ? ''
-                    : ` (${formatarRelativo(produto.custoAtualizadoEm, agora)})`}
-                </p>
-              </div>
-              <span className={classe}>{etiqueta.texto}</span>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+    <Link className={estilo.voltar} href={CAMINHO}>
+      <SinalVoltar />
+      Catálogo e preço
+    </Link>
   );
 }
 
+/** Um bloco da página do produto: título curto e o conteúdo, sem caixa em volta. */
+export function Bloco({
+  id,
+  titulo,
+  children,
+  destaque = false,
+}: {
+  readonly id: string;
+  readonly titulo: string;
+  readonly children: ReactNode;
+  readonly destaque?: boolean;
+}) {
+  return (
+    <section aria-labelledby={id} className={destaque ? estilo.blocoDestaque : estilo.bloco}>
+      <h2 className={estilo.blocoTitulo} id={id}>
+        {titulo}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+// ─── A lista ─────────────────────────────────────────────────────────────────
+
 /**
- * O formulário de produto novo.
+ * O catálogo vazio: a primeira pergunta, e não uma explicação.
  *
- * `tituloInicial` e `plataforma` chegam quando outra tela pede o cadastro — o "Publicar
- * em" do garimpo. A loja vai escondida e volta na ficha do produto criado, já com o
- * simulador nela: é o passo seguinte de quem escolheu onde vender.
+ * É o que o dono vê no primeiro dia. Em vez de dizer como o catálogo funciona, a tela
+ * pergunta o que ele vende, com o campo ali mesmo.
+ */
+export function CatalogoVazio() {
+  return (
+    <section aria-labelledby="primeiro-titulo" className={estilo.vazio}>
+      <h2 className={estilo.vazioTitulo} id="primeiro-titulo">
+        Qual é o primeiro produto que você vende?
+      </h2>
+      <p className={estilo.vazioTexto}>
+        Comece por um. Depois você diz quanto paga, e a tabela mostra quanto cobrar em cada loja.
+      </p>
+      <FormularioDeProduto />
+      <p className={estilo.vazioRodape}>
+        Já importou planilha de anúncios? Os anúncios parecidos viram produto em{' '}
+        <Link className={estilo.link} href={CAMINHO_DE_JUNTAR}>
+          Juntar iguais
+        </Link>
+        .
+      </p>
+    </section>
+  );
+}
+
+/** Os desativados, recolhidos no pé da lista: estão lá para voltar, não para trabalhar. */
+export function Desativados({ produtos }: { readonly produtos: readonly SkuGravado[] }) {
+  if (produtos.length === 0) return null;
+  return (
+    <details className={estilo.desativados}>
+      <summary className={estilo.desativadosResumo}>
+        {contagem(produtos.length, 'produto desativado', 'produtos desativados')}
+      </summary>
+      <ul className={estilo.desativadosLista}>
+        {produtos.map((produto) => (
+          <li key={produto.id}>
+            <Link className={estilo.link} href={`${CAMINHO}/${produto.id}`}>
+              {produto.tituloInterno}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+/** Pares esperando decisão em Juntar iguais. Nada quando não há, para o pé ficar quieto. */
+export function ParesEsperando({ pendentes }: { readonly pendentes: number | null }) {
+  if (pendentes === null || pendentes === 0) return null;
+  return (
+    <p className={estilo.pares}>
+      {pendentes === 1
+        ? '1 par de anúncios pode ser o mesmo produto. '
+        : `${String(pendentes)} pares de anúncios podem ser o mesmo produto. `}
+      <Link className={estilo.link} href={CAMINHO_DE_JUNTAR}>
+        Decidir em Juntar iguais
+      </Link>
+    </p>
+  );
+}
+
+// ─── Cadastrar ───────────────────────────────────────────────────────────────
+
+/**
+ * O cadastro: o nome é a pergunta, e o resto é opcional e diz que é.
+ *
+ * `tituloInicial` e `plataforma` chegam quando outra tela pede o cadastro (o "Publicar
+ * em" do garimpo). A loja vai escondida e volta na conta do produto criado.
  */
 export function FormularioDeProduto({
   tituloInicial = '',
@@ -146,10 +163,10 @@ export function FormularioDeProduto({
       {plataforma === undefined ? null : (
         <input name="plataforma" type="hidden" value={plataforma} />
       )}
-      <label className={estilo.campoLargo}>
-        O que é
+      <label className={estilo.campo}>
+        <span className={estilo.rotulo}>Nome do produto</span>
         <input
-          className={estilo.entrada}
+          className={estilo.entradaGrande}
           defaultValue={tituloInicial}
           maxLength={200}
           name="titulo"
@@ -158,133 +175,196 @@ export function FormularioDeProduto({
           type="text"
         />
         <span className={estilo.ajuda}>
-          O nome que <strong>você</strong> usa para reconhecer a peça. O título do anúncio é outro,
-          e a tela de montar anúncio gera aquele.
+          O nome que você usa para reconhecer a peça. O título do anúncio é feito depois.
         </span>
       </label>
 
-      <label className={estilo.campo}>
-        Código de barras
-        <input
-          className={estilo.entrada}
-          inputMode="numeric"
-          name="ean"
-          placeholder="7898123456789"
-          type="text"
-        />
-        <span className={estilo.ajuda}>
-          Opcional, e conferido pelo dígito verificador. É o que o leitor da loja procura.
-        </span>
-      </label>
-
-      <label className={estilo.campo}>
-        Marca
-        <input className={estilo.entrada} maxLength={80} name="marca" type="text" />
-      </label>
-
-      <div className={estilo.acao}>
-        <button className={estilo.botao} type="submit">
-          Acrescentar
-        </button>
+      <div className={estilo.linhaDeCampos}>
+        <label className={estilo.campo}>
+          <span className={estilo.rotulo}>
+            Código de barras <span className={estilo.opcional}>se tiver</span>
+          </span>
+          <input
+            className={estilo.entrada}
+            inputMode="numeric"
+            name="ean"
+            placeholder="7898123456789"
+            type="text"
+          />
+        </label>
+        <label className={estilo.campo}>
+          <span className={estilo.rotulo}>
+            Marca <span className={estilo.opcional}>se tiver</span>
+          </span>
+          <input className={estilo.entrada} maxLength={80} name="marca" type="text" />
+        </label>
       </div>
+
+      <p className={estilo.acoesDoFormulario}>
+        <button className={estilo.botao} type="submit">
+          Cadastrar produto
+        </button>
+      </p>
     </form>
   );
 }
 
+/** O botão do alto da lista, para a tela de cadastro. */
+export function BotaoDeCadastrar() {
+  return (
+    <Link className={estilo.botao} href={CAMINHO_DO_NOVO}>
+      Cadastrar produto
+    </Link>
+  );
+}
+
+// ─── O produto ───────────────────────────────────────────────────────────────
+
 /**
- * O custo, com a idade dele.
+ * Quanto a pessoa paga por uma unidade: a primeira pergunta da página do produto.
  *
- * Formulário próprio porque a data do custo é gravada junto, e é ela que responde se o
- * número ainda vale. Salvar peso não pode reescrever essa data.
+ * Sem custo, ela vem em destaque e com o cursor no campo, porque sem ela a conta não sai.
+ * A loja e o alvo escolhidos vão junto no formulário, para a página voltar do jeito que
+ * estava depois de salvar.
  */
-export function FormularioDeCusto({
+export function PerguntaDoCusto({
   sku,
   agora,
+  plataforma,
+  alvoBp,
 }: {
   readonly sku: SkuGravado;
   readonly agora: Date;
+  readonly plataforma: Plataforma;
+  readonly alvoBp: number;
+}) {
+  const idade = textoDoCusto(sku.custoAtualizadoEm, agora);
+  const semCusto = sku.custoAtual === null;
+  return (
+    <Bloco destaque={semCusto} id="custo" titulo="Você paga">
+      <form action={salvarCusto} className={estilo.perguntaDoCusto}>
+        <input name="id" type="hidden" value={sku.id} />
+        <input name="plataforma" type="hidden" value={plataforma} />
+        <input name="alvo" type="hidden" value={alvoEmPercentual(alvoBp)} />
+        <label className={estilo.campoPergunta} htmlFor="custo-campo">
+          Quanto você paga por uma unidade?
+        </label>
+        <span className={estilo.linhaDaPergunta}>
+          <span className={estilo.campoDinheiro}>
+            <span aria-hidden="true" className={estilo.moeda}>
+              R$
+            </span>
+            <input
+              autoFocus={semCusto}
+              className={estilo.entradaDinheiro}
+              defaultValue={
+                sku.custoAtual === null ? '' : centavosParaDigitar(centavos(sku.custoAtual))
+              }
+              id="custo-campo"
+              inputMode="decimal"
+              name="custo"
+              placeholder="0,00"
+              required
+              type="text"
+            />
+          </span>
+          <button className={estilo.botao} type="submit">
+            Salvar
+          </button>
+        </span>
+        <span className={idade?.velho === true ? estilo.custoVelho : estilo.ajuda}>
+          {idade === null
+            ? 'Com o frete do fornecedor, se você paga. Sem isso, não dá para saber quanto sobra.'
+            : `Valor ${idade.texto}.${idade.velho ? ` ${PERGUNTA_DO_CUSTO_VELHO}` : ''}`}
+        </span>
+      </form>
+    </Bloco>
+  );
+}
+
+/** Uma linha da ficha: o nome do campo e o valor, ou "não informado". */
+function LinhaDaFicha({
+  rotulo,
+  valor,
+}: {
+  readonly rotulo: string;
+  readonly valor: string | null;
 }) {
   return (
-    <form action={salvarCusto} className={estilo.formulario}>
-      <input name="id" type="hidden" value={sku.id} />
-      <label className={estilo.campo}>
-        Custo de compra
-        <input
-          className={estilo.entrada}
-          defaultValue={reaisNoCampo(sku.custoAtual)}
-          inputMode="decimal"
-          name="custo"
-          placeholder="18,40"
-          required
-          type="text"
-        />
-        <span className={estilo.ajuda}>
-          {sku.custoAtualizadoEm === null
-            ? 'Nunca informado. Sem custo, a margem que a tela mostra é o teto.'
-            : `Informado ${formatarRelativo(sku.custoAtualizadoEm, agora)}.`}
-        </span>
-      </label>
+    <div className={estilo.fichaLinha}>
+      <dt className={estilo.fichaRotulo}>{rotulo}</dt>
+      <dd className={valor === null ? estilo.fichaFalta : estilo.fichaValor}>
+        {valor ?? 'não informado'}
+      </dd>
+    </div>
+  );
+}
 
-      <div className={estilo.acao}>
-        <button className={estilo.botao} type="submit">
-          Salvar custo
-        </button>
-      </div>
-    </form>
+function milimetrosEmCentimetros(mm: number): string {
+  return (mm / 10).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+}
+
+/**
+ * A ficha, para ler, e o formulário, para mudar.
+ *
+ * Ler é o que se faz quase sempre, então a ficha aparece como lista, e o formulário fica
+ * atrás de "Mudar a ficha". Abre sozinho quando a última tentativa de salvar voltou com
+ * erro, para a pessoa não ter de achar onde estava.
+ */
+export function FichaDoProduto({
+  sku,
+  abrirFormulario,
+}: {
+  readonly sku: SkuGravado;
+  readonly abrirFormulario: boolean;
+}) {
+  const caixa =
+    sku.dimMm === null
+      ? null
+      : `${milimetrosEmCentimetros(sku.dimMm.comprimento)} × ${milimetrosEmCentimetros(sku.dimMm.largura)} × ${milimetrosEmCentimetros(sku.dimMm.altura)} cm`;
+  return (
+    <Bloco id="ficha" titulo="Ficha">
+      <dl className={estilo.ficha}>
+        <LinhaDaFicha rotulo="Marca" valor={sku.marca} />
+        <LinhaDaFicha rotulo="Código de barras" valor={sku.ean} />
+        <LinhaDaFicha
+          rotulo="Peso com embalagem"
+          valor={sku.pesoG === null ? null : `${String(sku.pesoG)} g`}
+        />
+        <LinhaDaFicha rotulo="Caixa" valor={caixa} />
+        <LinhaDaFicha rotulo="Voltagem" valor={sku.voltagem} />
+        <LinhaDaFicha rotulo="Medida que decide se encaixa" valor={sku.medida} />
+        <LinhaDaFicha
+          rotulo="Peças na embalagem"
+          valor={sku.quantidadeEmbalagem === null ? null : String(sku.quantidadeEmbalagem)}
+        />
+        <LinhaDaFicha
+          rotulo="Devolução esperada"
+          valor={
+            sku.taxaDevolucaoEsperadaBp === null
+              ? null
+              : `${(sku.taxaDevolucaoEsperadaBp / 100).toLocaleString('pt-BR')} de cada 100 vendas`
+          }
+        />
+      </dl>
+      <details className={estilo.mudar} open={abrirFormulario}>
+        <summary className={estilo.mudarResumo}>Mudar a ficha</summary>
+        <FormularioDaFicha sku={sku} />
+      </details>
+    </Bloco>
   );
 }
 
 /**
- * O resto da ficha.
- *
- * Os três campos que a margem usa além do custo — peso, dimensão e devolução — mais a
- * marca, que é a que aparece na lista. Cada um em branco entra presumido no cálculo, e
- * o simulador diz quais.
- *
- * Todo campo numérico é `type="text"` com `inputMode`, e não `type="number"`:
- * `type="number"` **não aceita vírgula**, então quem digita "2,5" na devolução perde o
- * que digitou sem aviso — e 2,5% é como se escreve em português. O `inputMode` dá o
- * teclado numérico no celular do mesmo jeito, e a leitura do lado do servidor já troca
- * vírgula por ponto. Apareceu exercitando o formulário no navegador.
+ * O formulário da ficha. Número é `type="text"` com `inputMode`: `type="number"` não
+ * aceita vírgula, e 2,5 é como se escreve em português.
  */
-export function FormularioDaFicha({ sku }: { readonly sku: SkuGravado }) {
+function FormularioDaFicha({ sku }: { readonly sku: SkuGravado }) {
   return (
-    <form action={salvarFicha} className={estilo.formulario}>
+    <form action={salvarFicha} className={estilo.formularioDaFicha}>
       <input name="id" type="hidden" value={sku.id} />
-
       <label className={estilo.campo}>
-        Peso, em gramas
-        <input
-          className={estilo.entrada}
-          defaultValue={sku.pesoG ?? ''}
-          inputMode="numeric"
-          name="pesoG"
-          placeholder="420"
-          type="text"
-        />
-        <span className={estilo.ajuda}>
-          Na balança, com embalagem. É o que decide a faixa de frete.
-        </span>
-      </label>
-
-      <label className={estilo.campo}>
-        Devolução esperada, em %
-        <input
-          className={estilo.entrada}
-          defaultValue={
-            sku.taxaDevolucaoEsperadaBp === null
-              ? ''
-              : String(sku.taxaDevolucaoEsperadaBp / 100).replace('.', ',')
-          }
-          inputMode="decimal"
-          name="devolucao"
-          placeholder="2,5"
-          type="text"
-        />
-      </label>
-
-      <label className={estilo.campo}>
-        Marca
+        <span className={estilo.rotulo}>Marca</span>
         <input
           className={estilo.entrada}
           defaultValue={sku.marca ?? ''}
@@ -293,309 +373,144 @@ export function FormularioDaFicha({ sku }: { readonly sku: SkuGravado }) {
           type="text"
         />
       </label>
-
-      <fieldset className={estilo.medidas}>
-        <legend className={estilo.legenda}>Medida da caixa, em milímetros</legend>
-        {(
-          [
-            ['comprimento', 'Comprimento'],
-            ['largura', 'Largura'],
-            ['altura', 'Altura'],
-          ] as const
-        ).map(([nome, rotulo]) => (
-          <label className={estilo.campoMiudo} key={nome}>
-            {rotulo}
-            <input
-              className={estilo.entradaMiuda}
-              defaultValue={sku.dimMm?.[nome] ?? ''}
-              inputMode="decimal"
-              name={nome}
-              type="text"
-            />
-          </label>
-        ))}
-        <span className={estilo.ajuda}>
-          Os três juntos ou nenhum: dois lados medidos e um em branco não é medida, é medida pela
-          metade.
-        </span>
+      <label className={estilo.campo}>
+        <span className={estilo.rotulo}>Peso com embalagem, em gramas</span>
+        <input
+          className={estilo.entrada}
+          defaultValue={sku.pesoG ?? ''}
+          inputMode="numeric"
+          name="pesoG"
+          placeholder="420"
+          type="text"
+        />
+      </label>
+      <fieldset className={estilo.grupoDeCampos}>
+        <legend className={estilo.rotulo}>Caixa, em milímetros: os três lados, ou nenhum</legend>
+        <div className={estilo.tresCampos}>
+          {(
+            [
+              ['comprimento', 'Comprimento'],
+              ['largura', 'Largura'],
+              ['altura', 'Altura'],
+            ] as const
+          ).map(([nome, rotulo]) => (
+            <label className={estilo.campo} key={nome}>
+              <span className={estilo.rotuloMiudo}>{rotulo}</span>
+              <input
+                className={estilo.entrada}
+                defaultValue={sku.dimMm?.[nome] ?? ''}
+                inputMode="decimal"
+                name={nome}
+                type="text"
+              />
+            </label>
+          ))}
+        </div>
       </fieldset>
-
-      <fieldset className={estilo.medidas}>
-        <legend className={estilo.legenda}>O que o comprador confere antes de comprar</legend>
-
+      <label className={estilo.campo}>
+        <span className={estilo.rotulo}>Voltagem</span>
+        <input
+          className={estilo.entrada}
+          defaultValue={sku.voltagem ?? ''}
+          maxLength={60}
+          name="voltagem"
+          placeholder="Bivolt"
+          type="text"
+        />
+      </label>
+      <label className={estilo.campo}>
+        <span className={estilo.rotulo}>Medida que decide se encaixa</span>
+        <input
+          className={estilo.entrada}
+          defaultValue={sku.medida ?? ''}
+          maxLength={120}
+          name="medida"
+          placeholder="Rosca de 1/2 polegada"
+          type="text"
+        />
+      </label>
+      <div className={estilo.linhaDeCampos}>
         <label className={estilo.campo}>
-          Voltagem
-          <input
-            className={estilo.entrada}
-            defaultValue={sku.voltagem ?? ''}
-            maxLength={60}
-            name="voltagem"
-            placeholder="Bivolt"
-            type="text"
-          />
-        </label>
-
-        <label className={estilo.campoLargo}>
-          Medida que decide se encaixa
-          <input
-            className={estilo.entrada}
-            defaultValue={sku.medida ?? ''}
-            maxLength={120}
-            name="medida"
-            placeholder="Rosca 1/2 polegada"
-            type="text"
-          />
-          <span className={estilo.ajuda}>
-            A medida da peça, com a unidade — não a da caixa, que é o quadro acima.
-          </span>
-        </label>
-
-        <label className={estilo.campo}>
-          Peças na embalagem
+          <span className={estilo.rotulo}>Peças na embalagem</span>
           <input
             className={estilo.entrada}
             defaultValue={sku.quantidadeEmbalagem ?? ''}
             inputMode="numeric"
             name="quantidade"
+            placeholder="1"
+            type="text"
+          />
+        </label>
+        <label className={estilo.campo}>
+          <span className={estilo.rotulo}>Devolução, de cada 100 vendas</span>
+          <input
+            className={estilo.entrada}
+            defaultValue={
+              sku.taxaDevolucaoEsperadaBp === null
+                ? ''
+                : String(sku.taxaDevolucaoEsperadaBp / 100).replace('.', ',')
+            }
+            inputMode="decimal"
+            name="devolucao"
             placeholder="2"
             type="text"
           />
         </label>
-
-        <span className={estilo.ajudaDoQuadro}>
-          Voltagem trocada, medida que não encaixa e quantidade diferente da esperada voltam — o
-          checklist do anúncio cobra os três no nível de um anúncio que não sai.
-        </span>
-      </fieldset>
-
-      <div className={estilo.acao}>
-        <button className={estilo.botao} type="submit">
-          Salvar ficha
-        </button>
       </div>
+      <p className={estilo.acoesDoFormulario}>
+        <button className={estilo.botao} type="submit">
+          Salvar a ficha
+        </button>
+      </p>
     </form>
   );
 }
 
-/**
- * Os parâmetros do simulador, num formulário `GET`.
- *
- * O tipo de anúncio aparece sempre, e não só no Mercado Livre: esconder e mostrar campo
- * exigiria JavaScript, e o M8 já ignora o campo nas outras plataformas. O rótulo diz
- * que ele é do ML.
- */
-export function FormularioDoSimulador({
-  parametros,
-}: {
-  readonly parametros: ParametrosDoSimulador;
-}) {
+/** Os três códigos da nota, e o que falta, com o caminho para a tela Fiscal. */
+export function NotaFiscal({ sku }: { readonly sku: SkuGravado }) {
+  const estado = estadoFiscal({
+    ncm: sku.ncm,
+    cest: null,
+    cst: sku.cst,
+    cclasstrib: sku.cclasstrib,
+  });
+  const campos = [
+    ['ncm', sku.ncm],
+    ['cst', sku.cst],
+    ['cclasstrib', sku.cclasstrib],
+  ] as const;
   return (
-    <form className={estilo.formulario} method="get">
-      <label className={estilo.campo}>
-        Onde vender
-        <select className={estilo.entrada} defaultValue={parametros.plataforma} name="plataforma">
-          {PLATAFORMAS.map((p) => (
-            <option key={p} value={p}>
-              {ROTULO_DA_PLATAFORMA[p]}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className={estilo.campo}>
-        Tipo de anúncio (ML)
-        <select className={estilo.entrada} defaultValue={parametros.tipoAnuncioML} name="tipo">
-          {TIPOS_ANUNCIO_ML.map((t) => (
-            <option key={t} value={t}>
-              {ROTULO_DO_TIPO_ANUNCIO_ML[t]}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className={estilo.campo}>
-        Frete
-        <select className={estilo.entrada} defaultValue={parametros.modoFrete} name="frete">
-          {MODOS_FRETE.map((f) => (
-            <option key={f} value={f}>
-              {ROTULO_DO_MODO_FRETE[f]}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className={estilo.campo}>
-        Margem que eu quero, em %
-        <input
-          className={estilo.entrada}
-          defaultValue={alvoEmPercentual(parametros.margemAlvoBp)}
-          inputMode="decimal"
-          min={1}
-          name="alvo"
-          type="text"
-        />
-      </label>
-
-      <label className={estilo.campo}>
-        Preço a conferir
-        <input
-          className={estilo.entrada}
-          defaultValue={parametros.preco === null ? '' : reaisNoCampo(parametros.preco)}
-          inputMode="decimal"
-          name="preco"
-          placeholder="79,90"
-          type="text"
-        />
-        <span className={estilo.ajuda}>
-          Opcional. Com preço, a tela abre a conta linha por linha.
-        </span>
-      </label>
-
-      <div className={estilo.acao}>
-        <button className={estilo.botao} type="submit">
-          Calcular
-        </button>
-      </div>
-    </form>
-  );
-}
-
-export function Presuncoes({ textos }: { readonly textos: readonly string[] }) {
-  if (textos.length === 0) return null;
-
-  return (
-    <div className={estilo.presuncoes}>
-      <strong className={estilo.presuncoesTitulo}>O cálculo presumiu:</strong>
-      <ul className={estilo.listaDePresuncoes}>
-        {textos.map((texto) => (
-          <li key={texto}>{texto}</li>
+    <Bloco id="fiscal" titulo="Nota fiscal">
+      <dl className={estilo.ficha}>
+        {campos.map(([campo, valor]) => (
+          <LinhaDaFicha
+            key={campo}
+            rotulo={ROTULO_DO_CAMPO[campo]}
+            valor={valor === null || valor.trim() === '' ? null : valor}
+          />
         ))}
-      </ul>
-    </div>
-  );
-}
-
-export function AvisosDaMargem({ avisos }: { readonly avisos: readonly AvisoDeMargem[] }) {
-  if (avisos.length === 0) return null;
-
-  return (
-    <ul className={estilo.listaDeAvisos}>
-      {ordenarAvisos(avisos).map((aviso) => {
-        const tom = TOM_DA_SEVERIDADE[aviso.severidade];
-        const classe =
-          tom === 'erro'
-            ? estilo.avisoDeMargemErro
-            : tom === 'atencao'
-              ? estilo.avisoDeMargemAtencao
-              : estilo.avisoDeMargem;
-        return (
-          <li className={classe} key={aviso.codigo}>
-            {aviso.mensagem}
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-/**
- * A conta, linha por linha, do preço até a sobra.
- *
- * Na ordem em que o dinheiro sai. É a ordem que responde "para onde foi", e é o que
- * transforma "margem de 12%" em algo conferível.
- */
-export function Decomposicao({ resultado }: { readonly resultado: ResultadoDeMargem }) {
-  const negativa = resultado.margemReais < 0;
-
-  return (
-    <>
-      <div className={negativa ? estilo.veredictoRuim : estilo.veredicto}>
-        <strong className={estilo.veredictoNumero}>
-          {formatarBRL(resultado.margemReais)} · {margemLegivel(resultado.margemPontosBase)}
-        </strong>
-        <span className={estilo.veredictoNota}>
-          {negativa
-            ? 'Prejuízo por unidade a este preço.'
-            : `Sobra por unidade, depois de tudo. Repasse líquido: ${formatarBRL(resultado.repasseLiquido)}.`}
-          {resultado.markupSobreCusto === null
-            ? ''
-            : ` Markup de ${resultado.markupSobreCusto.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}× sobre o custo.`}
-        </span>
-      </div>
-
-      <div className={estilo.envelopeDaTabela}>
-        <table className={estilo.tabela}>
-          <caption className={estilo.legendaDaTabela}>
-            Tabela usada: {resultado.tabelaUsada}
-          </caption>
-          <tbody>
-            {linhasDaDecomposicao(resultado).map((linha) => (
-              <tr key={linha.rotulo}>
-                <th className={estilo.rotuloDaLinha} scope="row">
-                  {linha.rotulo}
-                </th>
-                <td className={estilo.numero}>
-                  {linha.subtrai ? '−' : ''}
-                  {formatarBRL(linha.valor)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <AvisosDaMargem avisos={resultado.avisos} />
-    </>
-  );
-}
-
-/**
- * A faixa de preço que funciona, com os degraus.
- *
- * Degrau é onde a comissão ou o frete mudam de faixa: um centavo a mais e a margem cai.
- * A fase 1 calcula isso desde o começo e nunca teve onde aparecer.
- */
-export function Faixas({ simulacao }: { readonly simulacao: SimulacaoDeFaixa }) {
-  return (
-    <>
-      {simulacao.faixasRecomendadas.length === 0 ? (
-        <p className={estilo.vazio}>
-          Nenhuma faixa recomendada nesta varredura. Com o custo e a comissão de hoje, não há trecho
-          de preço que valha a pena — e saber disso antes de anunciar é o ponto.
+      </dl>
+      <p className={estado.prontoPara2027 ? estilo.ajuda : estilo.fichaAviso}>
+        {estado.prontoPara2027
+          ? 'Pronto para a nota de 2027.'
+          : 'A partir de janeiro de 2027, nota sem esses códigos é recusada.'}
+      </p>
+      {sku.ativo ? (
+        <p className={estilo.acoesDoBloco}>
+          <Link
+            className={estilo.botaoSecundario}
+            href={`${CAMINHO_FISCAL}?${new URLSearchParams({ produto: sku.id }).toString()}`}
+          >
+            Preencher na tela Fiscal
+          </Link>
         </p>
-      ) : (
-        <ul className={estilo.lista}>
-          {simulacao.faixasRecomendadas.map((faixa) => (
-            <li className={estilo.item} key={`${String(faixa.de)}-${String(faixa.ate)}`}>
-              <h3 className={estilo.itemTitulo}>
-                {formatarBRL(faixa.de)} a {formatarBRL(faixa.ate)}
-              </h3>
-              <p className={estilo.itemCorpo}>{faixa.motivo}</p>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {simulacao.degraus.length > 0 && (
-        <details className={estilo.bloco}>
-          <summary className={estilo.resumoDoBloco}>
-            ver os {simulacao.degraus.length} degraus de preço desta plataforma
-          </summary>
-          <ul className={estilo.listaMiuda}>
-            {simulacao.degraus.map((degrau) => (
-              <li className={estilo.degrau} key={`${degrau.rotulo}-${String(degrau.preco)}`}>
-                <span>{formatarBRL(degrau.preco)}</span>
-                <span className={estilo.itemSub}>{degrau.rotulo}</span>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-    </>
+      ) : null}
+    </Bloco>
   );
 }
 
-export function Ocorrencias({
+/** Onde este produto apareceu em anúncios e planilhas. Recolhido: é consulta, não trabalho. */
+export function VistoEm({
   ocorrencias,
 }: {
   readonly ocorrencias: readonly {
@@ -606,143 +521,26 @@ export function Ocorrencias({
     readonly url: string | null;
   }[];
 }) {
-  if (ocorrencias.length === 0) {
-    return (
-      <p className={estilo.vazio}>
-        Nenhuma ocorrência ligada. Ocorrência é anúncio ou linha de planilha que fala deste mesmo
-        produto — elas entram pela importação e são ligadas na tela de juntar iguais.
-      </p>
-    );
-  }
-
+  if (ocorrencias.length === 0) return null;
   return (
-    <ul className={estilo.listaMiuda}>
-      {ocorrencias.map((ocorrencia) => (
-        <li className={estilo.ocorrencia} key={ocorrencia.id}>
-          <span>
-            {ocorrencia.url === null ? (
-              ocorrencia.tituloBruto
+    <details className={estilo.vistoEm}>
+      <summary className={estilo.mudarResumo}>
+        Visto em {contagem(ocorrencias.length, 'anúncio', 'anúncios')}
+      </summary>
+      <ul className={estilo.vistoEmLista}>
+        {ocorrencias.map((o) => (
+          <li className={estilo.vistoEmItem} key={o.id}>
+            {o.url === null ? (
+              <span>{o.tituloBruto}</span>
             ) : (
-              <a
-                className={estilo.link}
-                href={ocorrencia.url}
-                rel="noreferrer nofollow"
-                target="_blank"
-              >
-                {ocorrencia.tituloBruto}
+              <a className={estilo.link} href={o.url} rel="noreferrer nofollow" target="_blank">
+                {o.tituloBruto}
               </a>
             )}
-          </span>
-          <span className={estilo.itemSub}>
-            {ocorrencia.plataformaOuSite ?? 'origem não informada'}
-            {ocorrencia.preco === null ? '' : ` · ${formatarBRL(centavos(ocorrencia.preco))}`}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-/**
- * O cadastro fiscal do produto, resumido, com o caminho para editar.
- *
- * O formulário não se repete aqui: ele mora na tela Fiscal, com a sugestão de NCM e a
- * validação de cada código, e duas cópias do mesmo formulário divergiriam na primeira
- * mudança. O botão abre a tela Fiscal **focada neste produto**, e ela devolve para cá.
- */
-export function ResumoFiscal({ sku }: { readonly sku: SkuGravado }) {
-  const estado = estadoFiscal({
-    ncm: sku.ncm,
-    // CEST não é obrigatório e não entra na conta do que falta; a tela Fiscal mostra.
-    cest: null,
-    cst: sku.cst,
-    cclasstrib: sku.cclasstrib,
-  });
-  const campos = [
-    { campo: 'ncm', valor: sku.ncm },
-    { campo: 'cst', valor: sku.cst },
-    { campo: 'cclasstrib', valor: sku.cclasstrib },
-  ] as const;
-
-  return (
-    <>
-      <ul className={estilo.listaMiuda}>
-        {campos.map(({ campo, valor }) => (
-          <li key={campo}>
-            {ROTULO_DO_CAMPO[campo]}:{' '}
-            {valor === null || valor.trim() === '' ? 'não informado' : valor}
-          </li>
-        ))}
-      </ul>
-      <p className={estilo.dica}>{estado.mensagem}</p>
-      {sku.ativo ? (
-        <p className={estilo.acao}>
-          <Link
-            className={estilo.botaoSecundario}
-            href={`${CAMINHO_FISCAL}?${new URLSearchParams({ produto: sku.id }).toString()}`}
-          >
-            Editar dados fiscais
-          </Link>
-        </p>
-      ) : (
-        <p className={estilo.dica}>
-          Produto desativado não entra no cadastro fiscal. Reative para editar.
-        </p>
-      )}
-    </>
-  );
-}
-
-/** O aviso de produto desativado, com a volta no mesmo lugar. */
-export function ProdutoDesativado({ id }: { readonly id: string }) {
-  return (
-    <div className={estilo.avisoAtencao} role="status">
-      <strong className={estilo.avisoTitulo}>Este produto está desativado.</strong>
-      <span className={estilo.avisoCorpo}>
-        Não aparece no catálogo, nos anúncios, na compatibilidade, na consignação nem no cadastro
-        fiscal. Pedidos antigos continuam ligados a ele.
-      </span>
-      <form action={reativarProduto}>
-        <input name="id" type="hidden" value={id} />
-        <button className={estilo.botao} type="submit">
-          Reativar
-        </button>
-      </form>
-    </div>
-  );
-}
-
-/**
- * Desativar, no fim do detalhe.
- *
- * Sem confirmação, de propósito: a volta custa o mesmo clique e fica no topo da página
- * seguinte. Confirmação para ação reversível é atrito que ensina a clicar sem ler.
- */
-export function DesativarProduto({ id }: { readonly id: string }) {
-  return (
-    <form action={desativarProduto}>
-      <input name="id" type="hidden" value={id} />
-      <button className={estilo.botaoSecundario} type="submit">
-        Desativar produto
-      </button>
-    </form>
-  );
-}
-
-/** Os desativados, recolhidos no fim da lista: estão lá para voltar, não para trabalhar. */
-export function Desativados({ produtos }: { readonly produtos: readonly SkuGravado[] }) {
-  if (produtos.length === 0) return null;
-  return (
-    <details className={estilo.bloco}>
-      <summary className={estilo.resumoDoBloco}>
-        {contagem(produtos.length, 'produto desativado', 'produtos desativados')}
-      </summary>
-      <ul className={estilo.listaMiuda}>
-        {produtos.map((produto) => (
-          <li key={produto.id}>
-            <Link className={estilo.link} href={`${CAMINHO}/${produto.id}`}>
-              {produto.tituloInterno}
-            </Link>
+            <span className={estilo.vistoEmDetalhe}>
+              {o.plataformaOuSite ?? 'origem não informada'}
+              {o.preco === null ? '' : ` · ${formatarBRL(centavos(o.preco))}`}
+            </span>
           </li>
         ))}
       </ul>
@@ -751,53 +549,33 @@ export function Desativados({ produtos }: { readonly produtos: readonly SkuGrava
 }
 
 /**
- * "Publicar em": uma linha por loja, com o simulador dela e a montagem do anúncio.
- *
- * A mesma ficha serve a todas as lojas (ADR 0009) — o que muda de uma para outra é o
- * preço, porque a comissão muda, e por isso cada linha tem o seu simulador.
+ * Parar de vender. Sem confirmação, de propósito: voltar custa o mesmo clique, e fica no
+ * alto da página seguinte.
  */
-export function PublicarEm({ lojas }: { readonly lojas: readonly LojaParaPublicar[] }) {
+export function PararDeVender({ id }: { readonly id: string }) {
   return (
-    <ul className={estilo.publicar}>
-      {lojas.map((loja) => (
-        <li className={estilo.publicarLoja} key={loja.plataforma}>
-          <Selo identidade={IDENTIDADE_DA_LOJA[loja.plataforma]} tamanho={32} />
-          <span className={estilo.publicarTextos}>
-            <span className={estilo.publicarNome}>{ROTULO_DA_PLATAFORMA[loja.plataforma]}</span>
-            <span className={estilo.publicarNota}>{loja.nota}</span>
-          </span>
-          <span className={estilo.publicarAcoes}>
-            <Link className={estilo.link} href={loja.simular}>
-              Simular preço
-            </Link>
-            <Link className={estilo.botaoSecundario} href={loja.montar}>
-              Montar anúncio
-            </Link>
-          </span>
-        </li>
-      ))}
-    </ul>
+    <form action={desativarProduto} className={estilo.parar}>
+      <input name="id" type="hidden" value={id} />
+      <button className={estilo.botaoDiscreto} type="submit">
+        Parar de vender este produto
+      </button>
+      <span className={estilo.ajuda}>Ele sai das listas e volta quando você quiser.</span>
+    </form>
   );
 }
 
-/**
- * O atalho para juntar iguais, que mora dentro do catálogo (ADR 0009): é manutenção do
- * catálogo — duas ocorrências que são o mesmo produto viram um item só.
- *
- * `pendentes` nulo é contagem que não deu para ler: o link aparece mesmo assim, sem o
- * número, porque a tela de juntar funciona sem ele.
- */
-export function AtalhoParaJuntar({ pendentes }: { readonly pendentes: number | null }) {
+/** O aviso de produto desativado, com a volta no mesmo lugar. */
+export function ProdutoDesativado({ id }: { readonly id: string }) {
   return (
-    <p className={estilo.atalho}>
-      <Link className={estilo.link} href={CAMINHO_DE_JUNTAR}>
-        Juntar iguais
-      </Link>
-      {pendentes === null
-        ? ' — ocorrências de loja e de fornecedor que podem ser o mesmo produto.'
-        : pendentes === 0
-          ? ' — nenhum par esperando decisão.'
-          : ` — ${contagem(pendentes, 'par esperando', 'pares esperando')} a sua decisão: é o mesmo produto ou não?`}
-    </p>
+    <form action={reativarProduto} className={estilo.desativadoAviso}>
+      <input name="id" type="hidden" value={id} />
+      <span>
+        <strong>Este produto está desativado.</strong> Não aparece na tabela, nos anúncios nem na
+        nota fiscal.
+      </span>
+      <button className={estilo.botao} type="submit">
+        Reativar
+      </button>
+    </form>
   );
 }

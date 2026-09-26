@@ -8,19 +8,19 @@
 /** Rota da tela. */
 export const CAMINHO = '/catalogo';
 
+/** O cadastro de produto: uma tela só para ele, com uma pergunta por campo. */
+export const CAMINHO_DO_NOVO = '/catalogo/novo';
+
 /** Quantos produtos a lista carrega. */
 export const LIMITE_DO_CATALOGO = 200;
 
 /**
- * Margem alvo sugerida no simulador, em pontos-base.
+ * O alvo sugerido, em pontos-base: R$ 20 de cada R$ 100 vendidos.
  *
- * 20%. É o número que a especificação usa como referência de margem sadia em peça de
- * reposição, e é o campo que a pessoa troca primeiro — fica sugerido, não fixo.
+ * É o número que a especificação usa como referência de margem sadia em peça de
+ * reposição, e é o que a pessoa troca primeiro. Fica sugerido, não fixo.
  */
 export const MARGEM_ALVO_PADRAO_BP = 2_000;
-
-/** Onde a varredura de preço começa e termina, quando a pessoa não diz. */
-export const FAIXA_PADRAO = { deReais: 10, ateReais: 500 } as const;
 
 /** Quantas ocorrências do produto a tela lista. */
 export const OCORRENCIAS_NA_TELA = 12;
