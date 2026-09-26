@@ -28,6 +28,16 @@ Convenção de marcação:
 
 ## 2026-09-26 — Sem código de cadastro e sem perfil a configurar (ADR 0014)
 
+### 🐛 "Payload em formato não reconhecido" na primeira planilha no ar
+
+O primeiro envio no ar funcionou — a planilha de exemplo foi para o Supabase Storage, a
+fila a leu de volta e gravou 3 anúncios, o que prova o S3 do Supabase —, mas a lista
+mostrou três linhas com o título "payload em formato não reconhecido". Eram os
+"reconhecer o produto" que cada anúncio gera: a tela de importar só sabia dar nome ao que
+entra por ela, e todo job de outro tipo caía no aviso de forma inesperada, que parece
+erro. Agora cada tipo de job tem nome e rótulo (`JOBS_DE_OUTRAS_TELAS`), com o arquivo ou
+o alvo quando o payload traz; o aviso fica para o que é de fato desconhecido.
+
 ### 🔀 A tela de importar se atualiza sozinha enquanto há entrada andando
 
 O dono, no primeiro uso no ar: "o certo seria a pessoa não ter que ficar recarregando

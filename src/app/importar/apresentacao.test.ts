@@ -10,6 +10,7 @@ import type { JobDetalhado } from '@/infra/fila/fila';
 import {
   entradaAndando,
   haEntradaAndando,
+  rotuloDoTipoDeJob,
   CODIGOS_DE_AVISO,
   EXPLICACAO_DO_STATUS,
   JANELA_DE_FILA_PARADA_MS,
@@ -108,6 +109,35 @@ describe('resumirEntrada', () => {
       expect(resumo.formaInesperada, JSON.stringify(estranho)).toBe(true);
       expect(resumo.titulo).toBe('payload em formato não reconhecido');
     }
+  });
+
+  it('job de outra tela tem nome próprio, e não parece erro (diário, 26/09)', () => {
+    const identidade = resumirEntrada(
+      { produtoExternoId: '0b7c6c1e-7d0f-4f5e-9d2a-3a1f2b3c4d5e' },
+      'resolver_identidade',
+    );
+    expect(identidade.titulo).toBe('Reconhecer o produto');
+    expect(identidade.formaInesperada).toBe(false);
+    expect(rotuloDoTipoDeJob('resolver_identidade')).toBe('junta anúncios do mesmo produto');
+
+    expect(
+      resumirEntrada(
+        { hashConteudo: 'abc', plataforma: 'shopee', nomeArquivo: 'pedidos.xlsx' },
+        'importar_pedidos',
+      ).titulo,
+    ).toBe('pedidos.xlsx');
+    expect(
+      resumirEntrada(
+        { alvo: 'capinha iPhone 15', tetoCentavos: 500, tetoPassos: 20 },
+        'investigar_alvo',
+      ).titulo,
+    ).toBe('Investigar oportunidade: capinha iPhone 15');
+  });
+
+  it('tipo de job desconhecido continua avisando a forma inesperada', () => {
+    const resumo = resumirEntrada({ qualquer: 1 }, 'tipo_que_nao_existe');
+    expect(resumo.formaInesperada).toBe(true);
+    expect(rotuloDoTipoDeJob('tipo_que_nao_existe')).toBe('tipo_que_nao_existe');
   });
 
   it('payload com campo a mais continua sendo lido — o banco tem job de versão antiga', () => {

@@ -117,8 +117,59 @@ export interface ResumoDaEntrada {
 
 export const MAX_TITULO = 90;
 
-export function resumirEntrada(entrada: unknown): ResumoDaEntrada {
+/**
+ * Os jobs que não nascem nesta tela, pelo nome que quem vende entende.
+ *
+ * A lista mostra toda a fila, e não só o que entrou por aqui: cada anúncio de uma
+ * planilha gera um "reconhecer o produto". Sem nome próprio, esses apareciam como
+ * "payload em formato não reconhecido" — que parece erro, e não é (diário, 26/09).
+ */
+const JOBS_DE_OUTRAS_TELAS: ReadonlyMap<
+  string,
+  { readonly titulo: string; readonly rotulo: string }
+> = new Map([
+  [
+    'resolver_identidade',
+    { titulo: 'Reconhecer o produto', rotulo: 'junta anúncios do mesmo produto' },
+  ],
+  [
+    'coletar_compatibilidade',
+    { titulo: 'Buscar compatibilidade', rotulo: 'em que aparelhos o produto serve' },
+  ],
+  ['importar_pedidos', { titulo: 'Planilha de pedidos', rotulo: 'pedidos da loja' }],
+  ['investigar_alvo', { titulo: 'Investigar oportunidade', rotulo: 'garimpo' }],
+]);
+
+/** O que o payload de um desses jobs diz de si, quando diz: o arquivo ou o alvo. */
+const esquemaDeOutroJob = z.object({
+  nomeArquivo: z.string().trim().min(1).optional().catch(undefined),
+  alvo: z.string().trim().min(1).optional().catch(undefined),
+});
+
+/** O rótulo de um tipo de job, para a segunda linha da tabela; o nome cru, se não houver. */
+export function rotuloDoTipoDeJob(tipo: string): string {
+  return JOBS_DE_OUTRAS_TELAS.get(tipo)?.rotulo ?? tipo;
+}
+
+export function resumirEntrada(entrada: unknown, tipo?: string): ResumoDaEntrada {
   const lido = esquemaEntrada.safeParse(entrada);
+
+  const outro = tipo === undefined ? undefined : JOBS_DE_OUTRAS_TELAS.get(tipo);
+  if (!lido.success && outro !== undefined) {
+    const proprio = esquemaDeOutroJob.safeParse(entrada);
+    const nome = proprio.success ? proprio.data : {};
+    const titulo =
+      nome.nomeArquivo ??
+      (nome.alvo === undefined ? outro.titulo : `${outro.titulo}: ${nome.alvo}`);
+    return {
+      titulo: recortar(titulo, MAX_TITULO),
+      tipoDeEntrada: null,
+      site: null,
+      confiancaBp: null,
+      motivoDaClassificacao: null,
+      formaInesperada: false,
+    };
+  }
 
   if (!lido.success) {
     return {

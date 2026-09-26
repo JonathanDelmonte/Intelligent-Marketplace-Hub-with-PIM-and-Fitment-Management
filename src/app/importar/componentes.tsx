@@ -21,6 +21,7 @@ import {
   formatarDuracao,
   formatarRelativo,
   resumirEntrada,
+  rotuloDoTipoDeJob,
   resumirProgresso,
   resumirResultado,
   rotuloDoTipoDeEntrada,
@@ -171,7 +172,7 @@ export function TabelaDeJobs({
 }
 
 function LinhaDeJob({ job, agora }: { readonly job: JobDetalhado; readonly agora: Date }) {
-  const entrada = resumirEntrada(job.entrada);
+  const entrada = resumirEntrada(job.entrada, job.tipo);
   const metricas = resumirResultado(job.resultado);
   const progresso = resumirProgresso(job.progresso);
   const tentativas = descreverTentativas(job);
@@ -196,7 +197,9 @@ function LinhaDeJob({ job, agora }: { readonly job: JobDetalhado; readonly agora
       <td className={estilo.celulaEntrada}>
         <div className={estilo.tituloDaEntrada}>{entrada.titulo}</div>
         <div className={estilo.detalheDaEntrada}>
-          {entrada.tipoDeEntrada === null ? job.tipo : rotuloDoTipoDeEntrada(entrada.tipoDeEntrada)}
+          {entrada.tipoDeEntrada === null
+            ? rotuloDoTipoDeJob(job.tipo)
+            : rotuloDoTipoDeEntrada(entrada.tipoDeEntrada)}
           {entrada.site === null ? '' : ` · ${entrada.site}`}
           {entrada.confiancaBp === null
             ? ''

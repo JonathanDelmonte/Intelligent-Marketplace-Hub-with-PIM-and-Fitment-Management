@@ -29,6 +29,7 @@ import {
   resumirProgresso,
   resumirResultado,
   rotuloDoTipoDeEntrada,
+  rotuloDoTipoDeJob,
 } from '../apresentacao';
 import { reenfileirar } from '../acoes';
 import { AtualizacaoAutomatica } from '../atualizacao-automatica';
@@ -53,7 +54,7 @@ export default async function PaginaDoJob({
   if (job === null) notFound();
 
   const agora = new Date();
-  const entrada = resumirEntrada(job.entrada);
+  const entrada = resumirEntrada(job.entrada, job.tipo);
   const metricas = resumirResultado(job.resultado);
   const progresso = resumirProgresso(job.progresso);
   const rejeitadas = extrairRejeitadas(job.resultado);
@@ -68,7 +69,9 @@ export default async function PaginaDoJob({
 
       <h1 className={estilo.titulo}>{entrada.titulo}</h1>
       <p className={estilo.subtitulo}>
-        {entrada.tipoDeEntrada === null ? job.tipo : rotuloDoTipoDeEntrada(entrada.tipoDeEntrada)}
+        {entrada.tipoDeEntrada === null
+          ? rotuloDoTipoDeJob(job.tipo)
+          : rotuloDoTipoDeEntrada(entrada.tipoDeEntrada)}
         {entrada.site === null ? '' : ` · ${entrada.site}`}
         {entrada.confiancaBp === null
           ? ''
