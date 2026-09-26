@@ -1,6 +1,8 @@
 # ADR 0014 — Sem código de cadastro, a primeira conta entra direto
 
-**Estado:** Aceito · **Data:** 2026-09-26 · Decisão do dono · Substitui a parte do
+**Estado:** Em parte substituído pelo [ADR 0015](./0015-cadastro-aberto-sem-codigo.md) —
+sem código, o cadastro fica aberto; continua valendo o perfil padrão (item 5) ·
+**Data:** 2026-09-26 · Decisão do dono · Substitui a parte do
 [ADR 0011](./0011-contas-de-acesso.md) que fechava o cadastro sem código
 
 ## Contexto

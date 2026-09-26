@@ -86,9 +86,9 @@ vai para o ar sozinho depois que o CI passa — o rodapé de cada tela diz a ver
 Para montar (uma vez, uns 30 minutos), siga o [passo a passo](./docs/hospedagem.md); o
 porquê de cada peça está no [ADR 0013](./docs/adr/0013-hospedagem-gratuita-em-pecas.md).
 É um arranjo para testar: sem cópia de segurança, e com os limites dos planos gratuitos.
-Toda tela pede conta: o primeiro acesso é **Criar conta**, e a primeira conta não pede
-código ([ADR 0011](./docs/adr/0011-contas-de-acesso.md) e
-[0014](./docs/adr/0014-primeira-conta-sem-codigo.md)).
+Toda tela pede conta: o primeiro acesso é **Criar conta**, que não pede código enquanto
+não houver um configurado ([ADR 0011](./docs/adr/0011-contas-de-acesso.md) e
+[0015](./docs/adr/0015-cadastro-aberto-sem-codigo.md)).
 
 ### No Windows, com um clique
 
@@ -114,8 +114,8 @@ responde.
 - **Internet, sem chave nenhuma:** ler link colado, o garimpo (buscador, páginas, CNPJ e
   compras públicas) e a conferência de fornecedor usam serviços gratuitos e abertos.
 - **Primeira vez:** alguns minutos. **Depois:** cerca de três segundos.
-- **A primeira tela pede conta:** clique em **Criar conta**; a primeira conta não pede
-  código (ADR 0014). Depois é só entrar.
+- **A primeira tela pede conta:** clique em **Criar conta**; sem `CADASTRO_CODIGO` no
+  `.env`, não pede código (ADR 0015). Depois é só entrar.
 - **Clicar de novo com tudo rodando** só abre o navegador.
 - **Fechar a janela preta** desliga o servidor e a fila juntos.
 - **A janela sempre espera uma tecla no fim**, e nunca fecha sozinha. Se algo der errado,

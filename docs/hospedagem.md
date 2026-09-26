@@ -98,7 +98,7 @@ Endpoint, o Access key ID e o Secret access key.
 
    O resto vem pronto do `render.yaml`. A `CREDENCIAL_CHAVE_MESTRA`, que protege as
    sessões e as credenciais guardadas, o Render gera sozinho. Não há código de cadastro
-   nem perfil a configurar (ADR 0014).
+   nem perfil a configurar (ADR 0014 e 0015).
 
 4. **Deploy Blueprint**. A primeira montagem leva uns dez minutos. Quando terminar, o
    serviço `hub` aparece como **Live**, com o endereço no topo — algo como
@@ -110,8 +110,8 @@ depois). Nada disso vai para o repositório.
 ## Passo 3 — Criar a sua conta
 
 Abra o endereço, clique em **Criar conta** e preencha nome, e-mail e uma senha de dez
-caracteres ou mais — a primeira conta não pede código. Faça isso logo depois da primeira
-subida: depois da primeira conta o cadastro fecha sozinho, e só entra quem tem conta.
+caracteres ou mais. Sem código de cadastro configurado, o cadastro fica aberto: nesta
+fase de teste, qualquer um com o endereço cria conta (ADR 0015).
 
 O nome da loja que aparece no sistema se acerta na tela **Meu negócio**.
 
@@ -134,13 +134,12 @@ tela depois disso leva quase um minuto, e a fila para até alguém abrir o siste
 do UptimeRobot também mantém o banco em uso, e o Supabase gratuito pausa o banco que passa
 uma semana parado.
 
-## Passo 5 (opcional) — Abrir o cadastro para mais gente
+## Quando for usar de verdade — Fechar o cadastro
 
-Sem código, o cadastro fecha depois da primeira conta, e não há "esqueci a senha". Para
-outra pessoa criar conta, ou para poder trocar uma senha esquecida, crie um código de
-cadastro — `node scripts/gerar-codigo.mjs` gera um, ou invente 12 letras e números — e,
-no Render, em **hub → Environment**, acrescente `CADASTRO_CODIGO` com ele e salve. O
-sistema reinicia, e a tela de criar conta passa a pedir o código.
+Antes de pôr dado de verdade, feche o cadastro: crie um código — `node
+scripts/gerar-codigo.mjs` gera um, ou invente 12 letras e números — e, no Render, em
+**hub → Environment**, acrescente `CADASTRO_CODIGO` com ele e salve. O sistema
+reinicia, e criar conta e trocar a senha esquecida passam a pedir o código.
 
 ---
 
@@ -202,8 +201,7 @@ banco chega perto do limite, e o uso fica na página **Usage** da organização.
 
 2. No Render, **hub → Manual Deploy → Restart service**: na subida, o sistema recria o
    perfil da loja.
-3. Crie a sua conta de novo (passo 3): com o banco vazio, a primeira conta volta a não
-   pedir código.
+3. Crie a sua conta de novo (passo 3).
 4. _(Opcional)_ Os arquivos enviados continuam no Storage, ocupando espaço: em **Storage →
    conteudo**, selecione tudo e apague.
 

@@ -343,6 +343,10 @@ projeto do Supabase (banco, bucket e chave S3), o Blueprint do Render (colando o
 valores) e o monitor do UptimeRobot. O servidor próprio, com cópia todo dia, fica guardado
 para quando escalar ([hospedagem-servidor.md](./hospedagem-servidor.md)).
 
+**Antes de pôr dado de verdade: fechar o cadastro.** Nesta fase de teste, sem código,
+qualquer um com o endereço cria conta e troca senha (ADR 0015). Fechar é pôr
+`CADASTRO_CODIGO` no painel do Render ([guia](./hospedagem.md)).
+
 **Aberto, e se resolve no primeiro uso:** o S3 do Supabase foi ensaiado contra imitações,
 e a primeira planilha enviada no ar é a prova (diário, 25/09). Sem cópia de segurança
 nesta fase, por decisão do dono: dado de verdade traz a cópia de volta ao plano.
