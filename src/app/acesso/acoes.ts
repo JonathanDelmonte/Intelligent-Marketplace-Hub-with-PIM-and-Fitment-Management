@@ -17,7 +17,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { lerAmbiente } from '@/config/ambiente';
-import { codigoConfere } from '@/dominio/acesso/codigo';
+import { codigoConfere, modoDoCadastro } from '@/dominio/acesso/codigo';
 import { normalizarEmail, RepositorioDeAcesso } from '@/dominio/acesso/repositorio';
 import {
   conferirSenha,
@@ -105,6 +105,11 @@ export async function entrar(
 
 // ─── Criar conta ─────────────────────────────────────────────────────────────
 
+/** Sem código e com a primeira conta já criada (ADR 0014). */
+const CADASTRO_FECHADO =
+  'O cadastro está fechado: a primeira conta já foi criada. Para abrir para mais gente, ' +
+  'configure o código de cadastro (CADASTRO_CODIGO).';
+
 const esquemaDoCadastro = z.object({
   nome: z.string().trim().min(2, 'diga o seu nome').max(80, 'o nome pode ter até 80 letras'),
   email: z.email('o e-mail não parece um e-mail').max(200),
@@ -143,15 +148,27 @@ export async function cadastrar(
   if (problemas.length > 0) return { ...manter, erro: primeiroProblema(problemas) };
 
   const configurado = lerAmbiente().CADASTRO_CODIGO;
-  if (configurado === undefined) {
-    return {
-      ...manter,
-      erro: 'O cadastro está fechado: falta configurar o código de cadastro deste sistema.',
-    };
+  const repo = new RepositorioDeAcesso(banco());
+  const agora = new Date();
+  const modo = modoDoCadastro(configurado, await repo.quantasContas());
+
+  if (modo === 'fechado') return { ...manter, erro: CADASTRO_FECHADO };
+
+  // Sem código, a primeira conta entra direto (ADR 0014). A contagem acima só escolhe a
+  // tela; quem garante que é mesmo a primeira é a trava dentro do repositório.
+  if (modo === 'primeira_conta') {
+    const primeira = await repo.criarPrimeiraConta({
+      nome,
+      email,
+      senhaHash: await criarHashDeSenha(senha),
+    });
+    if (primeira.tipo === 'ja_ha_conta') return { ...manter, erro: CADASTRO_FECHADO };
+    await abrirSessao(primeira.usuario, agora);
+    log.info('acesso.primeira_conta_criada', { conta: primeira.usuario.id });
+    redirect('/');
   }
 
   // O código é o que protege o cadastro, então as tentativas dele também têm limite.
-  const agora = new Date();
   const ip = enderecoDeQuemPede((await headers()).get('x-forwarded-for'));
   const chaves = [`codigo-ip:${ip}`];
   const ate = limite.bloqueadoAte(chaves, agora);
@@ -161,7 +178,7 @@ export async function cadastrar(
     return { ...manter, erro: 'O código de cadastro não confere.' };
   }
 
-  const resultado = await new RepositorioDeAcesso(banco()).criarUsuario({
+  const resultado = await repo.criarUsuario({
     nome,
     email,
     senhaHash: await criarHashDeSenha(senha),

@@ -99,7 +99,7 @@ function CampoDeSenha({
 function CampoDeCodigo() {
   return (
     <Campo
-      ajuda="O código que protege este sistema. Ele fica nos segredos do GitHub (CADASTRO_CODIGO) ou, no seu computador, no arquivo .env."
+      ajuda="O código que protege este sistema. Ele fica no painel do Render (CADASTRO_CODIGO) ou, no seu computador, no arquivo .env."
       autoCapitalize="characters"
       autoComplete="off"
       name="codigo"
@@ -131,7 +131,8 @@ export function FormularioDeEntrar({ volta }: { readonly volta: string }) {
   );
 }
 
-export function FormularioDeCadastro() {
+/** `pedeCodigo`: sem código configurado, a primeira conta não o pede (ADR 0014). */
+export function FormularioDeCadastro({ pedeCodigo }: { readonly pedeCodigo: boolean }) {
   const [estado, acao, enviando] = useActionState(cadastrar, ESTADO_INICIAL);
   return (
     <form action={acao} className={estilo.formulario}>
@@ -152,7 +153,7 @@ export function FormularioDeCadastro() {
         rotulo="Senha"
       />
       <CampoDeSenha nome="confirmacao" nova rotulo="Repita a senha" />
-      <CampoDeCodigo />
+      {pedeCodigo ? <CampoDeCodigo /> : null}
       <Erro texto={estado.erro} />
       <button className={estilo.botao} disabled={enviando} type="submit">
         {enviando ? 'Criando…' : 'Criar conta'}

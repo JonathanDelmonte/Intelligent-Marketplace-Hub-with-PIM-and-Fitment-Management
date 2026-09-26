@@ -18,7 +18,6 @@
  * ```
  */
 import { randomBytes } from 'node:crypto';
-import { gerarCodigoDeCadastro } from './gerar-codigo.mjs';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -118,9 +117,8 @@ let conteudo = readFileSync(exemplo, 'utf8');
 const chave = randomBytes(32).toString('base64');
 conteudo = conteudo.replace(/^CREDENCIAL_CHAVE_MESTRA=.*$/m, `CREDENCIAL_CHAVE_MESTRA=${chave}`);
 
-// O código de cadastro também nasce aqui: sem ele a tela de criar conta fica fechada, e
-// a primeira coisa que se faz num sistema novo é criar a própria conta (ADR 0011).
-conteudo = conteudo.replace(/^CADASTRO_CODIGO=.*$/m, `CADASTRO_CODIGO=${gerarCodigoDeCadastro()}`);
+// O código de cadastro não nasce aqui: sem ele, a primeira conta é criada sem pedir nada
+// (ADR 0014). Quem quiser exigir código de quem vier depois, preenche a linha.
 
 const urlInformada = argumento('database-url');
 const urlDeTesteInformada = argumento('database-url-teste');

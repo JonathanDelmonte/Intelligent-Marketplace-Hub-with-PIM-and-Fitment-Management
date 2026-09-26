@@ -53,6 +53,33 @@ describe.skipIf(!temBancoDeTeste())('RepositorioDeAcesso', () => {
     expect(repetido).toEqual({ tipo: 'email_em_uso' });
   });
 
+  it('a primeira conta sem código: só numa base vazia (ADR 0014)', async () => {
+    const primeira = await repo.criarPrimeiraConta({
+      nome: ' Dono ',
+      email: 'Dono@Loja.com',
+      senhaHash: 'scrypt$a',
+    });
+    expect(primeira).toMatchObject({ tipo: 'criado', usuario: { email: 'dono@loja.com' } });
+
+    const segunda = await repo.criarPrimeiraConta({
+      nome: 'Outra pessoa',
+      email: 'outra@loja.com',
+      senhaHash: 'scrypt$b',
+    });
+    expect(segunda).toEqual({ tipo: 'ja_ha_conta' });
+    expect(await repo.quantasContas()).toBe(1);
+  });
+
+  it('dois cadastros ao mesmo tempo numa base vazia: só um vira a primeira conta', async () => {
+    const resultados = await Promise.all(
+      ['a@loja.com', 'b@loja.com', 'c@loja.com'].map((email) =>
+        repo.criarPrimeiraConta({ nome: 'Alguém', email, senhaHash: 'scrypt$c' }),
+      ),
+    );
+    expect(resultados.filter((r) => r.tipo === 'criado')).toHaveLength(1);
+    expect(await repo.quantasContas()).toBe(1);
+  });
+
   it('a sessão aberta vale até vencer ou ser encerrada', async () => {
     const conta = await criar();
     const id = await repo.abrirSessao({
