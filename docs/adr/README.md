@@ -16,6 +16,7 @@ histórico da decisão vale mais que a limpeza do diretório.
 | [0008](./0008-modo-m4-fora-de-escopo.md)        | Extensão de navegador sob login fora de escopo              | Aceito                                           |
 | [0009](./0009-navegacao-por-loja.md)            | Navegação por loja; o que serve a todas aparece uma vez     | Aceito                                           |
 | [0010](./0010-hospedagem-gratuita.md)           | Um servidor gratuito; cada push no ar                       | Substituído pelo 0013, menos a regra de migração |
-| [0011](./0011-contas-de-acesso.md)              | Conta com senha; cadastro fechado por código                | Aceito                                           |
+| [0011](./0011-contas-de-acesso.md)              | Conta com senha; cadastro fechado por código                | Aceito; em parte substituído pelo 0014           |
 | [0012](./0012-conta-oracle-sem-upgrade.md)      | Conta da Oracle gratuita; servidor que não parece ocioso    | Substituído pelo 0013                            |
 | [0013](./0013-hospedagem-gratuita-em-pecas.md)  | Hospedagem gratuita em peças: Render, Supabase, UptimeRobot | Aceito                                           |
+| [0014](./0014-primeira-conta-sem-codigo.md)     | Sem código de cadastro, a primeira conta entra direto       | Aceito                                           |

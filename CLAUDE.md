@@ -130,7 +130,8 @@ Carregam `perfil_id` (operacional): `sku`, `anuncio`, `pedido`, `consignacao`,
 `produto_externo`, `fornecedor`, `aparelho`, `compatibilidade`, `oportunidade`.
 
 **Contas de acesso existem** (ADR 0011, decisão do dono em 25/09/2026): login e cadastro
-fechado por código, porque o sistema está no ar. Toda conta vê todos os perfis; papéis e
+fechado por código, porque o sistema está no ar. Sem código configurado, a primeira conta
+entra sem pedir nada, e o cadastro fecha em seguida (ADR 0014). Toda conta vê todos os perfis; papéis e
 permissões ficam para quando escalar, e entram por ADR novo. `usuario` e `sessao` são
 infraestrutura e não carregam `perfil_id`. Caminho que abre sem conta é decisão, e está
 listado em `src/app/acesso/constantes.ts`, com teste que confere a lista.

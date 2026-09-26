@@ -88,18 +88,17 @@ Endpoint, o Access key ID e o Secret access key.
 3. Escolha o repositório. O Render lê o arquivo `render.yaml` e mostra o serviço `hub`,
    no plano **Free**, pedindo estes valores:
 
-   | Campo                       | O que colar                                                                                            |
-   | --------------------------- | ------------------------------------------------------------------------------------------------------ |
-   | `DATABASE_URL`              | O endereço do banco do passo 1, com a senha no lugar de `[YOUR-PASSWORD]`.                             |
-   | `CADASTRO_CODIGO`           | O código que a tela "Criar conta" vai pedir: o do seu `.env`, ou outro com 8 letras e números ou mais. |
-   | `BANCADA_PERFIL_PADRAO`     | O identificador da loja, o mesmo do seu `.env` (por exemplo, `essencial-emporium`).                    |
-   | `LLM_API_KEY`               | A chave do OpenRouter, a mesma do seu `.env`. Sem ela, o sistema funciona e só a IA fica desligada.    |
-   | `ARMAZENAMENTO_S3_ENDPOINT` | O Endpoint do passo 1.                                                                                 |
-   | `ARMAZENAMENTO_S3_CHAVE`    | O Access key ID.                                                                                       |
-   | `ARMAZENAMENTO_S3_SEGREDO`  | O Secret access key.                                                                                   |
+   | Campo                       | O que colar                                                                                         |
+   | --------------------------- | --------------------------------------------------------------------------------------------------- |
+   | `DATABASE_URL`              | O endereço do banco do passo 1, com a senha no lugar de `[YOUR-PASSWORD]`.                          |
+   | `LLM_API_KEY`               | A chave do OpenRouter, a mesma do seu `.env`. Sem ela, o sistema funciona e só a IA fica desligada. |
+   | `ARMAZENAMENTO_S3_ENDPOINT` | O Endpoint do passo 1.                                                                              |
+   | `ARMAZENAMENTO_S3_CHAVE`    | O Access key ID.                                                                                    |
+   | `ARMAZENAMENTO_S3_SEGREDO`  | O Secret access key.                                                                                |
 
    O resto vem pronto do `render.yaml`. A `CREDENCIAL_CHAVE_MESTRA`, que protege as
-   sessões e as credenciais guardadas, o Render gera sozinho.
+   sessões e as credenciais guardadas, o Render gera sozinho. Não há código de cadastro
+   nem perfil a configurar (ADR 0014).
 
 4. **Deploy Blueprint**. A primeira montagem leva uns dez minutos. Quando terminar, o
    serviço `hub` aparece como **Live**, com o endereço no topo — algo como
@@ -110,9 +109,11 @@ depois). Nada disso vai para o repositório.
 
 ## Passo 3 — Criar a sua conta
 
-Abra o endereço, clique em **Criar conta** e preencha nome, e-mail, uma senha de dez
-caracteres ou mais e o código de cadastro (o `CADASTRO_CODIGO` do passo 2). Pronto: o
-sistema está no ar, e só entra quem tem conta.
+Abra o endereço, clique em **Criar conta** e preencha nome, e-mail e uma senha de dez
+caracteres ou mais — a primeira conta não pede código. Faça isso logo depois da primeira
+subida: depois da primeira conta o cadastro fecha sozinho, e só entra quem tem conta.
+
+O nome da loja que aparece no sistema se acerta na tela **Meu negócio**.
 
 No celular, o menu do navegador tem **Adicionar à tela inicial**: o leitor de código de
 barras vira um ícone, como um aplicativo.
@@ -133,11 +134,13 @@ tela depois disso leva quase um minuto, e a fila para até alguém abrir o siste
 do UptimeRobot também mantém o banco em uso, e o Supabase gratuito pausa o banco que passa
 uma semana parado.
 
-## Passo 5 (opcional) — Fechar o cadastro
+## Passo 5 (opcional) — Abrir o cadastro para mais gente
 
-Depois de criar a sua conta, no Render, **hub → Environment**, apague o
-`CADASTRO_CODIGO` e salve: o sistema reinicia, e ninguém mais cria conta. O "esqueci a
-senha" usa o mesmo código e fecha junto — para reabrir, ponha o código de volta.
+Sem código, o cadastro fecha depois da primeira conta, e não há "esqueci a senha". Para
+outra pessoa criar conta, ou para poder trocar uma senha esquecida, crie um código de
+cadastro — `node scripts/gerar-codigo.mjs` gera um, ou invente 12 letras e números — e,
+no Render, em **hub → Environment**, acrescente `CADASTRO_CODIGO` com ele e salve. O
+sistema reinicia, e a tela de criar conta passa a pedir o código.
 
 ---
 
@@ -199,8 +202,8 @@ banco chega perto do limite, e o uso fica na página **Usage** da organização.
 
 2. No Render, **hub → Manual Deploy → Restart service**: na subida, o sistema recria o
    perfil da loja.
-3. Crie a sua conta de novo (passo 3), com o `CADASTRO_CODIGO` — se você tiver fechado o
-   cadastro, reabra antes (passo 5).
+3. Crie a sua conta de novo (passo 3): com o banco vazio, a primeira conta volta a não
+   pedir código.
 4. _(Opcional)_ Os arquivos enviados continuam no Storage, ocupando espaço: em **Storage →
    conteudo**, selecione tudo e apague.
 

@@ -26,6 +26,33 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-26 — Sem código de cadastro e sem perfil a configurar (ADR 0014)
+
+### 🔀 A primeira conta entra direto, e o cadastro fecha em seguida
+
+Na tela de criar o Blueprint no Render, o dono recusou os dois valores que o
+`render.yaml` pedia e que ele não tinha: o código de cadastro ("eu vou lá, crio, e é
+isso") e o perfil padrão ("não existe isso"). O `.env` dele nem tinha a linha
+`CADASTRO_CODIGO`: foi criado antes das contas de acesso, e o `.env` não vem com o pull.
+
+Sem código, a primeira conta agora é criada sem pedir nada. Depois dela o cadastro fecha
+— o dono não precisa de mais nada, e quem achar o endereço depois não entra. O que o dono
+pediu foi não ter código para começar, e foi o que se fez; fechar depois da primeira conta
+é o que impede o sistema de ficar aberto a qualquer um, e o custo é que um segundo usuário
+pede o código. A contagem de contas escolhe a tela; quem garante que é a primeira é uma
+trava de tabela na transação, testada com três cadastros ao mesmo tempo.
+
+O perfil padrão passou a ter valor padrão, `principal`, e campo em branco conta como
+ausente — é assim que um campo vazio de painel chega. O atalho do Windows e o
+`preparar:env` pararam de gerar código; `node scripts/gerar-codigo.mjs` gera um quando
+for a hora.
+
+### ⚠️ Entre a primeira subida e a primeira conta, o cadastro está aberto
+
+É o preço de não haver código: quem chegasse ao endereço antes do dono criaria a primeira
+conta. O endereço é novo e não divulgado, e o dono cria a conta logo depois da subida.
+O guia manda fazer isso na hora.
+
 ## 2026-09-25 — A Oracle fica para trás: Render, Supabase e UptimeRobot (ADR 0013)
 
 ### 🔀 Desistir da Oracle, e o que entrou no lugar

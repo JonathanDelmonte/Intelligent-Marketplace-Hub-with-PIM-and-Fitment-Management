@@ -1,6 +1,7 @@
 # ADR 0011 — Conta com senha, cadastro fechado por código, permissões depois
 
-**Estado:** Aceito · **Data:** 2026-09-25 · Pedido e aprovação do dono
+**Estado:** Aceito; o cadastro sem código foi substituído pelo
+[ADR 0014](./0014-primeira-conta-sem-codigo.md) · **Data:** 2026-09-25 · Pedido e aprovação do dono
 
 ## Contexto
 
