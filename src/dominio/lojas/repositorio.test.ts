@@ -167,5 +167,40 @@ describe.skipIf(!temBancoDeTeste())('RepositorioDeLojas.numeros', () => {
         [null, 1, 1_000, null],
       ]);
     });
+
+    it('vendas de cada produto por loja contam unidades, e deixam de fora o pedido sem produto', async () => {
+      const skus = await conexao.db
+        .insert(sku)
+        .values([{ perfilId: perfil, tituloInterno: 'Refil PA21G' }])
+        .returning({ id: sku.id });
+      const refil = skus[0]?.id ?? '';
+
+      await pedidoDe(perfil, 'ml', 'a', '2026-09-20T12:00:00Z', { skuId: refil });
+      await conexao.db.insert(pedido).values({
+        perfilId: perfil,
+        plataforma: 'ml',
+        idExterno: 'b',
+        data: new Date('2026-09-21T12:00:00Z'),
+        qtd: 2,
+        precoBruto: 18_000,
+        skuId: refil,
+        fonte: 'm1_planilha' as const,
+      });
+      await pedidoDe(perfil, 'shopee', 'c', '2026-09-22T12:00:00Z', {
+        skuId: refil,
+        precoBruto: 4_500,
+      });
+      // Sem produto, fora da janela, e de outro perfil: nenhum entra.
+      await pedidoDe(perfil, 'ml', 'd', '2026-09-22T12:00:00Z');
+      await pedidoDe(perfil, 'ml', 'e', '2026-08-01T12:00:00Z', { skuId: refil });
+      await pedidoDe(outro, 'ml', 'f', '2026-09-22T12:00:00Z', { skuId: refil });
+
+      const vendas = await repo.vendasPorProduto(perfil, janela);
+      const ordenadas = [...vendas].sort((x, y) => x.plataforma.localeCompare(y.plataforma));
+      expect(ordenadas.map((v) => [v.skuId, v.plataforma, v.unidades, v.faturamento])).toEqual([
+        [refil, 'ml', 3, 28_000],
+        [refil, 'shopee', 1, 4_500],
+      ]);
+    });
   });
 });

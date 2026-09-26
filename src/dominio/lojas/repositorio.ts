@@ -5,7 +5,7 @@
  * o único filtro que a área da loja usa — nenhuma leitura pergunta o nome de uma
  * plataforma, e é isso que faz loja nova não precisar de consulta nova.
  */
-import { and, count, desc, eq, gte, lt, max, sql, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, gte, isNotNull, lt, max, sql, type SQL } from 'drizzle-orm';
 import type { PerfilId } from '@/dominio/catalogo/sku';
 import { FUSO_PADRAO } from '@/dominio/pedidos/fila-do-dia';
 import { PLATAFORMAS, type Plataforma } from '@/dominio/precificacao/tipos';
@@ -24,6 +24,15 @@ export interface MaisVendido {
   readonly faturamento: Centavos;
   /** Margem dos pedidos deste produto que têm custo. `null` sem nenhum. */
   readonly margemBp: PontosBase | null;
+}
+
+/** O que um produto do catálogo vendeu numa loja, dentro de uma janela. */
+export interface VendaDoProduto {
+  readonly skuId: string;
+  readonly plataforma: Plataforma;
+  /** Unidades, e não pedidos: um pedido de duas peças conta duas. */
+  readonly unidades: number;
+  readonly faturamento: Centavos;
 }
 
 /**
@@ -194,5 +203,38 @@ export class RepositorioDeLojas {
         margemBp: base === 0 ? null : pontosBase(Math.trunc((Number(l.margem) * 10_000) / base)),
       };
     });
+  }
+
+  /**
+   * Unidades e faturamento de cada produto em cada loja, na janela.
+   *
+   * É o "você cobra" da tabela de preços do catálogo: o preço médio de verdade, ao lado
+   * do preço que a tabela pede. Pedido que não casou com produto fica de fora, porque
+   * não tem linha na tabela onde aparecer.
+   */
+  async vendasPorProduto(perfil: PerfilId, janela: Janela): Promise<readonly VendaDoProduto[]> {
+    const linhas = await this.db
+      .select({
+        skuId: pedido.skuId,
+        plataforma: pedido.plataforma,
+        unidades: sql<string>`coalesce(sum(${pedido.qtd}), 0)`,
+        faturamento: FATURAMENTO,
+      })
+      .from(pedido)
+      .where(and(naJanela(perfil, janela), isNotNull(pedido.skuId)))
+      .groupBy(pedido.skuId, pedido.plataforma);
+
+    return linhas.flatMap((l) =>
+      l.skuId === null
+        ? []
+        : [
+            {
+              skuId: l.skuId,
+              plataforma: l.plataforma,
+              unidades: Number(l.unidades),
+              faturamento: somaEmCentavos(l.faturamento),
+            },
+          ],
+    );
   }
 }
