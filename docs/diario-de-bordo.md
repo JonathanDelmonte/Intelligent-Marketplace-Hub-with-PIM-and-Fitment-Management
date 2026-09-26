@@ -26,6 +26,95 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-26: o miolo recomeça, e a Catálogo e preço é o piloto
+
+### 🔀 O desenho novo de antes não serviu, e o dono disse por quê
+
+Mostradas lado a lado a tela antiga e a Visão geral, o dono respondeu que o miolo das
+telas está feio e confuso, que a única coisa boa é o texto que explica, e que esse texto
+polui e atrapalha. E que o desenho novo da Visão geral "ficou com muita cara de
+inteligência artificial" e não lembra os painéis de vendedor que ele pediu para misturar.
+Pediu um desenho intuitivo, profissional, elegante e autoral, feito para quem não presta
+atenção na tela, apoiado em psicologia e numa junção de referências, e sem os vícios de
+tela feita por máquina: travessão no texto, etiqueta arredondada em volta de palavra,
+traço como marcador de tópico. Só a Catálogo e preço primeiro; as outras esperam a
+confirmação dele.
+
+A pesquisa confirmou a queixa com nome: a régua colorida na borda de um cartão é
+apontada hoje como o sinal mais reconhecível de tela feita por IA, e a Visão geral tem
+uma em cada cartão.
+
+### 🔀 A ideia: cada tela é o papel que o comerciante já conhece
+
+A lista virou uma tabela de preços (a planilha de formação de preço que o Sebrae ensina,
+com produto na linha e loja na coluna), o produto ganhou um cupom (preço em cima, uma
+saída por linha pontilhada, total embaixo de traço duplo) e uma ficha. O porquê de cada
+escolha, com as referências e a psicologia, está no cabeçalho de
+`src/app/catalogo/catalogo.module.css`. O ADR fica para quando o dono aprovar: antes
+disso é piloto, e piloto recusado não merece ADR.
+
+### 🔀 Dinheiro em reais de cada R$ 100, e não em percentual
+
+"Quero ficar com R$ 20 de cada R$ 100 vendidos" é o mesmo número que "20% de margem", e
+é o que quem nunca calculou margem entende de primeira: gente lê frequência natural
+melhor do que percentual (Gigerenzer e Hoffrage, 1995). A URL e o domínio não mudaram:
+`alvo=20` na URL, pontos-base dentro.
+
+### 🔀 A conta roda no navegador
+
+O motor de margem é código puro desde a fase 1, e agora roda também no navegador: mexer
+no número de cima refaz a tabela inteira, e trocar de loja ou digitar um preço refaz o
+cupom, tudo sem recarregar. O simulador antigo era um formulário com botão de calcular.
+A escolha continua indo para a URL, com `history.replaceState`, para o link guardar a
+conta. Duzentos produtos em três lojas são seiscentas buscas de preço por mudança; a
+tabela usa `useDeferredValue` para o campo não travar enquanto isso.
+
+### 🔀 Dois avisos do motor de margem saem desta tela
+
+O de markup abaixo de 3 vezes contradizia o alvo que a própria pessoa escolheu: a tela
+dizia "cobre R$ 54,54 para ficar com R$ 20 de cada R$ 100" e logo embaixo reclamava do
+mesmo preço. O de venda abaixo de R$ 80 aparecia em quase todo refil, que é o que o
+negócio vende. Aviso que aparece sempre ensina a não ler aviso nenhum. Os dois continuam
+no domínio, para o log e para as outras telas.
+
+### 🔀 A fonte: IBM Plex, só nesta tela enquanto é piloto
+
+Sans no texto e Mono nos números do cupom, com licença livre, pelo `@fontsource`, servida
+pelo próprio sistema, só o subconjunto latino: 22 KB por peso. Carrega no layout do
+catálogo; aprovado o desenho, sobe para o layout do sistema. Até lá a lateral continua
+na fonte do sistema operacional.
+
+### 🐛 A régua do prejuízo contava a perda duas vezes
+
+Na venda com prejuízo, a régua somava os custos e a parte perdida, e os custos já passam
+do preço exatamente pela parte perdida. As frações davam 1,52 em vez de 1. O teste da
+régua pegou. Agora a régua são os custos, e um ponto marca onde o preço termina.
+
+### 🐛 "R$" com dois espaços diferentes na mesma frase
+
+O formatador de dinheiro separa "R$" do número com espaço que não quebra, e as frases
+novas usavam espaço comum em "R$ 100". Na tela não aparece, mas a frase podia quebrar
+entre "R$" e "100". As frases usam agora o mesmo espaço, escrito como escape.
+
+### ⚠️ "Você cobra" divide o valor do pedido pelas unidades
+
+O preço bruto do pedido é o total do pedido: a margem realizada já multiplica o custo
+pela quantidade. Nos pedidos de exemplo, de duas unidades cada, o "você cobra R$ 29,53"
+parecia errado e estava certo.
+
+### ❓ Não conferi planilha por planilha que o preço bruto é sempre o total
+
+A margem realizada assume isso desde a fase 8. Se alguma planilha de loja trouxer o
+preço da unidade na coluna do preço bruto, o "você cobra" sai dividido pela quantidade.
+
+### 🧹 A Visão geral, a área da loja e o assistente têm os vícios que este piloto recusa
+
+Régua colorida na borda, etiqueta arredondada com contagem, rótulo em caixa alta. Ficam
+como estão até o dono decidir sobre o piloto; se aprovar, entram na fila junto com as
+outras telas.
+
+---
+
 ## 2026-09-26 — Restaurar a cópia pela tela (ADR 0017)
 
 ### 🔀 A restauração entra na tela, por decisão do dono

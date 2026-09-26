@@ -863,6 +863,13 @@ Três armadilhas de layout apareceram no caminho, e estão no diário de 16/09 �
 instrutiva é que o medidor de rolagem horizontal que eu vinha usando dá falso positivo,
 e a medida honesta é a largura do print de página inteira.
 
+**26/09: o miolo recomeça.** Mostradas lado a lado a tela antiga e a Visão geral, o dono
+achou o miolo das telas feio e confuso, e a Visão geral com cara de tela feita por
+máquina. O piloto novo é a Catálogo e preço, e a ideia é outra: cada tela toma a forma do
+papel que o comerciante já conhece (tabela de preços, cupom, ficha). O porquê está no
+cabeçalho de `catalogo/catalogo.module.css`, e o registro no diário de 26/09. As outras
+telas esperam a aprovação do dono ao piloto.
+
 **O que falta para fechar a C.17:** as telas que ainda têm o desenho antigo serem migradas.
 A direção foi aprovada em 24/09 junto com a navegação por loja (C.19 a C.23, ADR 0009): a
 casca é a barra nova, escura e dividida por loja, e a tela inicial virou a visão geral. A

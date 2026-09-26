@@ -262,7 +262,7 @@ dependem de fora. O que sobra em cada fase, e o que trava.
 | 10 | Visão no garimpo | O garimpo não tem de onde receber imagem |
 | 11 | Envio da resposta ao comprador (11.3) | API do ML (1.2) |
 | 12 | Adaptadores de Shopee e Amazon por API | Adiado pelo dono (1.2) |
-| Casa | Desenho novo nas telas que ainda têm o antigo (C.17) | Nada: direção aprovada com a navegação por loja |
+| Casa | Desenho do miolo nas outras telas: o piloto está na Catálogo e preço (26/09, diário) | A aprovação do dono ao piloto |
 | Casa | Conectar pela aba Conexão da loja (OAuth, 2.6b) | APIs adiadas pelo dono (1.2) |
 | Casa | Lojas novas: Shein, AliExpress, Magalu, TikTok Shop | Comissão conferida e uma exportação real de cada painel (3.9) |
 
