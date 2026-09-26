@@ -21,6 +21,7 @@ import {
   COR_DO_STATUS,
   EXPLICACAO_DO_STATUS,
   ROTULO_DO_STATUS,
+  entradaAndando,
   extrairRejeitadas,
   fichaDoJob,
   jsonLegivel,
@@ -30,6 +31,7 @@ import {
   rotuloDoTipoDeEntrada,
 } from '../apresentacao';
 import { reenfileirar } from '../acoes';
+import { AtualizacaoAutomatica } from '../atualizacao-automatica';
 import estilo from '../importar.module.css';
 
 export const metadata: Metadata = { title: 'Entrada' };
@@ -77,6 +79,7 @@ export default async function PaginaDoJob({
         </span>{' '}
         ({EXPLICACAO_DO_STATUS[job.status]})
       </p>
+      <AtualizacaoAutomatica ativa={entradaAndando(job, agora)} />
 
       {job.erro === null ? null : (
         <section className={estilo.secao}>

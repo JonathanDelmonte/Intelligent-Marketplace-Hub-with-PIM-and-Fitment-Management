@@ -602,3 +602,27 @@ export function fichaDoJob(
     { rotulo: 'chave de idempotência', valor: job.chaveIdempotencia },
   ];
 }
+
+/**
+ * Há entrada andando agora? É o que decide se a tela se atualiza sozinha.
+ *
+ * Com entrada pronta para rodar, ou rodando, sim: a pergunta de quem olha é "já foi?", e
+ * a resposta não pode depender de apertar F5. Com a fila parada, não — nem com entrada
+ * que só espera a hora dela, como uma nova tentativa daqui a meia hora: senão uma aba
+ * esquecida consultaria o banco a cada poucos segundos, para sempre.
+ */
+export function haEntradaAndando(params: {
+  readonly prontos: number;
+  readonly rodando: number;
+}): boolean {
+  return params.prontos > 0 || params.rodando > 0;
+}
+
+/** A mesma pergunta, para uma entrada só: rodando, ou pendente com a hora já vencida. */
+export function entradaAndando(
+  job: Pick<JobDetalhado, 'status' | 'agendadoPara'>,
+  agora: Date,
+): boolean {
+  if (job.status === 'rodando') return true;
+  return job.status === 'pendente' && job.agendadoPara.getTime() <= agora.getTime();
+}

@@ -22,6 +22,7 @@ import { CAMINHO, LIMITE_DA_LISTA, LIMITE_DE_PROCESSAMENTO_MANUAL } from './cons
 import {
   avisoDeFilaParada,
   descreverAviso,
+  haEntradaAndando,
   inteiroDaUrl,
   ultimoTermino,
   IDIOMA,
@@ -125,7 +126,9 @@ export default async function PaginaDeImportacao({
             Últimas {String(LIMITE_DA_LISTA)} entradas
           </h2>
           <div className={estilo.acoesDaSecao} style={{ gap: '1rem', marginBottom: 0 }}>
-            <AtualizacaoAutomatica />
+            <AtualizacaoAutomatica
+              ativa={haEntradaAndando({ prontos, rodando: contagem.rodando })}
+            />
             <BotaoProcessarAgora limite={LIMITE_DE_PROCESSAMENTO_MANUAL} />
           </div>
         </div>

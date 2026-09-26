@@ -8,6 +8,8 @@
 import { describe, expect, it } from 'vitest';
 import type { JobDetalhado } from '@/infra/fila/fila';
 import {
+  entradaAndando,
+  haEntradaAndando,
   CODIGOS_DE_AVISO,
   EXPLICACAO_DO_STATUS,
   JANELA_DE_FILA_PARADA_MS,
@@ -475,5 +477,26 @@ describe('fichaDoJob', () => {
     const ficha = fichaDoJob(job({ iniciadoEm: null, terminadoEm: null }), AGORA);
     expect(ficha.find((f) => f.rotulo === 'iniciado')?.valor).toBe('nunca');
     expect(ficha.find((f) => f.rotulo === 'duração')?.valor).toBe('—');
+  });
+});
+
+describe('a tela se atualiza sozinha só com entrada andando', () => {
+  it('com entrada pronta ou rodando, atualiza', () => {
+    expect(haEntradaAndando({ prontos: 1, rodando: 0 })).toBe(true);
+    expect(haEntradaAndando({ prontos: 0, rodando: 2 })).toBe(true);
+  });
+
+  it('com a fila parada, não — a aba esquecida não consulta o banco', () => {
+    expect(haEntradaAndando({ prontos: 0, rodando: 0 })).toBe(false);
+  });
+
+  it('uma entrada: rodando, ou pendente com a hora vencida', () => {
+    const agora = new Date('2026-09-26T12:00:00.000Z');
+    const antes = new Date('2026-09-26T11:59:59.000Z');
+    const depois = new Date('2026-09-26T12:30:00.000Z');
+    expect(entradaAndando({ status: 'rodando', agendadoPara: depois }, agora)).toBe(true);
+    expect(entradaAndando({ status: 'pendente', agendadoPara: antes }, agora)).toBe(true);
+    expect(entradaAndando({ status: 'pendente', agendadoPara: depois }, agora)).toBe(false);
+    expect(entradaAndando({ status: 'concluido', agendadoPara: antes }, agora)).toBe(false);
   });
 });
