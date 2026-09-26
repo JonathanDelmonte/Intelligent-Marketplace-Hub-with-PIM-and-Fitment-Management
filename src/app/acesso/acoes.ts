@@ -17,7 +17,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { lerAmbiente } from '@/config/ambiente';
-import { codigoConfere, modoDoCadastro } from '@/dominio/acesso/codigo';
+import { codigoConfere, codigoExigido } from '@/dominio/acesso/codigo';
 import { normalizarEmail, RepositorioDeAcesso } from '@/dominio/acesso/repositorio';
 import {
   conferirSenha,
@@ -105,11 +105,6 @@ export async function entrar(
 
 // ─── Criar conta ─────────────────────────────────────────────────────────────
 
-/** Sem código e com a primeira conta já criada (ADR 0014). */
-const CADASTRO_FECHADO =
-  'O cadastro está fechado: a primeira conta já foi criada. Para abrir para mais gente, ' +
-  'configure o código de cadastro (CADASTRO_CODIGO).';
-
 const esquemaDoCadastro = z.object({
   nome: z.string().trim().min(2, 'diga o seu nome').max(80, 'o nome pode ter até 80 letras'),
   email: z.email('o e-mail não parece um e-mail').max(200),
@@ -148,37 +143,22 @@ export async function cadastrar(
   if (problemas.length > 0) return { ...manter, erro: primeiroProblema(problemas) };
 
   const configurado = lerAmbiente().CADASTRO_CODIGO;
-  const repo = new RepositorioDeAcesso(banco());
   const agora = new Date();
-  const modo = modoDoCadastro(configurado, await repo.quantasContas());
 
-  if (modo === 'fechado') return { ...manter, erro: CADASTRO_FECHADO };
-
-  // Sem código, a primeira conta entra direto (ADR 0014). A contagem acima só escolhe a
-  // tela; quem garante que é mesmo a primeira é a trava dentro do repositório.
-  if (modo === 'primeira_conta') {
-    const primeira = await repo.criarPrimeiraConta({
-      nome,
-      email,
-      senhaHash: await criarHashDeSenha(senha),
-    });
-    if (primeira.tipo === 'ja_ha_conta') return { ...manter, erro: CADASTRO_FECHADO };
-    await abrirSessao(primeira.usuario, agora);
-    log.info('acesso.primeira_conta_criada', { conta: primeira.usuario.id });
-    redirect('/');
+  // Sem código configurado, qualquer um cria conta: é a fase de teste (ADR 0015). Com
+  // código, ele protege o cadastro, e as tentativas dele têm limite.
+  if (codigoExigido(configurado)) {
+    const ip = enderecoDeQuemPede((await headers()).get('x-forwarded-for'));
+    const chaves = [`codigo-ip:${ip}`];
+    const ate = limite.bloqueadoAte(chaves, agora);
+    if (ate !== null) return bloqueado(ate, manter);
+    if (!codigoConfere(codigo, configurado)) {
+      limite.registrarFalha(chaves, agora);
+      return { ...manter, erro: 'O código de cadastro não confere.' };
+    }
   }
 
-  // O código é o que protege o cadastro, então as tentativas dele também têm limite.
-  const ip = enderecoDeQuemPede((await headers()).get('x-forwarded-for'));
-  const chaves = [`codigo-ip:${ip}`];
-  const ate = limite.bloqueadoAte(chaves, agora);
-  if (ate !== null) return bloqueado(ate, manter);
-  if (!codigoConfere(codigo, configurado)) {
-    limite.registrarFalha(chaves, agora);
-    return { ...manter, erro: 'O código de cadastro não confere.' };
-  }
-
-  const resultado = await repo.criarUsuario({
+  const resultado = await new RepositorioDeAcesso(banco()).criarUsuario({
     nome,
     email,
     senhaHash: await criarHashDeSenha(senha),
@@ -209,7 +189,8 @@ const esquemaDaRecuperacao = z.object({
  *
  * Sem serviço de e-mail, o código é a prova de que é você: é o mesmo segredo que abre o
  * cadastro. Com permissões e mais de uma pessoa, isso muda — quem tem o código trocaria
- * a senha de qualquer conta —, e a troca passa a ser por e-mail (ADR 0011).
+ * a senha de qualquer conta —, e a troca passa a ser por e-mail (ADR 0011). Sem código
+ * configurado, a troca não pede prova nenhuma, como o cadastro (ADR 0015).
  */
 export async function recuperar(
   _anterior: EstadoDoFormulario,
@@ -234,21 +215,18 @@ export async function recuperar(
   if (problemas.length > 0) return { ...manter, erro: primeiroProblema(problemas) };
 
   const configurado = lerAmbiente().CADASTRO_CODIGO;
-  if (configurado === undefined) {
-    return {
-      ...manter,
-      erro: 'A troca de senha está fechada: falta configurar o código de cadastro deste sistema.',
-    };
-  }
-
   const agora = new Date();
-  const ip = enderecoDeQuemPede((await headers()).get('x-forwarded-for'));
-  const chaves = [`codigo-ip:${ip}`];
-  const ate = limite.bloqueadoAte(chaves, agora);
-  if (ate !== null) return bloqueado(ate, manter);
-  if (!codigoConfere(codigo, configurado)) {
-    limite.registrarFalha(chaves, agora);
-    return { ...manter, erro: 'O código de cadastro não confere.' };
+
+  // A mesma chave do cadastro (ADR 0015): sem código configurado, a troca não pede prova.
+  if (codigoExigido(configurado)) {
+    const ip = enderecoDeQuemPede((await headers()).get('x-forwarded-for'));
+    const chaves = [`codigo-ip:${ip}`];
+    const ate = limite.bloqueadoAte(chaves, agora);
+    if (ate !== null) return bloqueado(ate, manter);
+    if (!codigoConfere(codigo, configurado)) {
+      limite.registrarFalha(chaves, agora);
+      return { ...manter, erro: 'O código de cadastro não confere.' };
+    }
   }
 
   const conta = await new RepositorioDeAcesso(banco()).trocarSenha(

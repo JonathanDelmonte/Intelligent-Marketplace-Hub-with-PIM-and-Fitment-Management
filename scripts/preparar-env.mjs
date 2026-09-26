@@ -117,8 +117,8 @@ let conteudo = readFileSync(exemplo, 'utf8');
 const chave = randomBytes(32).toString('base64');
 conteudo = conteudo.replace(/^CREDENCIAL_CHAVE_MESTRA=.*$/m, `CREDENCIAL_CHAVE_MESTRA=${chave}`);
 
-// O código de cadastro não nasce aqui: sem ele, a primeira conta é criada sem pedir nada
-// (ADR 0014). Quem quiser exigir código de quem vier depois, preenche a linha.
+// O código de cadastro não nasce aqui: sem ele, criar conta não pede código (ADR 0015).
+// Quem quiser fechar o cadastro, preenche a linha.
 
 const urlInformada = argumento('database-url');
 const urlDeTesteInformada = argumento('database-url-teste');

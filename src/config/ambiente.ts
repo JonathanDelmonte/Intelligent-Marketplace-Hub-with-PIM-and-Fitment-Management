@@ -56,12 +56,11 @@ const esquemaAmbiente = z
       .optional()
       .transform((slug) => (slug === undefined || slug === '' ? PERFIL_SEM_CONFIGURACAO : slug)),
     /**
-     * O código que a tela de cadastro pede (ADR 0011 e 0014).
+     * O código que a tela de cadastro pede (ADR 0011 e 0015).
      *
      * Sem permissões, toda conta vê os mesmos dados. Com o código, só quem o tem cria
-     * conta, e recupera a senha. Sem ele, a primeira conta é criada sem pedir nada, e o
-     * cadastro fecha em seguida: o dono entra direto, e quem achar o endereço depois,
-     * não.
+     * conta, e troca a senha esquecida. Sem ele, qualquer um cria conta e troca a senha:
+     * é a fase de teste, e fechar é pôr o código.
      */
     CADASTRO_CODIGO: z
       .string()

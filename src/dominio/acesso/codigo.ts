@@ -1,5 +1,5 @@
 /**
- * O código de cadastro (ADR 0011 e 0014): quando ele é pedido, e se o que a pessoa
+ * O código de cadastro (ADR 0011 e 0015): quando ele é pedido, e se o que a pessoa
  * digitou confere com o do servidor.
  *
  * Digitado por gente, então a comparação perdoa o que é só forma — maiúscula, espaço,
@@ -25,21 +25,10 @@ export function codigoConfere(informado: string, configurado: string | undefined
 }
 
 /**
- * Como a tela de criar conta está (ADR 0014):
- *
- * - `com_codigo`: há código configurado, e toda conta nova o pede;
- * - `primeira_conta`: sem código e sem conta nenhuma — a primeira entra sem pedir nada;
- * - `fechado`: sem código, e a primeira conta já existe.
- *
- * Sem código, o cadastro não fica aberto para sempre: toda conta vê os mesmos dados, e
- * quem achasse o endereço depois veria custos, margens e fornecedores.
+ * O código é exigido? Uma chave só, para criar conta e para trocar a senha (ADR 0015):
+ * com código configurado, as duas o pedem; sem código, nenhuma pede — é a fase de teste,
+ * e o dono decidiu deixar o sistema aberto a quem achar o endereço.
  */
-export type ModoDoCadastro = 'com_codigo' | 'primeira_conta' | 'fechado';
-
-export function modoDoCadastro(
-  configurado: string | undefined,
-  contasExistentes: number,
-): ModoDoCadastro {
-  if (configurado !== undefined && forma(configurado) !== '') return 'com_codigo';
-  return contasExistentes === 0 ? 'primeira_conta' : 'fechado';
+export function codigoExigido(configurado: string | undefined): boolean {
+  return configurado !== undefined && forma(configurado) !== '';
 }

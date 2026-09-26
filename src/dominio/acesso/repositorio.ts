@@ -35,10 +35,6 @@ function ehViolacaoDeUnicidade(erro: unknown): boolean {
 export type ResultadoDoCadastro =
   { readonly tipo: 'criado'; readonly usuario: Usuario } | { readonly tipo: 'email_em_uso' };
 
-/** A primeira conta, sem código (ADR 0014): ou ela, ou a notícia de que já existe uma. */
-export type ResultadoDaPrimeiraConta =
-  { readonly tipo: 'criado'; readonly usuario: Usuario } | { readonly tipo: 'ja_ha_conta' };
-
 export class RepositorioDeAcesso {
   constructor(private readonly db: Banco) {}
 
@@ -68,35 +64,6 @@ export class RepositorioDeAcesso {
       if (ehViolacaoDeUnicidade(erro)) return { tipo: 'email_em_uso' };
       throw erro;
     }
-  }
-
-  /**
-   * Cria a conta só se ainda não houver nenhuma: o cadastro sem código (ADR 0014).
-   *
-   * Contar e depois inserir deixaria dois cadastros simultâneos, numa base vazia,
-   * passarem juntos pela contagem. A trava da tabela põe um atrás do outro, e o segundo
-   * já encontra a conta do primeiro. Custa nada: é uma vez na vida do sistema.
-   */
-  async criarPrimeiraConta(dados: {
-    readonly nome: string;
-    readonly email: string;
-    readonly senhaHash: string;
-  }): Promise<ResultadoDaPrimeiraConta> {
-    return this.db.transaction(async (tx) => {
-      await tx.execute(sql`lock table ${usuario} in share row exclusive mode`);
-      const [existentes] = await tx.select({ n: count() }).from(usuario);
-      if ((existentes?.n ?? 0) > 0) return { tipo: 'ja_ha_conta' };
-      const [criado] = await tx
-        .insert(usuario)
-        .values({
-          nome: dados.nome.trim(),
-          email: normalizarEmail(dados.email),
-          senhaHash: dados.senhaHash,
-        })
-        .returning({ id: usuario.id, nome: usuario.nome, email: usuario.email });
-      if (criado === undefined) throw new Error('o banco não devolveu a conta criada');
-      return { tipo: 'criado', usuario: criado };
-    });
   }
 
   /** A conta ativa do e-mail, com o hash — só para conferir a senha na entrada. */

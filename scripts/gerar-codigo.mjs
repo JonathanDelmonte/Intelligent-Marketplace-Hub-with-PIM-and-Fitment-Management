@@ -1,5 +1,5 @@
 /**
- * O código de cadastro (ADR 0011 e 0014): o que a tela de criar conta pede, quando há
+ * O código de cadastro (ADR 0011 e 0015): o que a tela de criar conta pede, quando há
  * um configurado. Para gerar um: `node scripts/gerar-codigo.mjs`.
  *
  * Doze caracteres de um alfabeto sem letra ambígua (sem 0/O, 1/I/L), em três grupos —

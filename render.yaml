@@ -10,9 +10,9 @@
 # Os valores marcados `sync: false` são pedidos pelo Render na criação e ficam só lá,
 # nunca aqui: este arquivo é público.
 #
-# Não há código de cadastro nem perfil a configurar para começar (ADR 0014): a primeira
-# conta é criada sem código, e o perfil se chama `principal` até ganhar nome na tela do
-# negócio. Para exigir código de quem vier depois, CADASTRO_CODIGO no painel do Render.
+# Não há código de cadastro nem perfil a configurar (ADR 0014 e 0015): sem código,
+# qualquer um cria conta, e o perfil se chama `principal` até ganhar nome na tela Meu
+# negócio. Para fechar o cadastro um dia, CADASTRO_CODIGO no painel do Render.
 
 services:
   - type: web

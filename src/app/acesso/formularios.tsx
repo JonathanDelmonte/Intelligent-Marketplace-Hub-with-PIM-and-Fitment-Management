@@ -131,7 +131,7 @@ export function FormularioDeEntrar({ volta }: { readonly volta: string }) {
   );
 }
 
-/** `pedeCodigo`: sem código configurado, a primeira conta não o pede (ADR 0014). */
+/** `pedeCodigo`: sem código configurado, criar conta não o pede (ADR 0015). */
 export function FormularioDeCadastro({ pedeCodigo }: { readonly pedeCodigo: boolean }) {
   const [estado, acao, enviando] = useActionState(cadastrar, ESTADO_INICIAL);
   return (
@@ -165,14 +165,15 @@ export function FormularioDeCadastro({ pedeCodigo }: { readonly pedeCodigo: bool
   );
 }
 
-export function FormularioDeRecuperar() {
+/** `pedeCodigo`: sem código configurado, trocar a senha não o pede (ADR 0015). */
+export function FormularioDeRecuperar({ pedeCodigo }: { readonly pedeCodigo: boolean }) {
   const [estado, acao, enviando] = useActionState(recuperar, ESTADO_INICIAL);
   return (
     <form action={acao} className={estilo.formulario}>
       <CampoDeEmail rotulo="E-mail da conta" valor={estado.email} />
       <CampoDeSenha nome="senha" nova rotulo="Senha nova" />
       <CampoDeSenha nome="confirmacao" nova rotulo="Repita a senha nova" />
-      <CampoDeCodigo />
+      {pedeCodigo ? <CampoDeCodigo /> : null}
       <Erro texto={estado.erro} />
       <button className={estilo.botao} disabled={enviando} type="submit">
         {enviando ? 'Trocando…' : 'Trocar a senha e entrar'}

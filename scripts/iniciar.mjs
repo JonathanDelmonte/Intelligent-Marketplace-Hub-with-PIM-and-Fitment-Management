@@ -770,8 +770,8 @@ async function principal() {
       escrever('');
       escrever('  ─────────────────────────────────────────────────────────');
       escrever(`   Pronto: ${endereco}`);
-      escrever('   Primeira vez? Clique em "Criar conta": a primeira conta não pede');
-      escrever('   código (se o .env tiver CADASTRO_CODIGO, a tela pede esse código).');
+      escrever('   Primeira vez? Clique em "Criar conta" (se o .env tiver');
+      escrever('   CADASTRO_CODIGO, a tela pede esse código).');
       escrever('   Para desligar, feche esta janela.');
       escrever('  ─────────────────────────────────────────────────────────');
       escrever('');
