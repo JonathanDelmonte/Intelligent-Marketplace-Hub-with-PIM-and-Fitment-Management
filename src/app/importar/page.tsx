@@ -21,6 +21,7 @@ import { ROTULO_DA_PLATAFORMA } from '../ui/rotulos';
 import { CAMINHO, LIMITE_DA_LISTA, LIMITE_DE_PROCESSAMENTO_MANUAL } from './constantes';
 import {
   avisoDeFilaParada,
+  avisoDoPrazoNaNuvem,
   descreverAviso,
   haEntradaAndando,
   inteiroDaUrl,
@@ -62,7 +63,7 @@ export default async function PaginaDeImportacao({
     typeof parametros['n'] === 'string' ? parametros['n'] : undefined,
   );
 
-  const { fila } = montarNucleo();
+  const { fila, armazenamento } = montarNucleo();
 
   const [contagem, prontos, jobs, emRevisao] = await Promise.all([
     fila.contagemPorStatus(),
@@ -77,6 +78,7 @@ export default async function PaginaDeImportacao({
 
   const aviso = descreverAviso(codigo, quantidade);
   const filaParada = avisoDeFilaParada({ prontos, ultimoTermino: ultimoTermino(jobs), agora });
+  const prazoNaNuvem = avisoDoPrazoNaNuvem(armazenamento.retencaoDias);
 
   return (
     <main className={estilo.pagina}>
@@ -102,6 +104,7 @@ export default async function PaginaDeImportacao({
           </p>
         )}
         <FormularioDeEntrada loja={loja} />
+        {prazoNaNuvem === null ? null : <p className={estilo.dica}>{prazoNaNuvem}</p>}
       </section>
 
       {emRevisao.length === 0 ? null : (

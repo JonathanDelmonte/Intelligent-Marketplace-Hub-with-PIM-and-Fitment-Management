@@ -92,20 +92,26 @@ export async function enviarEntrada(dados: FormData): Promise<void> {
   log.info('entrada.recebida', {
     resultado: resultado.tipo,
     jobId: resultado.job.id,
+    devolvidosAFila: resultado.devolvidosAFila.length,
     tipoDeEntrada: resultado.classificacao.tipoDeEntrada,
     confiancaBp: resultado.classificacao.confiancaBp,
   });
 
   revalidatePath(CAMINHO);
 
+  // O arquivo que tinha saído da nuvem e voltou é o que mais importa dizer: o que
+  // esperava por ele já está na fila, e ninguém precisa procurar (ADR 0016).
+  const devolvidos = resultado.devolvidosAFila.length;
   const codigo: CodigoDeAviso =
-    resultado.tipo === 'precisa_revisao'
-      ? 'revisao'
-      : resultado.jaExistia
-        ? 'ja_existia'
-        : 'enfileirado';
+    devolvidos > 0
+      ? 'devolvido'
+      : resultado.tipo === 'precisa_revisao'
+        ? 'revisao'
+        : resultado.jaExistia
+          ? 'ja_existia'
+          : 'enfileirado';
 
-  redirect(paraOnde(codigo));
+  redirect(paraOnde(codigo, devolvidos > 0 ? devolvidos : undefined));
 }
 
 /** Devolve um job à fila, zerando tentativas. Para o que falhou e para o revisado. */

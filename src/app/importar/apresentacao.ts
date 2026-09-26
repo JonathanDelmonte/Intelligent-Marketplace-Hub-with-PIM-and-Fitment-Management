@@ -381,6 +381,7 @@ export const CODIGOS_DE_AVISO = [
   'nada_para_processar',
   'job_inexistente',
   'job_rodando',
+  'devolvido',
 ] as const;
 export type CodigoDeAviso = (typeof CODIGOS_DE_AVISO)[number];
 
@@ -474,7 +475,28 @@ export function descreverAviso(
         titulo: 'Entrada em execução',
         corpo: 'Não é seguro reenfileirar agora. Espere terminar ou o prazo de execução estourar.',
       };
+    case 'devolvido':
+      return {
+        tipo: 'ok',
+        titulo: contagem(n, 'entrada voltou para a fila', 'entradas voltaram para a fila'),
+        corpo:
+          'O arquivo tinha saído da nuvem, e o que esperava por ele roda em seguida — não ' +
+          'precisa apertar "tentar de novo".',
+      };
   }
+}
+
+/**
+ * O aviso do prazo do arquivo na nuvem, embaixo do formulário (ADR 0016). `null` quando
+ * o arquivo fica para sempre — no computador de quem usa, não há o que avisar.
+ */
+export function avisoDoPrazoNaNuvem(retencaoDias: number | null): string | null {
+  if (retencaoDias === null) return null;
+  return (
+    `Na nuvem, o arquivo enviado fica ${contagem(retencaoDias, 'dia', 'dias')} depois de ` +
+    'processado; o original continua no seu computador. Para rodar de novo depois disso, ' +
+    'envie o mesmo arquivo, e o que esperava por ele volta para a fila sozinho.'
+  );
 }
 
 /**

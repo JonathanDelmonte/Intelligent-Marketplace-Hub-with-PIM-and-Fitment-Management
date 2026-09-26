@@ -17,6 +17,7 @@ import {
   MAX_TITULO,
   ROTULO_DO_STATUS,
   avisoDeFilaParada,
+  avisoDoPrazoNaNuvem,
   descreverAviso,
   descreverTentativas,
   duracaoDoJob,
@@ -315,6 +316,8 @@ describe('avisos de ação', () => {
   it('plural acompanha a quantidade', () => {
     expect(descreverAviso('processado', 1)?.titulo).toBe('1 entrada processada');
     expect(descreverAviso('processado', 4)?.titulo).toBe('4 entradas processadas');
+    expect(descreverAviso('devolvido', 1)?.titulo).toBe('1 entrada voltou para a fila');
+    expect(descreverAviso('devolvido', 2)?.titulo).toBe('2 entradas voltaram para a fila');
   });
 
   it('quantidade inválida na URL não vira texto estranho', () => {
@@ -323,6 +326,19 @@ describe('avisos de ação', () => {
     expect(inteiroDaUrl('-1')).toBeNull();
     expect(inteiroDaUrl('12')).toBe(12);
     expect(inteiroDaUrl(undefined)).toBeNull();
+  });
+});
+
+describe('aviso do prazo na nuvem', () => {
+  it('na nuvem, diz o prazo, onde está o original e o que fazer depois', () => {
+    const texto = avisoDoPrazoNaNuvem(7);
+    expect(texto).toContain('fica 7 dias depois de processado');
+    expect(texto).toContain('o original continua no seu computador');
+    expect(texto).toContain('envie o mesmo arquivo');
+  });
+
+  it('no computador de quem usa, o arquivo fica, e não há o que avisar', () => {
+    expect(avisoDoPrazoNaNuvem(null)).toBeNull();
   });
 });
 
