@@ -10,6 +10,7 @@ vi.mock('./app/acesso/conferir', () => ({ contaDoCookie }));
 // Importado depois do `vi.mock`, que o vitest sobe para o topo do arquivo.
 const { config, proxy } = await import('./proxy');
 const { codificarConta } = await import('./app/acesso/caminhos');
+const { CAMINHOS_FORA_DO_PORTEIRO } = await import('./app/acesso/constantes');
 
 const CONTA = {
   id: '0f8fad5b-d9cb-469f-a165-70867728950e',
@@ -46,6 +47,19 @@ describe('o matcher do porteiro', () => {
       '/compatibilidade/baixar',
       '/entrar',
       '/saude',
+    ]) {
+      expect(pega(caminho), caminho).toBe(true);
+    }
+  });
+
+  it('deixa de fora a restauração da cópia, que confere a conta sozinha, e nada perto dela', () => {
+    // Com o porteiro na frente, o Next cortaria em 10 MB o arquivo da cópia.
+    for (const caminho of CAMINHOS_FORA_DO_PORTEIRO) expect(pega(caminho), caminho).toBe(false);
+    for (const caminho of [
+      '/copia',
+      '/copia/baixar',
+      '/copia/restaurar/outra',
+      '/copia/restaurarx',
     ]) {
       expect(pega(caminho), caminho).toBe(true);
     }

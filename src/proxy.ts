@@ -19,7 +19,9 @@
  * 5. Com sessão, segue com a conta no cabeçalho, para as telas saberem quem é.
  *
  * O `matcher` precisa ser literal: o Next o lê na compilação, e não avalia expressão.
- * O teste (`proxy.test.ts`) confere que ele pega as rotas e deixa os estáticos.
+ * O teste (`proxy.test.ts`) confere que ele pega as rotas e deixa os estáticos — e
+ * `CAMINHOS_FORA_DO_PORTEIRO`, a rota que recebe arquivo grande e confere a conta sozinha
+ * (a restauração da cópia, ADR 0017).
  */
 import { NextResponse, type NextRequest } from 'next/server';
 import { criarRegistrador, nivelDoAmbiente } from '@/infra/log';
@@ -85,6 +87,6 @@ export async function proxy(pedido: NextRequest): Promise<NextResponse> {
 
 export const config = {
   matcher: [
-    '/((?!_next/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|wasm|webmanifest|js|css|txt|map|woff|woff2)$).*)',
+    '/((?!_next/|copia/restaurar$|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|wasm|webmanifest|js|css|txt|map|woff|woff2)$).*)',
   ],
 };

@@ -13,7 +13,8 @@
 import type { Metadata } from 'next';
 import { banco } from '@/infra/banco/cliente';
 import { medirCopia } from '@/infra/banco/copia';
-import { CAMINHO_DO_DOWNLOAD, formatarTamanho } from './apresentacao';
+import { formatarTamanho } from './apresentacao';
+import { CAMINHO_DO_DOWNLOAD } from './constantes';
 import estilo from './copia.module.css';
 
 export const metadata: Metadata = { title: 'Cópia dos dados' };

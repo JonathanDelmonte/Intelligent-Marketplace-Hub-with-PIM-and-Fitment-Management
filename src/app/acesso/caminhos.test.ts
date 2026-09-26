@@ -8,7 +8,7 @@ import {
   enderecoDeQuemPede,
   lerDestino,
 } from './caminhos';
-import { CAMINHOS_PUBLICOS } from './constantes';
+import { CAMINHOS_FORA_DO_PORTEIRO, CAMINHOS_PUBLICOS } from './constantes';
 
 describe('caminhos públicos', () => {
   it('são exatamente as três telas de acesso e a saúde', () => {
@@ -23,6 +23,15 @@ describe('caminhos públicos', () => {
     expect(ehCaminhoPublico('/entrar/outra')).toBe(false);
     expect(ehCaminhoPublico('/saude/detalhe')).toBe(false);
     expect(ehCaminhoPublico('/')).toBe(false);
+  });
+});
+
+describe('caminhos fora do porteiro', () => {
+  it('são exatamente a restauração da cópia, que confere a conta sozinha', () => {
+    // Um caminho a mais nesta lista é uma rota que tem de conferir a sessão por conta
+    // própria. Quem precisar mudar este teste precisa de um motivo escrito num ADR — o
+    // desta é o 0017.
+    expect([...CAMINHOS_FORA_DO_PORTEIRO]).toEqual(['/copia/restaurar']);
   });
 });
 
