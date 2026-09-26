@@ -85,7 +85,9 @@ arquivos) e o UptimeRobot (que não o deixa dormir) —, em `https`, e todo push
 vai para o ar sozinho depois que o CI passa — o rodapé de cada tela diz a versão no ar.
 Para montar (uma vez, uns 30 minutos), siga o [passo a passo](./docs/hospedagem.md); o
 porquê de cada peça está no [ADR 0013](./docs/adr/0013-hospedagem-gratuita-em-pecas.md).
-É um arranjo para testar: sem cópia de segurança, e com os limites dos planos gratuitos.
+É um arranjo para testar, com os limites dos planos gratuitos. A cópia de segurança é
+baixada para o seu computador, pela tela **Cópia dos dados**, e os arquivos enviados
+saem da nuvem 7 dias depois de processados (ADR 0016).
 Toda tela pede conta: o primeiro acesso é **Criar conta**, que não pede código enquanto
 não houver um configurado ([ADR 0011](./docs/adr/0011-contas-de-acesso.md) e
 [0015](./docs/adr/0015-cadastro-aberto-sem-codigo.md)).

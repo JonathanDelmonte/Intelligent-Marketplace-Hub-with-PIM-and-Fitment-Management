@@ -206,6 +206,25 @@ separa um commit do sistema de quem usa.
 
 ---
 
+## 3.9 O computador de quem usa antes da nuvem
+
+Pedido do dono, de 25/09/2026 (ADR 0016): **o que pode ficar no computador de quem usa
+fica lá**, e a nuvem gratuita guarda o que o sistema precisa para funcionar sem esse
+computador ligado — o banco e a fila. É o que faz a cota gratuita render.
+
+- **O que o sistema gera é baixado, não guardado**: arquivo de importação, ficha,
+  relatório, a cópia do banco.
+- **Na nuvem, o arquivo enviado é temporário**: sai 7 dias depois do último uso
+  (`src/infra/armazenamento/limpeza.ts`), e rodar de novo pede o arquivo. Tipo de job
+  novo que guarde arquivo cita o hash no campo `hashConteudo` da entrada — é por ele que a
+  limpeza sabe que o arquivo ainda é preciso.
+- **A cópia do banco é baixada pela tela "Cópia dos dados"** e volta com
+  `npm run copia:restaurar`. Tabela nova entra nela sozinha; tabela que não deve viajar
+  num arquivo — conta, sessão, segredo — vai para `TABELAS_FORA_DA_COPIA`
+  (`src/infra/banco/copia.ts`).
+
+---
+
 ## 4. Convenções de código
 
 - TypeScript `strict`, sem `any` implícito, sem `as` para calar o compilador.
@@ -232,6 +251,7 @@ npm run db:generate    # gerar migration a partir do schema
 npm run db:migrate     # aplicar migrations
 npm run verify:authors # conferir autoria de todos os commits
 npm run montar:tarefas # empacota a subida do contêiner, fila, migração e semente para a imagem
+npm run copia:restaurar -- <arquivo> [--sim]  # confere, e com --sim restaura, a cópia dos dados
 ```
 
 ### O banco dos testes é outro, sempre

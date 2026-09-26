@@ -26,6 +26,111 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-26 — O computador de quem usa antes da nuvem (ADR 0016)
+
+### 🔀 A planilha sai da nuvem 7 dias depois do último uso
+
+O primeiro dos três pontos guardados em 25/09. O arquivo no Supabase Storage sai quando
+duas coisas valem juntas: foi gravado há mais de 7 dias, e nenhum job que ainda vá rodar
+o cita, com o último movimento dos que o citam também há mais de 7 dias. A regra é uma
+função pura (`escolherOQueApagar`), e a limpeza roda na fila a cada seis horas, a última
+da ordem — num tique em que nada mais tinha trabalho. Em disco, no computador, não roda.
+
+O cuidado foi com o depois. Job que precisa de um arquivo que saiu vai para revisão
+dizendo para enviá-lo de novo, e guarda o hash que espera (`job.aguardando_conteudo`,
+migração que só acrescenta). Enviar o mesmo arquivo devolve esse job à fila sozinho — a
+alternativa, reenviar e depois achar o job e apertar "tentar de novo", tinha no meio um
+aviso de "esta entrada já estava na fila", que diria o contrário do que aconteceu. Só o
+job que parou por falta do arquivo volta: um em revisão por classificação fraca continua
+esperando decisão, mesmo que o arquivo dele seja reenviado.
+
+Ensaiado no contêiner, do jeito que o Render roda, com um S3 de imitação. A limpeza de
+verdade, contra o S3 e o banco do contêiner e com o relógio adiantado, manteve o arquivo
+hoje e daqui a 6 dias, e o apagou daqui a 8. Depois disso, "rodar de novo" levou o job
+para revisão com o aviso, e enviar o mesmo arquivo pela tela o devolveu à fila ("1 entrada
+voltou para a fila") e o concluiu. A primeira limpeza roda na subida: sem balde ainda, a
+listagem responde que ele não existe, e isso é depósito vazio, não erro.
+
+### 🔀 Arquivo que falta vai para revisão, e não para nova tentativa
+
+Decisão desfeita, e de propósito. Um teste de ponta a ponta dizia que conteúdo sumido do
+armazenamento era "erro de infraestrutura, não de conteúdo: merece nova tentativa" — o
+job era reagendado com espera crescente e terminava em "falhou" com "conteúdo … não está
+no armazenamento". Com o prazo na nuvem, arquivo que falta é o estado normal de um envio
+antigo, e três tentativas não o trazem de volta. Agora vai direto para revisão, dizendo o
+que fazer. Falha de rede ao ler o S3 continua sendo nova tentativa: ela lança outro erro,
+e só o "não existe" vira revisão. O que se perde é o caso raro do disco que some e volta
+sozinho — ali o job espera um "tentar de novo", em vez de tentar sozinho.
+
+### 🔀 A cópia do banco em SQL comum, e não no formato do pg_dump
+
+O segundo ponto. O `pg_dump` não está na imagem, teria de ser da versão do Supabase, e a
+volta dele (`pg_restore`) pede ferramenta que o dono não tem. A cópia é gerada pelo
+próprio sistema, no formato texto que o `pg_dump` escreve: um `COPY` por tabela, na
+ordem das chaves estrangeiras, de uma fotografia só (`repeatable read`). Volta pelo
+sistema (`npm run copia:restaurar`) e por qualquer `psql`. Contas e sessões ficam de fora:
+com o cadastro aberto, o hash da senha de uma pessoa não pode ir num arquivo que outra
+conta baixa.
+
+A restauração não executa o SQL do arquivo — lê os blocos, confere tabela e coluna contra
+o destino, e monta os comandos. Arquivo com uma linha estranha (o teste põe um
+`DROP TABLE sku;` depois do `BEGIN`) é recusado inteiro, e nada muda.
+
+Restaurar pela tela ficou de fora e está nas pendências para o dono decidir: com o
+cadastro aberto, o botão deixaria qualquer conta trocar os dados de todo mundo.
+
+Ensaio: um banco com importação de verdade (anúncios e vendas, com par de identidade e
+pedido) gerou a cópia, que foi restaurada num banco novo pelo comando e em outro pelo
+`psql`. As três impressões digitais — um hash por tabela — saíram iguais, e as contas só
+na origem. No contêiner, a cópia baixada pela tela saiu com 3,7 KB (11,6 KB antes de
+comprimir), sem nenhum hash de senha, e voltou pelo comando; a memória ficou nos 200 MB de
+sempre.
+
+### 🐛 De novo: `pkill -f` com o padrão no próprio comando derrubou o shell
+
+Para parar o S3 de imitação do ensaio, `pkill -f "…moto_server"` casou com a linha de
+comando do próprio shell que o rodava, e o matou no meio de uma edição (saída 144) — o
+mesmo tropeço de 25/09, já anotado aqui. A edição não chegou a rodar, e foi refeita. O
+jeito que não se casa consigo mesmo é o colchete no padrão: `pgrep -f "[m]oto_server"`.
+
+### 🐛 O driver perde o erro do COPY que chega depois do fim
+
+O teste da cópia cortada no meio ficou parado para sempre. No `postgres` (o driver,
+3.4.9), o `COPY … FROM stdin` só termina quando o Postgres confirma; o erro que o Postgres
+só acha no fim — linha pela metade, chave estrangeira sem o registro referido — chega
+depois de o driver soltar o fluxo, e ele o descarta: a escrita nunca termina nem falha.
+Não há evento a esperar. A saída foi conferir o fim com uma consulta a mais na mesma
+conexão, que só roda depois do `COPY` e falha se ele falhou, porque a transação ficou
+abortada. O driver recusa a consulta (`COPY_IN_PROGRESS`) até mandar o fim do `COPY`, e
+ela é refeita a cada 5 ms. Há teste para os dois lados: a chave estrangeira quebrada, que
+falha no fim, e a linha com coluna a menos, que falha no meio.
+
+### ⚠️ Download cancelado deixaria a conexão presa
+
+`for await` sobre o fluxo do `COPY … TO stdout` o destrói quando quem lê para no meio — o
+navegador que cancelou o download. Destruído, o driver deixa de ler o socket, e a conexão
+voltaria ao pool com o `COPY` pela metade: presa para sempre, e no Render são cinco. A
+cópia lê com `iterator({ destroyOnReturn: false })` e, ao parar, esvazia o resto antes de
+devolver a conexão. O teste usa um pool de uma conexão só: se ela voltasse presa, a
+consulta seguinte estouraria o tempo.
+
+### ❓ Listar e apagar no S3 do Supabase
+
+Ensaiados contra o S3 de imitação dos testes, não contra o Supabase — o ambiente de
+desenvolvimento não o alcança. A primeira limpeza no ar só lista (nada tem 7 dias ainda),
+e a primeira que apaga vem uma semana depois do primeiro envio. O log diz
+`conteudo.limpeza` ou `conteudo.limpeza_falhou`; falha não para a fila, e a limpeza tenta
+de novo em 15 minutos.
+
+### 🧹 A nota das pendências citava o ADR errado
+
+A pendência dizia que apagar o arquivo mudava o ADR 0002 ("nunca jogar a entrada fora").
+O ADR 0002 não diz isso: a frase era de um comentário do `.env.example`, e a regra de não
+descartar, da especificação e do ADR 0005, é sobre o registro — que continua no banco. O
+comentário foi corrigido, e o ADR 0016 diz o que de fato mudou: o ADR 0013.
+
+---
+
 ## 2026-09-26 — Sem código de cadastro e sem perfil a configurar (ADR 0014)
 
 ### 🐛 "Payload em formato não reconhecido" na primeira planilha no ar

@@ -1,6 +1,8 @@
 # ADR 0013 — Hospedagem gratuita em peças: Render, Supabase e UptimeRobot
 
-**Estado:** Aceito; o filtro de montagem da decisão 4 saiu (diário, 26/09) ·
+**Estado:** Aceito; o filtro de montagem da decisão 4 saiu (diário, 26/09); a decisão 6
+foi substituída pelo [ADR 0016](./0016-computador-antes-da-nuvem.md), que também dá prazo
+aos arquivos da decisão 2 ·
 **Data:** 2026-09-25 · Decisão do dono · Substitui o
 [ADR 0012](./0012-conta-oracle-sem-upgrade.md) e a parte de hospedagem do
 [ADR 0010](./0010-hospedagem-gratuita.md)

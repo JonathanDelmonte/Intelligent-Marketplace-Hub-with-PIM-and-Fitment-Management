@@ -8,10 +8,11 @@ cada peça, e do que ficou de fora, está no [ADR 0013](./adr/0013-hospedagem-gr
 Você faz isto **uma vez**. Leva uns 30 minutos, quase todos esperando a primeira
 montagem.
 
-É um arranjo para testar, e foi escolhido assim: tudo de graça, sem cópia de segurança, e
-quando o banco encher, apaga e recomeça. Quando o sistema for usado de verdade, o caminho
-é pagar — um servidor próprio ([hospedagem-servidor.md](./hospedagem-servidor.md)) ou os
-planos pagos destes mesmos serviços.
+É um arranjo para testar, e foi escolhido assim: tudo de graça; a cópia de segurança é
+você que baixa, pela tela **Cópia dos dados** ([abaixo](#a-cópia-dos-dados)); e quando o
+banco encher, apaga e recomeça. Quando o sistema for usado de verdade, o caminho é pagar
+— um servidor próprio ([hospedagem-servidor.md](./hospedagem-servidor.md)) ou os planos
+pagos destes mesmos serviços.
 
 Os nomes dos menus abaixo são os dos painéis em inglês, como estavam em setembro de 2026.
 Se algum tiver mudado de lugar, a busca do painel acha pelo nome.
@@ -28,7 +29,9 @@ UptimeRobot ─► /saude a cada 5 minutos ─► o Render não dorme, e o banco
   endereço `https://…onrender.com`. O plano gratuito tem 512 MB de memória e dorme depois
   de 15 minutos sem visita.
 - **Supabase** (supabase.com) guarda os dados: o banco (Postgres) e os arquivos enviados
-  (planilhas, PDFs). O plano gratuito tem 500 MB de banco e 1 GB de arquivos.
+  (planilhas, PDFs). O plano gratuito tem 500 MB de banco e 1 GB de arquivos, e por isso
+  o arquivo enviado fica lá só 7 dias depois de processado — o original está com você
+  ([ADR 0016](./adr/0016-computador-antes-da-nuvem.md)).
 - **UptimeRobot** (uptimerobot.com) visita o sistema a cada 5 minutos. É isso que não
   deixa o Render dormir — e, se o sistema cair, ele manda e-mail.
 - **A publicação**: a cada push no `main`, o GitHub verifica tudo, inclusive se o
@@ -156,14 +159,49 @@ reinicia, e criar conta e trocar a senha esquecida passam a pedir o código.
 - **Voltar uma versão**: **hub → Events**, no deploy que funcionava, **Rollback**.
 - **Reiniciar**: **hub → Manual Deploy → Restart service**.
 
+## A cópia dos dados
+
+O Supabase gratuito não faz cópia de segurança; quem faz é você, pela tela **Cópia dos
+dados**, no fim da barra lateral. **Baixar a cópia** gera um arquivo
+`copia-dos-dados-….sql.gz` com o banco inteiro, menos as contas de acesso. Guarde em mais
+de um lugar — um pendrive, um e-mail para você mesmo. Uma por semana é um bom ritmo.
+
+Os arquivos enviados não entram na cópia, e também não ficam na nuvem para sempre: saem 7
+dias depois de processados. Para rodar de novo um envio antigo, envie o mesmo arquivo na
+tela **Importar**, e o que esperava por ele volta para a fila sozinho.
+
+**Para a cópia voltar** — o projeto do Supabase se perdeu, ou você quer os dados no seu
+computador:
+
+1. Tenha o banco de destino já com o sistema na versão da cópia, ou mais nova. Na nuvem:
+   um projeto novo do Supabase (passo 1), com o endereço novo no `DATABASE_URL` do Render
+   — o sistema prepara o banco na subida. No computador: o atalho de iniciar prepara o
+   banco sozinho.
+2. No seu computador, na pasta do sistema, com o endereço desse banco no `DATABASE_URL`
+   do `.env`:
+
+   ```sh
+   npm run copia:restaurar -- C:\caminho\da\copia-dos-dados-2026-09-26-1530.sql.gz
+   ```
+
+   Primeiro ele só confere o arquivo e diz o que tem, sem mudar nada. Rodando de novo com
+   `--sim` no fim, ele troca os dados daquele banco pelos da cópia, numa vez só: se algo
+   der errado no meio, nada muda. Se você pôs o endereço da nuvem no `.env` só para isso,
+   volte o `.env` ao que era.
+
+3. Crie a sua conta de novo (passo 3): as contas não vêm na cópia.
+
+Quem tiver o `psql` restaura sem o sistema: `gunzip -c copia.sql.gz | psql "endereço do
+banco"`.
+
 ## Quanto custa
 
-| Peça                         | Custo | O limite do plano gratuito                                                     |
-| ---------------------------- | ----- | ------------------------------------------------------------------------------ |
-| Site e fila (Render)         | R$ 0  | 512 MB de memória; 750 horas por mês; 500 minutos de montagem por mês          |
-| Banco e arquivos (Supabase)  | R$ 0  | 500 MB de banco; 1 GB de arquivos; 5 GB de tráfego; **sem cópia de segurança** |
-| Vigia (UptimeRobot)          | R$ 0  | uma visita a cada 5 minutos                                                    |
-| Verificação (GitHub Actions) | R$ 0  | repositório público não paga minuto                                            |
+| Peça                         | Custo | O limite do plano gratuito                                                    |
+| ---------------------------- | ----- | ----------------------------------------------------------------------------- |
+| Site e fila (Render)         | R$ 0  | 512 MB de memória; 750 horas por mês; 500 minutos de montagem por mês         |
+| Banco e arquivos (Supabase)  | R$ 0  | 500 MB de banco; 1 GB de arquivos; 5 GB de tráfego; sem cópia automática      |
+| Vigia (UptimeRobot)          | R$ 0  | uma visita a cada 5 minutos                                                   |
+| Verificação (GitHub Actions) | R$ 0  | repositório público não paga minuto                                           |
 
 As 750 horas são por conta, não por serviço: um serviço ligado o mês inteiro usa até 744,
 e cabe — um segundo serviço ligado, não. **Mais tarde, se quiser**: um domínio `.com.br`
@@ -183,7 +221,8 @@ também é público, e por isso ele nunca imprime dado.
 ## Quando o banco encher
 
 A decisão para esta fase é apagar tudo e recomeçar. O Supabase avisa por e-mail quando o
-banco chega perto do limite, e o uso fica na página **Usage** da organização.
+banco chega perto do limite, e o uso fica na página **Usage** da organização. Se quiser
+guardar o que tem, baixe a cópia antes ([A cópia dos dados](#a-cópia-dos-dados)).
 
 1. No Supabase, **SQL Editor**, cole e rode (**Run**):
 
@@ -202,8 +241,8 @@ banco chega perto do limite, e o uso fica na página **Usage** da organização.
 2. No Render, **hub → Manual Deploy → Restart service**: na subida, o sistema recria o
    perfil da loja.
 3. Crie a sua conta de novo (passo 3).
-4. _(Opcional)_ Os arquivos enviados continuam no Storage, ocupando espaço: em **Storage →
-   conteudo**, selecione tudo e apague.
+4. Os arquivos enviados saem do Storage sozinhos em até 7 dias. Para liberar o espaço na
+   hora: em **Storage → conteudo**, selecione tudo e apague.
 
 ## Quando algo dá errado
 

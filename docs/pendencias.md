@@ -324,7 +324,7 @@ vinte títulos por pedido, com o que já tem marca e modelo resolvido antes, sem
 quando a extração passa por ele — sozinha, com a chave, e parando quando a cota do dia
 acaba. A tela de juntar iguais diz quantas ofertas esperam essa leitura.
 
-### 3.3 Hospedar fora da máquina — feito; falta criar as contas
+### 3.3 Hospedar fora da máquina — feito, e no ar desde 26/09
 
 **Fechada em 25/09, do lado do código.** O dono pediu o sistema no ar, de graça, com
 cada mudança publicada sozinha — e com tela de cadastro e login. Entrou:
@@ -338,34 +338,40 @@ cada mudança publicada sozinha — e com tela de cadastro e login. Entrou:
 - **A publicação**: todo push no `main` vai para o ar depois do CI, e o CI sobe o
   contêiner do jeito que o Render sobe, contra o Postgres da versão do Supabase.
 
-**O que falta é do dono:** criar as três contas e seguir o [guia](./hospedagem.md) — o
-projeto do Supabase (banco, bucket e chave S3), o Blueprint do Render (colando os
-valores) e o monitor do UptimeRobot. O servidor próprio, com cópia todo dia, fica guardado
-para quando escalar ([hospedagem-servidor.md](./hospedagem-servidor.md)).
+**As contas o dono criou em 26/09**, seguindo o [guia](./hospedagem.md): o projeto do
+Supabase (banco, bucket e chave S3), o Blueprint do Render e o monitor do UptimeRobot. O
+servidor próprio, com cópia todo dia, fica guardado para quando escalar
+([hospedagem-servidor.md](./hospedagem-servidor.md)).
 
 **Antes de pôr dado de verdade: fechar o cadastro.** Nesta fase de teste, sem código,
 qualquer um com o endereço cria conta e troca senha (ADR 0015). Fechar é pôr
 `CADASTRO_CODIGO` no painel do Render ([guia](./hospedagem.md)).
 
-**Aberto, e se resolve no primeiro uso:** o S3 do Supabase foi ensaiado contra imitações,
-e a primeira planilha enviada no ar é a prova (diário, 25/09). Sem cópia de segurança
-nesta fase, por decisão do dono: dado de verdade traz a cópia de volta ao plano.
+**Resolvido no primeiro uso:** o S3 do Supabase, ensaiado contra imitações, gravou e leu
+de volta a primeira planilha enviada no ar (diário, 26/09).
 
-**Para depois de estar no ar — o computador do dono no lugar da nuvem.** Pedido do dono
-em 25/09: o que puder ficar no computador de quem usa, fica lá, para a cota gratuita
-render mais. Combinado tratar quando o sistema estiver no ar, nesta ordem:
+**O computador de quem usa no lugar da nuvem — feito em 26/09 (ADR 0016).** Pedido do
+dono em 25/09, combinado para depois de o sistema estar no ar. Os três pontos:
 
-1. **A planilha na nuvem vira temporária.** O original já está no computador de quem
-   enviou; a cópia no Supabase Storage pode ser apagada sozinha uns 7 dias depois de
-   processada, e reprocessar depois disso pede o arquivo de novo. Muda o ADR 0002 ("nunca
-   jogar a entrada fora"): entra por ADR novo, com a decisão do dono.
-2. **A cópia do banco baixada para o computador.** Um botão que gera a cópia e baixa. É a
-   cópia de segurança que o Supabase gratuito não tem, e sem custo.
-3. **O princípio vale para o que vier.** O que o sistema gera — arquivo de importação,
-   ficha, relatório — já é baixado, e não fica guardado. Processar a planilha no próprio
-   navegador foi avaliado e não compensa agora: poupa processamento do servidor, mas não
-   o banco, que é o que enche primeiro (os dados extraídos vão para ele de todo jeito).
-   Reavaliar se a máquina do Render ficar pequena.
+1. **A planilha na nuvem é temporária.** Sai do Supabase Storage 7 dias depois do último
+   uso; job pendente guarda o arquivo pelo tempo que for. Rodar de novo depois disso pede
+   o mesmo arquivo na tela Importar, e reenviá-lo devolve à fila o que esperava por ele.
+   No computador, em disco, nada sai.
+2. **A cópia do banco é baixada pelo navegador**, na tela **Cópia dos dados**, sem as
+   contas de acesso. Volta com `npm run copia:restaurar` ou com qualquer `psql`.
+   Substitui o "sem cópia de segurança" do ADR 0013.
+3. **O princípio está no CLAUDE.md (3.9).** Processar a planilha no navegador continua
+   avaliado e adiado: poupa o servidor, não o banco. Reavaliar se a máquina do Render
+   ficar pequena.
+
+**Aberto, e se resolve sozinho no ar:** listar e apagar no S3 foram ensaiados contra
+imitação. A primeira limpeza roda logo depois da publicação — só lista, porque nada tem 7
+dias ainda —, e a primeira que apaga vem uma semana depois do primeiro envio. O log do
+Render diz `conteudo.limpeza` ou `conteudo.limpeza_falhou`.
+
+**Para o dono decidir:** restaurar a cópia pela própria tela, sem computador. Não entrou
+porque, com o cadastro aberto, qualquer conta poderia trocar os dados de todo mundo; com o
+cadastro fechado, o risco cai, e o botão cabe.
 
 O que vem abaixo é a análise de antes, que levou à decisão, e continua valendo como
 registro: o banco sem SDK de provedor, o armazenamento em disco que tirou o serverless
