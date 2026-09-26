@@ -28,7 +28,7 @@ import { carregarPerfil } from '@/dominio/perfil';
 import { ehPlataforma } from '@/dominio/precificacao/tipos';
 import { banco } from '@/infra/banco/cliente';
 import { registroPadrao } from '@/plataformas/registro';
-import { PublicarEm } from '../catalogo/componentes';
+import { PublicarEm } from './publicar-em';
 import { avisoDeCamposInvalidos, descreverAviso, outrasLojas } from './apresentacao';
 import {
   AvisoDaAcao,

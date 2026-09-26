@@ -12,7 +12,8 @@ import type { CandidatoAAnuncio } from '@/dominio/anuncios/repositorio';
 import { PLATAFORMAS } from '@/dominio/precificacao/tipos';
 import { contagem } from '@/lib/texto';
 import { formatarPontosBase } from '@/lib/dinheiro';
-import { caminhoDoSimulador, type LojaParaPublicar } from '../catalogo/apresentacao';
+import { caminhoDoSimulador } from '../catalogo/apresentacao';
+import type { LojaParaPublicar } from './publicar-em';
 import { caminhoParaMontar, type ParametrosDaMontagem } from './parametros';
 
 export type Tom = 'alerta' | 'atencao' | 'neutro';
