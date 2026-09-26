@@ -1,6 +1,8 @@
 # ADR 0016 — O computador de quem usa antes da nuvem
 
-**Estado:** Aceito · **Data:** 2026-09-26 · Decisão do dono · Substitui a decisão 6 do
+**Estado:** Aceito; a restauração pela tela entrou pelo
+[ADR 0017](./0017-restaurar-pela-tela.md) · **Data:** 2026-09-26 · Decisão do dono ·
+Substitui a decisão 6 do
 [ADR 0013](./0013-hospedagem-gratuita-em-pecas.md) (sem cópia de segurança) e dá prazo
 aos arquivos da decisão 2
 

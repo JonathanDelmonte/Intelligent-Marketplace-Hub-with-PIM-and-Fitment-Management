@@ -358,8 +358,9 @@ dono em 25/09, combinado para depois de o sistema estar no ar. Os três pontos:
    o mesmo arquivo na tela Importar, e reenviá-lo devolve à fila o que esperava por ele.
    No computador, em disco, nada sai.
 2. **A cópia do banco é baixada pelo navegador**, na tela **Cópia dos dados**, sem as
-   contas de acesso. Volta com `npm run copia:restaurar` ou com qualquer `psql`.
-   Substitui o "sem cópia de segurança" do ADR 0013.
+   contas de acesso, e volta pela mesma tela (ADR 0017) — ou por `npm run
+   copia:restaurar`, ou por qualquer `psql`. Substitui o "sem cópia de segurança" do ADR
+   0013.
 3. **O princípio está no CLAUDE.md (3.9).** Processar a planilha no navegador continua
    avaliado e adiado: poupa o servidor, não o banco. Reavaliar se a máquina do Render
    ficar pequena.
@@ -369,9 +370,10 @@ imitação. A primeira limpeza roda logo depois da publicação — só lista, p
 dias ainda —, e a primeira que apaga vem uma semana depois do primeiro envio. O log do
 Render diz `conteudo.limpeza` ou `conteudo.limpeza_falhou`.
 
-**Para o dono decidir:** restaurar a cópia pela própria tela, sem computador. Não entrou
-porque, com o cadastro aberto, qualquer conta poderia trocar os dados de todo mundo; com o
-cadastro fechado, o risco cai, e o botão cabe.
+**Restaurar pela tela — feito em 26/09 (ADR 0017), por decisão do dono:** funcionar como
+o produto pronto funcionaria, mesmo com o cadastro aberto, em que qualquer conta pode
+trocar os dados de todo mundo. Fechar o cadastro fecha isso também. **Aberto:** o limite de
+envio do Render — a cópia de 13,9 MB foi ensaiada no contêiner, não no ar.
 
 O que vem abaixo é a análise de antes, que levou à decisão, e continua valendo como
 registro: o banco sem SDK de provedor, o armazenamento em disco que tirou o serverless

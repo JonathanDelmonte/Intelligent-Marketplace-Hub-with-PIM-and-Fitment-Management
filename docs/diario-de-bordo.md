@@ -26,6 +26,63 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-26 — Restaurar a cópia pela tela (ADR 0017)
+
+### 🔀 A restauração entra na tela, por decisão do dono
+
+O ADR 0016 deixou a restauração no computador, com o risco dito: com o cadastro aberto,
+um botão de restaurar deixaria qualquer conta trocar os dados de todo mundo. O dono
+respondeu que quer o sistema funcionando como o produto pronto funcionaria, "por mais que
+alguém possa invadir hoje e pegar os dados", e que o código de cadastro fica para depois
+dos testes. Entrou: escolher o arquivo, ver o que ele tem — conferido no navegador, sem
+subir nada —, confirmar numa caixa de marcar, restaurar.
+
+### ⚠️ O porteiro do Next corta em 10 MB o pedido que passa por ele
+
+Achado lendo a documentação desta versão do Next, antes de escrever a rota: com o proxy
+(o porteiro) na frente, o Next guarda o corpo do pedido na memória, para o proxy também
+poder lê-lo, e o corta no limite de `proxyClientMaxBodySize` — 10 MB por padrão —, sem
+erro, só com um aviso no log. A cópia de um banco de verdade passa disso. Aumentar o
+limite seria guardar na memória cada pedido grande, de qualquer rota, antes até de
+conferir a sessão.
+
+A rota da restauração ficou fora do porteiro e confere a sessão ela mesma, com um
+cabeçalho que só a tela manda. A lista do que fica fora (`CAMINHOS_FORA_DO_PORTEIRO`) tem
+teste, e o teste do porteiro confere o `matcher` literal contra ela.
+
+Ensaiado dos dois lados, com a mesma cópia de 13,9 MB: pela rota fora do porteiro, voltou
+em 2,4 s; numa imagem de teste com a rota dentro do porteiro, o log disse "Request body
+exceeded 10MB for /copia/restaurar", e a restauração recusou a cópia cortada sem mudar
+nada. O corte é real.
+
+### 🔀 A cópia de uma instalação na outra acerta o perfil da loja
+
+Na nuvem, sem configuração, o perfil se chama `principal` (ADR 0014); no computador, o
+`.env` de exemplo o chama pelo nome da loja. Restaurar a cópia de um lado no outro
+deixaria toda tela procurando um perfil que não existe. Depois de restaurar, com um perfil
+só na cópia, ele passa a ter o nome que esta instalação procura — o identificador e os
+dados continuam os mesmos. Com vários, e nenhum com esse nome, a tela avisa. Vale para a
+tela e para o comando. Ensaiado: a cópia com o perfil de outro nome voltou pela tela, e a
+visão geral abriu sem erro.
+
+### 🐛 Uma escuta pendurada a cada lote do COPY
+
+O ensaio da cópia grande pegou o aviso do Node "MaxListenersExceededWarning: 11 close
+listeners added to [Writable]". A espera pelo banco escoar cada lote corria
+`once('drain')` contra `once('close')`, e a escuta que perdia a corrida ficava no fluxo —
+uma por lote, até o fim da tabela. Agora as duas saem ao fim de cada espera. O teste de
+restauração com uns 3 MB falha com a espera antiga e passa com a nova, e o ensaio final no
+contêiner, com a cópia de 13,9 MB, não teve mais o aviso.
+
+### 🧹 O formato da cópia mora num arquivo sem nada de servidor
+
+Para o navegador conferir a cópia com a mesma leitura do servidor, a leitura saiu de
+`copia.ts` para `formato-da-copia.ts`, sem banco nem `node:`. A restauração do servidor
+passou a pendurar nela o que é do banco (conferir tabelas e colunas, apagar, escrever), e
+os testes de antes continuaram passando sem mudança.
+
+---
+
 ## 2026-09-26 — O computador de quem usa antes da nuvem (ADR 0016)
 
 ### 🔀 A planilha sai da nuvem 7 dias depois do último uso

@@ -134,7 +134,10 @@ fechado por código, porque o sistema está no ar. Sem código configurado, cada
 de senha ficam abertos — a fase de teste, por decisão do dono (ADR 0015). Toda conta vê todos os perfis; papéis e
 permissões ficam para quando escalar, e entram por ADR novo. `usuario` e `sessao` são
 infraestrutura e não carregam `perfil_id`. Caminho que abre sem conta é decisão, e está
-listado em `src/app/acesso/constantes.ts`, com teste que confere a lista.
+listado em `src/app/acesso/constantes.ts`, com teste que confere a lista. Caminho que o
+porteiro não vê — só o que recebe arquivo grande, porque com ele na frente o Next corta o
+pedido em 10 MB — também está lá (`CAMINHOS_FORA_DO_PORTEIRO`), e confere a sessão sozinho
+(ADR 0017).
 
 ### 3.5 IA onde é IA
 
@@ -218,10 +221,11 @@ computador ligado — o banco e a fila. É o que faz a cota gratuita render.
   (`src/infra/armazenamento/limpeza.ts`), e rodar de novo pede o arquivo. Tipo de job
   novo que guarde arquivo cita o hash no campo `hashConteudo` da entrada — é por ele que a
   limpeza sabe que o arquivo ainda é preciso.
-- **A cópia do banco é baixada pela tela "Cópia dos dados"** e volta com
-  `npm run copia:restaurar`. Tabela nova entra nela sozinha; tabela que não deve viajar
-  num arquivo — conta, sessão, segredo — vai para `TABELAS_FORA_DA_COPIA`
-  (`src/infra/banco/copia.ts`).
+- **A cópia do banco é baixada pela tela "Cópia dos dados"** e volta pela mesma tela
+  (ADR 0017) — ou por `npm run copia:restaurar`, ou por qualquer `psql`. Tabela nova entra
+  nela sozinha; tabela que não deve viajar num arquivo — conta, sessão, segredo — vai para
+  `TABELAS_FORA_DA_COPIA` (`src/infra/banco/copia.ts`). O formato é lido pelo navegador e
+  pelo servidor (`src/infra/banco/formato-da-copia.ts`).
 
 ---
 

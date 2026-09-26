@@ -170,29 +170,28 @@ Os arquivos enviados não entram na cópia, e também não ficam na nuvem para s
 dias depois de processados. Para rodar de novo um envio antigo, envie o mesmo arquivo na
 tela **Importar**, e o que esperava por ele volta para a fila sozinho.
 
-**Para a cópia voltar** — o projeto do Supabase se perdeu, ou você quer os dados no seu
-computador:
+**Para a cópia voltar**, na mesma tela, em **Restaurar uma cópia**: escolha o arquivo, e
+a tela diz de quando ele é e se está inteiro, antes de mandar qualquer coisa. Marque que
+entende que os dados de agora serão trocados pelos da cópia e aperte **Restaurar esta
+cópia**. É numa vez só: se algo der errado no meio, nada muda. A sua conta continua a
+mesma (ADR 0017).
 
-1. Tenha o banco de destino já com o sistema na versão da cópia, ou mais nova. Na nuvem:
-   um projeto novo do Supabase (passo 1), com o endereço novo no `DATABASE_URL` do Render
-   — o sistema prepara o banco na subida. No computador: o atalho de iniciar prepara o
-   banco sozinho.
-2. No seu computador, na pasta do sistema, com o endereço desse banco no `DATABASE_URL`
-   do `.env`:
+Se o projeto do Supabase se perdeu, crie outro (passo 1), ponha o endereço novo no
+`DATABASE_URL` do Render — o sistema prepara o banco na subida —, crie a sua conta (passo
+3) e restaure pela tela. A cópia também volta no seu computador, pela mesma tela do sistema
+rodando nele: o perfil da loja se acerta sozinho, mesmo que lá ele tenha outro nome.
 
-   ```sh
-   npm run copia:restaurar -- C:\caminho\da\copia-dos-dados-2026-09-26-1530.sql.gz
-   ```
+**Sem a tela**, no seu computador, na pasta do sistema, com o endereço do banco de destino
+no `DATABASE_URL` do `.env`:
 
-   Primeiro ele só confere o arquivo e diz o que tem, sem mudar nada. Rodando de novo com
-   `--sim` no fim, ele troca os dados daquele banco pelos da cópia, numa vez só: se algo
-   der errado no meio, nada muda. Se você pôs o endereço da nuvem no `.env` só para isso,
-   volte o `.env` ao que era.
+```sh
+npm run copia:restaurar -- C:\caminho\da\copia-dos-dados-2026-09-26-1530.sql.gz
+```
 
-3. Crie a sua conta de novo (passo 3): as contas não vêm na cópia.
-
-Quem tiver o `psql` restaura sem o sistema: `gunzip -c copia.sql.gz | psql "endereço do
-banco"`.
+Primeiro ele só confere o arquivo e diz o que tem, sem mudar nada; com `--sim` no fim, ele
+restaura. Se você pôs o endereço da nuvem no `.env` só para isso, volte o `.env` ao que
+era. E quem tiver o `psql` restaura sem o sistema: `gunzip -c copia.sql.gz | psql
+"endereço do banco"`.
 
 ## Quanto custa
 

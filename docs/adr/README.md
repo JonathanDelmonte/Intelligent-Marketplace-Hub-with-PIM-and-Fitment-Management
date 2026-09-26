@@ -21,4 +21,5 @@ histórico da decisão vale mais que a limpeza do diretório.
 | [0013](./0013-hospedagem-gratuita-em-pecas.md)  | Hospedagem gratuita em peças: Render, Supabase, UptimeRobot | Aceito; em parte substituído pelo 0016           |
 | [0014](./0014-primeira-conta-sem-codigo.md)     | Sem código de cadastro, a primeira conta entra direto       | Em parte substituído pelo 0015                   |
 | [0015](./0015-cadastro-aberto-sem-codigo.md)    | Sem código de cadastro, o cadastro fica aberto              | Aceito                                           |
-| [0016](./0016-computador-antes-da-nuvem.md)     | O computador de quem usa antes da nuvem                     | Aceito                                           |
+| [0016](./0016-computador-antes-da-nuvem.md)     | O computador de quem usa antes da nuvem                     | Aceito; em parte substituído pelo 0017           |
+| [0017](./0017-restaurar-pela-tela.md)           | Restaurar a cópia pela tela                                 | Aceito                                           |
