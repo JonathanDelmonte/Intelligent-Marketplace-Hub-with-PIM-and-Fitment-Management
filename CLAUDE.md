@@ -198,9 +198,9 @@ separa um commit do sistema de quem usa.
   existe no computador e falta no ar. (No servidor próprio, guardado para quando escalar,
   o lugar é `servidor/montar-config.sh` e o job `publicar` do `verificar.yml`.)
 - **Push por tarefa, não por commit.** O Render gratuito tem 500 minutos de montagem por
-  mês, e cada push que muda a imagem gasta alguns. Commit pequeno continua a regra; o
-  push junta os de uma tarefa terminada. Push só de documento ou teste não monta
-  (`buildFilter` no `render.yaml`).
+  mês, e todo push monta a imagem, uns 3 minutos — inclusive o só de documento: o filtro
+  de caminhos saiu porque fez o Render pular código (diário, 26/09). Commit pequeno
+  continua a regra; o push junta os de uma tarefa terminada.
 - O passo a passo, e o que fazer quando algo falha, está em `docs/hospedagem.md`; o do
   servidor próprio, em `docs/hospedagem-servidor.md`.
 

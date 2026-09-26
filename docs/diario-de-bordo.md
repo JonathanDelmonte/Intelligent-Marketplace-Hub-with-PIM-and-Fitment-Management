@@ -28,6 +28,26 @@ Convenção de marcação:
 
 ## 2026-09-26 — Sem código de cadastro e sem perfil a configurar (ADR 0014)
 
+### 🐛 O filtro de montagem deixou código fora do ar
+
+O primeiro deploy no Render saiu (`d208c42`), e o envio seguinte — dois commits: o do
+cadastro aberto, em `src/`, e depois o dos documentos — passou no CI e nunca chegou ao ar.
+Nos **Events** do serviço, nenhuma linha sobre ele: nem montagem, nem espera, nem aviso.
+O registro de publicações que o Render deixa no GitHub (`/deployments`) confirmou que só
+o primeiro commit foi publicado.
+
+A causa provável é o `buildFilter` do `render.yaml`: o último commit do envio mexia só em
+`*.md` e `docs/`, que o filtro ignorava, e a documentação do Render fala em "commit"
+alterando o caminho — o comportamento observado bate com ele olhar só o último. Outra
+suspeita, as verificações "na fila" que outros aplicativos do GitHub deixam em todo commit
+(Vercel, Cloudflare, Supabase e outros), é menos provável: o Render diz que só conta as
+verificações que terminam, e considera "pulado" como aprovado.
+
+O filtro saiu. Todo push monta a imagem — o primeiro levou uns 3 minutos —, e o custo são
+minutos de montagem num push só de documento. Pular código em silêncio é pior: o sistema
+fica velho e ninguém vê. Quando um commit verde não aparecer nos Events, **Manual Deploy →
+Deploy latest commit** publica na hora (está no guia).
+
 ### 🐛 Fechei o cadastro sem perguntar, e o dono não queria (ADR 0015)
 
 O dono tinha dito com todas as letras que não queria código e que o sistema era só de

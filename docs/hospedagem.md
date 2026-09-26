@@ -148,8 +148,8 @@ reinicia, e criar conta e trocar a senha esquecida passam a pedir o código.
 - **Mudança**: entrou no `main`, o CI verifica (uns quatro minutos), e o Render monta e
   troca a versão (uns dez). O rodapé de toda tela diz a versão no ar — "atualizado em
   25/09/2026 às 14:05 (3f9c2a1)" —, então dá para saber se a mudança já chegou.
-- **Mudança só em documento ou em teste** não vai para o Render: não muda nada no ar, e
-  poupa os minutos de montagem do mês (ver [Quanto custa](#quanto-custa)).
+- **Toda mudança monta a versão de novo**, uns 3 dos 500 minutos de montagem do mês (ver
+  [Quanto custa](#quanto-custa)) — inclusive a só de documento.
 - **Publicação que falhou**: o Render manda e-mail, e a versão anterior continua no ar. O
   motivo está em **hub → Events**, no deploy que falhou.
 - **O que o sistema está dizendo**: **hub → Logs**. Só você vê.
@@ -246,5 +246,6 @@ Endpoint termina em `/storage/v1/s3`, e a chave e o segredo são do mesmo par. O
 tem de se chamar `conteudo`.
 
 **A mudança não chegou.** Confira no GitHub se o CI do commit passou — o Render só
-publica commit verde. Mudança só em documento ou teste não vai para o ar, de propósito. E
-se os minutos de montagem do mês acabaram, o painel do Render mostra em **Billing**.
+publica commit verde. Se o commit passou e não aparece nos **Events** do serviço, **Manual
+Deploy → Deploy latest commit** publica na hora. E se os minutos de montagem do mês
+acabaram, o painel do Render mostra em **Billing**.

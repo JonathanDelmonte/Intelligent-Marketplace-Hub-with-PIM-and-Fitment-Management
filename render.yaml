@@ -23,16 +23,9 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /saude
     autoDeployTrigger: checksPass
-    # O plano gratuito tem 500 minutos de montagem por mês. Mudança só em documento, em
-    # teste ou no que não entra na imagem (ver .dockerignore) não gasta nenhum.
-    buildFilter:
-      ignoredPaths:
-        - '**/*.md'
-        - '**/*.test.ts'
-        - docs/**
-        - servidor/**
-        - .github/**
-        - Atalhos/**
+    # Sem filtro de caminhos, de propósito: com ele, o Render deixou de publicar um envio
+    # cujo último commit era só documento, e o código dos commits anteriores ficou fora do
+    # ar (diário, 26/09). Todo push monta a imagem — uns 3 dos 500 minutos do mês.
     envVars:
       # O endereço do "Session pooler" do Supabase, com a senha no lugar de
       # [YOUR-PASSWORD]. O TLS entra sozinho (src/infra/conteiner/ambiente.ts).
