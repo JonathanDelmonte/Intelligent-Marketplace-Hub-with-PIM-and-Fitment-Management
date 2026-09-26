@@ -34,7 +34,8 @@ A máquina não saiu: "Out of capacity" em toda tentativa, por horas. O dono rec
 máquina menor e recusou continuar disputando vaga. A pesquisa achou mais um motivo: em
 julho de 2026 a Oracle cortou pela metade o Always Free das contas gratuitas (2 núcleos e
 12 GB, contra 4 e 24 de quem é Pay As You Go, que também tem a prioridade na fila). O
-workflow **criar máquina** não chegou a rodar nenhuma vez.
+workflow **criar máquina** rodou uma vez pelo agendamento, antes de sair: 11 segundos, sem
+os segredos da Oracle, e terminou sem pedir nada, como previsto.
 
 A proposta nova junta três planos gratuitos: Render (site e fila), Supabase (banco e
 arquivos) e UptimeRobot (a visita que não deixa o Render dormir). O que ficou de fora, e
