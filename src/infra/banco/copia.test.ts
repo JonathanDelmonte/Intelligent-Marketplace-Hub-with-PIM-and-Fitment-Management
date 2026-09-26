@@ -291,6 +291,36 @@ describe.skipIf(!temBancoDeTeste())('cópia do banco (Postgres de verdade)', () 
     expect(Object.values(await fotografar(copiadas)).every((l) => l === '[]')).toBe(true);
   });
 
+  it('cópia grande volta sem deixar escuta pendurada no fluxo do COPY', async () => {
+    // Uns 3 MB: dezenas de lotes, e dezenas de esperas para o banco escoar. Cada espera
+    // que deixasse uma escuta para trás faria o Node avisar vazamento depois de dez.
+    await semear();
+    await conexao.db.execute(
+      sql`insert into llm_call (proposito, modelo, hash_entrada, entrada)
+          select 'volume', 'modelo', md5(n::text), jsonb_build_object('texto', repeat(md5(n::text), 40))
+          from generate_series(1, 2000) n`,
+    );
+    const antes = await fotografar(['llm_call']);
+    const copia = await juntar(gerarCopia(conexao.db, OPCOES));
+    await limparTabelas(conexao.db, copiadas);
+
+    const avisos: string[] = [];
+    const escutar = (aviso: Error) => {
+      avisos.push(aviso.name);
+    };
+    process.on('warning', escutar);
+    try {
+      await restaurarCopia(conexao.db, linhasDe(copia));
+      // O aviso do Node sai no tique seguinte ao excesso.
+      await new Promise((pronto) => setImmediate(pronto));
+    } finally {
+      process.off('warning', escutar);
+    }
+
+    expect(avisos).not.toContain('MaxListenersExceededWarning');
+    expect(await fotografar(['llm_call'])).toEqual(antes);
+  });
+
   it('quem para de ler no meio de uma tabela devolve a conexão pronta para o próximo', async () => {
     await semear();
     await conexao.db.execute(

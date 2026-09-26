@@ -29,7 +29,7 @@
  * não entram: não estão no banco, e o original está com quem enviou (ADR 0016).
  */
 import { once } from 'node:events';
-import type { Readable } from 'node:stream';
+import type { Readable, Writable } from 'node:stream';
 import { finished } from 'node:stream/promises';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -348,9 +348,7 @@ async function copiarPara(
   try {
     for await (const lote of lotes) {
       if (falha !== null) throw recusa();
-      if (!destino.write(lote)) {
-        await Promise.race([once(destino, 'drain'), once(destino, 'close')]);
-      }
+      if (!destino.write(lote)) await escoar(destino);
     }
   } catch (erro) {
     destino.destroy(erro instanceof Error ? erro : new Error(String(erro)));
@@ -372,6 +370,24 @@ async function copiarPara(
       if (!aindaCopiando || Date.now() > limite) throw recusa();
       await new Promise((pronto) => setTimeout(pronto, 5));
     }
+  }
+}
+
+/**
+ * Espera o `COPY` escoar o que já recebeu — ou fechar, se o banco o recusou no meio.
+ *
+ * As duas escutas saem ao fim, as duas: a que não disparou ficaria pendurada no fluxo a
+ * cada lote, e numa cópia de 14 MB passaram de dez — o Node avisou vazamento no ensaio.
+ */
+async function escoar(destino: Writable): Promise<void> {
+  const desistir = new AbortController();
+  try {
+    await Promise.race([
+      once(destino, 'drain', { signal: desistir.signal }),
+      once(destino, 'close', { signal: desistir.signal }),
+    ]);
+  } finally {
+    desistir.abort();
   }
 }
 
