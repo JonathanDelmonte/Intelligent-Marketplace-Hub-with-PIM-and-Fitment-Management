@@ -28,6 +28,27 @@ Convenção de marcação:
 
 ## 2026-09-26 — Sem código de cadastro e sem perfil a configurar (ADR 0014)
 
+### 🔀 A tela de importar se atualiza sozinha enquanto há entrada andando
+
+O dono, no primeiro uso no ar: "o certo seria a pessoa não ter que ficar recarregando
+tela para ver se foi ou não foi". A atualização automática existia, mas era uma caixa de
+seleção desligada, ao lado da lista — desligada de propósito, para uma aba esquecida não
+consultar o banco para sempre. Ninguém a achava.
+
+Agora é sozinha: com entrada pronta para rodar ou rodando (`haEntradaAndando`), a tela
+recarrega a cada 3 segundos; quando tudo termina, a recarga seguinte chega sem nada
+andando, e o relógio para. Entrada que só espera a hora dela — uma nova tentativa daqui a
+meia hora — não liga nada. Com a aba escondida, não recarrega; ao voltar, recarrega na
+hora. Vale também para a tela de uma entrada só. Ensaiado no contêiner: a planilha de
+exemplo apareceu concluída em 4 segundos sem recarregar, com 4 recargas, e nenhuma nos 10
+segundos seguintes.
+
+### ❓ Resolvido: o que a primeira publicação no Render confirmou
+
+Das dúvidas do dia 25: a chave mestra que o Render gera passou na validação; a porta que
+ele dá foi achada sem ajuste; e o `checksPass` publicou com os dois jobs pulados do CI, em
+dois minutos. Falta só o S3 do Supabase, que se prova no primeiro envio de planilha no ar.
+
 ### 🐛 O filtro de montagem deixou código fora do ar
 
 O primeiro deploy no Render saiu (`d208c42`), e o envio seguinte — dois commits: o do
