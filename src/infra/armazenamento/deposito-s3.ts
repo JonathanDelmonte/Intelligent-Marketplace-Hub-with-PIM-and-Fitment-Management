@@ -15,12 +15,14 @@
  */
 import {
   CreateBucketCommand,
+  DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
-import type { Deposito } from './deposito';
+import type { Deposito, ObjetoGuardado } from './deposito';
 
 export interface ConfiguracaoS3 {
   readonly endpoint: string;
@@ -115,6 +117,39 @@ export class DepositoS3 implements Deposito {
       return resposta.ContentLength ?? null;
     } catch (erro) {
       if (naoExiste(erro)) return null;
+      throw erro;
+    }
+  }
+
+  /** Página por página, até mil por pedido. Balde que ainda não existe é depósito vazio. */
+  async *listar(): AsyncIterable<ObjetoGuardado> {
+    let continuacao: string | undefined;
+    do {
+      let pagina;
+      try {
+        pagina = await this.cliente.send(
+          new ListObjectsV2Command({
+            Bucket: this.balde,
+            ...(continuacao === undefined ? {} : { ContinuationToken: continuacao }),
+          }),
+        );
+      } catch (erro) {
+        if (codigoDoErro(erro).nome === 'NoSuchBucket') return;
+        throw erro;
+      }
+      for (const objeto of pagina.Contents ?? []) {
+        if (objeto.Key === undefined || objeto.LastModified === undefined) continue;
+        yield { chave: objeto.Key, bytes: objeto.Size ?? 0, gravadoEm: objeto.LastModified };
+      }
+      continuacao = pagina.IsTruncated === true ? pagina.NextContinuationToken : undefined;
+    } while (continuacao !== undefined);
+  }
+
+  async apagar(chave: string): Promise<void> {
+    try {
+      await this.cliente.send(new DeleteObjectCommand({ Bucket: this.balde, Key: chave }));
+    } catch (erro) {
+      if (naoExiste(erro)) return;
       throw erro;
     }
   }

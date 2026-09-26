@@ -11,9 +11,21 @@
  *
  * A chave é o hash, fragmentado pelos dois primeiros caracteres (`ab/cdef…`): um
  * diretório com cem mil arquivos é lento de listar, e o mesmo desenho serve às duas.
+ *
+ * Listar e apagar existem para a nuvem guardar só o que ainda serve (ADR 0016): o
+ * original de quem enviou está no computador dele, e a cópia na nuvem sai depois de
+ * uns dias (`limpeza.ts`).
  */
-import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
+
+/** Um objeto guardado, como a listagem o vê. */
+export interface ObjetoGuardado {
+  readonly chave: string;
+  readonly bytes: number;
+  /** A última gravação. Guardar de novo o mesmo conteúdo que tinha saído renova. */
+  readonly gravadoEm: Date;
+}
 
 export interface Deposito {
   /** Para o log: onde fica, sem segredo nenhum. */
@@ -24,7 +36,14 @@ export interface Deposito {
   ler(chave: string): Promise<Uint8Array | null>;
   /** `null` quando a chave não existe. */
   tamanho(chave: string): Promise<number | null>;
+  /** Tudo o que está guardado. Arquivo pela metade de uma gravação em curso fica de fora. */
+  listar(): AsyncIterable<ObjetoGuardado>;
+  /** Apagar o que não existe não é erro: duas limpezas seguidas dão no mesmo. */
+  apagar(chave: string): Promise<void>;
 }
+
+/** O sufixo do arquivo temporário da escrita atômica. */
+const SUFIXO_PARCIAL = '.parcial';
 
 export class DepositoEmDisco implements Deposito {
   private readonly raiz: string;
@@ -43,7 +62,7 @@ export class DepositoEmDisco implements Deposito {
   async gravar(chave: string, bytes: Uint8Array): Promise<void> {
     const destino = join(this.raiz, chave);
     await mkdir(dirname(destino), { recursive: true });
-    const temporario = `${destino}.${String(process.pid)}.parcial`;
+    const temporario = `${destino}.${String(process.pid)}${SUFIXO_PARCIAL}`;
     await writeFile(temporario, bytes);
     await rename(temporario, destino);
   }
@@ -63,5 +82,34 @@ export class DepositoEmDisco implements Deposito {
     } catch {
       return null;
     }
+  }
+
+  /** Pasta por pasta, no desenho `ab/cdef…`. Pasta que ainda não existe é depósito vazio. */
+  async *listar(): AsyncIterable<ObjetoGuardado> {
+    for (const pasta of await entradas(this.raiz)) {
+      if (!pasta.isDirectory()) continue;
+      for (const arquivo of await entradas(join(this.raiz, pasta.name))) {
+        if (!arquivo.isFile() || arquivo.name.endsWith(SUFIXO_PARCIAL)) continue;
+        const chave = `${pasta.name}/${arquivo.name}`;
+        try {
+          const info = await stat(join(this.raiz, chave));
+          yield { chave, bytes: info.size, gravadoEm: info.mtime };
+        } catch {
+          // Apagado entre a listagem da pasta e o `stat`: já não está guardado.
+        }
+      }
+    }
+  }
+
+  async apagar(chave: string): Promise<void> {
+    await rm(join(this.raiz, chave), { force: true });
+  }
+}
+
+async function entradas(pasta: string) {
+  try {
+    return await readdir(pasta, { withFileTypes: true });
+  } catch {
+    return [];
   }
 }
