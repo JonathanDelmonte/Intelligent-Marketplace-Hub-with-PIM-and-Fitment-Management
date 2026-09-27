@@ -1,7 +1,7 @@
 /**
- * As peças de servidor da Catálogo e preço: o que não precisa mudar enquanto a pessoa
- * mexe. A tabela de preços e o cupom, que mudam, estão em `tabela-de-precos.tsx` e
- * `conta-da-venda.tsx`.
+ * As peças de servidor da Catálogo e preço: o que não muda enquanto a pessoa mexe. O que
+ * muda (os números, a tabela, o simulador) roda no navegador, em `painel.tsx` e
+ * `simulador.tsx`.
  *
  * Formulário é ação de servidor, e funciona sem JavaScript no navegador.
  */
@@ -9,30 +9,38 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import type { SkuGravado } from '@/dominio/catalogo/sku';
 import { ROTULO_DO_CAMPO, estadoFiscal } from '@/dominio/fiscal/codigos';
-import type { Plataforma } from '@/dominio/precificacao/tipos';
-import { centavos, centavosParaDigitar, formatarBRL } from '@/lib/dinheiro';
+import { PLATAFORMAS, type Plataforma } from '@/dominio/precificacao/tipos';
+import { centavos, formatarBRL } from '@/lib/dinheiro';
 import { contagem } from '@/lib/texto';
 import { CAMINHO as CAMINHO_FISCAL } from '../fiscal/constantes';
 import { CAMINHO as CAMINHO_DE_JUNTAR } from '../juntar-iguais/constantes';
-import { criarProduto, desativarProduto, reativarProduto, salvarCusto, salvarFicha } from './acoes';
-import {
-  alvoEmPercentual,
-  PERGUNTA_DO_CUSTO_VELHO,
-  textoDoCusto,
-  type Aviso,
-} from './apresentacao';
+import { IDENTIDADE_DA_LOJA } from '../lojas/identidade';
+import { Selo } from '../lojas/selo';
+import { ROTULO_DA_PLATAFORMA } from '../ui/rotulos';
+import { criarProduto, desativarProduto, reativarProduto, salvarFicha } from './acoes';
+import type { Aviso } from './apresentacao';
 import estilo from './catalogo.module.css';
 import { CAMINHO, CAMINHO_DO_NOVO } from './constantes';
-import { SinalAlerta, SinalCerto, SinalVoltar } from './sinais';
+import {
+  SinalAlerta,
+  SinalAvancar,
+  SinalCaixa,
+  SinalCerto,
+  SinalEtiqueta,
+  SinalMais,
+  SinalMoedas,
+} from './sinais';
 
-/** O aviso depois de uma ação: uma linha, com o sinal do tom. */
+// ─── Peças de toda a tela ────────────────────────────────────────────────────
+
+/** O aviso depois de uma ação: uma faixa, com o sinal do tom. */
 export function AvisoDaAcao({ aviso }: { readonly aviso: Aviso }) {
   const classe =
     aviso.tom === 'erro'
       ? estilo.avisoErro
       : aviso.tom === 'atencao'
         ? estilo.avisoAtencao
-        : estilo.aviso;
+        : estilo.avisoOk;
   return (
     <p className={classe} role="status">
       <span className={estilo.avisoSinal}>
@@ -46,31 +54,43 @@ export function AvisoDaAcao({ aviso }: { readonly aviso: Aviso }) {
   );
 }
 
-/** "‹ Catálogo e preço", o caminho de volta das telas de dentro. */
-export function Voltar() {
+/** O caminho até aqui, das telas de dentro: "Catálogo e preço › Refil…". */
+export function Migalha({ atual }: { readonly atual: string }) {
   return (
-    <Link className={estilo.voltar} href={CAMINHO}>
-      <SinalVoltar />
-      Catálogo e preço
-    </Link>
+    <nav aria-label="Caminho" className={estilo.migalha}>
+      <Link className={estilo.migalhaLink} href={CAMINHO}>
+        Catálogo e preço
+      </Link>
+      <SinalAvancar tamanho={12} />
+      <span aria-current="page" className={estilo.migalhaAtual}>
+        {atual}
+      </span>
+    </nav>
   );
 }
 
-/** Um bloco da página do produto: título curto e o conteúdo, sem caixa em volta. */
-export function Bloco({
+/** O lugar da foto do produto, enquanto o sistema não guarda foto. */
+export function Miniatura({ grande = false }: { readonly grande?: boolean }) {
+  return (
+    <span aria-hidden="true" className={grande ? estilo.miniaturaGrande : estilo.miniatura}>
+      <SinalCaixa tamanho={grande ? 26 : 18} />
+    </span>
+  );
+}
+
+/** Um cartão da coluna do produto: título curto e o conteúdo. */
+export function Cartao({
   id,
   titulo,
   children,
-  destaque = false,
 }: {
   readonly id: string;
   readonly titulo: string;
   readonly children: ReactNode;
-  readonly destaque?: boolean;
 }) {
   return (
-    <section aria-labelledby={id} className={destaque ? estilo.blocoDestaque : estilo.bloco}>
-      <h2 className={estilo.blocoTitulo} id={id}>
+    <section aria-labelledby={`${id}-titulo`} className={estilo.cartao} id={id}>
+      <h2 className={estilo.tituloDoCartao} id={`${id}-titulo`}>
         {titulo}
       </h2>
       {children}
@@ -80,22 +100,127 @@ export function Bloco({
 
 // ─── A lista ─────────────────────────────────────────────────────────────────
 
+/** O botão do alto da lista, para a tela de cadastro. */
+export function BotaoDeCadastrar() {
+  return (
+    <Link className={estilo.botao} href={CAMINHO_DO_NOVO}>
+      <SinalMais tamanho={14} />
+      Cadastrar produto
+    </Link>
+  );
+}
+
+/** Os três passos do começo, com o ícone de cada um. */
+const PASSOS: readonly {
+  readonly icone: ReactNode;
+  readonly titulo: string;
+  readonly texto: string;
+}[] = [
+  {
+    icone: <SinalCaixa />,
+    titulo: 'Cadastre o produto',
+    texto: 'O nome que você usa no dia a dia para reconhecer a peça.',
+  },
+  {
+    icone: <SinalMoedas />,
+    titulo: 'Diga quanto paga',
+    texto: 'O custo de uma unidade, com o frete do fornecedor, se você paga.',
+  },
+  {
+    icone: <SinalEtiqueta />,
+    titulo: 'Veja quanto cobrar',
+    texto: 'O preço de cada loja para você ganhar a meta que escolher.',
+  },
+];
+
+/** O exemplo da tabela pronta, desenhado: mostra o que vem, em vez de explicar. */
+const EXEMPLO: readonly { readonly loja: Plataforma; readonly preco: string }[] = [
+  { loja: 'ml', preco: 'R$ 39,90' },
+  { loja: 'shopee', preco: 'R$ 37,50' },
+  { loja: 'amazon', preco: 'R$ 41,20' },
+];
+
 /**
- * O catálogo vazio: a primeira pergunta, e não uma explicação.
+ * O catálogo vazio: a primeira pergunta, com o campo ali mesmo, e ao lado o desenho da
+ * tabela que ela vai virar.
  *
- * É o que o dono vê no primeiro dia. Em vez de dizer como o catálogo funciona, a tela
- * pergunta o que ele vende, com o campo ali mesmo.
+ * É o que o dono vê no primeiro dia. Mostrar a tabela pronta, com um produto de exemplo,
+ * explica em um olhar o que três parágrafos explicariam mal.
  */
 export function CatalogoVazio() {
   return (
-    <section aria-labelledby="primeiro-titulo" className={estilo.vazio}>
-      <h2 className={estilo.vazioTitulo} id="primeiro-titulo">
-        Qual é o primeiro produto que você vende?
-      </h2>
-      <p className={estilo.vazioTexto}>
-        Comece por um. Depois você diz quanto paga, e a tabela mostra quanto cobrar em cada loja.
-      </p>
-      <FormularioDeProduto />
+    <>
+      <section aria-labelledby="primeiro-titulo" className={estilo.vazio}>
+        <div className={estilo.vazioPergunta}>
+          <p className={estilo.sobretitulo}>Primeiro passo</p>
+          <h2 className={estilo.vazioTitulo} id="primeiro-titulo">
+            Qual é o primeiro produto que você vende?
+          </h2>
+          <p className={estilo.vazioTexto}>
+            Comece por um. Depois você diz quanto paga, e a tabela mostra quanto cobrar em cada
+            loja.
+          </p>
+          <FormularioDeProduto />
+        </div>
+        <div aria-hidden="true" className={estilo.vazioDesenho}>
+          <div className={estilo.exemplo}>
+            <div className={estilo.exemploCabeca}>
+              <span>Produto</span>
+              <span className={estilo.exemploNumero}>Você paga</span>
+              {EXEMPLO.map(({ loja }) => (
+                <span className={estilo.exemploLoja} key={loja}>
+                  <Selo identidade={IDENTIDADE_DA_LOJA[loja]} tamanho={14} />
+                  {ROTULO_DA_PLATAFORMA[loja]}
+                </span>
+              ))}
+            </div>
+            <div className={estilo.exemploLinha}>
+              <span className={estilo.exemploProduto}>
+                <Miniatura />
+                <span className={estilo.exemploNome}>
+                  Refil de purificador
+                  <span className={estilo.exemploDetalhe}>Seu produto aqui</span>
+                </span>
+              </span>
+              <span className={estilo.exemploNumero}>R$ 18,40</span>
+              {EXEMPLO.map(({ loja, preco }) => (
+                <span className={estilo.exemploPreco} key={loja}>
+                  {preco}
+                </span>
+              ))}
+            </div>
+            {[0, 1].map((fantasma) => (
+              <div className={estilo.exemploFantasma} key={fantasma}>
+                <span className={estilo.exemploProduto}>
+                  <span className={estilo.exemploQuadro} />
+                  <span className={estilo.exemploRisco} />
+                </span>
+                <span className={estilo.exemploRiscoCurto} />
+                {PLATAFORMAS.map((loja) => (
+                  <span className={estilo.exemploRiscoCurto} key={loja} />
+                ))}
+              </div>
+            ))}
+          </div>
+          <p className={estilo.exemploLegenda}>
+            Assim fica a sua tabela: o preço de cada loja para você ganhar o que quer.
+          </p>
+        </div>
+      </section>
+
+      <ol className={estilo.passos}>
+        {PASSOS.map((passo, indice) => (
+          <li className={estilo.passo} key={passo.titulo}>
+            <span className={estilo.passoTopo}>
+              <span className={estilo.icone}>{passo.icone}</span>
+              <span className={estilo.passoNumero}>{indice + 1}</span>
+            </span>
+            <strong className={estilo.passoTitulo}>{passo.titulo}</strong>
+            <span className={estilo.passoTexto}>{passo.texto}</span>
+          </li>
+        ))}
+      </ol>
+
       <p className={estilo.vazioRodape}>
         Já importou planilha de anúncios? Os anúncios parecidos viram produto em{' '}
         <Link className={estilo.link} href={CAMINHO_DE_JUNTAR}>
@@ -103,7 +228,7 @@ export function CatalogoVazio() {
         </Link>
         .
       </p>
-    </section>
+    </>
   );
 }
 
@@ -112,7 +237,7 @@ export function Desativados({ produtos }: { readonly produtos: readonly SkuGrava
   if (produtos.length === 0) return null;
   return (
     <details className={estilo.desativados}>
-      <summary className={estilo.desativadosResumo}>
+      <summary className={estilo.resumo}>
         {contagem(produtos.length, 'produto desativado', 'produtos desativados')}
       </summary>
       <ul className={estilo.desativadosLista}>
@@ -164,7 +289,7 @@ export function FormularioDeProduto({
         <input name="plataforma" type="hidden" value={plataforma} />
       )}
       <label className={estilo.campo}>
-        <span className={estilo.rotulo}>Nome do produto</span>
+        <span className={estilo.rotuloDoCampo}>Nome do produto</span>
         <input
           className={estilo.entradaGrande}
           defaultValue={tituloInicial}
@@ -179,9 +304,9 @@ export function FormularioDeProduto({
         </span>
       </label>
 
-      <div className={estilo.linhaDeCampos}>
+      <div className={estilo.doisCampos}>
         <label className={estilo.campo}>
-          <span className={estilo.rotulo}>
+          <span className={estilo.rotuloDoCampo}>
             Código de barras <span className={estilo.opcional}>se tiver</span>
           </span>
           <input
@@ -193,7 +318,7 @@ export function FormularioDeProduto({
           />
         </label>
         <label className={estilo.campo}>
-          <span className={estilo.rotulo}>
+          <span className={estilo.rotuloDoCampo}>
             Marca <span className={estilo.opcional}>se tiver</span>
           </span>
           <input className={estilo.entrada} maxLength={80} name="marca" type="text" />
@@ -209,78 +334,37 @@ export function FormularioDeProduto({
   );
 }
 
-/** O botão do alto da lista, para a tela de cadastro. */
-export function BotaoDeCadastrar() {
+/** Ao lado do cadastro: os mesmos três passos do catálogo vazio, com o primeiro marcado. */
+export function ComoFunciona() {
   return (
-    <Link className={estilo.botao} href={CAMINHO_DO_NOVO}>
-      Cadastrar produto
-    </Link>
+    <aside aria-labelledby="passos-titulo" className={estilo.cartao}>
+      <h2 className={estilo.tituloDoCartao} id="passos-titulo">
+        Como funciona
+      </h2>
+      <ol className={estilo.passosEmPe}>
+        {PASSOS.map((passo, indice) => (
+          <li
+            aria-current={indice === 0 ? 'step' : undefined}
+            className={estilo.passoEmPe}
+            key={passo.titulo}
+          >
+            <span className={indice === 0 ? estilo.passoNumeroAtual : estilo.passoNumero}>
+              {indice + 1}
+            </span>
+            <span className={estilo.passoTextos}>
+              <strong className={estilo.passoTitulo}>{passo.titulo}</strong>
+              <span className={estilo.passoTexto}>
+                {indice === 0 ? 'Você está aqui.' : passo.texto}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ol>
+    </aside>
   );
 }
 
 // ─── O produto ───────────────────────────────────────────────────────────────
-
-/**
- * Quanto a pessoa paga por uma unidade: a primeira pergunta da página do produto.
- *
- * Sem custo, ela vem em destaque e com o cursor no campo, porque sem ela a conta não sai.
- * A loja e o alvo escolhidos vão junto no formulário, para a página voltar do jeito que
- * estava depois de salvar.
- */
-export function PerguntaDoCusto({
-  sku,
-  agora,
-  plataforma,
-  alvoBp,
-}: {
-  readonly sku: SkuGravado;
-  readonly agora: Date;
-  readonly plataforma: Plataforma;
-  readonly alvoBp: number;
-}) {
-  const idade = textoDoCusto(sku.custoAtualizadoEm, agora);
-  const semCusto = sku.custoAtual === null;
-  return (
-    <Bloco destaque={semCusto} id="custo" titulo="Você paga">
-      <form action={salvarCusto} className={estilo.perguntaDoCusto}>
-        <input name="id" type="hidden" value={sku.id} />
-        <input name="plataforma" type="hidden" value={plataforma} />
-        <input name="alvo" type="hidden" value={alvoEmPercentual(alvoBp)} />
-        <label className={estilo.campoPergunta} htmlFor="custo-campo">
-          Quanto você paga por uma unidade?
-        </label>
-        <span className={estilo.linhaDaPergunta}>
-          <span className={estilo.campoDinheiro}>
-            <span aria-hidden="true" className={estilo.moeda}>
-              R$
-            </span>
-            <input
-              autoFocus={semCusto}
-              className={estilo.entradaDinheiro}
-              defaultValue={
-                sku.custoAtual === null ? '' : centavosParaDigitar(centavos(sku.custoAtual))
-              }
-              id="custo-campo"
-              inputMode="decimal"
-              name="custo"
-              placeholder="0,00"
-              required
-              type="text"
-            />
-          </span>
-          <button className={estilo.botao} type="submit">
-            Salvar
-          </button>
-        </span>
-        <span className={idade?.velho === true ? estilo.custoVelho : estilo.ajuda}>
-          {idade === null
-            ? 'Com o frete do fornecedor, se você paga. Sem isso, não dá para saber quanto sobra.'
-            : `Valor ${idade.texto}.${idade.velho ? ` ${PERGUNTA_DO_CUSTO_VELHO}` : ''}`}
-        </span>
-      </form>
-    </Bloco>
-  );
-}
 
 /** Uma linha da ficha: o nome do campo e o valor, ou "não informado". */
 function LinhaDaFicha({
@@ -323,7 +407,7 @@ export function FichaDoProduto({
       ? null
       : `${milimetrosEmCentimetros(sku.dimMm.comprimento)} × ${milimetrosEmCentimetros(sku.dimMm.largura)} × ${milimetrosEmCentimetros(sku.dimMm.altura)} cm`;
   return (
-    <Bloco id="ficha" titulo="Ficha">
+    <Cartao id="ficha" titulo="Ficha">
       <dl className={estilo.ficha}>
         <LinhaDaFicha rotulo="Marca" valor={sku.marca} />
         <LinhaDaFicha rotulo="Código de barras" valor={sku.ean} />
@@ -348,10 +432,10 @@ export function FichaDoProduto({
         />
       </dl>
       <details className={estilo.mudar} open={abrirFormulario}>
-        <summary className={estilo.mudarResumo}>Mudar a ficha</summary>
+        <summary className={estilo.resumo}>Mudar a ficha</summary>
         <FormularioDaFicha sku={sku} />
       </details>
-    </Bloco>
+    </Cartao>
   );
 }
 
@@ -364,7 +448,7 @@ function FormularioDaFicha({ sku }: { readonly sku: SkuGravado }) {
     <form action={salvarFicha} className={estilo.formularioDaFicha}>
       <input name="id" type="hidden" value={sku.id} />
       <label className={estilo.campo}>
-        <span className={estilo.rotulo}>Marca</span>
+        <span className={estilo.rotuloDoCampo}>Marca</span>
         <input
           className={estilo.entrada}
           defaultValue={sku.marca ?? ''}
@@ -374,7 +458,7 @@ function FormularioDaFicha({ sku }: { readonly sku: SkuGravado }) {
         />
       </label>
       <label className={estilo.campo}>
-        <span className={estilo.rotulo}>Peso com embalagem, em gramas</span>
+        <span className={estilo.rotuloDoCampo}>Peso com embalagem, em gramas</span>
         <input
           className={estilo.entrada}
           defaultValue={sku.pesoG ?? ''}
@@ -385,7 +469,9 @@ function FormularioDaFicha({ sku }: { readonly sku: SkuGravado }) {
         />
       </label>
       <fieldset className={estilo.grupoDeCampos}>
-        <legend className={estilo.rotulo}>Caixa, em milímetros: os três lados, ou nenhum</legend>
+        <legend className={estilo.rotuloDoCampo}>
+          Caixa, em milímetros: os três lados, ou nenhum
+        </legend>
         <div className={estilo.tresCampos}>
           {(
             [
@@ -408,7 +494,7 @@ function FormularioDaFicha({ sku }: { readonly sku: SkuGravado }) {
         </div>
       </fieldset>
       <label className={estilo.campo}>
-        <span className={estilo.rotulo}>Voltagem</span>
+        <span className={estilo.rotuloDoCampo}>Voltagem</span>
         <input
           className={estilo.entrada}
           defaultValue={sku.voltagem ?? ''}
@@ -419,7 +505,7 @@ function FormularioDaFicha({ sku }: { readonly sku: SkuGravado }) {
         />
       </label>
       <label className={estilo.campo}>
-        <span className={estilo.rotulo}>Medida que decide se encaixa</span>
+        <span className={estilo.rotuloDoCampo}>Medida que decide se encaixa</span>
         <input
           className={estilo.entrada}
           defaultValue={sku.medida ?? ''}
@@ -429,9 +515,9 @@ function FormularioDaFicha({ sku }: { readonly sku: SkuGravado }) {
           type="text"
         />
       </label>
-      <div className={estilo.linhaDeCampos}>
+      <div className={estilo.doisCampos}>
         <label className={estilo.campo}>
-          <span className={estilo.rotulo}>Peças na embalagem</span>
+          <span className={estilo.rotuloDoCampo}>Peças na embalagem</span>
           <input
             className={estilo.entrada}
             defaultValue={sku.quantidadeEmbalagem ?? ''}
@@ -442,7 +528,7 @@ function FormularioDaFicha({ sku }: { readonly sku: SkuGravado }) {
           />
         </label>
         <label className={estilo.campo}>
-          <span className={estilo.rotulo}>Devolução, de cada 100 vendas</span>
+          <span className={estilo.rotuloDoCampo}>Devolução, de cada 100 vendas</span>
           <input
             className={estilo.entrada}
             defaultValue={
@@ -480,7 +566,7 @@ export function NotaFiscal({ sku }: { readonly sku: SkuGravado }) {
     ['cclasstrib', sku.cclasstrib],
   ] as const;
   return (
-    <Bloco id="fiscal" titulo="Nota fiscal">
+    <Cartao id="fiscal" titulo="Nota fiscal">
       <dl className={estilo.ficha}>
         {campos.map(([campo, valor]) => (
           <LinhaDaFicha
@@ -490,22 +576,23 @@ export function NotaFiscal({ sku }: { readonly sku: SkuGravado }) {
           />
         ))}
       </dl>
-      <p className={estado.prontoPara2027 ? estilo.ajuda : estilo.fichaAviso}>
+      <p className={estado.prontoPara2027 ? estilo.fiscalPronto : estilo.fiscalFalta}>
+        <span className={estilo.fiscalSinal}>
+          {estado.prontoPara2027 ? <SinalCerto tamanho={14} /> : <SinalAlerta tamanho={14} />}
+        </span>
         {estado.prontoPara2027
           ? 'Pronto para a nota de 2027.'
           : 'A partir de janeiro de 2027, nota sem esses códigos é recusada.'}
       </p>
       {sku.ativo ? (
-        <p className={estilo.acoesDoBloco}>
-          <Link
-            className={estilo.botaoSecundario}
-            href={`${CAMINHO_FISCAL}?${new URLSearchParams({ produto: sku.id }).toString()}`}
-          >
-            Preencher na tela Fiscal
-          </Link>
-        </p>
+        <Link
+          className={estilo.botaoSecundario}
+          href={`${CAMINHO_FISCAL}?${new URLSearchParams({ produto: sku.id }).toString()}`}
+        >
+          Preencher na tela Fiscal
+        </Link>
       ) : null}
-    </Bloco>
+    </Cartao>
   );
 }
 
@@ -523,11 +610,11 @@ export function VistoEm({
 }) {
   if (ocorrencias.length === 0) return null;
   return (
-    <details className={estilo.vistoEm}>
-      <summary className={estilo.mudarResumo}>
+    <details className={estilo.cartaoRecolhido}>
+      <summary className={estilo.resumoDoCartao}>
         Visto em {contagem(ocorrencias.length, 'anúncio', 'anúncios')}
       </summary>
-      <ul className={estilo.vistoEmLista}>
+      <ul className={estilo.vistoEm}>
         {ocorrencias.map((o) => (
           <li className={estilo.vistoEmItem} key={o.id}>
             {o.url === null ? (
@@ -567,7 +654,7 @@ export function PararDeVender({ id }: { readonly id: string }) {
 /** O aviso de produto desativado, com a volta no mesmo lugar. */
 export function ProdutoDesativado({ id }: { readonly id: string }) {
   return (
-    <form action={reativarProduto} className={estilo.desativadoAviso}>
+    <form action={reativarProduto} className={estilo.desativado}>
       <input name="id" type="hidden" value={id} />
       <span>
         <strong>Este produto está desativado.</strong> Não aparece na tabela, nos anúncios nem na

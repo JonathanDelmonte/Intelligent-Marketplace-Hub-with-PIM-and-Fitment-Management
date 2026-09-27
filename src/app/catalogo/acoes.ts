@@ -24,13 +24,8 @@ import { ehPlataforma } from '@/dominio/precificacao/tipos';
 import { banco } from '@/infra/banco/cliente';
 import { criarRegistrador, nivelDoAmbiente } from '@/infra/log';
 import { lerReaisDigitados } from '@/lib/dinheiro';
-import {
-  alvoEmPercentual,
-  caminhoDoProdutoCriado,
-  lerAlvo,
-  type CodigoDeAviso,
-} from './apresentacao';
-import { CAMINHO, CAMINHO_DO_NOVO, MARGEM_ALVO_PADRAO_BP } from './constantes';
+import { caminhoDoProdutoCriado, lerMeta, metaNaUrl, type CodigoDeAviso } from './apresentacao';
+import { CAMINHO, CAMINHO_DO_NOVO } from './constantes';
 
 const log = criarRegistrador({
   nivelMinimo: nivelDoAmbiente(process.env['LOG_NIVEL']),
@@ -42,18 +37,21 @@ function paraLista(codigo: CodigoDeAviso): string {
 }
 
 /**
- * A loja e o alvo que a tela mandava, para ela voltar do jeito que estava.
+ * A loja e a meta que a tela mandava, para ela voltar do jeito que estava.
  *
- * Os dois vêm do formulário como texto, e só voltam se forem de verdade uma loja e um
- * alvo: é endereço de redirecionamento montado com o que chegou de fora.
+ * Vêm do formulário como texto, e só voltam se forem de verdade uma loja e uma meta: é
+ * endereço de redirecionamento montado com o que chegou de fora.
  */
 function contextoDaTela(dados: FormData | undefined): URLSearchParams {
   const busca = new URLSearchParams();
   const loja = dados?.get('plataforma');
   if (typeof loja === 'string' && ehPlataforma(loja)) busca.set('plataforma', loja);
-  const alvoBruto = dados?.get('alvo');
-  const alvo = typeof alvoBruto === 'string' ? lerAlvo(alvoBruto) : null;
-  if (alvo !== null && alvo !== MARGEM_ALVO_PADRAO_BP) busca.set('alvo', alvoEmPercentual(alvo));
+  const texto = (campo: string): string | undefined => {
+    const valor = dados?.get(campo);
+    return typeof valor === 'string' ? valor : undefined;
+  };
+  const meta = metaNaUrl(lerMeta({ alvo: texto('alvo'), lucro: texto('lucro') }));
+  if (meta !== null) busca.set(meta[0], meta[1]);
   return busca;
 }
 

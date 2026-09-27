@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { reaisParaCentavos } from '@/lib/dinheiro';
 import {
-  alvoEmPercentual,
   caminhoDoProduto,
   caminhoDoProdutoCriado,
   caminhoDoProdutoNovo,
@@ -9,36 +8,20 @@ import {
   CODIGOS_DE_AVISO,
   descreverAviso,
   detalheDoProduto,
-  lerAlvo,
+  lerMeta,
   lerParametros,
   lerProdutoNovo,
+  metaNaUrl,
   ordemDaTabela,
-  resumoDaTabela,
   textoDoCusto,
 } from './apresentacao';
-import { MARGEM_ALVO_PADRAO_BP } from './constantes';
+import { META_PADRAO } from './conta';
 
 const AGORA = new Date('2026-09-16T12:00:00Z');
 const diasAtras = (dias: number) => new Date(AGORA.getTime() - dias * 86_400_000);
 const SKU = '0f8fad5b-d9cb-469f-a165-70867728950e';
 
-describe('o alto da tabela', () => {
-  it('diz quantos produtos, e lidera pelo custo que falta', () => {
-    expect(resumoDaTabela({ total: 12, semCusto: 3, velhos: 2 })).toBe(
-      '12 produtos. Falta o custo de 3. 2 custos têm mais de 30 dias.',
-    );
-    expect(resumoDaTabela({ total: 12, semCusto: 0, velhos: 1 })).toBe(
-      '12 produtos. Um custo tem mais de 30 dias.',
-    );
-  });
-
-  it('tudo com custo é uma frase só, e conjuga o singular', () => {
-    expect(resumoDaTabela({ total: 12, semCusto: 0, velhos: 0 })).toBe(
-      '12 produtos, todos com custo.',
-    );
-    expect(resumoDaTabela({ total: 1, semCusto: 0, velhos: 0 })).toBe('1 produto, com custo.');
-  });
-
+describe('o nome do produto na tabela', () => {
   it('marca e código de barras juntos, ou nada', () => {
     expect(detalheDoProduto('Electrolux', '7896541200909')).toBe('Electrolux · 7896541200909');
     expect(detalheDoProduto(null, '7896541200909')).toBe('7896541200909');
@@ -50,6 +33,7 @@ describe('a idade do custo', () => {
   it('custo recente diz quando foi informado', () => {
     expect(textoDoCusto(diasAtras(10), AGORA)).toEqual({
       texto: 'informado há 10 dias',
+      quando: 'há 10 dias',
       velho: false,
     });
   });
@@ -57,6 +41,7 @@ describe('a idade do custo', () => {
   it('custo de mais de 30 dias fica marcado como velho, com a mesma frase', () => {
     expect(textoDoCusto(diasAtras(45), AGORA)).toEqual({
       texto: 'informado há 45 dias',
+      quando: 'há 45 dias',
       velho: true,
     });
   });
@@ -100,7 +85,7 @@ describe('lerParametros', () => {
     expect(p.tipoAnuncioML).toBe('classico');
     expect(p.modoFrete).toBe('comprador_paga');
     expect(p.preco).toBeNull();
-    expect(p.margemAlvoBp).toBe(MARGEM_ALVO_PADRAO_BP);
+    expect(p.meta).toEqual(META_PADRAO);
   });
 
   it('valor inventado na URL cai no padrão em vez de derrubar a página', () => {
@@ -114,32 +99,51 @@ describe('lerParametros', () => {
     const p = lerParametros({ plataforma: 'shopee', preco: '79,90', alvo: '30' });
     expect(p.plataforma).toBe('shopee');
     expect(p.preco).toBe(reaisParaCentavos(79.9));
-    expect(p.margemAlvoBp).toBe(3_000);
-  });
-
-  it('o alvo da URL são os reais de cada R$ 100, na mesma unidade que o campo manda', () => {
-    // A primeira versão lia ponto-base e o formulário mandava percentual: pedir 25
-    // virava 0,25, e a tela respondia um preço baixo com cara de certo.
-    expect(lerParametros({ alvo: '25' }).margemAlvoBp).toBe(2_500);
-    expect(alvoEmPercentual(lerParametros({ alvo: '25' }).margemAlvoBp)).toBe('25');
+    expect(p.meta).toEqual({ tipo: 'percentual', bp: 3_000 });
   });
 
   it('parâmetro repetido usa o primeiro, e não quebra', () => {
     expect(lerParametros({ plataforma: ['amazon', 'ml'] }).plataforma).toBe('amazon');
   });
+});
 
-  it('alvo absurdo volta para o padrão', () => {
-    expect(lerParametros({ alvo: '0' }).margemAlvoBp).toBe(MARGEM_ALVO_PADRAO_BP);
-    expect(lerParametros({ alvo: '100' }).margemAlvoBp).toBe(MARGEM_ALVO_PADRAO_BP);
-    expect(lerParametros({ alvo: 'muito' }).margemAlvoBp).toBe(MARGEM_ALVO_PADRAO_BP);
+describe('a meta na URL', () => {
+  it('alvo é percentual do preço, com casa decimal, na unidade que o campo mostra', () => {
+    // A primeira versão lia ponto-base e o formulário mandava percentual: pedir 25
+    // virava 0,25, e a tela respondia um preço baixo com cara de certo.
+    expect(lerMeta({ alvo: '25' })).toEqual({ tipo: 'percentual', bp: 2_500 });
+    expect(lerMeta({ alvo: '22,5' })).toEqual({ tipo: 'percentual', bp: 2_250 });
+    expect(lerMeta({ alvo: '22.5' })).toEqual({ tipo: 'percentual', bp: 2_250 });
   });
 
-  it('o alvo vai e volta entre o campo e os pontos-base', () => {
-    expect(alvoEmPercentual(2_000)).toBe('20');
-    expect(lerAlvo('20')).toBe(2_000);
-    expect(lerAlvo('12,5')).toBe(1_250);
-    expect(lerAlvo('0')).toBeNull();
-    expect(lerAlvo('100')).toBeNull();
+  it('lucro é o valor fixo por venda, em reais', () => {
+    expect(lerMeta({ lucro: '12,50' })).toEqual({ tipo: 'reais', centavos: 1_250 });
+    // As duas juntas: vale o lucro, que é o que o campo em reais manda.
+    expect(lerMeta({ lucro: '8', alvo: '30' })).toEqual({ tipo: 'reais', centavos: 800 });
+  });
+
+  it('meta absurda volta para o padrão', () => {
+    expect(lerMeta({ alvo: '0' })).toEqual(META_PADRAO);
+    expect(lerMeta({ alvo: '100' })).toEqual(META_PADRAO);
+    expect(lerMeta({ alvo: 'muito' })).toEqual(META_PADRAO);
+    expect(lerMeta({ lucro: '0' })).toEqual(META_PADRAO);
+    expect(lerMeta({ lucro: 'abc' })).toEqual(META_PADRAO);
+  });
+
+  it('vai e volta pela URL sem mudar, e a padrão nem vai', () => {
+    const metas = [
+      { tipo: 'percentual', bp: 3_000 },
+      { tipo: 'percentual', bp: 2_250 },
+      { tipo: 'reais', centavos: 1_250 },
+      { tipo: 'reais', centavos: 800 },
+    ] as const;
+    for (const meta of metas) {
+      const naUrl = metaNaUrl(meta);
+      expect(naUrl).not.toBeNull();
+      if (naUrl === null) continue;
+      expect(lerMeta({ [naUrl[0]]: naUrl[1] })).toEqual(meta);
+    }
+    expect(metaNaUrl(META_PADRAO)).toBeNull();
   });
 });
 
@@ -148,10 +152,17 @@ describe('os caminhos para o produto', () => {
     expect(caminhoDoSimulador(SKU, 'ml')).toBe(`/catalogo/${SKU}?plataforma=ml#preco-titulo`);
   });
 
-  it('o alvo só vai na URL quando não é o padrão', () => {
-    expect(caminhoDoProduto(SKU, { alvoBp: MARGEM_ALVO_PADRAO_BP })).toBe(`/catalogo/${SKU}`);
-    expect(caminhoDoProduto(SKU, { alvoBp: 3_000, plataforma: 'shopee', ancora: 'x' })).toBe(
-      `/catalogo/${SKU}?plataforma=shopee&alvo=30#x`,
+  it('a meta só vai na URL quando não é a padrão', () => {
+    expect(caminhoDoProduto(SKU, { meta: META_PADRAO })).toBe(`/catalogo/${SKU}`);
+    expect(
+      caminhoDoProduto(SKU, {
+        meta: { tipo: 'percentual', bp: 3_000 },
+        plataforma: 'shopee',
+        ancora: 'x',
+      }),
+    ).toBe(`/catalogo/${SKU}?plataforma=shopee&alvo=30#x`);
+    expect(caminhoDoProduto(SKU, { meta: { tipo: 'reais', centavos: 1_250 } })).toBe(
+      `/catalogo/${SKU}?lucro=12%2C50`,
     );
   });
 });

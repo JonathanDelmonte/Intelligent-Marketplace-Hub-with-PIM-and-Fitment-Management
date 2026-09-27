@@ -1,485 +1,1422 @@
 /*
- * Catálogo e preço: o piloto do desenho novo do miolo.
+ * Catálogo e preço: o segundo piloto do desenho novo do miolo.
  *
- * ## A ideia: cada tela é o papel que o comerciante já conhece
+ * ## O que o dono pediu
  *
- * Painel de vendedor costuma ser cartão, contador e gráfico, iguais de uma tela para a
- * outra, e é por isso que parecem todos o mesmo (e parecem feitos por máquina). Aqui cada
- * tela toma a forma do papel que ela substitui no balcão, porque esse papel a pessoa já
- * sabe ler antes de abrir o sistema.
+ * Premium, neutro, autoral, e que uma criança entenda de relance. Das referências que ele
+ * mandou, a facilidade de ler o número e o jogo de cores; do tom delas, nada, porque é
+ * jovem e brincalhão, e este sistema é ferramenta de trabalho. Cantos quase retos, e
+ * nenhuma cor própria: a tela fala de três lojas, e a cor de cada uma só aparece nela.
  *
- * A lista é uma **tabela de preços**, a mesma da planilha de formação de preço que o
- * Sebrae ensina: produto na linha, loja na coluna, o preço na casa. O produto tem um
- * **cupom**, o papel mais lido do Brasil: o preço em cima, cada saída numa linha
- * pontilhada, e o total embaixo de um traço duplo, que é como a contabilidade fecha uma
- * conta. E tem uma **ficha**, a de papel, com o nome do campo à esquerda e o valor à
- * direita.
+ * ## O que faz uma tela parecer cara
  *
- * ## O que veio de cada referência
+ * Espaço vazio. Em anúncio impresso, mais espaço em branco em volta do mesmo produto fez
+ * as pessoas acharem a marca mais cara, mais confiável e de mais prestígio (Pracejus,
+ * Olsen e O'Guinn, 2006). Aqui, cartão com 20 a 24 px de respiro, 16 px entre cartões, e
+ * a mesma escala de 4 em 4 em tudo, para o olho não achar dois espaços quase iguais.
  *
- * Da planilha de preço e do livro-caixa veio o número alinhado à direita, com algarismos
- * de largura igual, a linha fina entre as linhas, e nenhuma caixa em volta de nada. Do
- * cupom fiscal, a fonte de máquina nos números (IBM Plex Mono), a linha pontilhada entre
- * o nome e o valor, e o total com traço duplo. Da Shopify, a margem que aparece enquanto
- * se digita o custo. Do Mercado Livre e da Amazon, a loja com o selo dela no alto da
- * coluna, e a conta de quanto a loja fica de cada venda antes de publicar. Do TurboTax, a
- * pergunta no lugar do formulário: produto sem custo não mostra um campo solto, a linha
- * pergunta "quanto você paga?".
+ * Contenção de cor. Preto e cinza leem como sofisticação (Labrecque e Milne, 2012), e cor
+ * que aparece pouco é cor que se lê: verde é o que se ganha, âmbar é o que não chega à
+ * meta, vermelho é o que se perde, e nada mais tem cor. Um cartão escuro por tela, na cor
+ * da lateral, marca o número que mais importa.
  *
- * ## A psicologia por trás
+ * Hierarquia pelo tamanho, e não pelo enfeite: o número grande em 30 px, o rótulo em 13
+ * px, e número de coluna sempre alinhado à direita, para os valores se lerem de cima a
+ * baixo.
  *
- * Modelo que já existe na cabeça (lei de Jakob): tabela, cupom e ficha se leem sem
- * aprender nada. Frequência natural (Gigerenzer): "R$ 20 de cada R$ 100" em vez de "20%
- * de margem", que é o mesmo número dito do jeito que quem nunca calculou margem entende.
- * Uma decisão só (lei de Hick): um número no alto refaz a tabela inteira. Causa e efeito
- * na hora (manipulação direta): mexeu, mudou, sem botão de calcular. Destaque por
- * isolamento (efeito Von Restorff): só o que fica com você tem cor, o resto é cinza, e o
- * laranja aparece só quando você cobra menos do que devia. Tarefa aberta puxa (efeito
- * Zeigarnik): produto sem custo sobe para o alto, com a pergunta, e desce para o lugar
- * dele quando é respondido. Menos texto (carga cognitiva): nenhum parágrafo de
- * explicação; o que era texto virou pergunta, rótulo de coluna ou a própria conta.
+ * E o acabamento, porque o que parece bem feito parece mais fácil de usar (Kurosu e
+ * Kashimura, 1995): linha de 1 px, canto de 4 px em cartão, campo e botão, barra de canto
+ * quase reto, e uma sombra só, de 1 px.
  *
- * ## O que foi recusado, de propósito
+ * ## Como a tela se lê
  *
- * Cartão com régua colorida na borda, etiqueta arredondada em volta de texto, rótulo em
- * caixa alta espaçada, fileira de contadores iguais, travessão no meio da frase, traço
- * como marcador de lista, gradiente e sombra de cartão flutuante. São os sinais de tela
- * feita no automático, e a primeira versão do desenho novo tinha quase todos.
+ * Todo número vem com o desenho dele, porque número sozinho pede conta de cabeça e barra
+ * se lê de relance: comparar posição num eixo comum é o que o olho faz melhor (Cleveland e
+ * McGill, 1984). Uma decisão por vez (lei de Hick): a meta muda tudo, e fica sempre à
+ * vista. Mexeu, mudou: nenhum botão de calcular. E o gráfico do produto é também o
+ * controle do preço: arrastar a curva é perguntar "e se eu cobrar isto?".
  *
- * Cores só de variável de tema (ADR 0003), inclusive as do dinheiro (`--dinheiro-*`).
+ * ## O que foi recusado
+ *
+ * Etiqueta arredondada em volta de texto, rótulo em caixa alta espaçada, borda colorida
+ * de um lado só do cartão, gradiente, travessão no meio da frase e traço como marcador de
+ * lista. São os sinais de tela feita no automático.
+ *
+ * Cores só de variável de tema (ADR 0003). A cor de cada loja vem de
+ * `lojas/identidade.ts`, que é dado do mundo, e só pinta o selo e a barra dela.
  */
 
 /* ── A página ─────────────────────────────────────────────────────────────── */
 
 .pagina {
-  /* A tabela e o produto decidem o próprio desenho pela largura da página, e não da janela. */
-  container-name: pagina;
-  container-type: inline-size;
-  color: var(--cor-texto);
-  font-family: var(--fonte-miolo);
-  font-size: 0.9375rem;
-  line-height: 1.5;
-  max-width: 76rem;
-  padding: 2.25rem 2.5rem 3rem;
-  width: 100%;
-}
+  --canto: 4px;
+  --respiro: 24px;
+  --vao: 16px;
+  --foco-anel: 0 0 0 3px rgb(17 17 19 / 10%);
 
-@media (max-width: 40rem) {
-  .pagina {
-    padding: 1.25rem 1rem 2rem;
-  }
+  color: var(--tinta);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  max-width: 82rem;
+  padding: 2rem 2.5rem 3.5rem;
+  width: 100%;
 }
 
 .cabecalho {
   align-items: flex-end;
   display: flex;
-  flex-wrap: wrap;
   gap: 1rem 2rem;
   justify-content: space-between;
-  margin-bottom: 1.75rem;
+  margin-bottom: 1.5rem;
 }
 
 .cabecalhoTextos {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
   min-width: 0;
 }
 
-.cabecalhoDoProduto {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  margin: 0.875rem 0 1.75rem;
-}
-
 .titulo {
-  font-size: 1.875rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-size: 1.75rem;
+  font-weight: 680;
+  letter-spacing: -0.03em;
   line-height: 1.15;
   margin: 0;
-  overflow-wrap: anywhere;
 }
 
 .subtitulo {
-  color: var(--cor-texto-fraco);
-  font-size: 1rem;
-  margin: 0;
-  max-width: 62ch;
-}
-
-.voltar {
-  align-items: center;
-  color: var(--cor-texto-fraco);
-  display: inline-flex;
+  color: var(--tinta-2);
   font-size: 0.875rem;
-  font-weight: 500;
-  gap: 0.25rem;
-  text-decoration: none;
+  margin: 0.375rem 0 0;
 }
 
-.voltar:hover {
-  color: var(--cor-texto);
+.sobretitulo {
+  color: var(--tinta-3);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin: 0 0 0.625rem;
 }
 
 .link {
-  color: var(--cor-primaria);
-  text-underline-offset: 2px;
+  color: var(--tinta);
+  text-decoration: underline;
+  text-decoration-color: var(--cartao-borda);
+  text-underline-offset: 3px;
 }
 
-/* ── Botões ───────────────────────────────────────────────────────────────── */
+.link:hover {
+  text-decoration-color: currentColor;
+}
+
+/* ── Botões e campos ──────────────────────────────────────────────────────── */
 
 .botao {
   align-items: center;
-  background: var(--cor-primaria);
-  border: 1px solid var(--cor-primaria);
-  border-radius: var(--raio-pequeno);
-  color: var(--cor-superficie);
+  background: var(--tinta);
+  border: 1px solid var(--tinta);
+  border-radius: var(--canto);
+  color: var(--cartao);
   cursor: pointer;
   display: inline-flex;
+  flex: none;
   font: inherit;
-  font-weight: 600;
+  font-size: 0.84375rem;
+  font-weight: 560;
+  gap: 0.5rem;
   justify-content: center;
-  min-height: 2.5rem;
-  padding: 0 1.125rem;
+  letter-spacing: -0.005em;
+  line-height: 1;
+  padding: 0.6875rem 1rem;
   text-decoration: none;
+  transition: background 120ms ease;
   white-space: nowrap;
 }
 
 .botao:hover {
-  background: color-mix(in srgb, var(--cor-primaria) 86%, black);
+  background: var(--dado-1);
+}
+
+.botaoPequeno {
+  composes: botao;
+  font-size: 0.78125rem;
+  padding: 0.5rem 0.75rem;
 }
 
 .botaoSecundario {
-  align-items: center;
-  background: var(--papel);
-  border: 1px solid var(--cor-borda-forte);
-  border-radius: var(--raio-pequeno);
-  color: var(--cor-texto);
-  cursor: pointer;
-  display: inline-flex;
-  font: inherit;
-  font-weight: 500;
-  min-height: 2.5rem;
-  padding: 0 1rem;
-  text-decoration: none;
+  composes: botao;
+  background: var(--cartao);
+  border-color: var(--cartao-borda);
+  color: var(--tinta);
 }
 
 .botaoSecundario:hover {
-  border-color: var(--cor-texto-apagado);
+  background: var(--realce);
 }
 
-/* Ação que não deve chamar atenção: parece texto, e é botão para o teclado. */
-.botaoDiscreto,
-.linkBotao,
-.cancelar {
+.botaoTexto {
   background: none;
-  border: none;
-  color: var(--cor-texto-fraco);
+  border: 0;
+  color: var(--tinta-2);
   cursor: pointer;
   font: inherit;
-  padding: 0;
+  font-size: 0.78125rem;
+  font-weight: 520;
+  padding: 0.25rem 0;
   text-decoration: underline;
+  text-decoration-color: var(--cartao-borda);
   text-underline-offset: 3px;
 }
 
-.linkBotao {
-  color: var(--cor-primaria);
-  font-size: 0.875rem;
+.botaoTexto:hover {
+  color: var(--tinta);
+  text-decoration-color: currentColor;
 }
 
-.cancelar {
+.botaoDiscreto {
+  background: none;
+  border: 0;
+  color: var(--tinta-2);
+  cursor: pointer;
+  font: inherit;
   font-size: 0.8125rem;
+  font-weight: 520;
+  padding: 0;
 }
 
-.botaoDiscreto:hover,
-.cancelar:hover {
-  color: var(--cor-texto);
+.botaoDiscreto:hover {
+  color: var(--perda);
+  text-decoration: underline;
+}
+
+/* Botão só de ícone, para casa estreita de tabela. O nome vai no `aria-label`. */
+.botaoIcone {
+  align-items: center;
+  background: var(--tinta);
+  border: 1px solid var(--tinta);
+  border-radius: var(--canto);
+  color: var(--cartao);
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  height: 2rem;
+  justify-content: center;
+  padding: 0;
+  width: 2rem;
+}
+
+.botaoIcone:hover {
+  background: var(--dado-1);
+}
+
+.botaoIconeClaro {
+  composes: botaoIcone;
+  background: var(--cartao);
+  border-color: var(--cartao-borda);
+  color: var(--tinta-2);
+}
+
+.botaoIconeClaro:hover {
+  background: var(--realce);
+  color: var(--tinta);
+}
+
+.formulario {
+  display: grid;
+  gap: 1.125rem;
+}
+
+.campo {
+  display: grid;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.rotuloDoCampo {
+  color: var(--tinta);
+  font-size: 0.8125rem;
+  font-weight: 560;
+}
+
+.rotuloMiudo {
+  color: var(--tinta-2);
+  font-size: 0.75rem;
+}
+
+.opcional {
+  color: var(--tinta-3);
+  font-weight: 400;
+  margin-left: 0.25rem;
+}
+
+.ajuda {
+  color: var(--tinta-3);
+  font-size: 0.75rem;
+}
+
+.entrada {
+  background: var(--cartao);
+  border: 1px solid var(--cartao-borda);
+  border-radius: var(--canto);
+  color: var(--tinta);
+  font: inherit;
+  font-size: 0.875rem;
+  height: 2.375rem;
+  min-width: 0;
+  padding: 0 0.75rem;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+  width: 100%;
+}
+
+.entrada:focus {
+  border-color: var(--tinta);
+  box-shadow: var(--foco-anel);
+  outline: none;
+}
+
+.entrada::placeholder {
+  color: var(--tinta-3);
+  opacity: 0.7;
+}
+
+.entradaGrande {
+  composes: entrada;
+  font-size: 1rem;
+  height: 2.875rem;
+}
+
+.doisCampos {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.tresCampos {
+  display: grid;
+  gap: 0.625rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.grupoDeCampos {
+  border: 0;
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+}
+
+.acoesDoFormulario {
+  margin: 0.25rem 0 0;
+}
+
+/* O campo de dinheiro: o "R$" fora do campo de texto, e o número grande. */
+.campoDinheiro {
+  align-items: center;
+  background: var(--cartao);
+  border: 1px solid var(--cartao-borda);
+  border-radius: var(--canto);
+  display: flex;
+  gap: 0.375rem;
+  height: 2.625rem;
+  max-width: 13rem;
+  padding: 0 0.75rem;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.campoDinheiro:focus-within {
+  border-color: var(--tinta);
+  box-shadow: var(--foco-anel);
+}
+
+.moeda {
+  color: var(--tinta-3);
+  font-size: 0.8125rem;
+  font-weight: 520;
+}
+
+.entradaDinheiro {
+  background: transparent;
+  border: 0;
+  color: var(--tinta);
+  font: inherit;
+  font-size: 1.125rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  min-width: 0;
+  outline: none;
+  padding: 0;
+  width: 100%;
+}
+
+.seletor {
+  background: var(--cartao);
+  border: 1px solid var(--cartao-borda);
+  border-radius: var(--canto);
+  color: var(--tinta);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8125rem;
+  height: 2.125rem;
+  padding: 0 0.5rem;
+}
+
+.seletor:focus-visible {
+  border-color: var(--tinta);
+  box-shadow: var(--foco-anel);
+  outline: none;
 }
 
 /* ── O aviso depois de uma ação ───────────────────────────────────────────── */
 
-.aviso,
-.avisoAtencao,
-.avisoErro {
+.avisoOk {
   align-items: flex-start;
-  border-radius: var(--raio);
+  background: var(--lucro-suave);
+  border-radius: var(--canto);
   display: flex;
-  font-size: 0.9375rem;
+  font-size: 0.84375rem;
   gap: 0.625rem;
-  margin: 0 0 1.5rem;
-  max-width: 62rem;
+  margin: 0 0 var(--vao);
   padding: 0.75rem 1rem;
 }
 
-.aviso {
-  background: var(--tinta-ok);
-}
-
 .avisoAtencao {
-  background: var(--tinta-atencao);
+  composes: avisoOk;
+  background: var(--atencao-suave);
 }
 
 .avisoErro {
-  background: var(--tinta-agora);
+  composes: avisoOk;
+  background: var(--perda-suave);
 }
 
 .avisoSinal {
   display: inline-flex;
   flex: none;
-  margin-top: 0.2em;
+  margin-top: 0.125rem;
 }
 
-.aviso > .avisoSinal {
-  color: var(--cor-ok);
+.avisoOk .avisoSinal {
+  color: var(--lucro);
 }
 
-.avisoAtencao > .avisoSinal {
-  color: var(--cor-aviso);
+.avisoAtencao .avisoSinal {
+  color: var(--atencao);
 }
 
-.avisoErro > .avisoSinal {
-  color: var(--cor-erro);
+.avisoErro .avisoSinal {
+  color: var(--perda);
 }
 
 .avisoTitulo {
-  font-weight: 600;
+  font-weight: 620;
 }
 
-/* ── O número que decide a tabela ─────────────────────────────────────────── */
+/* ── Os cartões ───────────────────────────────────────────────────────────── */
 
-.alvo {
+.cartao {
+  background: var(--cartao);
+  border: 1px solid var(--cartao-borda);
+  border-radius: var(--canto);
+  box-shadow: var(--cartao-sombra);
+  padding: 1.25rem var(--respiro);
+}
+
+.tituloDoCartao {
+  font-size: 0.9375rem;
+  font-weight: 650;
+  letter-spacing: -0.012em;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.textoDoCartao {
+  color: var(--tinta-2);
+  font-size: 0.8125rem;
+  margin: 0.25rem 0 0;
+}
+
+.subtituloDoCartao {
+  font-size: 0.875rem;
+  font-weight: 620;
+  letter-spacing: -0.008em;
+  margin: 0;
+}
+
+.notaDoCartao {
+  color: var(--tinta-3);
+  font-size: 0.75rem;
+  margin: 0;
+}
+
+.topoTextos {
+  min-width: 0;
+}
+
+/* ── Os quatro números ────────────────────────────────────────────────────── */
+
+.numeros {
+  display: grid;
+  gap: var(--vao);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: var(--vao);
+}
+
+.cartaoNumero {
+  composes: cartao;
+  display: flex;
+  flex-direction: column;
+  min-height: 11rem;
+  padding: 1.25rem;
+}
+
+.topoDoNumero {
   align-items: center;
   display: flex;
-  flex-wrap: wrap;
-  font-size: 1rem;
-  gap: 0.5rem 0.75rem;
+  gap: 0.625rem;
+  margin-bottom: 0.875rem;
 }
 
-.alvoTexto {
-  font-weight: 500;
-}
-
-.passo {
-  align-items: stretch;
-  background: var(--papel);
-  border: 1px solid var(--cor-borda-forte);
-  border-radius: var(--raio-pequeno);
+.icone {
+  align-items: center;
+  background: var(--realce);
+  border: 1px solid var(--linha);
+  border-radius: var(--canto);
+  color: var(--tinta-2);
   display: inline-flex;
-  height: 2.5rem;
+  flex: none;
+  height: 1.75rem;
+  justify-content: center;
+  width: 1.75rem;
 }
 
-.passo:focus-within {
-  border-color: var(--cor-primaria);
+.rotuloDoNumero {
+  color: var(--tinta-2);
+  font-size: 0.8125rem;
+  font-weight: 560;
+  margin: 0;
 }
 
-.passoBotao {
+.numero {
+  font-size: 1.875rem;
+  font-weight: 680;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.numeroResto {
+  color: var(--tinta-3);
+  font-size: 0.875rem;
+  font-weight: 520;
+  letter-spacing: 0;
+}
+
+.numeroVazio {
+  color: var(--tinta-3);
+  font-size: 1.25rem;
+  font-weight: 620;
+  letter-spacing: -0.02em;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.numeroNota {
+  color: var(--tinta-3);
+  font-size: 0.78125rem;
+  line-height: 1.45;
+  margin: 0.375rem 0 0;
+}
+
+/*
+ * O pé do cartão de número: uma linha com um fio em cima, sempre no fundo do cartão, para
+ * os pés dos quatro cartões ficarem na mesma altura.
+ */
+.baseDoCartao {
+  align-items: flex-start;
+  border-top: 1px solid var(--linha);
+  color: var(--tinta-2);
+  display: flex;
+  font-size: 0.78125rem;
+  gap: 0.5rem;
+  line-height: 1.45;
+  margin: auto 0 0;
+  /* Duas linhas, sempre: o fio de cima fica na mesma altura nos cartões lado a lado. */
+  min-height: 3.5rem;
+  padding-top: 0.75rem;
+}
+
+.baseDoCartao > svg {
+  color: var(--lucro);
+  flex: none;
+  margin-top: 0.125rem;
+}
+
+.baseEmPe {
+  composes: baseDoCartao;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.baseDoCartaoAtencao {
+  composes: baseDoCartao;
+  color: var(--atencao);
+}
+
+.baseDoCartaoAtencao > svg {
+  color: var(--atencao);
+}
+
+.baseForte {
+  color: var(--tinta);
+  font-weight: 620;
+}
+
+.diferencaFalta,
+.diferencaSobra {
+  font-weight: 600;
+}
+
+.diferencaFalta {
+  color: var(--atencao);
+}
+
+.diferencaSobra {
+  color: var(--lucro);
+}
+
+/* A barra de situação: a cor de cada produto, lado a lado, na proporção de cada grupo. */
+.barraDeSituacao {
+  display: flex;
+  gap: 2px;
+  height: 0.5rem;
+  margin-top: auto;
+  padding-top: 0;
+}
+
+.barraDeSituacao > span {
+  border-radius: 1px;
+  min-width: 4px;
+}
+
+.trechoNaMeta {
+  background: var(--lucro-cheio);
+}
+
+.trechoAbaixo {
+  background: var(--atencao-cheio);
+}
+
+.trechoPrejuizo {
+  background: var(--perda-cheio);
+}
+
+.trechoSemVendas {
+  background: var(--dado-3);
+}
+
+.trechoSemCusto {
+  background: var(--dado-4);
+}
+
+.legendaDoNumero {
+  color: var(--tinta-2);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  gap: 0.375rem 0.875rem;
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+}
+
+.legendaItem {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.375rem;
+  white-space: nowrap;
+}
+
+.legendaQuantos {
+  color: var(--tinta);
+  font-weight: 650;
+}
+
+/* O ponto da situação. Oco é o que ainda não se sabe; cheio é a resposta. */
+.pontoNaMeta,
+.pontoAbaixo,
+.pontoPrejuizo,
+.pontoSemVendas,
+.pontoSemCusto,
+.pontoCustoVelho {
+  border-radius: 50%;
+  display: inline-block;
+  flex: none;
+  height: 0.5rem;
+  width: 0.5rem;
+}
+
+.pontoNaMeta {
+  background: var(--lucro-cheio);
+}
+
+.pontoAbaixo {
+  background: var(--atencao-cheio);
+}
+
+.pontoPrejuizo {
+  background: var(--perda-cheio);
+}
+
+.pontoSemVendas {
+  background: var(--dado-3);
+}
+
+.pontoSemCusto {
+  box-shadow: inset 0 0 0 1.5px var(--tinta-3);
+}
+
+.pontoCustoVelho {
+  box-shadow: inset 0 0 0 1.5px var(--atencao-cheio);
+}
+
+/* As lojas de um cartão: o selo, o nome, a barra na cor da loja e o número. */
+.lojasDoNumero {
+  display: grid;
+  gap: 0.5rem;
+  list-style: none;
+  margin: auto 0 0;
+  padding: 0.875rem 0 0;
+}
+
+.lojaDoNumero {
+  align-items: center;
+  display: grid;
+  font-size: 0.75rem;
+  gap: 0.5rem;
+  grid-template-columns: 0.875rem 5.5rem minmax(0, 1fr) 1.75rem;
+}
+
+.lojaDoNumeroNome {
+  color: var(--tinta-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lojaDoNumeroNomeForte {
+  composes: lojaDoNumeroNome;
+  color: var(--tinta);
+  font-weight: 620;
+}
+
+.lojaDoNumeroValor {
+  font-weight: 620;
+  text-align: right;
+}
+
+.trilhoDaLoja {
+  background: var(--linha);
+  border-radius: 1px;
+  display: block;
+  height: 0.375rem;
+  overflow: hidden;
+}
+
+.barraDaLoja {
+  border-radius: 1px;
+  display: block;
+  height: 100%;
+  transition: width 200ms ease;
+}
+
+/* O cartão escuro: a cor da lateral, no número que mais importa da tela. */
+.cartaoEscuro {
+  background: var(--cartao-escuro);
+  border: 1px solid var(--cartao-escuro);
+  border-radius: var(--canto);
+  color: var(--cartao-escuro-texto);
+  display: flex;
+  flex-direction: column;
+  min-height: 11rem;
+  padding: 1.25rem;
+}
+
+.iconeEscuro {
+  composes: icone;
+  background: var(--cartao-escuro-trilho);
+  border-color: var(--cartao-escuro-trilho);
+  color: var(--cartao-escuro-texto);
+}
+
+.rotuloEscuro {
+  color: var(--cartao-escuro-fraco);
+  font-size: 0.8125rem;
+  font-weight: 560;
+  margin: 0;
+}
+
+.numeroEscuro {
+  color: var(--cartao-escuro-texto);
+  font-size: 1.875rem;
+  font-weight: 680;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.numeroEscuroPerda {
+  composes: numeroEscuro;
+  color: var(--perda-cheio);
+}
+
+.numeroEscuroVazio {
+  composes: numeroEscuro;
+  color: var(--cartao-escuro-fraco);
+  font-size: 1.25rem;
+  line-height: 1.5;
+}
+
+.notaEscura {
+  color: var(--cartao-escuro-fraco);
+  font-size: 0.78125rem;
+  margin: 0.375rem 0 0;
+}
+
+.reguaEscura {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 1rem;
+}
+
+.trilhoEscuro {
+  background: var(--cartao-escuro-trilho);
+  border-radius: 1px;
+  display: block;
+  height: 0.375rem;
+  position: relative;
+}
+
+.cheioEscuro {
+  background: var(--atencao-cheio);
+  border-radius: 1px;
+  display: block;
+  height: 100%;
+  transition: width 200ms ease;
+}
+
+.cheioEscuroNaMeta {
+  composes: cheioEscuro;
+  background: var(--lucro-claro);
+}
+
+.marcaDaMeta {
+  background: var(--cartao-escuro-texto);
+  border-radius: 1px;
+  display: block;
+  height: 0.875rem;
+  margin-left: -1px;
+  position: absolute;
+  top: -0.25rem;
+  transition: left 200ms ease;
+  width: 2px;
+}
+
+.legendaEscura {
+  color: var(--cartao-escuro-fraco);
+  display: flex;
+  font-size: 0.75rem;
+  justify-content: space-between;
+}
+
+/* O que pede a pessoa: cada linha é um atalho para o filtro da tabela. */
+.atencoes {
+  display: grid;
+  gap: 0.125rem;
+  list-style: none;
+  margin: -0.25rem -0.5rem 0;
+  padding: 0;
+}
+
+.atencao {
   align-items: center;
   background: none;
-  border: none;
-  color: var(--cor-texto-fraco);
+  border: 0;
+  border-radius: var(--canto);
+  color: var(--tinta-2);
   cursor: pointer;
-  display: inline-flex;
-  justify-content: center;
-  width: 2.5rem;
+  display: grid;
+  font: inherit;
+  font-size: 0.8125rem;
+  gap: 0.5rem;
+  grid-template-columns: 0.5rem 1.25rem minmax(0, 1fr) 0.875rem;
+  padding: 0.4375rem 0.5rem;
+  text-align: left;
+  width: 100%;
 }
 
-.passoBotao:first-child {
-  border-radius: var(--raio-pequeno) 0 0 var(--raio-pequeno);
-  border-right: 1px solid var(--cor-borda);
+.atencao:hover {
+  background: var(--realce);
+  color: var(--tinta);
 }
 
-.passoBotao:last-child {
-  border-left: 1px solid var(--cor-borda);
-  border-radius: 0 var(--raio-pequeno) var(--raio-pequeno) 0;
+.atencaoQuantos {
+  color: var(--tinta);
+  font-weight: 680;
+  text-align: right;
 }
 
-.passoBotao:hover:not(:disabled) {
-  background: var(--cor-fundo);
-  color: var(--cor-texto);
+.atencaoTexto {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.passoBotao:disabled {
-  color: var(--cor-borda-forte);
-  cursor: default;
-}
-
-.passoMoeda {
+.tudoEmDia {
   align-items: center;
-  color: var(--cor-texto-fraco);
-  display: inline-flex;
-  font-weight: 500;
-  padding-left: 0.625rem;
+  color: var(--tinta-2);
+  display: flex;
+  font-size: 0.8125rem;
+  gap: 0.625rem;
+  margin: 0;
 }
 
-.passoCampo {
+.tudoEmDiaSinal {
+  align-items: center;
+  background: var(--lucro-suave);
+  border-radius: var(--canto);
+  color: var(--lucro);
+  display: inline-flex;
+  flex: none;
+  height: 1.5rem;
+  justify-content: center;
+  width: 1.5rem;
+}
+
+/* ── A meta ───────────────────────────────────────────────────────────────── */
+
+.meta {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.metaTopo {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.metaRotulo {
+  color: var(--tinta);
+  font-size: 0.8125rem;
+  font-weight: 560;
+}
+
+.alternador {
+  background: var(--realce);
+  border: 1px solid var(--linha);
+  border-radius: var(--canto);
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+}
+
+.alternadorOpcao {
+  background: none;
+  border: 0;
+  border-radius: 3px;
+  color: var(--tinta-3);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 540;
+  padding: 0.1875rem 0.5rem;
+  white-space: nowrap;
+}
+
+.alternadorOpcao:hover {
+  color: var(--tinta);
+}
+
+.alternadorAtual {
+  composes: alternadorOpcao;
+  background: var(--cartao);
+  box-shadow:
+    0 0 0 1px var(--cartao-borda),
+    0 1px 2px rgb(15 15 17 / 6%);
+  color: var(--tinta);
+}
+
+.alternadorAtual:hover {
+  color: var(--tinta);
+}
+
+.metaLinha {
+  align-items: center;
+  display: flex;
+  gap: 0.875rem;
+}
+
+.metaCampo {
+  align-items: center;
+  background: var(--cartao);
+  border: 1px solid var(--cartao-borda);
+  border-radius: var(--canto);
+  display: inline-flex;
+  flex: none;
+  gap: 0.25rem;
+  height: 2.5rem;
+  padding: 0 0.625rem;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.metaCampo:focus-within {
+  border-color: var(--tinta);
+  box-shadow: var(--foco-anel);
+}
+
+.metaCampoInvalido {
+  composes: metaCampo;
+  border-color: var(--perda);
+}
+
+.metaCampoInvalido:focus-within {
+  border-color: var(--perda);
+}
+
+.metaEntrada {
   background: transparent;
-  border: none;
-  color: var(--cor-texto);
+  border: 0;
+  color: var(--tinta);
+  field-sizing: content;
   font: inherit;
   font-size: 1.125rem;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  padding: 0 0.5rem 0 0.25rem;
-  width: 2.75rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  max-width: 8ch;
+  min-width: 2ch;
+  outline: none;
+  padding: 0;
+  text-align: right;
 }
 
-.passoCampo:focus-visible {
+/* Sem `field-sizing`, o campo não cresce com o número: largura fixa que cabe "100,00". */
+@supports not (field-sizing: content) {
+  .metaEntrada {
+    width: 6ch;
+  }
+}
+
+.metaUnidade {
+  color: var(--tinta-3);
+  font-size: 0.875rem;
+  font-weight: 520;
+}
+
+/* A régua da meta: trilho fino, a parte cheia em preto, e o botão redondo, que é controle. */
+.metaRegua {
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  flex: 1;
+  height: 1.25rem;
+  margin: 0;
+  min-width: 7rem;
+}
+
+.metaRegua::-webkit-slider-runnable-track {
+  background: linear-gradient(
+    to right,
+    var(--tinta) var(--progresso, 0%),
+    var(--dado-4) var(--progresso, 0%)
+  );
+  border-radius: 1px;
+  height: 4px;
+}
+
+.metaRegua::-webkit-slider-thumb {
+  appearance: none;
+  background: var(--cartao);
+  border: 2px solid var(--tinta);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgb(15 15 17 / 18%);
+  height: 1rem;
+  margin-top: -6px;
+  width: 1rem;
+}
+
+.metaRegua::-moz-range-track {
+  background: var(--dado-4);
+  border-radius: 1px;
+  height: 4px;
+}
+
+.metaRegua::-moz-range-progress {
+  background: var(--tinta);
+  border-radius: 1px;
+  height: 4px;
+}
+
+.metaRegua::-moz-range-thumb {
+  background: var(--cartao);
+  border: 2px solid var(--tinta);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgb(15 15 17 / 18%);
+  height: 0.75rem;
+  width: 0.75rem;
+}
+
+.metaRegua:focus-visible {
   outline: none;
+}
+
+.metaRegua:focus-visible::-webkit-slider-thumb {
+  box-shadow: var(--foco-anel);
+}
+
+.metaRegua:focus-visible::-moz-range-thumb {
+  box-shadow: var(--foco-anel);
 }
 
 /* ── A tabela de preços ───────────────────────────────────────────────────── */
 
-.tabelaDePrecos {
-  container-name: tabela;
+.cartaoDaTabela {
+  composes: cartao;
+  /* A tabela decide o próprio aperto pela largura dela, e não da janela. */
   container-type: inline-size;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  padding: 0;
 }
 
-/* A folha: uma só, branca, sobre a mesa. Nada de cartão por produto. */
-.folha {
-  background: var(--papel);
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio);
-  overflow: hidden;
+.topoDaTabela {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--linha);
+  display: flex;
+  gap: 2rem;
+  justify-content: space-between;
+  padding: 1.25rem var(--respiro);
+}
+
+.topoDaTabela > .meta {
+  flex: none;
+  width: 25rem;
+}
+
+.barraDaTabela {
+  align-items: center;
+  border-bottom: 1px solid var(--linha);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0 var(--respiro);
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.5rem;
+}
+
+.filtro {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--tinta-2);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 540;
+  margin-bottom: -1px;
+  padding: 0.875rem 0 0.75rem;
+  white-space: nowrap;
+}
+
+.filtro:hover {
+  color: var(--tinta);
+}
+
+.filtroAtual {
+  composes: filtro;
+  border-bottom-color: var(--tinta);
+  color: var(--tinta);
+}
+
+.filtroConta {
+  color: var(--tinta-3);
+  font-weight: 500;
+  margin-left: 0.375rem;
+}
+
+.busca {
+  align-items: center;
+  background: var(--cartao);
+  border: 1px solid var(--cartao-borda);
+  border-radius: var(--canto);
+  color: var(--tinta-3);
+  display: flex;
+  flex: none;
+  gap: 0.5rem;
+  height: 2.125rem;
+  padding: 0 0.625rem;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+  width: 15rem;
+}
+
+.busca:focus-within {
+  border-color: var(--tinta);
+  box-shadow: var(--foco-anel);
+}
+
+.buscaEntrada {
+  background: transparent;
+  border: 0;
+  color: var(--tinta);
+  flex: 1;
+  font: inherit;
+  font-size: 0.8125rem;
+  min-width: 0;
+  outline: none;
+}
+
+.buscaEntrada::placeholder {
+  color: var(--tinta-3);
 }
 
 .tabela {
   border-collapse: collapse;
+  table-layout: fixed;
   width: 100%;
 }
 
-.cabecaProduto,
-.cabecaCusto,
-.cabecaLoja {
-  border-bottom: 1px solid var(--cor-borda);
-  color: var(--cor-texto-fraco);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  padding: 0.875rem 1.25rem 0.75rem;
-  text-align: left;
+.tabela th,
+.tabela td {
+  border-bottom: 1px solid var(--linha);
+  padding: 0.875rem 1rem;
+  vertical-align: middle;
+}
+
+.tabela thead th {
+  color: var(--tinta-3);
+  font-size: 0.75rem;
+  font-weight: 540;
+  padding-bottom: 0.625rem;
+  padding-top: 0.625rem;
   white-space: nowrap;
 }
 
-/* Largo o bastante para a pergunta do custo caber numa linha: campo e botão. */
-.cabecaCusto {
-  text-align: right;
-  width: 14rem;
+.tabela th:first-child,
+.tabela td:first-child {
+  padding-left: var(--respiro);
 }
 
-.cabecaLoja {
-  text-align: right;
-  width: 11.5rem;
+.tabela th:last-child,
+.tabela td:last-child {
+  padding-right: 1rem;
 }
 
-.cabecaLojaNome {
-  align-items: center;
-  display: inline-flex;
-  gap: 0.5rem;
-}
-
-.linha,
-.linhaPendente {
-  vertical-align: top;
-}
-
-.linha + .linha > *,
-.linha + .linhaPendente > *,
-.linhaPendente + .linha > *,
-.linhaPendente + .linhaPendente > * {
-  border-top: 1px solid var(--papel-linha);
-}
-
-.linha:hover {
-  background: color-mix(in srgb, var(--cor-fundo) 70%, var(--papel));
-}
-
-/* A linha que espera o custo: marca-texto, e não alarme. */
-.linhaPendente {
-  background: var(--papel-pergunta);
-}
-
-.celulaProduto,
-.celulaCusto,
-.celulaLoja {
-  font-weight: 400;
-  padding: 1rem 1.25rem;
+.cabecaProduto {
   text-align: left;
 }
 
-.celulaCusto,
-.celulaLoja {
+.cabecaNumero {
   text-align: right;
+  width: 8rem;
 }
 
-.nome {
-  color: var(--cor-texto);
-  font-size: 1rem;
-  font-weight: 600;
+/* "Você paga" é mais larga: sem custo, é nela que o campo e o botão de salvar aparecem. */
+.cabecaNumero:nth-child(2) {
+  width: 10.5rem;
+}
+
+.cabecaLoja {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.375rem;
+}
+
+.cabecaSituacao {
+  text-align: left;
+  width: 9rem;
+}
+
+.cabecaSeta {
+  width: 3rem;
+}
+
+.linha td,
+.linha th {
+  transition: background 120ms ease;
+}
+
+.linha:hover td,
+.linha:hover th {
+  background: var(--realce);
+}
+
+/* A linha que acabou de ganhar custo: a volta da ação rola até ela e a marca de leve. */
+.linha:target td,
+.linha:target th {
+  background: var(--lucro-suave);
+}
+
+.linha:last-child td,
+.linha:last-child th {
+  border-bottom: 0;
+}
+
+.celulaProduto {
+  font-weight: 400;
+  text-align: left;
+}
+
+.produto {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.miniatura {
+  align-items: center;
+  background: var(--realce);
+  border: 1px solid var(--linha);
+  border-radius: var(--canto);
+  color: var(--tinta-3);
+  display: inline-flex;
+  flex: none;
+  height: 2.5rem;
+  justify-content: center;
+  width: 2.5rem;
+}
+
+.miniaturaGrande {
+  composes: miniatura;
+  background: var(--cartao);
+  border-color: var(--cartao-borda);
+  height: 3.5rem;
+  width: 3.5rem;
+}
+
+.produtoTextos {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* O nome vai até duas linhas, e só então corta: nome de peça se reconhece pelo fim. */
+.produtoNome {
+  -webkit-box-orient: vertical;
+  color: var(--tinta);
+  display: -webkit-box;
+  font-size: 0.875rem;
+  font-weight: 580;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  letter-spacing: -0.005em;
   line-height: 1.35;
-  overflow-wrap: anywhere;
+  overflow: hidden;
   text-decoration: none;
 }
 
-.nome:hover {
+.produtoNome:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-.detalhe {
-  color: var(--cor-texto-apagado);
-  display: block;
-  font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
-  margin-top: 0.125rem;
-  overflow-wrap: anywhere;
+.produtoDetalhe {
+  color: var(--tinta-3);
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* O custo informado: parece número, e o sublinhado pontilhado diz que se muda clicando. */
-.custo {
+.celulaCusto {
+  text-align: right;
+}
+
+.custoNaTabela {
+  align-items: center;
+  background: none;
+  border: 0;
+  color: var(--tinta);
+  cursor: pointer;
   display: inline-flex;
-  flex-direction: column;
-  align-items: flex-end;
+  font: inherit;
+  gap: 0.375rem;
+  padding: 0.125rem 0;
 }
 
 .custoValor {
+  font-size: 0.875rem;
+  font-weight: 540;
+}
+
+.custoLapis {
+  color: var(--tinta-3);
+  display: inline-flex;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.custoNaTabela:hover .custoLapis,
+.custoNaTabela:focus-visible .custoLapis,
+.linha:hover .custoLapis {
+  opacity: 1;
+}
+
+.custoNoCartao {
+  align-items: center;
+  align-self: flex-start;
   background: none;
-  border: none;
-  color: var(--cor-texto);
+  border: 0;
+  color: var(--tinta);
   cursor: pointer;
+  display: inline-flex;
   font: inherit;
-  font-size: 1.0625rem;
-  font-variant-numeric: tabular-nums;
+  gap: 0.5rem;
   padding: 0;
-  text-decoration: underline dotted var(--cor-borda-forte);
-  text-underline-offset: 5px;
+  text-align: left;
 }
 
-.custoValor:hover {
-  text-decoration-color: currentColor;
+.custoNoCartao .custoLapis {
+  opacity: 0.7;
 }
 
-.custoQuando,
-.custoVelho {
-  display: block;
-  font-size: 0.8125rem;
-  margin-top: 0.125rem;
+.custoNoCartao:hover .custoLapis {
+  color: var(--tinta);
+  opacity: 1;
+}
+
+.numeroDoCartao {
+  composes: numero;
 }
 
 .custoQuando {
-  color: var(--cor-texto-apagado);
+  color: var(--tinta-3);
+  display: block;
+  font-size: 0.71875rem;
+  margin-top: 0.125rem;
 }
 
 .custoVelho {
-  color: var(--cor-aviso);
-  font-weight: 500;
+  align-items: center;
+  color: var(--atencao);
+  display: flex;
+  font-size: 0.71875rem;
+  gap: 0.25rem;
+  justify-content: flex-end;
+  margin-top: 0.125rem;
 }
 
-/* A pergunta do custo, na linha. */
-.formCusto {
+.formDoCusto {
   align-items: center;
   display: inline-flex;
   flex-wrap: wrap;
@@ -487,220 +1424,248 @@
   justify-content: flex-end;
 }
 
-.campoCusto,
-.campoDinheiro {
+.formDoCustoGrande {
   align-items: center;
-  background: var(--papel);
-  border: 1px solid var(--cor-borda-forte);
-  border-radius: var(--raio-pequeno);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.campoDoCusto {
+  align-items: center;
+  background: var(--cartao);
+  border: 1px solid var(--cartao-borda);
+  border-radius: var(--canto);
   display: inline-flex;
-  padding-left: 0.625rem;
+  gap: 0.25rem;
+  height: 2rem;
+  padding: 0 0.5rem;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
 }
 
-.campoCusto {
-  height: 2.25rem;
-  width: 6.5rem;
+.campoDoCusto:focus-within,
+.campoDoCustoGrande:focus-within {
+  border-color: var(--tinta);
+  box-shadow: var(--foco-anel);
 }
 
-.campoCusto:focus-within,
-.campoDinheiro:focus-within {
-  border-color: var(--cor-primaria);
-  outline: var(--foco);
-  outline-offset: 1px;
-}
-
-.moeda {
-  color: var(--cor-texto-fraco);
-  font-size: 0.9375rem;
-  margin-right: 0.25rem;
-}
-
-.entradaCusto,
-.entradaDinheiro {
-  background: transparent;
-  border: none;
-  color: var(--cor-texto);
-  font: inherit;
-  /* 16px no mínimo: abaixo disso o Safari do iPhone aproxima a tela ao focar. */
-  font-size: 1rem;
-  font-variant-numeric: tabular-nums;
-  min-width: 0;
-  padding: 0 0.5rem 0 0;
-  width: 100%;
-}
-
-.entradaCusto:focus-visible,
-.entradaDinheiro:focus-visible {
-  outline: none;
-}
-
-.salvarCusto {
-  composes: botao;
-  font-size: 0.875rem;
-  min-height: 2.25rem;
+.campoDoCustoGrande {
+  composes: campoDoCusto;
+  flex: 1;
+  height: 2.75rem;
+  min-width: 7rem;
   padding: 0 0.75rem;
 }
 
-/* O preço de cada loja. */
+.entradaDoCusto {
+  background: transparent;
+  border: 0;
+  color: var(--tinta);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 560;
+  min-width: 0;
+  outline: none;
+  padding: 0;
+  width: 3.75rem;
+}
+
+.campoDoCustoGrande .entradaDoCusto {
+  font-size: 1.25rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  width: 100%;
+}
+
+.entradaDoCusto::placeholder {
+  color: var(--tinta-3);
+  opacity: 0.6;
+}
+
+.celulaEspera {
+  text-align: left;
+}
+
+.espera {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.esperaTexto {
+  align-items: center;
+  background: var(--realce);
+  border-radius: var(--canto);
+  color: var(--tinta-2);
+  display: inline-flex;
+  font-size: 0.78125rem;
+  gap: 0.5rem;
+  padding: 0.4375rem 0.75rem;
+}
+
+.celulaLoja {
+  text-align: right;
+}
+
 .precoNaLoja {
+  align-items: flex-end;
   display: inline-flex;
   flex-direction: column;
-  align-items: flex-end;
+  gap: 0.125rem;
 }
 
 .preco {
-  color: var(--cor-texto);
-  font-size: 1.0625rem;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  color: var(--tinta);
+  font-size: 0.9375rem;
+  font-weight: 620;
+  letter-spacing: -0.01em;
   text-decoration: none;
   white-space: nowrap;
 }
 
 .preco:hover {
-  color: var(--cor-primaria);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-.precoVazio {
-  color: var(--cor-borda-forte);
-  cursor: help;
-  font-size: 1.0625rem;
-  font-weight: 600;
-}
-
 .precoImpossivel {
-  color: var(--cor-aviso);
-  cursor: help;
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.voceCobra,
-.voceCobraAbaixo {
-  font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
-  margin-top: 0.125rem;
+  color: var(--tinta-3);
+  font-size: 0.78125rem;
   white-space: nowrap;
 }
 
-.voceCobra {
-  color: var(--cor-texto-apagado);
+.cobraNaMeta,
+.cobraAbaixo,
+.cobraPrejuizo {
+  font-size: 0.71875rem;
+  font-weight: 540;
+  white-space: nowrap;
 }
 
-.voceCobraAbaixo {
-  color: var(--cor-aviso);
-  font-weight: 600;
+.cobraNaMeta {
+  color: var(--lucro);
 }
 
-.legenda {
+.cobraAbaixo {
+  color: var(--atencao);
+}
+
+.cobraPrejuizo {
+  color: var(--perda);
+}
+
+.celulaSituacao {
+  text-align: left;
+}
+
+.situacao {
   align-items: center;
-  color: var(--cor-texto-fraco);
-  display: flex;
+  color: var(--tinta-2);
+  display: inline-flex;
   font-size: 0.8125rem;
   gap: 0.5rem;
-  margin: 0;
+  white-space: nowrap;
 }
 
-.legendaAmostra {
-  background: var(--cor-aviso);
-  border-radius: 2px;
-  flex: none;
-  height: 0.625rem;
-  width: 0.625rem;
+.celulaSeta {
+  text-align: right;
+}
+
+.seta {
+  align-items: center;
+  border-radius: var(--canto);
+  color: var(--tinta-3);
+  display: inline-flex;
+  height: 1.75rem;
+  justify-content: center;
+  width: 1.75rem;
+}
+
+.seta:hover {
+  background: var(--cartao);
+  box-shadow: 0 0 0 1px var(--cartao-borda);
+  color: var(--tinta);
 }
 
 /*
- * No telefone, a tabela vira uma ficha por produto: o nome, o custo, e as três lojas
- * lado a lado. Pela largura da tabela, e não da janela: a lateral também ocupa espaço.
+ * Tabela mais estreita (notebook de 1280 px, com a lateral aberta): colunas de número mais
+ * justas, menos respiro entre as casas e os filtros mais juntos, para o nome do produto
+ * não virar reticências.
  */
-@container tabela (max-width: 46rem) {
-  .tabela thead {
-    display: none;
+@container (max-width: 68rem) {
+  .cabecaNumero {
+    width: 6.75rem;
   }
 
-  .tabela,
-  .tabela tbody {
-    display: block;
+  .cabecaNumero:nth-child(2) {
+    width: 9rem;
   }
 
-  .linha,
-  .linhaPendente {
-    display: grid;
-    gap: 0.75rem;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    padding: 1rem;
+  .cabecaSituacao {
+    width: 8.25rem;
   }
 
-  .linha + .linha,
-  .linha + .linhaPendente,
-  .linhaPendente + .linha,
-  .linhaPendente + .linhaPendente {
-    border-top: 1px solid var(--papel-linha);
+  .tabela th,
+  .tabela td {
+    padding-left: 0.625rem;
+    padding-right: 0.625rem;
   }
 
-  .linha + .linha > *,
-  .linha + .linhaPendente > *,
-  .linhaPendente + .linha > *,
-  .linhaPendente + .linhaPendente > * {
-    border-top: none;
+  .filtros {
+    gap: 0 0.875rem;
   }
 
-  .celulaProduto,
-  .celulaCusto,
-  .celulaLoja {
-    padding: 0;
+  .filtro {
+    font-size: 0.78125rem;
   }
 
-  .celulaProduto,
-  .celulaCusto {
-    grid-column: 1 / -1;
-  }
-
-  .celulaCusto {
-    align-items: baseline;
-    display: flex;
-    gap: 0.75rem;
-    justify-content: space-between;
-  }
-
-  .celulaCusto::before,
-  .celulaLoja::before {
-    color: var(--cor-texto-apagado);
-    content: attr(data-rotulo);
-    font-size: 0.8125rem;
-  }
-
-  .celulaLoja {
-    text-align: left;
-  }
-
-  .celulaLoja::before {
-    display: block;
-    font-size: 0.75rem;
-    margin-bottom: 0.125rem;
-  }
-
-  .precoNaLoja {
-    align-items: flex-start;
-  }
-
-  .voceCobra,
-  .voceCobraAbaixo {
-    white-space: normal;
+  .busca {
+    width: 10rem;
   }
 }
 
-/* ── O pé da lista ────────────────────────────────────────────────────────── */
+.semResultado {
+  color: var(--tinta-3);
+  font-size: 0.84375rem;
+  padding: 2rem var(--respiro);
+  text-align: center;
+}
+
+.rodapeDaTabela {
+  align-items: center;
+  border-top: 1px solid var(--linha);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  padding: 0.875rem var(--respiro);
+}
+
+.legenda {
+  color: var(--tinta-3);
+  font-size: 0.75rem;
+  margin: 0;
+}
+
+.legendaCores {
+  color: var(--tinta-2);
+  display: flex;
+  font-size: 0.75rem;
+  gap: 1rem;
+  margin: 0;
+}
 
 .peDaLista {
-  color: var(--cor-texto-fraco);
-  display: flex;
-  flex-direction: column;
-  font-size: 0.875rem;
+  color: var(--tinta-2);
+  display: grid;
+  font-size: 0.8125rem;
   gap: 0.75rem;
   margin-top: 1.5rem;
+}
+
+.peDaLista:empty {
+  display: none;
 }
 
 .pares {
@@ -708,672 +1673,968 @@
 }
 
 .desativados {
-  color: var(--cor-texto-fraco);
-}
-
-.desativadosResumo {
-  cursor: pointer;
+  font-size: 0.8125rem;
 }
 
 .desativadosLista {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 0.375rem;
-  list-style: none;
   margin: 0.625rem 0 0;
-  padding: 0 0 0 1rem;
+  padding-left: 1.25rem;
 }
 
-/* ── Catálogo vazio: a primeira pergunta ──────────────────────────────────── */
-
-.vazio,
-.folhaDoCadastro {
-  background: var(--papel);
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio);
-  max-width: 46rem;
-  padding: 2rem;
-}
-
-@media (max-width: 40rem) {
-  .vazio,
-  .folhaDoCadastro {
-    padding: 1.25rem;
-  }
-}
-
-.vazioTitulo {
-  font-size: 1.375rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  line-height: 1.25;
-  margin: 0 0 0.375rem;
-}
-
-.vazioTexto {
-  color: var(--cor-texto-fraco);
-  margin: 0 0 1.5rem;
-  max-width: 54ch;
-}
-
-.vazioRodape {
-  border-top: 1px solid var(--papel-linha);
-  color: var(--cor-texto-fraco);
-  font-size: 0.875rem;
-  margin: 1.75rem 0 0;
-  padding-top: 1rem;
-}
-
-.jaExiste {
-  background: var(--tinta-atencao);
-  border-radius: var(--raio);
-  margin: 0 0 1.25rem;
-  max-width: 46rem;
-  padding: 0.75rem 1rem;
-}
-
-/* ── Formulários ──────────────────────────────────────────────────────────── */
-
-.formulario,
-.formularioDaFicha {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.formularioDaFicha {
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.campo {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 0.375rem;
-  min-width: 0;
-}
-
-.rotulo {
-  font-weight: 500;
-}
-
-.rotuloMiudo {
-  color: var(--cor-texto-fraco);
+/* O "abrir e fechar" dos recolhidos: uma seta que gira, no lugar do triângulo do navegador. */
+.resumo {
+  align-items: center;
+  color: var(--tinta);
+  cursor: pointer;
+  display: inline-flex;
   font-size: 0.8125rem;
-}
-
-.opcional {
-  color: var(--cor-texto-apagado);
-  font-size: 0.8125rem;
-  font-weight: 400;
-  margin-left: 0.25rem;
-}
-
-.entrada,
-.entradaGrande {
-  background: var(--papel);
-  border: 1px solid var(--cor-borda-forte);
-  border-radius: var(--raio-pequeno);
-  color: var(--cor-texto);
-  font: inherit;
-  font-size: 1rem;
-  min-height: 2.5rem;
-  padding: 0.5rem 0.75rem;
-  width: 100%;
-}
-
-.entradaGrande {
-  font-size: 1.125rem;
-  min-height: 3rem;
-  padding: 0.625rem 0.875rem;
-}
-
-.entrada:focus-visible,
-.entradaGrande:focus-visible {
-  border-color: var(--cor-primaria);
-}
-
-.ajuda {
-  color: var(--cor-texto-apagado);
-  font-size: 0.8125rem;
-}
-
-.linhaDeCampos {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.linhaDeCampos > .campo {
-  flex: 1 1 12rem;
-}
-
-.grupoDeCampos {
-  border: none;
-  display: flex;
-  flex-direction: column;
+  font-weight: 560;
   gap: 0.5rem;
-  margin: 0;
+  list-style: none;
+}
+
+.resumo::-webkit-details-marker {
+  display: none;
+}
+
+.resumo::before {
+  border-bottom: 1.5px solid currentColor;
+  border-right: 1.5px solid currentColor;
+  content: '';
+  height: 0.375rem;
+  transform: rotate(-45deg);
+  transition: transform 120ms ease;
+  width: 0.375rem;
+}
+
+details[open] > .resumo::before {
+  transform: rotate(45deg);
+}
+
+/* ── O catálogo vazio ─────────────────────────────────────────────────────── */
+
+.vazio {
+  composes: cartao;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.2fr);
+  overflow: hidden;
   padding: 0;
 }
 
-.tresCampos {
-  display: grid;
-  gap: 0.5rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.vazioPergunta {
+  padding: 2.5rem;
 }
 
-.acoesDoFormulario,
-.acoesDoBloco {
+.vazioTitulo {
+  font-size: 1.5rem;
+  font-weight: 680;
+  letter-spacing: -0.028em;
+  line-height: 1.2;
+  margin: 0;
+  max-width: 22ch;
+}
+
+.vazioTexto {
+  color: var(--tinta-2);
+  font-size: 0.875rem;
+  margin: 0.625rem 0 1.75rem;
+  max-width: 44ch;
+}
+
+.vazioDesenho {
+  background: var(--realce);
+  border-left: 1px solid var(--linha);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  justify-content: center;
+  padding: 2.5rem 2rem;
+}
+
+/* O exemplo: a tabela pronta, desenhada como uma tela de verdade que flutua um pouco. */
+.exemplo {
+  background: var(--cartao);
+  border: 1px solid var(--cartao-borda);
+  border-radius: var(--canto);
+  box-shadow: 0 16px 40px -18px rgb(15 15 17 / 22%);
+  font-size: 0.75rem;
+  overflow: hidden;
+}
+
+.exemploCabeca,
+.exemploLinha,
+.exemploFantasma {
+  align-items: center;
+  display: grid;
+  gap: 0.625rem;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.75fr) repeat(3, minmax(0, 1fr));
+  padding: 0.75rem 0.875rem;
+}
+
+.exemploCabeca {
+  border-bottom: 1px solid var(--linha);
+  color: var(--tinta-3);
+  font-size: 0.6875rem;
+  font-weight: 540;
+  padding-bottom: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.exemploLinha {
+  border-bottom: 1px solid var(--linha);
+}
+
+.exemploFantasma + .exemploFantasma {
+  border-top: 1px solid var(--linha);
+}
+
+.exemploProduto {
   align-items: center;
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.exemploProduto .miniatura {
+  height: 1.75rem;
+  width: 1.75rem;
+}
+
+.exemploNome {
+  display: flex;
+  flex-direction: column;
+  font-weight: 620;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.exemploDetalhe {
+  color: var(--tinta-3);
+  font-size: 0.65625rem;
+  font-weight: 400;
+}
+
+.exemploNumero {
+  text-align: right;
+}
+
+.exemploLoja {
+  align-items: center;
+  display: flex;
+  gap: 0.25rem;
+  justify-content: flex-end;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.exemploPreco {
+  font-size: 0.78125rem;
+  font-weight: 650;
+  text-align: right;
+}
+
+.exemploQuadro {
+  background: var(--realce);
+  border-radius: var(--canto);
+  flex: none;
+  height: 1.75rem;
+  width: 1.75rem;
+}
+
+.exemploRisco,
+.exemploRiscoCurto {
+  background: var(--dado-4);
+  border-radius: 1px;
+  display: block;
+  height: 0.5rem;
+}
+
+.exemploRisco {
+  width: 70%;
+}
+
+.exemploRiscoCurto {
+  justify-self: end;
+  width: 60%;
+}
+
+.exemploLegenda {
+  color: var(--tinta-2);
+  font-size: 0.8125rem;
   margin: 0;
+}
+
+.passos {
+  display: grid;
+  gap: var(--vao);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  list-style: none;
+  margin: var(--vao) 0 0;
+  padding: 0;
+}
+
+.passo {
+  composes: cartao;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.passoTopo {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.625rem;
+}
+
+.passoNumeroAtual {
+  composes: passoNumero;
+  background: var(--tinta);
+  border-color: var(--tinta);
+  color: var(--cartao);
+}
+
+.passoNumero {
+  align-items: center;
+  border: 1px solid var(--cartao-borda);
+  border-radius: var(--canto);
+  color: var(--tinta-2);
+  display: inline-flex;
+  flex: none;
+  font-size: 0.75rem;
+  font-weight: 620;
+  height: 1.5rem;
+  justify-content: center;
+  width: 1.5rem;
+}
+
+.passoTitulo {
+  font-size: 0.875rem;
+  font-weight: 620;
+}
+
+.passoTexto {
+  color: var(--tinta-2);
+  font-size: 0.8125rem;
+}
+
+.passosEmPe {
+  display: grid;
+  gap: 1rem;
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+
+.passoEmPe {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+}
+
+.passoTextos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.vazioRodape {
+  color: var(--tinta-2);
+  font-size: 0.8125rem;
+  margin: var(--vao) 0 0;
+}
+
+/* ── O cadastro ───────────────────────────────────────────────────────────── */
+
+.cadastro {
+  align-items: start;
+  display: grid;
+  gap: var(--vao);
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  max-width: 64rem;
+}
+
+.cartaoDoCadastro {
+  composes: cartao;
+  padding: 1.75rem;
+}
+
+.jaExiste {
+  background: var(--atencao-suave);
+  border-radius: var(--canto);
+  font-size: 0.84375rem;
+  margin: 0 0 var(--vao);
+  max-width: 64rem;
+  padding: 0.75rem 1rem;
 }
 
 /* ── O produto ────────────────────────────────────────────────────────────── */
 
-.desativadoAviso {
+.migalha {
   align-items: center;
-  background: var(--tinta-atencao);
-  border-radius: var(--raio);
+  color: var(--tinta-3);
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 1.5rem;
-  justify-content: space-between;
-  margin: 0 0 1.5rem;
-  max-width: 62rem;
-  padding: 0.875rem 1.125rem;
-}
-
-.produto {
-  align-items: start;
-  display: grid;
-  gap: 2.5rem;
-  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
-}
-
-@container pagina (max-width: 56rem) {
-  .produto {
-    gap: 2rem;
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.principal {
-  display: flex;
-  flex-direction: column;
-  gap: 2.25rem;
+  font-size: 0.8125rem;
+  gap: 0.375rem;
+  margin-bottom: 1rem;
   min-width: 0;
 }
 
-/* A ficha: um cartão só, de papel, com as seções separadas por linha fina. */
-.lateral {
-  background: var(--papel);
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio);
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  min-width: 0;
-  padding: 1.25rem 1.375rem 1.375rem;
+.migalhaLink {
+  color: var(--tinta-2);
+  flex: none;
+  text-decoration: none;
 }
 
-.lateral > * + * {
-  border-top: 1px solid var(--papel-linha);
-  padding-top: 1.25rem;
+.migalhaLink:hover {
+  color: var(--tinta);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-.bloco,
-.blocoDestaque {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  min-width: 0;
-}
-
-/* O custo que falta: a primeira pergunta da página, em marca-texto. */
-.blocoDestaque {
-  background: var(--papel-pergunta);
-  border: 1px solid color-mix(in srgb, var(--cor-aviso) 22%, transparent);
-  border-radius: var(--raio);
-  padding: 1.25rem 1.25rem 1.375rem;
-}
-
-.blocoTitulo {
-  font-size: 1.0625rem;
-  font-weight: 600;
-  letter-spacing: -0.005em;
-  margin: 0;
-}
-
-.perguntaDoCusto {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.campoPergunta {
-  font-size: 1rem;
-}
-
-.linhaDaPergunta {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.campoDinheiro {
-  height: 2.5rem;
-  width: 9rem;
-}
-
-.entradaDinheiro {
-  font-size: 1.0625rem;
-  font-weight: 600;
-}
-
-/* A loja da conta: três botões lado a lado, e um aceso. */
-.lojas {
-  align-self: flex-start;
-  background: var(--cor-superficie-baixa);
-  border-radius: var(--raio);
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  padding: 0.25rem;
-}
-
-.loja,
-.lojaAtual {
-  align-items: center;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--raio-pequeno);
-  color: var(--cor-texto-fraco);
-  cursor: pointer;
-  display: inline-flex;
-  font: inherit;
-  gap: 0.5rem;
-  min-height: 2.5rem;
-  padding: 0.25rem 0.875rem 0.25rem 0.5rem;
-}
-
-.loja:hover {
-  color: var(--cor-texto);
-}
-
-.lojaAtual {
-  background: var(--papel);
-  border-color: var(--cor-borda);
-  box-shadow: var(--sombra-cartao);
-  color: var(--cor-texto);
-  font-weight: 600;
-}
-
-.esperandoCusto {
-  color: var(--cor-texto-fraco);
-  margin: 0;
-  max-width: 52ch;
-}
-
-/* No telefone, as três lojas numa linha só: letra menor, e menos folga. */
-@container pagina (max-width: 30rem) {
-  .lojas {
-    gap: 0.125rem;
-  }
-
-  .loja,
-  .lojaAtual {
-    font-size: 0.8125rem;
-    gap: 0.375rem;
-    padding: 0.25rem 0.5rem 0.25rem 0.375rem;
-  }
-}
-
-/* A resposta: um número, grande, e a frase que diz o que ele é. */
-.resposta {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.respostaLinha {
-  align-items: baseline;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 0.75rem;
-  margin: 0;
-}
-
-.respostaRotulo {
-  color: var(--cor-texto-fraco);
-  font-size: 1.25rem;
-  font-weight: 500;
-}
-
-.respostaValor {
-  font-size: 3rem;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-}
-
-@container pagina (max-width: 30rem) {
-  .respostaValor {
-    font-size: 2.375rem;
-  }
-}
-
-.respostaNota {
-  color: var(--cor-texto-fraco);
-  font-size: 1rem;
-  margin: 0;
-}
-
-.respostaEmpate {
-  color: var(--cor-texto-apagado);
-  font-size: 0.875rem;
-  margin: 0.25rem 0 0;
-}
-
-/* ── O cupom ──────────────────────────────────────────────────────────────── */
-
-.cupom {
-  background: var(--papel);
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio);
-  display: flex;
-  flex-direction: column;
-  gap: 1.125rem;
-  padding: 1.25rem 1.5rem 1.125rem;
-}
-
-@container pagina (max-width: 30rem) {
-  .cupom {
-    padding: 1rem;
-  }
-}
-
-.cupomTopo {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 0.75rem;
-}
-
-.cupomPergunta {
-  font-weight: 500;
-}
-
-.cupomVazio {
-  color: var(--cor-texto-fraco);
-  margin: 0;
-}
-
-/*
- * A régua: fina, com 2 px de folga entre as partes, e cantos pouco arredondados. A
- * parte que fica com você começa no zero, e é a única com cor.
- */
-.regua {
-  border-radius: 4px;
-  display: flex;
-  gap: 2px;
-  height: 0.875rem;
+.migalhaAtual {
+  color: var(--tinta-3);
   overflow: hidden;
-  position: relative;
-}
-
-.reguaParte {
-  flex-basis: 0;
-  min-width: 2px;
-}
-
-.parteFica {
-  background: var(--dinheiro-fica);
-}
-
-.parteProduto {
-  background: var(--dinheiro-produto);
-}
-
-.parteLoja {
-  background: var(--dinheiro-loja);
-}
-
-.parteResto {
-  background: var(--dinheiro-resto);
-}
-
-/* O que passa do preço, quando a venda dá prejuízo. */
-.reguaPerde {
-  background: color-mix(in srgb, var(--dinheiro-perde) 45%, transparent);
-  border-left: 2px solid var(--dinheiro-perde);
-  bottom: 0;
-  position: absolute;
-  right: 0;
-  top: 0;
-}
-
-.cupomLinhas {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-}
-
-.cupomLinha,
-.cupomLinhaDoPreco {
-  align-items: baseline;
-  display: flex;
-  gap: 0.5rem;
-  padding: 0.3125rem 0;
-}
-
-/* A primeira linha é o todo, e não uma parte: sem amostra, e em negrito. */
-.cupomLinhaDoPreco {
-  font-weight: 600;
-}
-
-/* O nome à esquerda, o valor à direita, e a linha pontilhada entre os dois. */
-.cupomRotulo {
-  align-items: baseline;
-  display: flex;
-  flex: 1;
-  gap: 0.5rem;
-  min-width: 0;
-}
-
-.cupomRotulo::after {
-  border-bottom: 1.5px dotted var(--cor-borda-forte);
-  content: '';
-  flex: 1;
-  min-width: 1rem;
-  transform: translateY(-0.3em);
-}
-
-.cupomValor {
-  font-family: var(--fonte-cupom);
-  font-size: 0.9375rem;
-  font-variant-numeric: tabular-nums;
-  margin: 0;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.amostra {
-  align-self: center;
-  border-radius: 2px;
-  flex: none;
-  height: 0.625rem;
-  width: 0.625rem;
-}
-
-.estimado {
-  color: var(--cor-aviso);
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-/* O total, embaixo do traço duplo: como a contabilidade fecha uma conta. */
-.cupomTotal,
-.cupomTotalPerde {
-  align-items: baseline;
-  border-top: 3px double var(--cor-texto);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.125rem 0.75rem;
-  margin: 0;
-  padding-top: 0.75rem;
-}
-
-.cupomTotalRotulo {
+.cabecalhoDoProduto {
   align-items: center;
-  display: inline-flex;
-  flex: 1;
-  font-size: 1.0625rem;
-  font-weight: 600;
-  gap: 0.5rem;
-}
-
-.cupomTotalValor {
-  color: var(--dinheiro-fica);
-  font-family: var(--fonte-cupom);
-  font-size: 1.375rem;
-  font-variant-numeric: tabular-nums;
-  font-weight: 500;
-}
-
-.cupomTotalPerde .cupomTotalValor,
-.cupomTotalPerde .cupomTotalRotulo {
-  color: var(--dinheiro-perde);
-}
-
-.cupomTotalNota {
-  color: var(--cor-texto-apagado);
-  flex-basis: 100%;
-  font-size: 0.8125rem;
-  text-align: right;
-}
-
-.cupomRodape {
-  color: var(--cor-texto-apagado);
   display: flex;
-  flex-direction: column;
-  font-size: 0.75rem;
-  gap: 0.125rem;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
-.cupomRodape > p {
-  margin: 0;
-}
-
-/* Os avisos da conta: frase inteira, com um quadrado da cor da gravidade na frente. */
-.avisosDaConta {
+.desativado {
+  align-items: center;
+  background: var(--atencao-suave);
+  border-radius: var(--canto);
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  list-style: none;
-  margin: 0;
+  font-size: 0.84375rem;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 0 0 var(--vao);
+  padding: 0.75rem 1rem;
+}
+
+.corpoDoProduto {
+  align-items: start;
+  display: grid;
+  gap: var(--vao);
+  grid-template-columns: minmax(0, 1fr) 21rem;
+}
+
+.lateralDoProduto {
+  display: grid;
+  gap: var(--vao);
+}
+
+.cartaoDoSimulador {
+  composes: cartao;
   padding: 0;
 }
 
-.avisoDaConta,
-.avisoDaContaAtencao,
-.avisoDaContaErro {
+.topoDoSimulador {
+  align-items: flex-start;
   display: flex;
-  font-size: 0.875rem;
-  gap: 0.625rem;
-  line-height: 1.45;
+  gap: 1.5rem;
+  justify-content: space-between;
+  padding: 1.25rem var(--respiro);
 }
 
-.avisoDaConta::before,
-.avisoDaContaAtencao::before,
-.avisoDaContaErro::before {
-  border-radius: 1px;
-  content: '';
+.abasDeLoja {
+  background: var(--realce);
+  border: 1px solid var(--linha);
+  border-radius: var(--canto);
+  display: inline-flex;
   flex: none;
-  height: 0.5rem;
-  margin-top: 0.45em;
-  width: 0.5rem;
+  gap: 2px;
+  padding: 2px;
 }
 
-.avisoDaConta {
-  color: var(--cor-texto-fraco);
+.abaDeLoja {
+  align-items: center;
+  background: none;
+  border: 0;
+  border-radius: 3px;
+  color: var(--tinta-2);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 540;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem 0.375rem 0.5rem;
+  white-space: nowrap;
 }
 
-.avisoDaConta::before {
-  background: var(--cor-borda-forte);
+.abaDeLoja:hover {
+  color: var(--tinta);
 }
 
-.avisoDaContaAtencao::before {
-  background: var(--cor-aviso);
+.abaDeLojaAtual {
+  composes: abaDeLoja;
+  background: var(--cartao);
+  box-shadow:
+    0 0 0 1px var(--cartao-borda),
+    0 1px 2px rgb(15 15 17 / 6%);
+  color: var(--tinta);
 }
 
-.avisoDaContaErro::before {
-  background: var(--cor-erro);
+.controlesDoSimulador {
+  background: var(--realce);
+  border-bottom: 1px solid var(--linha);
+  border-top: 1px solid var(--linha);
+  display: grid;
+  gap: 1rem 2rem;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  padding: 1.125rem var(--respiro);
 }
 
-.montar {
-  margin: 0;
+.campoDoPreco {
+  align-content: start;
+  display: grid;
+  gap: 0.5rem;
 }
 
-.opcoes {
-  border-top: 1px solid var(--papel-linha);
+.notaDoCampo {
+  color: var(--tinta-3);
+  font-size: 0.75rem;
+}
+
+.campoDoPreco .botaoTexto {
+  justify-self: start;
+  padding: 0;
+}
+
+.opcoesDoAnuncio {
+  align-items: center;
+  border-top: 1px solid var(--linha);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.75rem;
+  grid-column: 1 / -1;
   padding-top: 0.875rem;
 }
 
-.opcoesResumo,
-.mudarResumo {
-  cursor: pointer;
-  font-weight: 500;
+.opcaoDoAnuncio {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.625rem;
 }
 
-.opcoesResumo {
-  color: var(--cor-texto-fraco);
+.opcaoDoAnuncio .rotuloDoCampo {
+  color: var(--tinta-2);
+  font-weight: 520;
 }
 
-.opcoesCorpo {
+.secaoDoSimulador {
+  display: grid;
+  gap: 0.875rem;
+  padding: 1.25rem var(--respiro);
+}
+
+.secaoDoSimulador + .secaoDoSimulador {
+  border-top: 1px solid var(--linha);
+}
+
+.topoDaSecao {
+  align-items: baseline;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.legendaDoGrafico {
+  color: var(--tinta-2);
+  display: flex;
+  font-size: 0.75rem;
+  gap: 1rem;
+  margin: 0;
+}
+
+.amostraGanha,
+.amostraPerde,
+.amostraMeta {
+  display: inline-block;
+  height: 0;
+  width: 0.875rem;
+}
+
+.amostraGanha {
+  border-top: 2px solid var(--lucro);
+}
+
+.amostraPerde {
+  border-top: 2px solid var(--perda);
+}
+
+.amostraMeta {
+  border-top: 1.5px dashed var(--tinta-3);
+}
+
+.semConta {
+  color: var(--tinta-3);
+  font-size: 0.84375rem;
+  margin: 0;
+  padding: 1.25rem var(--respiro);
+}
+
+/* ── O gráfico de lucro ───────────────────────────────────────────────────── */
+
+.grafico {
+  min-height: 16rem;
+  position: relative;
+  user-select: none;
+}
+
+.graficoDesenho {
+  cursor: ew-resize;
+  display: block;
+  max-width: 100%;
+  touch-action: pan-y;
+}
+
+.graficoDesenho:focus-visible,
+.graficoArrastando:focus-visible {
+  border-radius: var(--canto);
+  box-shadow: var(--foco-anel);
+  outline: none;
+}
+
+.graficoArrastando {
+  composes: graficoDesenho;
+  cursor: grabbing;
+}
+
+.graficoGrade {
+  shape-rendering: crispEdges;
+  stroke: var(--linha);
+  stroke-width: 1;
+}
+
+.graficoZero {
+  shape-rendering: crispEdges;
+  stroke: var(--dado-3);
+  stroke-width: 1;
+}
+
+.graficoRotulo {
+  fill: var(--tinta-3);
+  font-size: 11px;
+}
+
+.graficoAreaGanha {
+  fill: var(--lucro-cheio);
+  opacity: 0.1;
+}
+
+.graficoAreaPerde {
+  fill: var(--perda-cheio);
+  opacity: 0.1;
+}
+
+.graficoLinhaGanha,
+.graficoLinhaPerde {
+  fill: none;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.graficoLinhaGanha {
+  stroke: var(--lucro);
+}
+
+.graficoLinhaPerde {
+  stroke: var(--perda);
+}
+
+.graficoEmpate {
+  fill: var(--cartao);
+  stroke: var(--tinta-2);
+  stroke-width: 1.5;
+}
+
+.graficoNota {
+  fill: var(--tinta-2);
+  font-size: 11px;
+  font-weight: 520;
+}
+
+.graficoMeta {
+  stroke: var(--tinta-3);
+  stroke-dasharray: 3 3;
+  stroke-width: 1;
+}
+
+.graficoMira {
+  shape-rendering: crispEdges;
+  stroke: var(--dado-3);
+  stroke-width: 1;
+}
+
+.graficoMiraPonto {
+  fill: var(--cartao);
+  stroke: var(--tinta-2);
+  stroke-width: 1.5;
+}
+
+.graficoAlcaLinha {
+  stroke: var(--tinta);
+  stroke-width: 1.5;
+}
+
+.graficoAlcaPonto {
+  fill: var(--cartao);
+  stroke: var(--tinta);
+  stroke-width: 2.5;
+}
+
+.graficoEtiqueta {
+  fill: var(--tinta);
+}
+
+.graficoEtiquetaTexto {
+  fill: var(--cartao);
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.graficoDica {
+  background: var(--cartao);
+  border: 1px solid var(--cartao-borda);
+  border-radius: var(--canto);
+  box-shadow: var(--sombra-suspensa);
+  display: grid;
+  font-size: 0.75rem;
+  gap: 0.125rem;
+  padding: 0.5rem 0.625rem;
+  pointer-events: none;
+  position: absolute;
+  white-space: nowrap;
+}
+
+.graficoDicaPreco {
+  color: var(--tinta-2);
+}
+
+.graficoDicaGanha,
+.graficoDicaPerde {
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.graficoDicaGanha {
+  color: var(--lucro);
+}
+
+.graficoDicaPerde {
+  color: var(--perda);
+}
+
+.graficoDicaNota {
+  color: var(--tinta-3);
+}
+
+/* ── Para onde vai o dinheiro ─────────────────────────────────────────────── */
+
+.barraDaDivisao {
+  display: flex;
+  gap: 2px;
+  height: 0.875rem;
+  position: relative;
+}
+
+.barraDaDivisao > span {
+  border-radius: 1px;
+  display: block;
+  min-width: 3px;
+}
+
+.parteFica {
+  background: var(--lucro-cheio);
+}
+
+.parteProduto {
+  background: var(--dado-1);
+}
+
+.parteLoja {
+  background: var(--dado-2);
+}
+
+.parteFrete {
+  background: var(--dado-3);
+}
+
+.parteResto {
+  background: var(--dado-4);
+}
+
+/* O que passa do preço, quando ele não paga tudo: riscado em vermelho, depois do traço. */
+.excessoDaDivisao {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--perda-suave) 0 3px,
+    var(--perda-cheio) 3px 5px
+  );
+  border-left: 2px solid var(--tinta);
+  bottom: -3px;
+  opacity: 0.85;
+  position: absolute;
+  right: 0;
+  top: -3px;
+}
+
+.partes {
+  display: grid;
+  gap: 0.125rem 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  margin: 0.25rem 0 0;
+}
+
+/* Rótulo, valor e nota em três linhas comuns a todas as partes: rótulo de duas linhas não
+ * desalinha o valor da parte ao lado. */
+.parte {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  margin: 0;
+}
+
+.parteRotulo {
+  align-items: flex-start;
+  color: var(--tinta-2);
+  display: flex;
+  font-size: 0.75rem;
+  gap: 0.4375rem;
+}
+
+.parteRotulo > span {
+  border-radius: 2px;
+  display: inline-block;
+  flex: none;
+  height: 0.625rem;
+  margin-top: 0.1875rem;
+  width: 0.625rem;
+}
+
+.parteValor {
+  font-size: 0.9375rem;
+  font-weight: 620;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.parteValorFica {
+  composes: parteValor;
+  color: var(--lucro);
+}
+
+.parteNota {
+  color: var(--tinta-3);
+  font-size: 0.71875rem;
+  margin: 0;
+}
+
+.perdaDaDivisao {
+  background: var(--perda-suave);
+  border-radius: var(--canto);
+  font-size: 0.8125rem;
+  margin: 0;
+  padding: 0.625rem 0.75rem;
+}
+
+/* ── Os avisos da conta ───────────────────────────────────────────────────── */
+
+.alertas {
+  display: grid;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--respiro) 1.25rem;
+}
+
+.alertaNota,
+.alertaAtencao,
+.alertaErro {
+  align-items: flex-start;
+  border-radius: var(--canto);
+  display: flex;
+  font-size: 0.8125rem;
+  gap: 0.625rem;
+  line-height: 1.45;
+  padding: 0.625rem 0.75rem;
+}
+
+.alertaNota > svg,
+.alertaAtencao > svg,
+.alertaErro > svg {
+  flex: none;
+  margin-top: 0.125rem;
+}
+
+.alertaNota {
+  background: var(--realce);
+  color: var(--tinta-2);
+}
+
+.alertaAtencao {
+  background: var(--atencao-suave);
+}
+
+.alertaAtencao > svg {
+  color: var(--atencao);
+}
+
+.alertaErro {
+  background: var(--perda-suave);
+}
+
+.alertaErro > svg {
+  color: var(--perda);
+}
+
+.rodapeDoSimulador {
+  align-items: center;
+  border-top: 1px solid var(--linha);
   display: flex;
   flex-wrap: wrap;
-  gap: 1.25rem 2.5rem;
-  margin-top: 0.875rem;
+  gap: 0.75rem 1rem;
+  padding: 1rem var(--respiro) 1.25rem;
 }
 
-.opcoesGrupo {
-  border: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  margin: 0;
-  padding: 0;
+/* Sem custo, o simulador mostra a conta que vai aparecer, apagada, com a pergunta em cima. */
+.esperandoCusto {
+  border-top: 1px solid var(--linha);
+  padding: 1.5rem var(--respiro) 2rem;
+  position: relative;
 }
 
-.opcoesLegenda {
-  color: var(--cor-texto-apagado);
+.esperandoDesenho {
+  display: block;
+  height: 11.25rem;
+  width: 100%;
+}
+
+.esperandoGrade {
+  stroke: var(--linha);
+  stroke-width: 1;
+}
+
+.esperandoZero {
+  stroke: var(--dado-4);
+  stroke-width: 1;
+}
+
+.esperandoCurva {
+  fill: none;
+  stroke: var(--dado-3);
+  stroke-dasharray: 4 5;
+  stroke-width: 2;
+}
+
+.esperandoTexto {
+  background: var(--cartao);
+  border: 1px solid var(--cartao-borda);
+  border-radius: var(--canto);
+  box-shadow: var(--sombra-suspensa);
+  color: var(--tinta-2);
   font-size: 0.8125rem;
+  left: 50%;
+  margin: 0;
+  max-width: 22rem;
+  padding: 0.875rem 1.125rem;
+  position: absolute;
+  text-align: center;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.esperandoTexto strong {
+  color: var(--tinta);
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 620;
   margin-bottom: 0.25rem;
+}
+
+/* ── As lojas comparadas ──────────────────────────────────────────────────── */
+
+.comparacao {
+  display: grid;
+  gap: 0.25rem;
+  list-style: none;
+  margin: 0.875rem -0.5rem 0.625rem;
   padding: 0;
 }
 
-.opcao {
-  align-items: center;
+.lojaComparada {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--canto);
+  color: var(--tinta);
   cursor: pointer;
-  display: flex;
+  display: grid;
+  font: inherit;
   gap: 0.5rem;
+  padding: 0.625rem 0.5rem;
+  text-align: left;
+  width: 100%;
 }
 
-/* ── A ficha ──────────────────────────────────────────────────────────────── */
+.lojaComparada:hover {
+  background: var(--realce);
+}
+
+.lojaComparadaAtual {
+  composes: lojaComparada;
+  background: var(--realce);
+  border-color: var(--linha);
+}
+
+.lojaComparadaTopo {
+  align-items: center;
+  display: flex;
+  gap: 0.625rem;
+}
+
+.lojaComparadaNome {
+  font-size: 0.8125rem;
+  font-weight: 540;
+}
+
+.lojaComparadaPreco {
+  font-size: 0.875rem;
+  font-weight: 650;
+  margin-left: auto;
+}
+
+.lojaComparadaSem {
+  color: var(--tinta-3);
+  font-size: 0.78125rem;
+  margin-left: auto;
+}
+
+.menorPreco {
+  color: var(--lucro);
+  font-size: 0.71875rem;
+  font-weight: 560;
+}
+
+/* ── A ficha e a nota fiscal ──────────────────────────────────────────────── */
 
 .ficha {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
+  display: grid;
+  margin: 0.75rem 0 0;
 }
 
 .fichaLinha {
   align-items: baseline;
-  border-bottom: 1px solid var(--papel-linha);
+  border-bottom: 1px solid var(--linha);
   display: flex;
   gap: 1rem;
   justify-content: space-between;
@@ -1381,75 +2642,98 @@
 }
 
 .fichaLinha:last-child {
-  border-bottom: none;
+  border-bottom: 0;
 }
 
 .fichaRotulo {
-  color: var(--cor-texto-fraco);
-  flex: none;
-  max-width: 55%;
+  color: var(--tinta-2);
+  font-size: 0.8125rem;
 }
 
 .fichaValor,
 .fichaFalta {
+  font-size: 0.8125rem;
   margin: 0;
-  overflow-wrap: anywhere;
   text-align: right;
+  white-space: nowrap;
 }
 
 .fichaValor {
-  font-variant-numeric: tabular-nums;
-  font-weight: 500;
+  font-weight: 540;
 }
 
 .fichaFalta {
-  color: var(--cor-texto-apagado);
-  font-size: 0.875rem;
+  color: var(--tinta-3);
 }
 
-.fichaAviso {
-  color: var(--cor-aviso);
-  font-size: 0.875rem;
-  margin: 0;
+.mudar {
+  border-top: 1px solid var(--linha);
+  margin-top: 0.5rem;
+  padding-top: 0.875rem;
 }
 
-.mudarResumo {
-  color: var(--cor-primaria);
+.formularioDaFicha {
+  display: grid;
+  gap: 0.875rem;
+  margin-top: 1rem;
 }
 
-.vistoEmLista {
+.fiscalPronto,
+.fiscalFalta {
+  align-items: flex-start;
   display: flex;
-  flex-direction: column;
+  font-size: 0.78125rem;
+  gap: 0.5rem;
+  margin: 0.75rem 0 1rem;
+}
+
+.fiscalPronto {
+  color: var(--lucro);
+}
+
+.fiscalFalta {
+  color: var(--atencao);
+}
+
+.fiscalSinal {
+  display: inline-flex;
+  flex: none;
+  margin-top: 0.125rem;
+}
+
+.cartaoRecolhido {
+  composes: cartao;
+  padding: 1rem var(--respiro);
+}
+
+.resumoDoCartao {
+  composes: resumo;
   font-size: 0.875rem;
+  font-weight: 620;
+}
+
+.vistoEm {
+  display: grid;
   gap: 0.75rem;
   list-style: none;
-  margin: 0.75rem 0 0;
+  margin: 0.875rem 0 0;
   padding: 0;
 }
 
 .vistoEmItem {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  font-size: 0.8125rem;
   gap: 0.125rem;
-  overflow-wrap: anywhere;
 }
 
 .vistoEmDetalhe {
-  color: var(--cor-texto-apagado);
-  font-size: 0.8125rem;
-}
-
-.vistoEm {
-  color: var(--cor-texto);
-}
-
-.mudar {
-  color: var(--cor-texto);
+  color: var(--tinta-3);
+  font-size: 0.75rem;
 }
 
 .parar {
-  align-items: flex-start;
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 0.25rem;
+  justify-items: start;
+  padding: 0.25rem 0.25rem 0;
 }

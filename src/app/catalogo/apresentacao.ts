@@ -5,8 +5,8 @@
  * os caminhos: a idade do custo, o resumo do alto, os avisos depois de cada ação, os
  * parâmetros que viajam na URL e os caminhos que outras telas usam para chegar aqui.
  *
- * Texto de tela, nesta tela, segue três regras do desenho novo: frase curta, sem
- * travessão, e dinheiro dito em reais antes de percentual.
+ * Texto de tela, nesta tela, segue as regras do desenho novo: frase curta e sem
+ * travessão.
  */
 import { custoDefasado } from '@/dominio/catalogo/custo';
 import {
@@ -18,39 +18,12 @@ import {
   type Plataforma,
   type TipoAnuncioML,
 } from '@/dominio/precificacao/tipos';
-import { lerReaisDigitados, pontosBase, type Centavos } from '@/lib/dinheiro';
-import { contagem } from '@/lib/texto';
+import { centavos, centavosParaDigitar, lerReaisDigitados, type Centavos } from '@/lib/dinheiro';
 import { formatarRelativo } from '../ui/tempo';
-import { CAMINHO, CAMINHO_DO_NOVO, MARGEM_ALVO_PADRAO_BP } from './constantes';
+import { CAMINHO, CAMINHO_DO_NOVO } from './constantes';
+import { META_PADRAO, metaValida, type Meta } from './conta';
 
 // ─── O alto da tela ──────────────────────────────────────────────────────────
-
-/**
- * A frase debaixo do título, quando há produto.
- *
- * Lidera pelo custo que falta, porque é a única falta que deixa a tabela em branco. Custo
- * velho vem depois: a tabela sai, mas pode estar mentindo devagar.
- */
-export function resumoDaTabela(params: {
-  readonly total: number;
-  readonly semCusto: number;
-  readonly velhos: number;
-}): string {
-  const base = contagem(params.total, 'produto', 'produtos');
-  if (params.semCusto === 0 && params.velhos === 0) {
-    return params.total === 1 ? `${base}, com custo.` : `${base}, todos com custo.`;
-  }
-  const partes = [`${base}.`];
-  if (params.semCusto > 0) partes.push(`Falta o custo de ${String(params.semCusto)}.`);
-  if (params.velhos > 0) {
-    partes.push(
-      params.velhos === 1
-        ? 'Um custo tem mais de 30 dias.'
-        : `${String(params.velhos)} custos têm mais de 30 dias.`,
-    );
-  }
-  return partes.join(' ');
-}
 
 /** O que a ordem da tabela precisa saber de cada produto. */
 export interface ChaveDeOrdem {
@@ -83,23 +56,22 @@ export function detalheDoProduto(marca: string | null, ean: string | null): stri
 /**
  * Quando o custo foi informado, e se ainda vale.
  *
- * Custo de mais de 30 dias vira pergunta ("ainda é esse?", que a tela põe numa linha
- * própria), e não alarme: quem sabe se o fornecedor reajustou é a pessoa, e a tela só
- * lembra de perguntar.
+ * Custo de mais de 30 dias vira pergunta ("ainda é esse?"), e não alarme: quem sabe se o
+ * fornecedor reajustou é a pessoa, e a tela só lembra de perguntar. `quando` é a forma
+ * curta, para a coluna da tabela, onde "informado" já está no nome da coluna.
  */
 export function textoDoCusto(
   custoAtualizadoEm: Date | null,
   agora: Date,
-): { readonly texto: string; readonly velho: boolean } | null {
+): { readonly texto: string; readonly quando: string; readonly velho: boolean } | null {
   if (custoAtualizadoEm === null) return null;
+  const quando = formatarRelativo(custoAtualizadoEm, agora);
   return {
-    texto: `informado ${formatarRelativo(custoAtualizadoEm, agora)}`,
+    texto: `informado ${quando}`,
+    quando,
     velho: custoDefasado(custoAtualizadoEm, agora),
   };
 }
-
-/** A pergunta que acompanha o custo velho. */
-export const PERGUNTA_DO_CUSTO_VELHO = 'Ainda é esse?';
 
 // ─── Parâmetros que viajam na URL ────────────────────────────────────────────
 
@@ -109,62 +81,72 @@ export interface ParametrosDoSimulador {
   readonly modoFrete: ModoFrete;
   /** Preço a conferir. `null` quando a pessoa não escolheu um. */
   readonly preco: Centavos | null;
-  readonly margemAlvoBp: number;
+  readonly meta: Meta;
 }
 
-/** O alvo como vai na URL: `2000` pontos-base vira `"20"`, os reais de cada R$ 100. */
-export function alvoEmPercentual(margemAlvoBp: number): string {
-  return String(Math.round(margemAlvoBp / 100));
+function um(bruto: Readonly<Record<string, string | string[] | undefined>>, chave: string) {
+  const valor = bruto[chave];
+  return Array.isArray(valor) ? valor[0] : valor;
 }
 
-/** O alvo da URL de volta em pontos-base, ou `null`. */
-export function lerAlvo(bruto: string): number | null {
-  const n = Number.parseFloat(bruto.replace(',', '.'));
-  if (!Number.isFinite(n) || n <= 0 || n >= 100) return null;
-  return pontosBase(Math.round(n * 100));
+/**
+ * A meta da URL: `lucro=12,50` é valor fixo por venda, `alvo=22,5` é percentual do preço.
+ *
+ * Valor que não fecha cai no padrão em vez de derrubar a página: URL é texto que qualquer
+ * um digita. Ida e volta pela mesma unidade que o campo mostra, para "25" não virar 0,25.
+ */
+export function lerMeta(bruto: Readonly<Record<string, string | string[] | undefined>>): Meta {
+  const lucro = lerReaisDigitados(um(bruto, 'lucro') ?? '');
+  if (lucro !== null) {
+    const meta: Meta = { tipo: 'reais', centavos: lucro };
+    if (metaValida(meta)) return meta;
+  }
+  const alvo = Number.parseFloat((um(bruto, 'alvo') ?? '').replace(',', '.'));
+  if (Number.isFinite(alvo)) {
+    const meta: Meta = { tipo: 'percentual', bp: Math.round(alvo * 100) };
+    if (metaValida(meta)) return meta;
+  }
+  return META_PADRAO;
+}
+
+/** A meta como vai na URL. `null` para a meta padrão, que não precisa ir. */
+export function metaNaUrl(meta: Meta): readonly [string, string] | null {
+  if (meta.tipo === 'reais') return ['lucro', centavosParaDigitar(centavos(meta.centavos))];
+  if (META_PADRAO.tipo === 'percentual' && meta.bp === META_PADRAO.bp) return null;
+  return ['alvo', (meta.bp / 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })];
 }
 
 /**
  * Lê os parâmetros da conta na URL.
  *
  * Na URL e não só em estado de cliente: recarregar não perde o que se estava olhando, e
- * o link de uma conta é compartilhável. Valor fora da lista cai no padrão em vez de
- * derrubar a página, porque URL é texto que qualquer um digita.
+ * o link de uma conta é compartilhável.
  */
 export function lerParametros(
   bruto: Readonly<Record<string, string | string[] | undefined>>,
 ): ParametrosDoSimulador {
-  const um = (chave: string): string | undefined => {
-    const valor = bruto[chave];
-    return Array.isArray(valor) ? valor[0] : valor;
-  };
-
   return {
-    plataforma: PLATAFORMAS.find((p) => p === um('plataforma')) ?? 'ml',
-    tipoAnuncioML: TIPOS_ANUNCIO_ML.find((t) => t === um('tipo')) ?? 'classico',
-    modoFrete: MODOS_FRETE.find((f) => f === um('frete')) ?? 'comprador_paga',
-    preco: lerReaisDigitados(um('preco') ?? ''),
-    // O campo e a URL falam em reais de cada R$ 100 ("20"), e o domínio em pontos-base
-    // (2000). Ida e volta pela mesma função: a primeira versão lia um e mandava o outro,
-    // e pedir 25 virava 0,25.
-    margemAlvoBp: lerAlvo(um('alvo') ?? '') ?? MARGEM_ALVO_PADRAO_BP,
+    plataforma: PLATAFORMAS.find((p) => p === um(bruto, 'plataforma')) ?? 'ml',
+    tipoAnuncioML: TIPOS_ANUNCIO_ML.find((t) => t === um(bruto, 'tipo')) ?? 'classico',
+    modoFrete: MODOS_FRETE.find((f) => f === um(bruto, 'frete')) ?? 'comprador_paga',
+    preco: lerReaisDigitados(um(bruto, 'preco') ?? ''),
+    meta: lerMeta(bruto),
   };
 }
 
-/** O produto, com a loja e o alvo quando dados, e a âncora de onde abrir. */
+/** O produto, com a loja e a meta quando dadas, e a âncora de onde abrir. */
 export function caminhoDoProduto(
   skuId: string,
   opcoes: {
     readonly plataforma?: Plataforma;
-    readonly alvoBp?: number;
+    readonly meta?: Meta;
     readonly ancora?: string;
   } = {},
 ): string {
   const busca = new URLSearchParams();
   if (opcoes.plataforma !== undefined) busca.set('plataforma', opcoes.plataforma);
-  if (opcoes.alvoBp !== undefined && opcoes.alvoBp !== MARGEM_ALVO_PADRAO_BP) {
-    busca.set('alvo', alvoEmPercentual(opcoes.alvoBp));
-  }
+  const meta = opcoes.meta === undefined ? null : metaNaUrl(opcoes.meta);
+  if (meta !== null) busca.set(meta[0], meta[1]);
   const consulta = busca.toString();
   return `${CAMINHO}/${skuId}${consulta === '' ? '' : `?${consulta}`}${
     opcoes.ancora === undefined ? '' : `#${opcoes.ancora}`

@@ -17,7 +17,7 @@ import { banco } from '@/infra/banco/cliente';
 import { naLoja } from '../../ui/rotulos';
 import { caminhoDoProduto, descreverAviso, lerProdutoNovo } from '../apresentacao';
 import estilo from '../catalogo.module.css';
-import { AvisoDaAcao, FormularioDeProduto, Voltar } from '../componentes';
+import { AvisoDaAcao, ComoFunciona, FormularioDeProduto, Migalha } from '../componentes';
 
 export const metadata: Metadata = { title: 'Cadastrar produto' };
 
@@ -42,14 +42,16 @@ export default async function PaginaDoCadastro({
 
   return (
     <main className={estilo.pagina}>
-      <Voltar />
-      <header className={estilo.cabecalhoDoProduto}>
-        <h1 className={estilo.titulo}>Cadastrar produto</h1>
-        <p className={estilo.subtitulo}>
-          {pedido === null
-            ? 'Um por vez. Depois você diz quanto paga, e a tabela mostra quanto cobrar.'
-            : `Veio do garimpo${pedido.plataforma === undefined ? '' : `, para vender ${naLoja(pedido.plataforma)}`}. Confira o nome: ele não muda depois.`}
-        </p>
+      <Migalha atual="Cadastrar produto" />
+      <header className={estilo.cabecalho}>
+        <div className={estilo.cabecalhoTextos}>
+          <h1 className={estilo.titulo}>Cadastrar produto</h1>
+          <p className={estilo.subtitulo}>
+            {pedido === null
+              ? 'Um por vez. Depois você diz quanto paga, e a tabela mostra quanto cobrar.'
+              : `Veio do garimpo${pedido.plataforma === undefined ? '' : `, para vender ${naLoja(pedido.plataforma)}`}. Confira o nome: ele não muda depois.`}
+          </p>
+        </div>
       </header>
 
       {aviso === null ? null : <AvisoDaAcao aviso={aviso} />}
@@ -70,8 +72,14 @@ export default async function PaginaDoCadastro({
         </p>
       )}
 
-      <div className={estilo.folhaDoCadastro}>
-        <FormularioDeProduto plataforma={pedido?.plataforma} tituloInicial={pedido?.titulo ?? ''} />
+      <div className={estilo.cadastro}>
+        <section aria-label="O produto" className={estilo.cartaoDoCadastro}>
+          <FormularioDeProduto
+            plataforma={pedido?.plataforma}
+            tituloInicial={pedido?.titulo ?? ''}
+          />
+        </section>
+        <ComoFunciona />
       </div>
     </main>
   );

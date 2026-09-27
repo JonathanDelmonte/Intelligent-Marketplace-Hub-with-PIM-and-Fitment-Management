@@ -1,11 +1,12 @@
 /**
  * Catálogo e preço (M2 e M8): o que você vende, e quanto cobrar em cada loja.
  *
- * A tela é uma tabela de preços, o papel que o comerciante já conhece: um produto por
- * linha, uma loja por coluna, e o preço que deixa com você a parte que você pediu. O
- * desenho, e o porquê de cada escolha, estão no cabeçalho de `catalogo.module.css`.
+ * Quatro números no alto e a tabela de preços embaixo: um produto por linha, uma loja por
+ * coluna, e o preço que alcança a meta que a pessoa escolheu. O desenho, e o porquê de
+ * cada escolha, estão no cabeçalho de `catalogo.module.css`.
  *
- * Catálogo vazio não mostra tabela vazia: mostra a primeira pergunta, com o campo.
+ * Catálogo vazio não mostra tabela vazia: mostra a primeira pergunta, com o campo, e o
+ * desenho da tabela que ela vai virar.
  */
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
@@ -15,17 +16,16 @@ import { RepositorioDePares } from '@/dominio/identidade/pares';
 import { janelasDoPainel } from '@/dominio/lojas/painel';
 import { RepositorioDeLojas, type VendaDoProduto } from '@/dominio/lojas/repositorio';
 import { carregarPerfil } from '@/dominio/perfil';
-import { PLATAFORMAS, type Plataforma } from '@/dominio/precificacao/tipos';
+import { PLATAFORMAS } from '@/dominio/precificacao/tipos';
 import { banco } from '@/infra/banco/cliente';
 import { criarRegistrador, nivelDoAmbiente } from '@/infra/log';
 import {
   caminhoDoProdutoNovo,
   descreverAviso,
   detalheDoProduto,
-  lerParametros,
+  lerMeta,
   lerProdutoNovo,
   ordemDaTabela,
-  resumoDaTabela,
   textoDoCusto,
 } from './apresentacao';
 import estilo from './catalogo.module.css';
@@ -37,8 +37,8 @@ import {
   ParesEsperando,
 } from './componentes';
 import { LIMITE_DO_CATALOGO } from './constantes';
-import { limitarAlvo, type VendaNaLoja } from './conta';
-import { TabelaDePrecos, type LinhaDaTabela } from './tabela-de-precos';
+import { PainelDoCatalogo, type LinhaDaTabela } from './painel';
+import { vendasPorSku } from './vendas';
 
 export const metadata: Metadata = { title: 'Catálogo e preço' };
 
@@ -49,19 +49,6 @@ const log = criarRegistrador({
   nivelMinimo: nivelDoAmbiente(process.env['LOG_NIVEL']),
   contexto: { origem: 'tela_catalogo' },
 });
-
-/** As vendas de cada produto, por loja: a coluna "você cobra" da tabela. */
-function vendasPorSku(
-  vendas: readonly VendaDoProduto[],
-): ReadonlyMap<string, Partial<Record<Plataforma, VendaNaLoja>>> {
-  const mapa = new Map<string, Partial<Record<Plataforma, VendaNaLoja>>>();
-  for (const venda of vendas) {
-    const doProduto = mapa.get(venda.skuId) ?? {};
-    doProduto[venda.plataforma] = { unidades: venda.unidades, faturamento: venda.faturamento };
-    mapa.set(venda.skuId, doProduto);
-  }
-  return mapa;
-}
 
 export default async function PaginaDoCatalogo({
   searchParams,
@@ -111,7 +98,7 @@ export default async function PaginaDoCatalogo({
           devolucaoBp: produto.taxaDevolucaoEsperadaBp,
           categoriaMl: produto.categoriaMl,
         },
-        custoTexto: produto.custoAtual === null ? null : (custo?.texto ?? null),
+        custoQuando: produto.custoAtual === null ? null : (custo?.quando ?? null),
         custoVelho: produto.custoAtual !== null && custo?.velho === true,
         vendas: vendasDoProduto,
       };
@@ -134,13 +121,7 @@ export default async function PaginaDoCatalogo({
         <div className={estilo.cabecalhoTextos}>
           <h1 className={estilo.titulo}>Catálogo e preço</h1>
           <p className={estilo.subtitulo}>
-            {vazio
-              ? 'O que você vende e quanto cobrar em cada loja.'
-              : resumoDaTabela({
-                  total: linhas.length,
-                  semCusto: linhas.filter((l) => l.ficha.custo === null).length,
-                  velhos: linhas.filter((l) => l.custoVelho).length,
-                })}
+            O que você vende, quanto paga e quanto cobrar em cada loja.
           </p>
         </div>
         {vazio ? null : <BotaoDeCadastrar />}
@@ -151,9 +132,9 @@ export default async function PaginaDoCatalogo({
       {vazio ? (
         <CatalogoVazio />
       ) : (
-        <TabelaDePrecos
-          alvoInicialBp={limitarAlvo(lerParametros(parametros).margemAlvoBp)}
+        <PainelDoCatalogo
           linhas={linhas}
+          metaInicial={lerMeta(parametros)}
           vendedor={perfil.contextoDoVendedor}
         />
       )}

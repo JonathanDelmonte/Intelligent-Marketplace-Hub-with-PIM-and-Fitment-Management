@@ -1,12 +1,12 @@
 /**
- * Um produto: quanto você paga, quanto cobrar, e a conta de uma venda.
+ * Um produto: quanto você paga, quanto cobrar em cada loja, e a conta de uma venda.
  *
- * Duas colunas. À esquerda, o dinheiro, na ordem de quem decide preço: primeiro o custo,
- * porque sem ele não há conta; depois a resposta ("cobre R$ 39,90") e o cupom que a
- * explica. À direita, o que se consulta: a ficha, a nota fiscal e onde o produto
- * apareceu. No telefone as duas viram uma, com o dinheiro em cima.
+ * No alto, o caminho de volta e o nome. Embaixo, os quatro números do produto, o
+ * simulador e, ao lado, as lojas comparadas, a ficha e a nota fiscal. O que muda enquanto
+ * a pessoa mexe roda no navegador (`simulador.tsx`); a ficha e a nota fiscal são do
+ * servidor e chegam prontas para a coluna do lado.
  *
- * Loja, alvo, tipo de anúncio, frete e preço viajam na URL: o link guarda a conta que se
+ * Loja, meta, tipo de anúncio, frete e preço viajam na URL: o link guarda a conta que se
  * estava olhando, e as outras telas abrem o produto direto numa loja
  * (`?plataforma=shopee#preco-titulo`).
  */
@@ -14,27 +14,35 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { lerAmbiente } from '@/config/ambiente';
 import { RepositorioDeSku } from '@/dominio/catalogo/sku';
+import { janelasDoPainel } from '@/dominio/lojas/painel';
+import { RepositorioDeLojas, type VendaDoProduto } from '@/dominio/lojas/repositorio';
 import { carregarPerfil } from '@/dominio/perfil';
 import { banco } from '@/infra/banco/cliente';
-import { descreverAviso, detalheDoProduto, lerParametros } from '../apresentacao';
+import { criarRegistrador, nivelDoAmbiente } from '@/infra/log';
+import { descreverAviso, detalheDoProduto, lerParametros, textoDoCusto } from '../apresentacao';
 import estilo from '../catalogo.module.css';
 import {
   AvisoDaAcao,
   FichaDoProduto,
+  Migalha,
+  Miniatura,
   NotaFiscal,
   PararDeVender,
-  PerguntaDoCusto,
   ProdutoDesativado,
-  Voltar,
   VistoEm,
 } from '../componentes';
 import { OCORRENCIAS_NA_TELA } from '../constantes';
-import { limitarAlvo } from '../conta';
-import { ContaDaVenda } from '../conta-da-venda';
+import { PainelDoProduto } from '../simulador';
+import { vendasPorSku } from '../vendas';
 
 export const metadata: Metadata = { title: 'Produto' };
 
 export const dynamic = 'force-dynamic';
+
+const log = criarRegistrador({
+  nivelMinimo: nivelDoAmbiente(process.env['LOG_NIVEL']),
+  contexto: { origem: 'tela_produto' },
+});
 
 export default async function PaginaDoProduto({
   params,
@@ -54,9 +62,18 @@ export default async function PaginaDoProduto({
   if (sku === null) notFound();
 
   const agora = new Date();
-  const ocorrencias = await repo.ocorrencias(perfil.id, sku.id);
+  const [ocorrencias, vendas] = await Promise.all([
+    repo.ocorrencias(perfil.id, sku.id),
+    // As vendas são enfeite: se falharem, o produto abre sem elas.
+    new RepositorioDeLojas(db)
+      .vendasPorProduto(perfil.id, janelasDoPainel(agora).atual)
+      .catch((erro: unknown) => {
+        log.aviso('produto.vendas_nao_lidas', { erro });
+        return [] as readonly VendaDoProduto[];
+      }),
+  ]);
   const parametros = lerParametros(busca);
-  const alvoBp = limitarAlvo(parametros.margemAlvoBp);
+  const custo = textoDoCusto(sku.custoAtualizadoEm, agora);
 
   const codigo = Array.isArray(busca['r']) ? busca['r'][0] : busca['r'];
   const aviso = descreverAviso(codigo);
@@ -64,50 +81,53 @@ export default async function PaginaDoProduto({
 
   return (
     <main className={estilo.pagina}>
-      <Voltar />
+      <Migalha atual={sku.tituloInterno} />
       <header className={estilo.cabecalhoDoProduto}>
-        <h1 className={estilo.titulo}>{sku.tituloInterno}</h1>
-        {detalhe === null ? null : <p className={estilo.subtitulo}>{detalhe}</p>}
+        <Miniatura grande />
+        <div className={estilo.cabecalhoTextos}>
+          <h1 className={estilo.titulo}>{sku.tituloInterno}</h1>
+          <p className={estilo.subtitulo}>
+            {detalhe ?? 'Sem marca e sem código de barras'}
+            {sku.ativo ? null : ' · desativado'}
+          </p>
+        </div>
       </header>
 
       {aviso === null ? null : <AvisoDaAcao aviso={aviso} />}
       {sku.ativo ? null : <ProdutoDesativado id={sku.id} />}
 
-      <div className={estilo.produto}>
-        <div className={estilo.principal}>
-          <PerguntaDoCusto
-            agora={agora}
-            alvoBp={alvoBp}
-            plataforma={parametros.plataforma}
-            sku={sku}
-          />
-          <ContaDaVenda
-            ativo={sku.ativo}
-            ficha={{
-              custo: sku.custoAtual,
-              pesoG: sku.pesoG,
-              devolucaoBp: sku.taxaDevolucaoEsperadaBp,
-              categoriaMl: sku.categoriaMl,
-            }}
-            inicial={{
-              plataforma: parametros.plataforma,
-              tipoAnuncioML: parametros.tipoAnuncioML,
-              modoFrete: parametros.modoFrete,
-              alvoBp,
-              preco: parametros.preco,
-            }}
-            skuId={sku.id}
-            vendedor={perfil.contextoDoVendedor}
-          />
-        </div>
-
-        <aside aria-label="Ficha do produto" className={estilo.lateral}>
-          <FichaDoProduto abrirFormulario={codigo === 'ficha_invalida'} sku={sku} />
-          <NotaFiscal sku={sku} />
-          <VistoEm ocorrencias={ocorrencias.slice(0, OCORRENCIAS_NA_TELA)} />
-          {sku.ativo ? <PararDeVender id={sku.id} /> : null}
-        </aside>
-      </div>
+      <PainelDoProduto
+        inicio={{
+          plataforma: parametros.plataforma,
+          tipoAnuncioML: parametros.tipoAnuncioML,
+          modoFrete: parametros.modoFrete,
+          meta: parametros.meta,
+          preco: parametros.preco,
+        }}
+        lateral={
+          <>
+            <FichaDoProduto abrirFormulario={codigo === 'ficha_invalida'} sku={sku} />
+            <NotaFiscal sku={sku} />
+            <VistoEm ocorrencias={ocorrencias.slice(0, OCORRENCIAS_NA_TELA)} />
+            {sku.ativo ? <PararDeVender id={sku.id} /> : null}
+          </>
+        }
+        produto={{
+          id: sku.id,
+          nome: sku.tituloInterno,
+          ativo: sku.ativo,
+          ficha: {
+            custo: sku.custoAtual,
+            pesoG: sku.pesoG,
+            devolucaoBp: sku.taxaDevolucaoEsperadaBp,
+            categoriaMl: sku.categoriaMl,
+          },
+          custoTexto: sku.custoAtual === null ? null : (custo?.texto ?? null),
+          custoVelho: sku.custoAtual !== null && custo?.velho === true,
+          vendas: vendasPorSku(vendas).get(sku.id) ?? {},
+        }}
+        vendedor={perfil.contextoDoVendedor}
+      />
     </main>
   );
 }
