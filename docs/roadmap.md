@@ -870,6 +870,13 @@ papel que o comerciante já conhece (tabela de preços, cupom, ficha). O porquê
 cabeçalho de `catalogo/catalogo.module.css`, e o registro no diário de 26/09. As outras
 telas esperam a aprovação do dono ao piloto.
 
+**27/09: o segundo piloto.** O primeiro foi recusado: feio, sem cara de premium, e com a
+meta presa num número que não se mudava. O segundo é neutro e de cantos quase retos, com
+cartões brancos sobre a lona e um cartão escuro por tela, quatro números com o desenho
+de cada um, a meta livre (percentual ou reais por venda) e, no produto, o gráfico de
+lucro que também escolhe o preço. A Mona Sans passou a ser a fonte do sistema. Só
+computador, por decisão do dono; o registro está no diário de 27/09.
+
 **O que falta para fechar a C.17:** as telas que ainda têm o desenho antigo serem migradas.
 A direção foi aprovada em 24/09 junto com a navegação por loja (C.19 a C.23, ADR 0009): a
 casca é a barra nova, escura e dividida por loja, e a tela inicial virou a visão geral. A

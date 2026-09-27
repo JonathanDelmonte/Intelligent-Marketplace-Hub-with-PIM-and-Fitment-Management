@@ -26,6 +26,108 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-27: o segundo piloto da Catálogo e preço
+
+### 🔀 O primeiro piloto foi recusado, e o dono disse o que queria
+
+Ainda feio, sem cara de produto premium, e com a estrutura mal resolvida. A meta presa
+em "R$ 20 de cada R$ 100" sem poder mudar o número foi o exemplo dele: por que não
+escrever o que quiser? Mandou duas referências de painel (Fingoals e GoodBoard) dizendo
+o que tirar delas e o que não: tirar a facilidade de ler o número e o jogo de cores,
+deixar o tom jovem e brincalhão. Pediu cor neutra, porque o sistema fala de três lojas
+que já têm a cor delas, cantos quase retos, algo que uma criança entenda de relance, e
+que funcione no claro e depois no escuro. Pediu também outra fonte na lateral. E nada
+de celular por enquanto: o celular fica por último, para não gastar trabalho agora.
+
+### 🔀 O desenho: cartão branco sobre a lona, e um cartão escuro por tela
+
+A lista abre com quatro números, cada um com o desenho dele (a barra de cores da
+situação dos preços, as barras por loja, a régua do lucro até a meta, a lista do que
+pede atenção), e embaixo a tabela de preços com filtro e busca. O produto abre com os
+quatro números dele, o simulador ao centro e, ao lado, as lojas comparadas, a ficha e a
+nota fiscal. O cartão escuro, na cor da lateral, marca o número que mais importa: o
+lucro, na lista, e o que sobra por venda, no produto.
+
+O que faz a tela parecer cara, com fonte: espaço vazio em volta do que importa (Pracejus,
+Olsen e O'Guinn, 2006), preto e cinza como sofisticação (Labrecque e Milne, 2012), cor só
+onde ela diz alguma coisa, e acabamento, porque o que parece bem feito parece mais fácil
+de usar (Kurosu e Kashimura, 1995). O resto está no cabeçalho de
+`src/app/catalogo/catalogo.module.css`. As cores novas são por papel (`--cartao`,
+`--tinta`, `--lucro`), em `globals.css`, e o modo escuro será trocar os valores.
+
+### 🔀 A meta é livre: percentual do preço ou reais por venda
+
+Qualquer número, com vírgula, digitado ou arrastado na régua, e a unidade é da pessoa:
+"20% do preço" ou "R$ 12,50 por venda". Troca a decisão de 26/09 de dizer o alvo só em
+reais de cada R$ 100: era mais fácil de ler e impossível de mexer. Na URL, `alvo=22,5`
+é percentual e `lucro=12,50` é reais; valor que não faz sentido cai nos 20% de sempre.
+
+### 🔀 O gráfico do produto é também o controle do preço
+
+A curva de quanto se ganha em cada preço, verde acima do zero e vermelha abaixo. Clicar,
+arrastar ou usar as setas do teclado escolhe o preço, e o resto da conta acompanha. Os
+degraus de taxa e de frete aparecem como queda de verdade; quando um cai na ponta do
+gráfico (o frete grátis do Mercado Livre em R$ 79), o trecho estica para a queda não
+ficar colada na borda, onde parecia defeito.
+
+### 🔀 Mona Sans no sistema todo, e a lateral com ela
+
+Fonte de licença aberta (OFL), variável, 40 KB no alfabeto latino. Entra no sistema todo,
+e não só no piloto: a lateral mudou a pedido do dono, e lateral numa fonte e miolo em
+outra não fecha. As IBM Plex do primeiro piloto saíram. O fundo da área de trabalho
+também passou a ser a lona (`--lona`) em todas as telas. O resto do desenho não sai do
+catálogo antes da aprovação do dono.
+
+### 🐛 Os algarismos de largura igual da Mona Sans parecem de fonte de código
+
+Com `tabular-nums`, a Mona Sans troca os algarismos por outros, com ponto dentro do zero
+e base no um: uma coluna de preços com eles lê como terminal. Só apareceu na foto
+ampliada. A regra ficou no `body` (`font-feature-settings: 'tnum' 0`), porque vence o
+`tabular-nums` que as telas antigas pedem em quatorze lugares; os algarismos normais dela
+já têm largura quase igual, e o alinhamento à direita resolve as colunas.
+
+### 🐛 A escala do gráfico ficava com duas marcas
+
+O passo da marcação arredondava sempre para cima: quando a conta passava um fio de uma
+potência de dez, o passo dobrava, e o eixo mostrava R$ 20 e R$ 40, e mais nada. Agora o
+passo é o que dá o número de marcas mais perto do pedido.
+
+### 🐛 O `pkill -f` matou o próprio comando, de novo
+
+O roteiro de remontar os servidores estava escrito dentro do mesmo comando que o rodava,
+e o texto dele casava com o padrão do `pkill`. A armadilha era conhecida; o que faltou foi
+lembrar que o padrão casa também com o texto de um heredoc. O roteiro agora mora num
+arquivo, e roda sozinho.
+
+### 🔀 Sem custo, o botão de salvar mora na casa ao lado
+
+Na linha sem custo, o campo e o botão juntos na coluna estreita quebravam em duas linhas.
+O botão foi para a casa larga que espera os preços, ao lado do campo, e acha o formulário
+pelo atributo `form`, que é HTML comum e funciona sem JavaScript.
+
+### 🔀 A URL espera a pessoa parar de mexer
+
+Arrastar a régua ou o gráfico dispara dezenas de mudanças por segundo, e o navegador
+recusa quem troca a URL rápido demais (o Safari lança erro depois de cem trocas em trinta
+segundos). A escrita espera 250 ms sem mudança (`catalogo/url.ts`).
+
+### ⚠️ O lucro de verdade e o preço da tabela podem discordar
+
+"Lucro em 30 dias" soma o que os pedidos renderam, pelas taxas que a planilha da loja
+trouxe. "Dando prejuízo" é a conta do motor de margem ao preço médio, pelas tabelas de
+taxa do sistema. Se as tabelas estiverem atrás das taxas de verdade, os dois discordam, e
+a discordância é informação: vale conferir a tabela da loja. No banco local, os pedidos de
+demonstração tinham lucro calculado com o custo de uma unidade em pedido de duas, de uma
+versão antiga; foram recalculados pelo motor. Nada disso toca o banco do ar.
+
+### 🧹 O que ficou para depois, por decisão
+
+O celular (o dono pediu por último), o modo escuro (futuro; as cores já são por papel), o
+logo de cada loja no lugar da sigla (o dono vai mandar os arquivos) e a foto do produto
+(a caixa desenhada guarda o lugar). As outras telas esperam a aprovação deste piloto.
+
+---
+
 ## 2026-09-26: o miolo recomeça, e a Catálogo e preço é o piloto
 
 ### 🔀 O desenho novo de antes não serviu, e o dono disse por quê
