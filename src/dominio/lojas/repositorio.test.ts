@@ -175,7 +175,7 @@ describe.skipIf(!temBancoDeTeste())('RepositorioDeLojas.numeros', () => {
         .returning({ id: sku.id });
       const refil = skus[0]?.id ?? '';
 
-      await pedidoDe(perfil, 'ml', 'a', '2026-09-20T12:00:00Z', { skuId: refil });
+      await pedidoDe(perfil, 'ml', 'a', '2026-09-20T12:00:00Z', { skuId: refil, margem: 1_500 });
       await conexao.db.insert(pedido).values({
         perfilId: perfil,
         plataforma: 'ml',
@@ -201,6 +201,12 @@ describe.skipIf(!temBancoDeTeste())('RepositorioDeLojas.numeros', () => {
         [refil, 'ml', 3, 28_000],
         [refil, 'shopee', 1, 4_500],
       ]);
+      // A margem só dos pedidos que têm margem, com o faturamento deles como base.
+      expect(ordenadas[0]?.margem).toBe(1_500);
+      expect(ordenadas[0]?.faturamentoComMargem).toBe(10_000);
+      expect(ordenadas[0]?.unidadesComMargem).toBe(1);
+      expect(ordenadas[1]?.margem).toBe(0);
+      expect(ordenadas[1]?.unidadesComMargem).toBe(0);
     });
   });
 });

@@ -33,6 +33,12 @@ export interface VendaDoProduto {
   /** Unidades, e não pedidos: um pedido de duas peças conta duas. */
   readonly unidades: number;
   readonly faturamento: Centavos;
+  /** Soma das margens realizadas dos pedidos que têm margem. */
+  readonly margem: Centavos;
+  /** Faturamento só dos pedidos que têm margem: a base certa para a margem em percentual. */
+  readonly faturamentoComMargem: Centavos;
+  /** Unidades só dos pedidos que têm margem: a base certa para o lucro por unidade. */
+  readonly unidadesComMargem: number;
 }
 
 /**
@@ -219,6 +225,9 @@ export class RepositorioDeLojas {
         plataforma: pedido.plataforma,
         unidades: sql<string>`coalesce(sum(${pedido.qtd}), 0)`,
         faturamento: FATURAMENTO,
+        faturamentoComMargem: FATURAMENTO_COM_MARGEM,
+        margem: MARGEM,
+        unidadesComMargem: sql<string>`coalesce(sum(${pedido.qtd}) filter (where ${pedido.margemRealizada} is not null), 0)`,
       })
       .from(pedido)
       .where(and(naJanela(perfil, janela), isNotNull(pedido.skuId)))
@@ -233,6 +242,9 @@ export class RepositorioDeLojas {
               plataforma: l.plataforma,
               unidades: Number(l.unidades),
               faturamento: somaEmCentavos(l.faturamento),
+              margem: somaEmCentavos(l.margem),
+              faturamentoComMargem: somaEmCentavos(l.faturamentoComMargem),
+              unidadesComMargem: Number(l.unidadesComMargem),
             },
           ],
     );
