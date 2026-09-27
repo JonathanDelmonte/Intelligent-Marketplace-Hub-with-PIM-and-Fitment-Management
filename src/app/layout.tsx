@@ -5,6 +5,7 @@ import { montarMarca, variaveisCssDaMarca } from '@/config/marca';
 import { Lateral } from './lateral';
 import { descreverVersao } from './versao';
 import estilo from './casca.module.css';
+import '@fontsource-variable/mona-sans';
 import './globals.css';
 
 /**

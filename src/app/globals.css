@@ -116,34 +116,49 @@
   --sombra-suspensa: 0 4px 12px rgb(0 0 0 / 8%);
 
   /*
-   * ── O miolo do desenho novo ──
+   * ── O desenho premium (piloto na Catálogo e preço) ──
    *
-   * Piloto na Catálogo e preço: cada tela toma a forma do papel que o comerciante já
-   * conhece (tabela de preços, cupom, ficha). O porquê está no cabeçalho de
-   * `catalogo/catalogo.module.css`. A fonte carrega só lá enquanto é piloto; fora de lá,
-   * vale a do sistema, que é a segunda da lista.
+   * Neutro de propósito: o sistema fala de três lojas, cada uma com a sua cor, e a cor
+   * delas só aparece no selo de cada uma. O resto é preto, branco e cinza, que é o que
+   * lê como sofisticado (Labrecque e Milne, 2012) e o que vira modo escuro sem redesenho:
+   * cada cor aqui é um papel ("cartão", "tinta"), e o modo escuro troca os valores.
    */
-  --fonte-miolo:
-    'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
-    Arial, sans-serif;
-  --fonte-cupom: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  /* A folha: branca, sobre a mesa creme do fundo. */
-  --papel: #ffffff;
-  /* A linha entre duas linhas da tabela: mais clara que a borda da folha. */
-  --papel-linha: #efeff1;
-  /* A linha que espera uma resposta, como marca-texto amarelo claro. */
-  --papel-pergunta: #fffaeb;
-  /* Texto de terceiro plano, ainda com 4,8:1 sobre o branco. */
-  --cor-texto-apagado: #71717a;
-  /*
-   * O dinheiro de uma venda. Só o que fica com você tem cor: é o que se procura de
-   * relance. O resto são três cinzas, do mais escuro (o produto) ao mais claro.
-   */
-  --dinheiro-fica: #15803d;
-  --dinheiro-produto: #52525b;
-  --dinheiro-loja: #a1a1aa;
-  --dinheiro-resto: #d4d4d8;
-  --dinheiro-perde: #b91c1c;
+  --fonte-sistema:
+    'Mona Sans Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  /* A mesa: o fundo da área de trabalho, um tom abaixo do cartão. */
+  --lona: #f3f3f1;
+  --cartao: #ffffff;
+  --cartao-borda: #e6e6e3;
+  --cartao-sombra: 0 1px 2px rgb(15 15 17 / 4%);
+  /* O cartão escuro, o mesmo tom da lateral: um por tela, no número que mais importa. */
+  --cartao-escuro: #141518;
+  --cartao-escuro-texto: #f4f4f5;
+  --cartao-escuro-fraco: #a3a4ab;
+  --cartao-escuro-trilho: #2b2d33;
+  /* Texto em três níveis. O terceiro ainda tem 4,6:1 sobre o branco. */
+  --tinta: #111113;
+  --tinta-2: #55565c;
+  --tinta-3: #74757b;
+  --linha: #eeeeeb;
+  --realce: #f6f6f4;
+  /* O dinheiro: verde é o que fica, âmbar é o que não chega à meta, vermelho é o que se perde. */
+  --lucro: #0f7a51;
+  --lucro-claro: #34c98b;
+  --lucro-suave: #e5f3ec;
+  --atencao: #a45a05;
+  --atencao-suave: #fbf0df;
+  --perda: #c0352d;
+  --perda-suave: #fbe9e7;
+  /* Preenchimento de barra e de gráfico: um tom mais vivo que o do texto, que precisa de contraste. */
+  --lucro-cheio: #1f9a68;
+  --atencao-cheio: #e39b32;
+  --perda-cheio: #d9463b;
+  /* As partes da conta que não são lucro: três cinzas, do produto ao resto. */
+  --dado-1: #26272c;
+  --dado-2: #8d8f96;
+  --dado-3: #c3c4c9;
+  --dado-4: #e2e2e5;
 
   color-scheme: light;
 }
@@ -161,15 +176,16 @@ body {
 body {
   background: var(--cor-fundo);
   color: var(--cor-texto);
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    'Helvetica Neue',
-    Arial,
-    sans-serif;
+  font-family: var(--fonte-sistema);
+  /*
+   * Sem algarismo de largura igual, em lugar nenhum. Os da Mona Sans são desenhados como
+   * os de fonte de código, com ponto dentro do zero e base no um, e uma coluna de preços
+   * com eles lê como terminal. Os algarismos normais dela já têm largura quase igual, e o
+   * alinhamento à direita resolve a coluna. Fica aqui, e não em cada tela, porque as telas
+   * antigas pedem `tabular-nums` desde a fonte do sistema, e esta regra vence a delas.
+   */
+  font-feature-settings: 'tnum' 0;
+  font-optical-sizing: auto;
   font-size: 15px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;

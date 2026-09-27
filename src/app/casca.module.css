@@ -12,9 +12,9 @@
  *
  * A barra passou a ter um grupo de lojas, cada uma com o selo e o estado dela. Sobre
  * fundo escuro o selo colorido é achado de relance, e a navegação se separa da área de
- * trabalho sem precisar de borda. O escuro é neutro: a cor da marca vem de
- * `perfil_vendedor.marca_visual` e pode ser qualquer uma (ADR 0003), então ela aparece
- * só onde significa alguma coisa — o botão de importar e o ícone da tela aberta.
+ * trabalho sem precisar de borda. O escuro é neutro, e desde o desenho premium o botão de
+ * importar e o ícone da tela aberta também: branco sobre o escuro, sem a cor da marca. O
+ * sistema fala de três lojas, cada uma com a sua cor, e a dele é o preto e o branco.
  *
  * Cores só de variável de tema, nunca literal (ADR 0003).
  */
@@ -100,13 +100,13 @@
 
 .sigla {
   align-items: center;
-  background: var(--cor-primaria);
-  border-radius: var(--raio);
-  color: var(--cor-superficie);
+  background: var(--lateral-texto-forte);
+  border-radius: 7px;
+  color: var(--lateral-fundo);
   display: flex;
   flex: none;
-  font-size: var(--texto-maior);
-  font-weight: 700;
+  font-size: 1rem;
+  font-weight: 750;
   height: 2rem;
   justify-content: center;
   letter-spacing: -0.02em;
@@ -115,9 +115,9 @@
 
 .nomeDoSistema {
   color: var(--lateral-texto-forte);
-  font-size: var(--texto-base);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-size: 1rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
   white-space: nowrap;
 }
 
@@ -127,12 +127,13 @@
  */
 .destaque {
   align-items: center;
-  background: var(--cor-primaria);
+  background: var(--lateral-texto-forte);
   border-radius: var(--raio);
-  color: var(--cor-superficie);
+  color: var(--lateral-fundo);
   display: flex;
-  font-size: var(--texto-menor);
+  font-size: 0.8125rem;
   font-weight: 600;
+  letter-spacing: -0.005em;
   gap: var(--espaco-2);
   justify-content: center;
   margin: 0 var(--espaco-1) var(--espaco-2);
@@ -141,7 +142,7 @@
 }
 
 .destaque:hover {
-  filter: brightness(1.1);
+  background: var(--cartao);
 }
 
 .navegacao {
@@ -162,14 +163,17 @@
  * Caixa alta aqui é certa pelo motivo que a torna errada num rótulo de linha de tabela:
  * o que se lê é a categoria, não a palavra. Ela some da leitura e fica como marcação.
  */
+/*
+ * O título do grupo em letra normal, sem caixa alta espaçada: o desenho premium recusa o
+ * rótulo em caixa alta, que é dos sinais mais comuns de tela feita no automático.
+ */
 .grupoTitulo {
   color: var(--lateral-texto-fraco);
-  font-size: var(--texto-micro);
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0;
   margin: 0;
-  padding: var(--espaco-2) var(--espaco-2) var(--espaco-1);
-  text-transform: uppercase;
+  padding: var(--espaco-3) var(--espaco-2) var(--espaco-1);
 }
 
 .portas {
@@ -187,8 +191,10 @@
   border-radius: var(--raio);
   color: var(--lateral-texto);
   display: flex;
-  font-size: var(--texto-menor);
+  font-size: 0.8125rem;
+  font-weight: 450;
   gap: var(--espaco-3);
+  letter-spacing: -0.003em;
   padding: 0 var(--espaco-2);
   text-decoration: none;
 }
@@ -234,12 +240,12 @@
 }
 
 .portaAtual .icone {
-  color: color-mix(in srgb, var(--cor-primaria) 45%, white);
+  color: var(--lateral-texto-forte);
 }
 
 .contagem {
   background: var(--lateral-contagem);
-  border-radius: 999px;
+  border-radius: 5px;
   color: var(--lateral-texto-forte);
   flex: none;
   font-size: var(--texto-micro);
@@ -327,7 +333,7 @@
 .sair {
   background: transparent;
   border: 1px solid var(--lateral-contagem);
-  border-radius: 999px;
+  border-radius: 6px;
   color: var(--lateral-texto);
   cursor: pointer;
   flex: none;
@@ -349,7 +355,9 @@
 
 /* ── Conteúdo ────────────────────────────────────────────────────────────── */
 
+/* A mesa: a área de trabalho um tom abaixo do branco, para o cartão branco se destacar. */
 .conteudo {
+  background: var(--lona);
   display: flex;
   flex-direction: column;
   grid-area: conteudo;
@@ -357,7 +365,7 @@
 }
 
 .rodape {
-  border-top: 1px solid var(--cor-borda);
+  border-top: 1px solid var(--cartao-borda);
   color: var(--cor-texto-fraco);
   font-size: var(--texto-menor);
   /* `auto` no topo: empurra o rodapé para o fim mesmo em tela de conteúdo curto. */
