@@ -11,7 +11,9 @@ import type { PontoDaSerie } from '@/dominio/lojas/painel';
 import type { MaisVendido } from '@/dominio/lojas/repositorio';
 import type { Plataforma } from '@/dominio/precificacao/tipos';
 import { formatarBRL } from '@/lib/dinheiro';
+import { FaixaDeNumeros, type NumeroDoPainel } from '../ui/numeros';
 import { ROTULO_DA_PLATAFORMA, aLoja, daLoja } from '../ui/rotulos';
+import { SinalCarteira, SinalMoedas, SinalPercentual, SinalSacola } from '../ui/sinais';
 import {
   ROTULO_DA_ABA,
   ROTULO_DA_SITUACAO,
@@ -79,13 +81,18 @@ export function CabecalhoDaLoja({
   );
 }
 
-const CLASSE_DA_NOTA: Readonly<Record<NumeroNaTela['tom'], string>> = {
-  alta: `${estilo.numeroNota} ${estilo.notaAlta}`,
-  baixa: `${estilo.numeroNota} ${estilo.notaBaixa}`,
-  neutro: estilo.numeroNota,
-};
+/** O ícone de cada número, na ordem de `numerosDoPainel`: faturamento, pedidos, margem, repasse. */
+const ICONES_DOS_NUMEROS = [
+  <SinalMoedas key="faturamento" />,
+  <SinalSacola key="pedidos" />,
+  <SinalPercentual key="margem" />,
+  <SinalCarteira key="repasse" />,
+];
 
-/** A faixa dos quatro números da janela. */
+/**
+ * Os quatro números da janela, em cartões. O faturamento vai no cartão escuro: é o
+ * número que se procura primeiro, na loja e na visão geral.
+ */
 export function Numeros({
   numeros,
   titulo,
@@ -93,17 +100,15 @@ export function Numeros({
   readonly numeros: readonly NumeroNaTela[];
   readonly titulo: string;
 }) {
-  return (
-    <section aria-label={titulo} className={estilo.numeros}>
-      {numeros.map((n) => (
-        <div className={estilo.numero} key={n.rotulo}>
-          <span className={estilo.numeroRotulo}>{n.rotulo}</span>
-          <span className={estilo.numeroValor}>{n.valor}</span>
-          <span className={CLASSE_DA_NOTA[n.tom]}>{n.nota}</span>
-        </div>
-      ))}
-    </section>
-  );
+  const itens: readonly NumeroDoPainel[] = numeros.map((n, indice) => ({
+    rotulo: n.rotulo,
+    valor: n.valor,
+    nota: n.nota,
+    tom: n.tom,
+    icone: ICONES_DOS_NUMEROS[indice] ?? <SinalMoedas />,
+    escuro: indice === 0,
+  }));
+  return <FaixaDeNumeros itens={itens} rotulo={titulo} />;
 }
 
 /** As abas, com a contagem do que espera em cada uma. */

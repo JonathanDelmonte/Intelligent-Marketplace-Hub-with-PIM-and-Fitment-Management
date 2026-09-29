@@ -23,10 +23,10 @@ import {
   resumoDaCasa,
   separarCalmas,
 } from './inicio/apresentacao';
-import { Calmas, Cartoes, Lojas, PergunteAIA, Portas } from './inicio/componentes';
+import { Lojas, OQueFazer, PergunteAIA, Portas } from './inicio/componentes';
 import { lerCasa, lerLojas } from './inicio/dados';
 import { numerosDoPainel } from './lojas/apresentacao';
-import { Numeros } from './lojas/componentes';
+import { GraficoPorDia, Numeros } from './lojas/componentes';
 import { formatarDataEHora } from './ui/tempo';
 import estilo from './inicio/inicio.module.css';
 
@@ -48,17 +48,17 @@ export default async function Pagina() {
   return (
     <main className={estilo.pagina}>
       <header className={estilo.cabecalho}>
-        <div className={estilo.linhaDoTitulo}>
+        <div>
           <h1 className={estilo.titulo}>Visão geral</h1>
-          {/*
-            A hora da leitura, porque estes números são de um instante e a aba fica
-            aberta o dia todo.
-          */}
-          <span className={estilo.lido}>última leitura: {formatarDataEHora(agora)}</span>
+          <p className={estilo.subtitulo}>
+            Todas as lojas somadas, nos últimos {DIAS_DO_PAINEL} dias.
+          </p>
         </div>
-        <p className={estilo.subtitulo}>
-          Todas as lojas somadas, nos últimos {DIAS_DO_PAINEL} dias.
-        </p>
+        {/*
+          A hora da leitura, porque estes números são de um instante e a aba fica
+          aberta o dia todo.
+        */}
+        <span className={estilo.lido}>Última leitura: {formatarDataEHora(agora)}</span>
       </header>
 
       <PergunteAIA />
@@ -69,37 +69,38 @@ export default async function Pagina() {
           está gravado está gravado.
         </p>
       ) : (
-        <>
-          <Numeros
-            numeros={numerosDoPainel(lojas.total, lojas.totalAnterior, DIAS_DO_PAINEL)}
-            titulo={`Todas as lojas nos últimos ${String(DIAS_DO_PAINEL)} dias`}
-          />
-          <section aria-labelledby="lojas-titulo" className={estilo.secao}>
-            <h2 className={estilo.secaoTitulo} id="lojas-titulo">
-              Por loja
-            </h2>
-            <Lojas cartoes={cartoesDasLojas(lojas.lojas)} />
-          </section>
-        </>
+        <Numeros
+          numeros={numerosDoPainel(lojas.total, lojas.totalAnterior, DIAS_DO_PAINEL)}
+          titulo={`Todas as lojas nos últimos ${String(DIAS_DO_PAINEL)} dias`}
+        />
       )}
 
-      <section aria-labelledby="hoje-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="hoje-titulo">
-          O que fazer hoje
-        </h2>
-        <p className={estilo.secaoSub}>{resumoDaCasa(pendencias)}</p>
-        <Cartoes itens={ativas} />
-        <Calmas itens={calmas} />
-      </section>
+      {/*
+        O número do negócio de um lado, o trabalho do dia do outro: o mesmo arranjo do
+        resumo da área da loja, para as duas telas se lerem do mesmo jeito.
+      */}
+      <div className={estilo.grade}>
+        {lojas === null ? null : <GraficoPorDia serie={lojas.serie} />}
+        <OQueFazer ativas={ativas} calmas={calmas} resumo={resumoDaCasa(pendencias)} />
+      </div>
+
+      {lojas === null ? null : (
+        <section aria-labelledby="lojas-titulo" className={estilo.secao}>
+          <h2 className={estilo.secaoTitulo} id="lojas-titulo">
+            Por loja
+          </h2>
+          <Lojas cartoes={cartoesDasLojas(lojas.lojas)} />
+        </section>
+      )}
 
       {/*
         O índice fica recolhido porque a lateral já lista as mesmas portas nos mesmos
         grupos, logo ao lado. O que ele tem de próprio é a descrição de cada tela, que
-        ensina — então continua aqui, para quem está aprendendo abrir.
+        ensina, e então continua aqui, para quem está aprendendo abrir.
       */}
       <details className={estilo.indice}>
         <summary className={estilo.indiceResumo}>O que cada tela faz</summary>
-        <p className={estilo.secaoSub}>
+        <p className={estilo.indiceTexto}>
           O de cima é o negócio e o que está cobrando você agora. Isto é o que o sistema faz, para
           quando a pergunta é outra.
         </p>

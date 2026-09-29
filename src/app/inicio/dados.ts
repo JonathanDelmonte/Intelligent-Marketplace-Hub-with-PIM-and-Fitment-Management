@@ -18,7 +18,13 @@ import { avaliarPrazos, prazoQueImporta } from '@/dominio/fiscal/prazos';
 import { RepositorioFiscal } from '@/dominio/fiscal/repositorio';
 import { RepositorioDePares } from '@/dominio/identidade/pares';
 import { estadoDaLoja } from '@/dominio/lojas/estado';
-import { janelasDoPainel, somarPainel, type Painel } from '@/dominio/lojas/painel';
+import {
+  completarSerie,
+  janelasDoPainel,
+  somarPainel,
+  type Painel,
+  type PontoDaSerie,
+} from '@/dominio/lojas/painel';
 import { RepositorioDeLojas } from '@/dominio/lojas/repositorio';
 import { RepositorioDePedidos } from '@/dominio/pedidos/repositorio';
 import { carregarPerfil } from '@/dominio/perfil';
@@ -138,6 +144,8 @@ export interface LeiturasDasLojas {
   readonly lojas: readonly LeituraDaLoja[];
   readonly total: Painel;
   readonly totalAnterior: Painel;
+  /** O faturamento de todas as lojas por dia, com os dias sem venda em zero. */
+  readonly serie: readonly PontoDaSerie[];
 }
 
 /**
@@ -152,10 +160,11 @@ export async function lerLojas(agora: Date): Promise<LeiturasDasLojas | null> {
     const perfil = await carregarPerfil(db, lerAmbiente().BANCADA_PERFIL_PADRAO);
     const repo = new RepositorioDeLojas(db);
     const janelas = janelasDoPainel(agora);
-    const [numeros, atuais, anteriores] = await Promise.all([
+    const [numeros, atuais, anteriores, pontos] = await Promise.all([
       repo.numeros(perfil.id),
       repo.somas(perfil.id, janelas.atual),
       repo.somas(perfil.id, janelas.anterior),
+      repo.serieDiaria(perfil.id, janelas.atual),
     ]);
     return {
       lojas: numeros.map((n) => ({
@@ -165,6 +174,7 @@ export async function lerLojas(agora: Date): Promise<LeiturasDasLojas | null> {
       })),
       total: somarPainel(atuais),
       totalAnterior: somarPainel(anteriores),
+      serie: completarSerie(pontos, janelas.atual.dias),
     };
   } catch (erro) {
     log.erro('inicio.lojas_falhou', { erro });

@@ -2,13 +2,16 @@
  * A área de uma loja, e a tela de adicionar loja (ADR 0009).
  *
  * Uma folha para as duas porque são a mesma família: o cabeçalho com o selo, os
- * números do alto e os cartões de conteúdo. Cores só de variável de tema (ADR 0003) —
- * a cor da loja entra pelo selo, e só nele.
+ * números do alto e os cartões de conteúdo. Cores só de variável de tema (ADR 0003): a
+ * cor da loja entra pelo selo e pela barra dela, e só nelas.
+ *
+ * No desenho da Catálogo e preço, aprovado pelo dono em 27/09: cartão branco sobre a
+ * lona, canto de 4 px, e os números do alto em cartões (ui/numeros.tsx), com o do
+ * faturamento no cartão escuro.
  */
 
 .pagina {
   composes: pagina from '../ui/comum.module.css';
-  --largura-pagina: 76rem;
 }
 
 /* ── Cabeçalho ──────────────────────────────────────────────────────────── */
@@ -60,7 +63,7 @@
 }
 
 .pontoPlanilha {
-  background: var(--cor-primaria);
+  background: var(--tinta-2);
 }
 
 .pontoSemDados {
@@ -72,7 +75,7 @@
 }
 
 .estadoPlanilha {
-  color: var(--cor-primaria);
+  color: var(--tinta);
 }
 
 .acoes {
@@ -91,101 +94,44 @@
   text-decoration: none;
 }
 
-/* ── Os números do alto ─────────────────────────────────────────────────── */
-
-/*
- * Uma faixa só, com divisórias, e não quatro cartões soltos: são quatro leituras da
- * mesma janela, e cartão separado sugere quatro assuntos.
- */
-.numeros {
-  background: var(--cor-superficie);
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio);
-  box-shadow: var(--sombra-cartao);
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin: 0 0 var(--espaco-5);
-}
-
-.numero {
-  display: flex;
-  flex-direction: column;
-  gap: var(--espaco-1);
-  min-width: 0;
-  padding: var(--espaco-4) var(--espaco-5);
-}
-
-.numero + .numero {
-  border-left: 1px solid var(--cor-borda);
-}
-
-.numeroRotulo {
-  color: var(--cor-texto-fraco);
-  font-size: var(--texto-menor);
-}
-
-.numeroValor {
-  font-size: var(--texto-titulo);
-  font-variant-numeric: tabular-nums;
-  font-weight: 650;
-  letter-spacing: -0.015em;
-}
-
-.numeroNota {
-  color: var(--cor-texto-fraco);
-  font-size: var(--texto-miudo);
-}
-
-.notaAlta {
-  color: var(--cor-ok);
-  font-weight: 500;
-}
-
-.notaBaixa {
-  color: var(--cor-erro);
-  font-weight: 500;
-}
-
 /* ── Abas ───────────────────────────────────────────────────────────────── */
 
+/* Abas sublinhadas, como os filtros da tabela de preços; a contagem é número cinza, sem cápsula. */
 .abas {
-  border-bottom: 1px solid var(--cor-borda);
+  border-bottom: 1px solid var(--cartao-borda);
   display: flex;
   flex-wrap: wrap;
-  gap: var(--espaco-1);
-  margin: 0 0 var(--espaco-5);
+  gap: 0 1.75rem;
+  margin: 0.5rem 0 1.5rem;
 }
 
 .aba {
   align-items: center;
   border-bottom: 2px solid transparent;
-  color: var(--cor-texto-fraco);
+  color: var(--tinta-2);
   display: flex;
-  font-size: var(--texto-base);
-  gap: var(--espaco-2);
+  font-size: 0.875rem;
+  font-weight: 540;
+  gap: 0.375rem;
   margin-bottom: -1px;
-  padding: var(--espaco-3) var(--espaco-3);
+  padding: 0.75rem 0 0.6875rem;
   text-decoration: none;
 }
 
 .aba:hover {
-  color: var(--cor-texto);
+  color: var(--tinta);
 }
 
 .abaAtual {
-  border-bottom-color: var(--cor-primaria);
-  color: var(--cor-texto);
-  font-weight: 600;
+  border-bottom-color: var(--tinta);
+  color: var(--tinta);
+  font-weight: 620;
 }
 
 .abaContagem {
-  background: var(--cor-superficie-baixa);
-  border-radius: 999px;
-  color: var(--cor-texto);
-  font-size: var(--texto-micro);
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  padding: 1px var(--espaco-2);
+  color: var(--tinta-3);
+  font-size: 0.8125rem;
+  font-weight: 500;
 }
 
 /* ── Conteúdo das abas ──────────────────────────────────────────────────── */
@@ -193,30 +139,30 @@
 .grade {
   align-items: start;
   display: grid;
-  gap: var(--espaco-4);
+  gap: 1rem;
   grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
 }
 
 .coluna {
   display: flex;
   flex-direction: column;
-  gap: var(--espaco-4);
+  gap: 1rem;
   min-width: 0;
 }
 
 .bloco {
-  background: var(--cor-superficie);
-  border: 1px solid var(--cor-borda);
+  background: var(--cartao);
+  border: 1px solid var(--cartao-borda);
   border-radius: var(--raio);
-  box-shadow: var(--sombra-cartao);
+  box-shadow: var(--cartao-sombra);
   min-width: 0;
-  padding: var(--espaco-4) var(--espaco-5);
+  padding: 1.25rem 1.5rem;
 }
 
 /* Bloco que vem depois de uma lista, separado dela. */
 .blocoAbaixo {
   composes: bloco;
-  margin-top: var(--espaco-4);
+  margin-top: 1rem;
 }
 
 /* O gráfico é uma figura: a legenda embaixo é o que ele diz em palavras. */
@@ -229,20 +175,21 @@
   align-items: baseline;
   display: flex;
   flex-wrap: wrap;
-  gap: var(--espaco-2);
+  gap: 0.5rem;
   justify-content: space-between;
-  margin-bottom: var(--espaco-3);
+  margin-bottom: 1rem;
 }
 
 .blocoTitulo {
-  font-size: var(--texto-base);
-  font-weight: 600;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  letter-spacing: -0.012em;
   margin: 0;
 }
 
 .blocoNota {
-  color: var(--cor-texto-fraco);
-  font-size: var(--texto-miudo);
+  color: var(--tinta-3);
+  font-size: 0.75rem;
 }
 
 .dica {
@@ -255,40 +202,46 @@
 
 /*
  * O gráfico de faturamento por dia: uma barra por dia, e o dia sem venda com um traço
- * no chão — pular o dia encolheria o eixo e esconderia justamente o buraco.
+ * no chão (pular o dia encolheria o eixo e esconderia justamente o buraco). Barra quase
+ * preta, de canto quase reto, com 2 px entre uma e outra; passar o mouse destaca o dia.
  */
 .grafico {
   align-items: flex-end;
-  border-bottom: 1px solid var(--cor-borda);
+  border-bottom: 1px solid var(--dado-3);
   display: flex;
-  gap: 3px;
-  height: 8.5rem;
+  gap: 2px;
+  height: 10rem;
   margin: 0;
 }
 
 .barra {
-  background: var(--cor-primaria);
-  border-radius: 2px 2px 0 0;
+  background: var(--dado-1);
+  border-radius: 1px 1px 0 0;
   flex: 1 1 0;
   min-height: 2px;
+  transition: background 120ms ease;
+}
+
+.barra:hover {
+  background: var(--lucro);
 }
 
 .barraVazia {
-  background: var(--cor-borda);
+  background: var(--dado-4);
 }
 
 .eixo {
-  color: var(--cor-texto-fraco);
+  color: var(--tinta-3);
   display: flex;
-  font-size: var(--texto-micro);
+  font-size: 0.6875rem;
   justify-content: space-between;
-  margin-top: var(--espaco-1);
+  margin-top: 0.375rem;
 }
 
 .legenda {
-  color: var(--cor-texto-fraco);
-  font-size: var(--texto-miudo);
-  margin: var(--espaco-2) 0 0;
+  color: var(--tinta-3);
+  font-size: 0.75rem;
+  margin: 0.625rem 0 0;
 }
 
 .tabela {
@@ -296,7 +249,6 @@
 }
 
 .numeroDaTabela {
-  font-variant-numeric: tabular-nums;
   text-align: right;
   white-space: nowrap;
 }
@@ -317,10 +269,10 @@
 
 .pendencia {
   align-items: flex-start;
-  border-top: 1px solid var(--cor-borda);
+  border-top: 1px solid var(--linha);
   display: flex;
-  gap: var(--espaco-3);
-  padding: var(--espaco-3) 0;
+  gap: 0.75rem;
+  padding: 0.875rem 0;
 }
 
 .pendencia:first-child {
@@ -338,47 +290,53 @@
 }
 
 .pendenciaTexto {
+  color: var(--tinta-2);
   flex: 1;
-  font-size: var(--texto-menor);
+  font-size: 0.84375rem;
 }
 
 .pendenciaAcao {
-  font-size: var(--texto-menor);
-  font-weight: 600;
-  text-decoration: none;
+  composes: botaoMiudo from '../ui/comum.module.css';
+  flex: none;
   white-space: nowrap;
 }
 
 /* ── Conexão ────────────────────────────────────────────────────────────── */
 
+/* A situação de uma capacidade: ponto na cor, e o texto. Sem cápsula. */
 .situacao {
-  border-radius: 999px;
-  display: inline-block;
-  font-size: var(--texto-micro);
-  font-weight: 600;
-  padding: 2px var(--espaco-2);
+  align-items: center;
+  display: inline-flex;
+  font-size: 0.8125rem;
+  font-weight: 540;
+  gap: 0.4375rem;
   white-space: nowrap;
 }
 
+.situacao::before {
+  background: currentcolor;
+  border-radius: 50%;
+  content: '';
+  flex: none;
+  height: 0.4375rem;
+  width: 0.4375rem;
+}
+
 .situacaoFunciona {
-  background: var(--tinta-ok);
-  color: var(--cor-ok);
+  color: var(--lucro);
 }
 
 .situacaoPrevisto {
-  background: var(--cor-superficie-baixa);
-  color: var(--cor-texto);
+  color: var(--tinta-2);
 }
 
 .situacaoSemConexao,
 .situacaoBloqueado {
-  background: var(--tinta-atencao);
-  color: var(--cor-aviso);
+  color: var(--atencao);
 }
 
 .situacaoNaoOferece {
-  background: var(--cor-superficie-baixa);
-  color: var(--cor-texto-fraco);
+  color: var(--tinta-3);
 }
 
 .caixa {
@@ -403,36 +361,45 @@
 
 .caminhos {
   display: grid;
-  gap: var(--espaco-4);
+  gap: 1rem;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-top: var(--espaco-4);
+  margin-top: 1rem;
 }
 
 .caminho {
-  border: 1px solid var(--cor-borda);
+  background: var(--realce);
+  border: 1px solid var(--linha);
   border-radius: var(--raio);
   display: flex;
   flex-direction: column;
-  gap: var(--espaco-2);
-  padding: var(--espaco-4);
+  gap: 0.5rem;
+  padding: 1.25rem;
 }
 
+/* O estado do caminho: ponto na cor, e o texto. Sem cápsula. */
 .caminhoEtiqueta {
+  align-items: center;
   align-self: flex-start;
-  border-radius: 999px;
-  font-size: var(--texto-micro);
-  font-weight: 600;
-  padding: 2px var(--espaco-2);
+  display: inline-flex;
+  font-size: 0.78125rem;
+  font-weight: 560;
+  gap: 0.4375rem;
+}
+
+.caminhoEtiqueta::before {
+  background: currentcolor;
+  border-radius: 50%;
+  content: '';
+  height: 0.4375rem;
+  width: 0.4375rem;
 }
 
 .etiquetaHoje {
-  background: var(--tinta-ok);
-  color: var(--cor-ok);
+  color: var(--lucro);
 }
 
 .etiquetaDepende {
-  background: var(--tinta-atencao);
-  color: var(--cor-aviso);
+  color: var(--atencao);
 }
 
 .caminhoTitulo {
@@ -457,7 +424,7 @@
 
 .lojas {
   display: grid;
-  gap: var(--espaco-4);
+  gap: 1rem;
   grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
   list-style: none;
   margin: 0;
@@ -465,15 +432,15 @@
 }
 
 .loja {
-  background: var(--cor-superficie);
-  border: 1px solid var(--cor-borda);
+  background: var(--cartao);
+  border: 1px solid var(--cartao-borda);
   border-radius: var(--raio);
-  box-shadow: var(--sombra-cartao);
+  box-shadow: var(--cartao-sombra);
   display: flex;
   flex-direction: column;
-  gap: var(--espaco-3);
+  gap: 0.75rem;
   height: 100%;
-  padding: var(--espaco-4);
+  padding: 1.25rem;
 }
 
 .lojaCabecalho {
@@ -483,8 +450,9 @@
 }
 
 .lojaNome {
-  font-size: var(--texto-maior);
-  font-weight: 600;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  letter-spacing: -0.012em;
   margin: 0;
 }
 
@@ -523,18 +491,6 @@
 /* ── Telefone ───────────────────────────────────────────────────────────── */
 
 @media (max-width: 60rem) {
-  .numeros {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .numero:nth-child(3) {
-    border-left: 0;
-  }
-
-  .numero:nth-child(n + 3) {
-    border-top: 1px solid var(--cor-borda);
-  }
-
   .grade,
   .caminhos {
     grid-template-columns: minmax(0, 1fr);

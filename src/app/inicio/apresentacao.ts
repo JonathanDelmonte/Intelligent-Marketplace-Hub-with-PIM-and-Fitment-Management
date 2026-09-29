@@ -61,7 +61,7 @@ export interface LeiturasDaCasa {
 }
 
 /** Texto de "não deu para ler". Uma frase só, usada em toda linha que falhou. */
-export const NAO_DEU_PARA_LER = 'não deu para ler agora — a tela continua abrindo';
+export const NAO_DEU_PARA_LER = 'não deu para ler agora, e a tela continua abrindo';
 
 /**
  * A linha da postagem, que é a única com três números.
@@ -220,7 +220,7 @@ export function resumoDaCasa(itens: readonly Pendencia[]): string {
 
   const agora = comTrabalho.filter((i) => i.tom === 'agora');
   if (agora.length > 0) {
-    return `${contagem(agora.length, 'coisa não pode esperar', 'coisas não podem esperar')} — ${agora
+    return `${contagem(agora.length, 'coisa não pode esperar', 'coisas não podem esperar')}: ${agora
       .map((i) => i.titulo.toLocaleLowerCase('pt-BR'))
       .join(', ')}.`;
   }
