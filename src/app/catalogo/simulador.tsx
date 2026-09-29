@@ -75,7 +75,7 @@ import {
   SinalEtiqueta,
   SinalMoedas,
   SinalSacola,
-} from './sinais';
+} from '../ui/sinais';
 import { gravarNaUrl } from './url';
 
 /** O produto, como o servidor manda. */

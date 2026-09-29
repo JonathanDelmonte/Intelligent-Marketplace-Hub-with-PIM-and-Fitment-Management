@@ -29,7 +29,7 @@ import {
   SinalEtiqueta,
   SinalMais,
   SinalMoedas,
-} from './sinais';
+} from '../ui/sinais';
 
 // ─── Peças de toda a tela ────────────────────────────────────────────────────
 

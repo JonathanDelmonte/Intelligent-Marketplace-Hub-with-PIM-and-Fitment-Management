@@ -56,7 +56,7 @@ import {
   SinalSacola,
   SinalSino,
   SinalVoltar,
-} from './sinais';
+} from '../ui/sinais';
 import { gravarNaUrl } from './url';
 
 /** Uma linha da tabela, como o servidor manda. */

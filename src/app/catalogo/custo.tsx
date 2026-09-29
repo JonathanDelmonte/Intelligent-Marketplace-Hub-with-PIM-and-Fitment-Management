@@ -15,7 +15,7 @@ import { salvarCusto } from './acoes';
 import { metaNaUrl } from './apresentacao';
 import estilo from './catalogo.module.css';
 import type { Meta } from './conta';
-import { SinalCerto, SinalFechar, SinalLapis } from './sinais';
+import { SinalCerto, SinalFechar, SinalLapis } from '../ui/sinais';
 
 export function CampoDeCusto({
   skuId,

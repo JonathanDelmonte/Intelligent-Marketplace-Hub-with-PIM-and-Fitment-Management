@@ -1,0 +1,163 @@
+/*
+ * A faixa de números do alto de uma tela, no desenho da Catálogo e preço (o porquê está
+ * no cabeçalho de `catalogo/catalogo.module.css`). Os tamanhos são os de lá, para um
+ * número grande ter o mesmo peso em qualquer tela.
+ */
+
+.faixa {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  margin-bottom: 1rem;
+}
+
+.cartao,
+.cartaoEscuro {
+  border-radius: var(--raio);
+  display: flex;
+  flex-direction: column;
+  min-height: 9.5rem;
+  padding: 1.25rem;
+}
+
+.cartao {
+  background: var(--cartao);
+  border: 1px solid var(--cartao-borda);
+  box-shadow: var(--cartao-sombra);
+}
+
+/* O cartão escuro, na cor da lateral: um por tela, no número que mais importa ali. */
+.cartaoEscuro {
+  background: var(--cartao-escuro);
+  border: 1px solid var(--cartao-escuro);
+  color: var(--cartao-escuro-texto);
+}
+
+.topo {
+  align-items: center;
+  display: flex;
+  gap: 0.625rem;
+  margin-bottom: 0.875rem;
+}
+
+.icone,
+.iconeEscuro {
+  align-items: center;
+  border-radius: var(--raio);
+  display: inline-flex;
+  flex: none;
+  height: 1.75rem;
+  justify-content: center;
+  width: 1.75rem;
+}
+
+.icone {
+  background: var(--realce);
+  border: 1px solid var(--linha);
+  color: var(--tinta-2);
+}
+
+.iconeEscuro {
+  background: var(--cartao-escuro-trilho);
+  border: 1px solid var(--cartao-escuro-trilho);
+  color: var(--cartao-escuro-texto);
+}
+
+.rotulo,
+.rotuloEscuro {
+  font-size: 0.8125rem;
+  font-weight: 560;
+}
+
+.rotulo {
+  color: var(--tinta-2);
+}
+
+.rotuloEscuro {
+  color: var(--cartao-escuro-fraco);
+}
+
+.valor,
+.valorEscuro {
+  font-size: 1.875rem;
+  font-weight: 680;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.valorEscuro {
+  color: var(--cartao-escuro-texto);
+}
+
+.resto,
+.restoEscuro {
+  font-size: 0.875rem;
+  font-weight: 520;
+  letter-spacing: 0;
+}
+
+.resto {
+  color: var(--tinta-3);
+}
+
+.restoEscuro {
+  color: var(--cartao-escuro-fraco);
+}
+
+.nota,
+.notaAlta,
+.notaBaixa,
+.notaAtencao,
+.notaEscura,
+.notaAltaEscura,
+.notaBaixaEscura,
+.notaAtencaoEscura {
+  font-size: 0.78125rem;
+  line-height: 1.45;
+  margin: 0.375rem 0 0;
+}
+
+.nota {
+  color: var(--tinta-3);
+}
+
+.notaAlta {
+  color: var(--lucro);
+  font-weight: 560;
+}
+
+.notaBaixa {
+  color: var(--perda);
+  font-weight: 560;
+}
+
+.notaAtencao {
+  color: var(--atencao);
+  font-weight: 560;
+}
+
+.notaEscura {
+  color: var(--cartao-escuro-fraco);
+}
+
+.notaAltaEscura {
+  color: var(--lucro-claro);
+  font-weight: 560;
+}
+
+.notaBaixaEscura {
+  color: var(--perda-cheio);
+  font-weight: 560;
+}
+
+.notaAtencaoEscura {
+  color: var(--atencao-cheio);
+  font-weight: 560;
+}
+
+/* O pé do cartão: sempre no fundo, para os pés dos cartões lado a lado se alinharem. */
+.base {
+  margin-top: auto;
+  padding-top: 0.875rem;
+}
