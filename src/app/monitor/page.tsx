@@ -28,7 +28,7 @@ import {
   resumoDoMonitor,
   type QuedaNaTela,
 } from './apresentacao';
-import { AvisoDaAcao, Grupos, Quedas } from './componentes';
+import { AvisoDaAcao, Grupos, Numeros, Quedas } from './componentes';
 import { LIMITE_DE_EVENTOS, LIMITE_DE_QUEDAS } from './constantes';
 import estilo from './monitor.module.css';
 
@@ -86,32 +86,35 @@ export default async function PaginaDoMonitor({
           Mudança abaixo de 3% não entra: monitor que avisa de tudo é monitor desligado na segunda
           semana.
         </p>
-        <p className={estilo.resumo}>
-          {resumoDoMonitor({ grupos, ofertasComSerie: candidatos.length })}
-        </p>
       </header>
 
       {aviso !== null && <AvisoDaAcao aviso={aviso} />}
 
-      <section aria-labelledby="mudancas-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="mudancas-titulo">
-          O que mudou
-        </h2>
-        <Grupos agora={agora} grupos={grupos} leituras={leituras} temChave={temChaveDeLlm()} />
-      </section>
+      <Numeros grupos={grupos} ofertasComSerie={candidatos.length} />
 
-      <section aria-labelledby="quedas-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="quedas-titulo">
-          Vale publicar?
-        </h2>
-        <p className={estilo.dica}>
-          Desconto é contra a <strong>mediana dos últimos 90 dias</strong>, não contra o preço de
-          ontem. É o que separa queda real de preço que subiu para depois &ldquo;baixar&rdquo;. A
-          mediana é calculada sobre os preços diferentes já vistos — a série ganha um ponto quando o
-          preço muda, e não a cada captura.
-        </p>
-        <Quedas quedas={quedas} />
-      </section>
+      <div className={estilo.grade}>
+        <section aria-labelledby="mudancas-titulo" className={estilo.bloco}>
+          <h2 className={estilo.blocoTitulo} id="mudancas-titulo">
+            O que mudou
+          </h2>
+          <p className={estilo.blocoTexto}>
+            {resumoDoMonitor({ grupos, ofertasComSerie: candidatos.length })} A leitura vem antes
+            dos números, e &ldquo;Já vi&rdquo; tira o grupo inteiro da lista.
+          </p>
+          <Grupos agora={agora} grupos={grupos} leituras={leituras} temChave={temChaveDeLlm()} />
+        </section>
+
+        <section aria-labelledby="quedas-titulo" className={estilo.bloco}>
+          <h2 className={estilo.blocoTitulo} id="quedas-titulo">
+            Vale publicar?
+          </h2>
+          <p className={estilo.blocoTexto}>
+            Desconto é contra a mediana dos últimos 90 dias, não contra o preço de ontem: é o que
+            separa queda real de preço que subiu para depois &ldquo;baixar&rdquo;.
+          </p>
+          <Quedas quedas={quedas} />
+        </section>
+      </div>
     </main>
   );
 }

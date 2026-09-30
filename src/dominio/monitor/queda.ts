@@ -135,7 +135,7 @@ export function avaliarQueda(
       descontoBp: null,
       observacoes: naJanela.length,
       valePublicar: false,
-      mensagem: `Só ${contagem(naJanela.length, 'observação', 'observações')} de preço em ${String(janela)} dias. Sem ${String(OBSERVACOES_MINIMAS)} não há mediana que sirva de referência — e "não sei se está barato" é diferente de "não está barato".`,
+      mensagem: `Só ${contagem(naJanela.length, 'observação', 'observações')} de preço em ${String(janela)} dias. Sem ${String(OBSERVACOES_MINIMAS)} não há mediana que sirva de referência, e "não sei se está barato" é diferente de "não está barato".`,
     };
   }
 

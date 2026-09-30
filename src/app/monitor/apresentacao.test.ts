@@ -8,6 +8,7 @@ import {
   descreverAviso,
   descreverEvento,
   inteiroDaUrl,
+  numerosDoMonitor,
   ordenarGrupos,
   ordenarQuedas,
   percentual,
@@ -188,5 +189,20 @@ describe('descreverAviso', () => {
   it('marcar nada não é erro, e o texto diz por quê', () => {
     expect(descreverAviso('nada_para_ler')?.tom).toBe('atencao');
     expect(descreverAviso('falha')?.tom).toBe('erro');
+  });
+});
+
+describe('numerosDoMonitor', () => {
+  it('conta as mudanças de cada severidade, e nada urgente é dito em verde', () => {
+    const grupos = agruparEventos([eventoDe(40, 50, 'A'), eventoDe(50, 40, 'B')]);
+    const numeros = numerosDoMonitor({ grupos, ofertasComSerie: 3 });
+    const total = numeros.slice(0, 3).reduce((soma, n) => soma + n.valor, 0);
+    expect(total).toBe(grupos.length);
+    expect(numeros[3]).toMatchObject({ chave: 'series', valor: 3 });
+  });
+
+  it('sem mudança nenhuma, o que não pode esperar é zero e verde', () => {
+    const [vermelho] = numerosDoMonitor({ grupos: [], ofertasComSerie: 0 });
+    expect(vermelho).toMatchObject({ valor: 0, tom: 'alta', nota: 'nada urgente' });
   });
 });

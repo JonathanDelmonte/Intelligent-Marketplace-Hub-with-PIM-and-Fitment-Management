@@ -94,7 +94,7 @@ export const O_QUE_SIGNIFICA: Readonly<Record<TipoDeMudanca, string>> = {
   concorrente_novo:
     'Entrou vendedor novo no seu nicho. Se ele chegou com preço abaixo do seu custo, ele tem outro fornecedor.',
   produto_parou_de_vender:
-    'Um produto seu parou. Pode ser posição de busca, pode ser preço, pode ser concorrente novo — e a diferença muda o conserto.',
+    'Um produto seu parou. Pode ser posição de busca, pode ser preço, pode ser concorrente novo, e a diferença muda o conserto.',
   taxa_da_plataforma_mudou:
     'A plataforma mudou a taxa. Toda margem calculada com a taxa antiga está errada a partir de agora.',
 };
@@ -267,11 +267,11 @@ export function lerGrupo(eventos: readonly Evento[]): string {
   const tipos = new Set(eventos.map((e) => e.tipo));
 
   if (tipos.has('preco_concorrente_caiu') && tipos.has('estoque_concorrente_subiu')) {
-    return 'Preço caiu e estoque subiu na mesma semana. Queima de estoque não vem com reposição — isto parece fornecedor novo, e nesse caso o piso de preço do nicho baixou de forma permanente.';
+    return 'Preço caiu e estoque subiu na mesma semana. Queima de estoque não vem com reposição: isto parece fornecedor novo, e nesse caso o piso de preço do nicho baixou de forma permanente.';
   }
 
   if (tipos.has('preco_concorrente_caiu') && tipos.has('concorrente_novo')) {
-    return 'Vendedor novo entrou e o preço do nicho caiu na mesma semana. Se ele chegou abaixo do seu custo, ele tem outro fornecedor — e a briga não é de preço, é de compra.';
+    return 'Vendedor novo entrou e o preço do nicho caiu na mesma semana. Se ele chegou abaixo do seu custo, ele tem outro fornecedor, e a briga não é de preço, é de compra.';
   }
 
   if (tipos.has('custo_fornecedor_subiu') && tipos.has('preco_concorrente_caiu')) {

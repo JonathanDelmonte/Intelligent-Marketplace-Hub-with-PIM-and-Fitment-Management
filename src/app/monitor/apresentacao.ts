@@ -248,3 +248,56 @@ export function inteiroDaUrl(bruto: string | string[] | undefined): number | nul
   const n = Number.parseInt(valor, 10);
   return Number.isInteger(n) && n >= 0 ? n : null;
 }
+
+export interface NumeroDoMonitor {
+  readonly chave: 'vermelho' | 'amarelo' | 'informativo' | 'series';
+  readonly rotulo: string;
+  readonly valor: number;
+  readonly nota: string;
+  readonly tom: 'neutro' | 'alta' | 'baixa' | 'atencao';
+}
+
+/**
+ * Os quatro números do alto: quantas mudanças em cada severidade, e quantas ofertas já
+ * têm série de preço para medir desconto real. O que não pode esperar é o escuro.
+ */
+export function numerosDoMonitor(params: {
+  readonly grupos: readonly GrupoDeEventos[];
+  readonly ofertasComSerie: number;
+}): readonly NumeroDoMonitor[] {
+  const quantos = (severidade: Severidade): number =>
+    params.grupos.filter((g) => g.severidade === severidade).length;
+  const vermelho = quantos('vermelho');
+  const amarelo = quantos('amarelo');
+  const informativo = quantos('informativo');
+  return [
+    {
+      chave: 'vermelho',
+      rotulo: 'Não pode esperar',
+      valor: vermelho,
+      nota: vermelho === 0 ? 'nada urgente' : 'olhe antes de tudo',
+      tom: vermelho === 0 ? 'alta' : 'baixa',
+    },
+    {
+      chave: 'amarelo',
+      rotulo: 'Olhe hoje',
+      valor: amarelo,
+      nota: amarelo === 0 ? 'nada para hoje' : 'mudou o bastante para olhar',
+      tom: amarelo === 0 ? 'neutro' : 'atencao',
+    },
+    {
+      chave: 'informativo',
+      rotulo: 'Para saber',
+      valor: informativo,
+      nota: 'sem pressa',
+      tom: 'neutro',
+    },
+    {
+      chave: 'series',
+      rotulo: 'Ofertas com série',
+      valor: params.ofertasComSerie,
+      nota: 'medem desconto real',
+      tom: 'neutro',
+    },
+  ];
+}

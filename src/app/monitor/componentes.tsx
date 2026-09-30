@@ -6,9 +6,12 @@
  * fornecedor novo"; os dois eventos que sustentam a frase vêm abaixo, para conferir.
  * Invertido, a tela seria uma lista de números com uma conclusão escondida no fim.
  */
+import type { ReactNode } from 'react';
 import { O_QUE_SIGNIFICA, type GrupoDeEventos } from '@/dominio/monitor/eventos';
 import type { LeituraDoGrupo } from '@/dominio/monitor/leitura';
 import { formatarBRL } from '@/lib/dinheiro';
+import { FaixaDeNumeros } from '../ui/numeros';
+import { SinalAlerta, SinalGrafico, SinalRelogio, SinalSino } from '../ui/sinais';
 import { formatarAbsoluto, formatarRelativo } from '../ui/tempo';
 import { marcarLido } from './acoes';
 import {
@@ -18,7 +21,9 @@ import {
   TOM_DO_VEREDITO,
   descontoLegivel,
   descreverEvento,
+  numerosDoMonitor,
   type Aviso,
+  type NumeroDoMonitor,
   type QuedaNaTela,
 } from './apresentacao';
 import estilo from './monitor.module.css';
@@ -35,6 +40,30 @@ export function AvisoDaAcao({ aviso }: { readonly aviso: Aviso }) {
       <strong className={estilo.avisoTitulo}>{aviso.titulo}</strong>
       <span className={estilo.avisoCorpo}>{aviso.corpo}</span>
     </div>
+  );
+}
+
+const ICONE_DO_NUMERO: Readonly<Record<NumeroDoMonitor['chave'], ReactNode>> = {
+  vermelho: <SinalAlerta />,
+  amarelo: <SinalRelogio />,
+  informativo: <SinalSino />,
+  series: <SinalGrafico />,
+};
+
+/** Os quatro números do alto. O escuro é o do que não pode esperar. */
+export function Numeros(props: Parameters<typeof numerosDoMonitor>[0]) {
+  return (
+    <FaixaDeNumeros
+      itens={numerosDoMonitor(props).map((numero) => ({
+        rotulo: numero.rotulo,
+        valor: numero.valor.toLocaleString('pt-BR'),
+        nota: numero.nota,
+        tom: numero.tom,
+        icone: ICONE_DO_NUMERO[numero.chave],
+        escuro: numero.chave === 'vermelho',
+      }))}
+      rotulo="O monitor em números"
+    />
   );
 }
 
@@ -67,7 +96,7 @@ function LeituraDaIa({
         </p>
         <p className={estilo.leituraIaNota}>
           Leitura por IA gratuita, em {formatarAbsoluto(new Date(leitura.em))}. É hipótese sobre os
-          números acima — confira antes de agir.
+          números acima: confira antes de agir.
         </p>
       </div>
     );
@@ -94,15 +123,9 @@ function Grupo({
   readonly temChave: boolean;
 }) {
   const tom = TOM_DA_SEVERIDADE[grupo.severidade];
-  const classeDoItem =
-    tom === 'alerta'
-      ? `${estilo.item} ${estilo.itemAlerta}`
-      : tom === 'atencao'
-        ? `${estilo.item} ${estilo.itemAtencao}`
-        : estilo.item;
 
   return (
-    <li className={classeDoItem}>
+    <li className={estilo.item}>
       <div className={estilo.itemCabecalho}>
         <div>
           <h3 className={estilo.itemTitulo}>{grupo.sobre}</h3>
@@ -176,7 +199,7 @@ export function Grupos({
     return (
       <p className={estilo.vazio}>
         Nada na fila. Uma mudança entra aqui quando a mesma oferta é capturada de novo com preço
-        diferente — acima de 3%, que é o piso que impede o monitor de virar ruído.
+        diferente, acima de 3%, que é o piso que impede o monitor de virar ruído.
       </p>
     );
   }
@@ -207,7 +230,7 @@ function Queda({ queda }: { readonly queda: QuedaNaTela }) {
         : estilo.etiqueta;
 
   return (
-    <li className={queda.avaliacao.valePublicar ? `${estilo.item} ${estilo.itemOk}` : estilo.item}>
+    <li className={estilo.item}>
       <div className={estilo.itemCabecalho}>
         <div>
           <h3 className={estilo.itemTitulo}>{queda.titulo}</h3>
@@ -219,18 +242,26 @@ function Queda({ queda }: { readonly queda: QuedaNaTela }) {
       <p className={estilo.itemCorpo}>{queda.avaliacao.mensagem}</p>
 
       <dl className={estilo.numeros}>
-        <dt>preço agora</dt>
-        <dd>{formatarBRL(queda.avaliacao.precoAtual)}</dd>
-        <dt>mediana de 90 dias</dt>
-        <dd>
-          {queda.avaliacao.medianaJanela === null
-            ? 'sem referência'
-            : formatarBRL(queda.avaliacao.medianaJanela)}
-        </dd>
-        <dt>{desconto.rotulo}</dt>
-        <dd>{desconto.valor}</dd>
-        <dt>preços diferentes vistos</dt>
-        <dd>{queda.avaliacao.observacoes}</dd>
+        <div className={estilo.numero}>
+          <dt>Preço agora</dt>
+          <dd>{formatarBRL(queda.avaliacao.precoAtual)}</dd>
+        </div>
+        <div className={estilo.numero}>
+          <dt>Mediana de 90 dias</dt>
+          <dd>
+            {queda.avaliacao.medianaJanela === null
+              ? 'sem referência'
+              : formatarBRL(queda.avaliacao.medianaJanela)}
+          </dd>
+        </div>
+        <div className={estilo.numero}>
+          <dt>{desconto.rotulo}</dt>
+          <dd>{desconto.valor}</dd>
+        </div>
+        <div className={estilo.numero}>
+          <dt>Preços diferentes vistos</dt>
+          <dd>{queda.avaliacao.observacoes}</dd>
+        </div>
       </dl>
     </li>
   );
@@ -240,10 +271,10 @@ export function Quedas({ quedas }: { readonly quedas: readonly QuedaNaTela[] }) 
   if (quedas.length === 0) {
     return (
       <p className={estilo.vazio}>
-        Nenhuma oferta tem série de preço suficiente ainda. São necessários três{' '}
-        <strong>preços diferentes</strong> na janela de 90 dias — a série guarda um ponto por preço
-        novo, não por captura, então importar a mesma planilha sem mudança não avança a conta. Sem
-        mediana, &ldquo;está barato&rdquo; é chute.
+        Nenhuma oferta tem série de preço suficiente ainda. São necessários três preços diferentes
+        na janela de 90 dias: a série guarda um ponto por preço novo, não por captura, então
+        importar a mesma planilha sem mudança não avança a conta. Sem mediana, &ldquo;está
+        barato&rdquo; é chute.
       </p>
     );
   }
