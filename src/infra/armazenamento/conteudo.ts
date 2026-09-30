@@ -44,7 +44,7 @@ export function motivoDoArquivoAusente(erro: ConteudoNaoEncontrado): string {
   const porque =
     erro.retencaoDias === null
       ? 'O arquivo enviado não está guardado'
-      : `O arquivo enviado já saiu da nuvem, onde fica ${String(erro.retencaoDias)} dias depois de processado — o original está com quem enviou`;
+      : `O arquivo enviado já saiu da nuvem, onde fica ${String(erro.retencaoDias)} dias depois de processado, e o original está com quem enviou`;
   return `${porque}. Envie o mesmo arquivo de novo na tela Importar, e isto volta para a fila sozinho.`;
 }
 

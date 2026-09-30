@@ -220,7 +220,7 @@ export function prefixoGs1(
   const numero = Number(tres);
 
   if (numero >= 200 && numero <= 299) {
-    return { codigo: tres, rotulo: 'uso interno de loja — nenhuma base pública resolve' };
+    return { codigo: tres, rotulo: 'uso interno de loja: nenhuma base pública resolve' };
   }
   if (numero >= 789 && numero <= 790) return { codigo: tres, rotulo: 'Brasil' };
   if (numero >= 0 && numero <= 139) return { codigo: tres, rotulo: 'Estados Unidos e Canadá' };

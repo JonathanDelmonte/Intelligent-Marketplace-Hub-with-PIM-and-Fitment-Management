@@ -137,7 +137,7 @@ export function decidirEscrita<T>(params: {
 
   return {
     tipo: 'conflito',
-    motivo: `duas leituras de ${nomeNovo} discordam — precisa de decisão`,
+    motivo: `duas leituras de ${nomeNovo} discordam: precisa de decisão`,
   };
 }
 

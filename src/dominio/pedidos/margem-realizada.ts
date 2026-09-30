@@ -91,7 +91,7 @@ export function calcularMargemRealizada(taxas: TaxasRealizadas): MargemRealizada
   // que alguém está fazendo aritmética de dinheiro fora das funções que validam.
   if (divergenciaDeRepasse !== null && divergenciaDeRepasse < 0 - DIVERGENCIA_QUE_IMPORTA) {
     avisos.push(
-      'A plataforma vai repassar menos do que as taxas informadas explicam. É taxa que não estava na conta — vale conferir no extrato.',
+      'A plataforma vai repassar menos do que as taxas informadas explicam. É taxa que não estava na conta: vale conferir no extrato.',
     );
   }
   if (divergenciaDeRepasse !== null && divergenciaDeRepasse > DIVERGENCIA_QUE_IMPORTA) {

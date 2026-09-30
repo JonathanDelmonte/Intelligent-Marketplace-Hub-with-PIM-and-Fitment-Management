@@ -109,7 +109,7 @@ export const PORTAS: readonly Porta[] = [
     href: '/importar',
     rotulo: 'Importar arquivo',
     descricao:
-      'Sobe a exportação do painel da loja, a tabela do fornecedor, um link, um PDF ou um print — e mostra o que o sistema está lendo.',
+      'Sobe a exportação do painel da loja, a tabela do fornecedor, um link, um PDF ou um print, e mostra o que o sistema está lendo.',
     grupo: 'topo',
     icone: 'importar',
     destaque: true,
@@ -167,7 +167,7 @@ export const PORTAS: readonly Porta[] = [
     href: '/garimpo',
     rotulo: 'Garimpo',
     descricao:
-      'Investigação dirigida a um alvo, com teto declarado antes de começar: quem fabrica, quem distribui, onde é mais barato — e o dossiê com a fonte de cada achado.',
+      'Investigação dirigida a um alvo, com teto declarado antes de começar: quem fabrica, quem distribui, onde é mais barato, e o dossiê com a fonte de cada achado.',
     grupo: 'oportunidades',
     icone: 'garimpo',
   }),
@@ -175,7 +175,7 @@ export const PORTAS: readonly Porta[] = [
     href: '/monitor',
     rotulo: 'Monitor de preço',
     descricao:
-      'O que mudou no mercado desde a última vez que você olhou, agrupado por vendedor e semana — e o que vale publicar hoje.',
+      'O que mudou no mercado desde a última vez que você olhou, agrupado por vendedor e semana, e o que vale publicar hoje.',
     grupo: 'oportunidades',
     icone: 'monitor',
   }),
@@ -191,7 +191,7 @@ export const PORTAS: readonly Porta[] = [
     href: '/afiliados',
     rotulo: 'Afiliados',
     descricao:
-      'Oferta de terceiro publicada com a sua tag, com teto por dia e intervalo entre uma e a próxima — grupo que posta demais é silenciado pelos membros.',
+      'Oferta de terceiro publicada com a sua tag, com teto por dia e intervalo entre uma e a próxima: grupo que posta demais é silenciado pelos membros.',
     grupo: 'oportunidades',
     icone: 'afiliados',
   }),
@@ -199,7 +199,7 @@ export const PORTAS: readonly Porta[] = [
     href: '/fornecedores',
     rotulo: 'Fornecedores',
     descricao:
-      'As cinco perguntas que eliminam a maioria dos candidatos — e quem vende na mesma vitrine é descartado na hora.',
+      'As cinco perguntas que eliminam a maioria dos candidatos, e quem vende na mesma vitrine é descartado na hora.',
     grupo: 'fornecimento',
     icone: 'fornecedores',
   }),
@@ -223,7 +223,7 @@ export const PORTAS: readonly Porta[] = [
     href: '/negocio',
     rotulo: 'Meu negócio',
     descricao:
-      'Regime, CNPJ, estado, certificado e DAS — o que muda a margem, o teto e o emissor de nota. As vendas do mês o sistema conta sozinho.',
+      'Regime, CNPJ, estado, certificado e DAS: o que muda a margem, o teto e o emissor de nota. As vendas do mês o sistema conta sozinho.',
     grupo: 'empresa',
     icone: 'negocio',
   }),
@@ -231,7 +231,7 @@ export const PORTAS: readonly Porta[] = [
     href: '/copia',
     rotulo: 'Cópia dos dados',
     descricao:
-      'O banco inteiro num arquivo, guardado no seu computador — a cópia de segurança que a nuvem gratuita não faz.',
+      'O banco inteiro num arquivo, guardado no seu computador: a cópia de segurança que a nuvem gratuita não faz.',
     grupo: 'empresa',
     icone: 'copia',
   }),

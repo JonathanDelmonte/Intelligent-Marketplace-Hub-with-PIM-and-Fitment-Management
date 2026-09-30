@@ -49,7 +49,7 @@ export type CampoPresumido = (typeof CAMPOS_PRESUMIVEIS)[number];
 /** O que cada presunção custa quando está errada. É o texto que a tela mostra. */
 export const O_QUE_O_PRESUMIDO_CUSTA: Readonly<Record<CampoPresumido, string>> = {
   peso: `Peso presumido em ${String(PESO_PRESUMIDO_GRAMAS)} g. Peso errado muda a faixa de frete, e frete é o custo que come margem sem aparecer.`,
-  embalagem: 'Embalagem presumida em R$ 1,50 — caixa, plástico e etiqueta de item pequeno.',
+  embalagem: 'Embalagem presumida em R$ 1,50: caixa, plástico e etiqueta de item pequeno.',
   devolucao: `Devolução presumida em ${String(DEVOLUCAO_PRESUMIDA_BP / 100)}%. A real só aparece com histórico de pedido.`,
 };
 
