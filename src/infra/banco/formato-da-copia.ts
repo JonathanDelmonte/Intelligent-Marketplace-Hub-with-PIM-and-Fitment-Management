@@ -61,9 +61,9 @@ const TAMANHO_DO_LOTE = 64 * 1024;
 export const MOTIVO_DE_NAO_SER_COPIA =
   'este arquivo não é uma cópia dos dados que este sistema saiba ler';
 export const MOTIVO_DE_COPIA_CORTADA =
-  'a cópia termina no meio de uma tabela — o download deve ter sido interrompido. Nada foi mudado: baixe a cópia de novo.';
+  'a cópia termina no meio de uma tabela: o download deve ter sido interrompido. Nada foi mudado: baixe a cópia de novo.';
 export const MOTIVO_DE_COPIA_INCOMPLETA =
-  'a cópia está incompleta — o download deve ter sido interrompido. Nada foi mudado: baixe a cópia de novo.';
+  'a cópia está incompleta: o download deve ter sido interrompido. Nada foi mudado: baixe a cópia de novo.';
 
 function numeroOuNulo(valor: string | undefined): number | null {
   if (valor === undefined) return null;
@@ -272,7 +272,7 @@ export async function* linhasDoArquivo(
         lido = await leitor.read();
       } catch {
         throw new CopiaInvalida(
-          'o arquivo não pôde ser lido até o fim — está corrompido ou cortado. Nada foi mudado.',
+          'o arquivo não pôde ser lido até o fim: está corrompido ou cortado. Nada foi mudado.',
         );
       }
       if (lido.done) break;

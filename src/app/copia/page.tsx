@@ -16,6 +16,7 @@ import { banco } from '@/infra/banco/cliente';
 import { medirCopia } from '@/infra/banco/copia';
 import { formatarTamanho } from './apresentacao';
 import { CAMINHO_DO_DOWNLOAD } from './constantes';
+import { SinalCaixa, SinalCerto, SinalFechar } from '../ui/sinais';
 import estilo from './copia.module.css';
 import { RestaurarCopia } from './formulario-de-restaurar';
 
@@ -37,81 +38,117 @@ export default async function PaginaDaCopia() {
         </p>
       </header>
 
-      <section aria-labelledby="baixar-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="baixar-titulo">
-          Baixar
-        </h2>
-        <div className={estilo.painel}>
-          <div className={estilo.cartao}>
-            <span className={estilo.cartaoRotulo}>Tabelas na cópia</span>
-            <span className={estilo.cartaoNumero}>{medida.tabelas}</span>
-          </div>
-          <div className={estilo.cartao}>
-            <span className={estilo.cartaoRotulo}>Tamanho no banco</span>
-            <span className={estilo.cartaoNumero}>{formatarTamanho(medida.bytesNoBanco)}</span>
+      {/*
+        O cartão escuro da tela: é a ação dela. Os dois números moram dentro dele, porque
+        dizem o tamanho do que vai sair, e não são assunto à parte.
+      */}
+      <section aria-labelledby="baixar-titulo" className={estilo.baixar}>
+        <div className={estilo.baixarTextos}>
+          <span aria-hidden="true" className={estilo.baixarIcone}>
+            <SinalCaixa />
+          </span>
+          <div>
+            <h2 className={estilo.baixarTitulo} id="baixar-titulo">
+              Baixar a cópia de agora
+            </h2>
+            <p className={estilo.baixarTexto}>
+              O arquivo sai comprimido, bem menor que o tamanho no banco. Guarde em mais de um
+              lugar: um pendrive, um e-mail para você mesmo.
+            </p>
           </div>
         </div>
-        <a className={estilo.botao} download href={CAMINHO_DO_DOWNLOAD}>
+        <dl className={estilo.medidas}>
+          <div>
+            <dt>Tabelas na cópia</dt>
+            <dd>{medida.tabelas}</dd>
+          </div>
+          <div>
+            <dt>Tamanho no banco</dt>
+            <dd>{formatarTamanho(medida.bytesNoBanco)}</dd>
+          </div>
+        </dl>
+        <a className={estilo.botaoClaro} download href={CAMINHO_DO_DOWNLOAD}>
           Baixar a cópia
         </a>
-        <p className={estilo.dica}>
-          O arquivo sai comprimido, bem menor que o tamanho no banco. Guarde em mais de um lugar —
-          um pendrive, um e-mail para você mesmo. Uma cópia por semana, e outra antes de mexer em
-          muita coisa de uma vez, é um bom ritmo.
-        </p>
       </section>
 
-      <section aria-labelledby="conteudo-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="conteudo-titulo">
-          O que vai, e o que fica de fora
-        </h2>
-        <ul className={estilo.lista}>
-          <li>
-            <strong>Vai tudo o que está no banco:</strong> produtos, anúncios, pedidos,
-            fornecedores, compatibilidade, o histórico de preços, a fila de importação e o que a IA
-            já leu — que assim não precisa ser pago de novo.
-          </li>
-          <li>
-            <strong>As contas de acesso ficam de fora.</strong> Quem restaurar cria a conta de novo;
-            a senha de ninguém viaja no arquivo.
-          </li>
-          <li>
-            <strong>Os arquivos enviados também.</strong> Não estão no banco, e o original está com
-            quem enviou.
-          </li>
-        </ul>
-      </section>
+      <div className={estilo.grade}>
+        <section aria-labelledby="restaurar-titulo" className={estilo.bloco}>
+          <h2 className={estilo.blocoTitulo} id="restaurar-titulo">
+            Restaurar uma cópia
+          </h2>
+          <p className={estilo.blocoTexto}>
+            Troca todos os dados de agora pelos da cópia, numa vez só: se algo der errado no meio,
+            nada muda. As contas de acesso continuam as mesmas. Quer guardar os dados de agora?{' '}
+            <a download href={CAMINHO_DO_DOWNLOAD}>
+              Baixe a cópia deles antes
+            </a>
+            .
+          </p>
+          <RestaurarCopia />
+        </section>
 
-      <section aria-labelledby="restaurar-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="restaurar-titulo">
-          Restaurar uma cópia
-        </h2>
-        <p className={estilo.dica}>
-          Troca todos os dados de agora pelos da cópia, numa vez só: se algo der errado no meio,
-          nada muda. As contas de acesso continuam as mesmas. Quer guardar os dados de agora?{' '}
-          <a download href={CAMINHO_DO_DOWNLOAD}>
-            Baixe a cópia deles antes
-          </a>
-          .
-        </p>
-        <RestaurarCopia />
-      </section>
+        <div className={estilo.coluna}>
+          <section aria-labelledby="conteudo-titulo" className={estilo.bloco}>
+            <h2 className={estilo.blocoTitulo} id="conteudo-titulo">
+              O que vai, e o que fica de fora
+            </h2>
+            <ul className={estilo.lista}>
+              <li>
+                <span aria-hidden="true" className={estilo.vai}>
+                  <SinalCerto tamanho={12} />
+                </span>
+                <span>
+                  <strong>Vai tudo o que está no banco:</strong> produtos, anúncios, pedidos,
+                  fornecedores, compatibilidade, o histórico de preços, a fila de importação e o que
+                  a IA já leu, que assim não precisa ser pago de novo.
+                </span>
+              </li>
+              <li>
+                <span aria-hidden="true" className={estilo.ficaFora}>
+                  <SinalFechar tamanho={12} />
+                </span>
+                <span>
+                  <strong>As contas de acesso ficam de fora.</strong> Quem restaurar cria a conta de
+                  novo; a senha de ninguém viaja no arquivo.
+                </span>
+              </li>
+              <li>
+                <span aria-hidden="true" className={estilo.ficaFora}>
+                  <SinalFechar tamanho={12} />
+                </span>
+                <span>
+                  <strong>Os arquivos enviados também.</strong> Não estão no banco, e o original
+                  está com quem enviou.
+                </span>
+              </li>
+            </ul>
+            <p className={estilo.nota}>
+              Uma cópia por semana, e outra antes de mexer em muita coisa de uma vez, é um bom
+              ritmo.
+            </p>
+          </section>
 
-      <section aria-labelledby="sem-a-tela-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="sem-a-tela-titulo">
-          Sem esta tela
-        </h2>
-        <p className={estilo.dica}>
-          No computador, com o sistema instalado e o banco de destino no arquivo de configuração, o
-          comando abaixo confere o arquivo e diz o que ele tem; com <code>--sim</code> no fim,
-          restaura.
-        </p>
-        <code className={estilo.comando}>npm run copia:restaurar -- copia-dos-dados.sql.gz</code>
-        <p className={estilo.dica}>Sem o sistema, qualquer Postgres restaura o mesmo arquivo:</p>
-        <code className={estilo.comando}>
-          gunzip -c copia-dos-dados.sql.gz | psql &quot;endereço do banco&quot;
-        </code>
-      </section>
+          <section aria-labelledby="sem-a-tela-titulo" className={estilo.bloco}>
+            <h2 className={estilo.blocoTitulo} id="sem-a-tela-titulo">
+              Sem esta tela
+            </h2>
+            <p className={estilo.blocoTexto}>
+              No computador, com o sistema instalado, o comando abaixo confere o arquivo e diz o que
+              ele tem; com <code>--sim</code> no fim, restaura.
+            </p>
+            <code className={estilo.comando}>
+              npm run copia:restaurar -- copia-dos-dados.sql.gz
+            </code>
+            <p className={estilo.blocoTexto}>
+              Sem o sistema, qualquer Postgres restaura o mesmo arquivo:
+            </p>
+            <code className={estilo.comando}>
+              gunzip -c copia-dos-dados.sql.gz | psql &quot;endereço do banco&quot;
+            </code>
+          </section>
+        </div>
+      </div>
     </main>
   );
 }

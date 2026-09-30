@@ -1,17 +1,22 @@
 /*
- * Estilo da tela da cópia dos dados. Cores só de variável de tema (convenções, 3.1).
+ * Estilo da tela da cópia dos dados, no desenho aprovado na Catálogo e preço (o porquê
+ * de cada forma está no cabeçalho de `catalogo/catalogo.module.css`). Cores só de
+ * variável de tema (ADR 0003).
  *
- * Uma tela de leitura curta com uma ação: o que vai na cópia, o botão, e como ela volta.
- * O que é comum a todas as telas vem de `ui/comum.module.css` por `composes`.
+ * O cartão escuro é a ação da tela (baixar a cópia), com os dois números do tamanho dela
+ * dentro; embaixo, restaurar à esquerda, e à direita o que vai na cópia e como ela volta
+ * sem a tela.
  */
 
 .pagina {
   composes: pagina from '../ui/comum.module.css';
-  --largura-pagina: 52rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .cabecalho {
-  composes: cabecalho from '../ui/comum.module.css';
+  margin-bottom: 0.5rem;
 }
 
 .titulo {
@@ -22,62 +27,186 @@
   composes: subtitulo from '../ui/comum.module.css';
 }
 
-.secao {
-  composes: secao from '../ui/comum.module.css';
+.grade {
+  align-items: start;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
 }
 
-.secaoTitulo {
-  composes: secaoTitulo from '../ui/comum.module.css';
+.coluna {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
 }
 
-.painel {
-  composes: painel from '../ui/comum.module.css';
+.bloco {
+  composes: bloco from '../ui/comum.module.css';
 }
 
-.cartao {
-  composes: cartao from '../ui/comum.module.css';
+.blocoTitulo {
+  composes: blocoTitulo from '../ui/comum.module.css';
 }
 
-.cartaoRotulo {
-  composes: cartaoRotulo from '../ui/comum.module.css';
-}
-
-.cartaoNumero {
-  composes: cartaoNumero from '../ui/comum.module.css';
+.blocoTexto {
+  composes: blocoTexto from '../ui/comum.module.css';
 }
 
 .dica {
   composes: dica from '../ui/comum.module.css';
+  margin: 0;
 }
 
-/* O link de download com cara de botão: é a ação da tela. */
-.botao {
-  composes: botao from '../ui/comum.module.css';
+/* ── Baixar: o cartão escuro ─────────────────────────────────────────────── */
+
+.baixar {
   align-items: center;
-  display: inline-flex;
-  margin: 1rem 0 0.5rem;
-  text-decoration: none;
+  background: var(--cartao-escuro);
+  border-radius: var(--raio);
+  color: var(--cartao-escuro-texto);
+  display: grid;
+  gap: 1.5rem 2.5rem;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  padding: 1.5rem;
 }
+
+.baixarTextos {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.875rem;
+  min-width: 0;
+}
+
+.baixarIcone {
+  align-items: center;
+  background: color-mix(in srgb, var(--cartao-escuro-texto) 12%, transparent);
+  border-radius: var(--raio);
+  display: inline-flex;
+  flex: none;
+  height: 2.25rem;
+  justify-content: center;
+  width: 2.25rem;
+}
+
+.baixarTitulo {
+  font-size: 1rem;
+  font-weight: 650;
+  letter-spacing: -0.012em;
+  margin: 0;
+}
+
+.baixarTexto {
+  color: color-mix(in srgb, var(--cartao-escuro-texto) 70%, transparent);
+  font-size: 0.8125rem;
+  margin: 0.25rem 0 0;
+  max-width: 34rem;
+}
+
+.medidas {
+  display: flex;
+  gap: 2rem;
+  margin: 0;
+}
+
+.medidas dt {
+  color: color-mix(in srgb, var(--cartao-escuro-texto) 65%, transparent);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.medidas dd {
+  font-size: 1.5rem;
+  font-weight: 680;
+  letter-spacing: -0.03em;
+  margin: 0.125rem 0 0;
+  white-space: nowrap;
+}
+
+/* O botão claro sobre o cartão escuro: a única ação dele. */
+.botaoClaro {
+  align-items: center;
+  background: var(--cartao);
+  border-radius: var(--raio);
+  color: var(--tinta);
+  display: inline-flex;
+  font-size: 0.84375rem;
+  font-weight: 600;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0.5rem 1.125rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.botaoClaro:hover {
+  background: var(--realce);
+}
+
+.botaoClaro:focus-visible {
+  outline: 2px solid var(--cartao);
+  outline-offset: 2px;
+}
+
+/* ── O que vai ────────────────────────────────────────────────────────────── */
 
 .lista {
-  line-height: 1.55;
-  margin: 0;
-  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.84375rem;
+  gap: 0.75rem;
+  line-height: 1.5;
+  list-style: none;
+  margin: 0.875rem 0 0;
+  padding: 0;
 }
 
-.lista li + li {
-  margin-top: 0.375rem;
+.lista li {
+  display: grid;
+  gap: 0.625rem;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
 }
 
+.vai,
+.ficaFora {
+  align-items: center;
+  border-radius: 50%;
+  display: inline-flex;
+  height: 1.25rem;
+  justify-content: center;
+  margin-top: 0.0625rem;
+  width: 1.25rem;
+}
+
+.vai {
+  background: var(--lucro-suave);
+  color: var(--lucro);
+}
+
+.ficaFora {
+  background: var(--realce);
+  color: var(--tinta-3);
+}
+
+.nota {
+  border-top: 1px solid var(--linha);
+  color: var(--tinta-3);
+  font-size: 0.78125rem;
+  margin: 1rem 0 0;
+  padding-top: 0.875rem;
+}
+
+/* O comando quebra a linha em vez de rolar: copiado, ele sai inteiro do mesmo jeito. */
 .comando {
-  background: var(--cor-superficie-baixa);
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio-pequeno);
+  background: var(--realce);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
   display: block;
-  font-size: 0.875rem;
-  margin: 0.5rem 0 0.75rem;
-  overflow-x: auto;
+  font-size: 0.8125rem;
+  margin: 0.625rem 0 0.875rem;
+  overflow-wrap: anywhere;
   padding: 0.5rem 0.75rem;
+  white-space: pre-wrap;
 }
 
 /* ─── Restaurar ─────────────────────────────────────────────────────────── */
@@ -102,30 +231,62 @@
   composes: avisoCorpo from '../ui/comum.module.css';
 }
 
-.campo {
-  composes: campo from '../ui/comum.module.css';
-  --largura-campo: 100%;
-}
-
 .restaurar {
   display: flex;
   flex-direction: column;
   gap: 0.875rem;
-  margin-top: 0.875rem;
+  margin-top: 1rem;
 }
 
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rotulo {
+  color: var(--tinta);
+  font-size: 0.8125rem;
+  font-weight: 560;
+}
+
+/* O campo de arquivo do navegador, com o botão no desenho dos outros. */
 .arquivo {
+  color: var(--tinta-2);
   font: inherit;
+  font-size: 0.8125rem;
 }
 
-/* O que a cópia escolhida tem, e a confirmação: um cartão, porque é a decisão da tela. */
+.arquivo::file-selector-button {
+  background: var(--cartao);
+  border: 1px solid var(--cartao-borda);
+  border-radius: var(--raio);
+  color: var(--tinta);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 560;
+  margin-right: 0.75rem;
+  padding: 0.4375rem 0.875rem;
+}
+
+.arquivo::file-selector-button:hover {
+  background: var(--realce);
+}
+
+/* O que a cópia escolhida tem, e a confirmação: fundo suave, porque é a decisão da tela. */
 .confirmacao {
-  composes: cartao from '../ui/comum.module.css';
   align-items: flex-start;
+  background: var(--atencao-suave);
+  border-radius: var(--raio);
+  display: flex;
+  flex-direction: column;
   gap: 0.75rem;
+  padding: 1rem 1.125rem;
 }
 
 .resumoDaCopia {
+  font-size: 0.875rem;
   line-height: 1.5;
   margin: 0;
 }
@@ -134,6 +295,7 @@
   align-items: flex-start;
   cursor: pointer;
   display: flex;
+  font-size: 0.84375rem;
   gap: 0.5rem;
   line-height: 1.45;
 }
@@ -150,4 +312,14 @@
 .botaoDeAcao:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+@media (max-width: 64rem) {
+  .grade {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .baixar {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

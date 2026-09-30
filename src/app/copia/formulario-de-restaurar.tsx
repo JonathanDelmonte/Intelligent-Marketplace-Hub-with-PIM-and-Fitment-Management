@@ -106,7 +106,9 @@ export function RestaurarCopia() {
   return (
     <div className={estilo.restaurar}>
       <div className={estilo.campo}>
-        <label htmlFor={idDoArquivo}>Arquivo da cópia — o que termina em .sql.gz</label>
+        <label className={estilo.rotulo} htmlFor={idDoArquivo}>
+          Arquivo da cópia, o que termina em .sql.gz
+        </label>
         <input
           accept=".gz,.sql,application/gzip"
           className={estilo.arquivo}
@@ -157,7 +159,7 @@ export function RestaurarCopia() {
 
       {etapa.tipo === 'restaurando' && (
         <p className={estilo.dica} role="status">
-          Restaurando — {descreverCopia(etapa.resumo)}. Numa cópia grande, leva alguns minutos.
+          Restaurando: {descreverCopia(etapa.resumo)}. Numa cópia grande, leva alguns minutos.
         </p>
       )}
 
