@@ -13,6 +13,7 @@ import {
   rotuloDoTipoDeJob,
   CODIGOS_DE_AVISO,
   EXPLICACAO_DO_STATUS,
+  numerosDaImportacao,
   JANELA_DE_FILA_PARADA_MS,
   MAX_TITULO,
   ROTULO_DO_STATUS,
@@ -275,6 +276,41 @@ describe('tentativas', () => {
       texto: '3/3',
       alerta: true,
     });
+  });
+});
+
+describe('numerosDaImportacao', () => {
+  const zerada = { pendente: 0, rodando: 0, concluido: 0, falhou: 0, pendente_revisao: 0 };
+
+  it('junta o que falhou e o que espera revisão no número de quem precisa de você', () => {
+    const numeros = numerosDaImportacao({ ...zerada, falhou: 2, pendente_revisao: 1 }, 0);
+    expect(numeros.map((n) => [n.chave, n.valor])).toEqual([
+      ['fila', 0],
+      ['rodando', 0],
+      ['concluido', 0],
+      ['voce', 3],
+    ]);
+    expect(numeros[3]).toMatchObject({ nota: '2 falharam e 1 para revisar', tom: 'baixa' });
+  });
+
+  it('só revisão pede atenção, e não é vermelho: não é erro', () => {
+    const [, , , voce] = numerosDaImportacao({ ...zerada, pendente_revisao: 1 }, 0);
+    expect(voce).toMatchObject({ nota: '1 para revisar', tom: 'atencao' });
+  });
+
+  it('nada esperando é boa notícia, em verde', () => {
+    const [, , , voce] = numerosDaImportacao(zerada, 0);
+    expect(voce).toMatchObject({ valor: 0, nota: 'nada esperando você', tom: 'alta' });
+  });
+
+  it('a nota da fila diz quantas já podem rodar, e quando nenhuma pode', () => {
+    expect(numerosDaImportacao({ ...zerada, pendente: 3 }, 2)[0]?.nota).toBe(
+      '2 prontas para rodar agora',
+    );
+    expect(numerosDaImportacao({ ...zerada, pendente: 3 }, 0)[0]?.nota).toBe(
+      'esperam a hora de rodar',
+    );
+    expect(numerosDaImportacao(zerada, 0)[0]?.nota).toBe('nada esperando');
   });
 });
 

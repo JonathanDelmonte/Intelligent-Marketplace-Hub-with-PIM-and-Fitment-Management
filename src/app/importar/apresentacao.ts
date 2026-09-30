@@ -43,17 +43,82 @@ export const EXPLICACAO_DO_STATUS: Readonly<Record<StatusJob, string>> = {
   rodando: 'em execução agora',
   concluido: 'terminou e gravou',
   falhou: 'esgotou as tentativas; o erro fica visível',
-  pendente_revisao: 'esperando decisão humana — não é erro, e nada foi descartado',
+  pendente_revisao: 'esperando decisão humana: não é erro, e nada foi descartado',
 };
 
-/** Cor por status. Nome de variável CSS, nunca cor literal (ADR 0003). */
+/**
+ * Cor por status. Nome de variável CSS, nunca cor literal (ADR 0003).
+ *
+ * "Rodando" era a cor da marca, que é a dos botões de outro sistema qualquer; no desenho
+ * aprovado (27/09) cor só diz ganho, atenção ou perda, e rodar não é nenhum dos três.
+ */
 export const COR_DO_STATUS: Readonly<Record<StatusJob, string>> = {
-  pendente: 'var(--cor-texto-fraco)',
-  rodando: 'var(--cor-primaria)',
-  concluido: 'var(--cor-ok)',
-  falhou: 'var(--cor-erro)',
-  pendente_revisao: 'var(--cor-aviso)',
+  pendente: 'var(--tinta-3)',
+  rodando: 'var(--tinta)',
+  concluido: 'var(--lucro)',
+  falhou: 'var(--perda)',
+  pendente_revisao: 'var(--atencao)',
 };
+
+export type TomDoNumeroDaFila = 'neutro' | 'alta' | 'baixa' | 'atencao';
+
+export interface NumeroDaImportacao {
+  readonly chave: 'fila' | 'rodando' | 'concluido' | 'voce';
+  readonly rotulo: string;
+  readonly valor: number;
+  readonly nota: string;
+  readonly tom: TomDoNumeroDaFila;
+}
+
+/**
+ * Os quatro números do alto da tela.
+ *
+ * Eram seis cartões, um por status e mais o dos prontos, e a pergunta de quem abre a
+ * tela é outra: tem alguma coisa esperando por mim? Por isso "falhou" e "revisar" viram
+ * um número só, o de "precisam de você", e "prontas agora" vira a nota da fila, que é
+ * onde elas estão.
+ */
+export function numerosDaImportacao(
+  contagemPorStatus: Readonly<Record<StatusJob, number>>,
+  prontos: number,
+): readonly NumeroDaImportacao[] {
+  const { pendente, rodando, concluido, falhou, pendente_revisao: revisar } = contagemPorStatus;
+  const voce = falhou + revisar;
+  const notaDaFila =
+    pendente === 0
+      ? 'nada esperando'
+      : prontos === 0
+        ? 'esperam a hora de rodar'
+        : contagem(prontos, 'pronta para rodar agora', 'prontas para rodar agora');
+  const partesDeVoce = [
+    ...(falhou === 0 ? [] : [contagem(falhou, 'falhou', 'falharam')]),
+    ...(revisar === 0 ? [] : [`${String(revisar)} para revisar`]),
+  ];
+  return [
+    { chave: 'fila', rotulo: 'Na fila', valor: pendente, nota: notaDaFila, tom: 'neutro' },
+    {
+      chave: 'rodando',
+      rotulo: 'Rodando',
+      valor: rodando,
+      nota: rodando === 0 ? 'nada rodando agora' : 'em execução agora',
+      tom: 'neutro',
+    },
+    {
+      chave: 'concluido',
+      rotulo: 'Concluídas',
+      valor: concluido,
+      nota: concluido === 0 ? 'nenhuma ainda' : 'terminaram e gravaram',
+      tom: concluido === 0 ? 'neutro' : 'alta',
+    },
+    {
+      chave: 'voce',
+      rotulo: 'Precisam de você',
+      valor: voce,
+      nota: voce === 0 ? 'nada esperando você' : partesDeVoce.join(' e '),
+      tom: voce === 0 ? 'alta' : falhou > 0 ? 'baixa' : 'atencao',
+    },
+  ];
+}
 
 export function ehStatusConhecido(valor: string): valor is StatusJob {
   return (STATUS_JOB as readonly string[]).includes(valor);
@@ -480,8 +545,8 @@ export function descreverAviso(
         tipo: 'ok',
         titulo: contagem(n, 'entrada voltou para a fila', 'entradas voltaram para a fila'),
         corpo:
-          'O arquivo tinha saído da nuvem, e o que esperava por ele roda em seguida — não ' +
-          'precisa apertar "tentar de novo".',
+          'O arquivo tinha saído da nuvem, e o que esperava por ele roda em seguida. Não ' +
+          'precisa apertar "Tentar de novo".',
       };
   }
 }

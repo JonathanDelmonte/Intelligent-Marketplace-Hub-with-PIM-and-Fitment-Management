@@ -6,14 +6,16 @@
  * arquivos decidem só onde as coisas ficam na página.
  */
 import Link from 'next/link';
-import { STATUS_JOB, type JobDetalhado, type StatusJob } from '@/infra/fila/fila';
+import type { ReactNode } from 'react';
+import type { JobDetalhado, StatusJob } from '@/infra/fila/fila';
 import { MAX_UPLOAD_ROTULO } from '@/config/limites';
 import type { Plataforma } from '@/dominio/precificacao/tipos';
+import { FaixaDeNumeros } from '../ui/numeros';
+import { SinalAlerta, SinalCaixa, SinalCerto, SinalRelogio } from '../ui/sinais';
 import { CAMINHO } from './constantes';
 import {
   COR_DO_STATUS,
   IDIOMA,
-  EXPLICACAO_DO_STATUS,
   ROTULO_DO_STATUS,
   descreverTentativas,
   duracaoDoJob,
@@ -25,7 +27,9 @@ import {
   resumirProgresso,
   resumirResultado,
   rotuloDoTipoDeEntrada,
+  numerosDaImportacao,
   type Aviso,
+  type NumeroDaImportacao,
 } from './apresentacao';
 import { enviarEntrada, processarAgora, reenfileirar } from './acoes';
 import estilo from './importar.module.css';
@@ -56,8 +60,16 @@ export function AvisoDeFilaParada({ texto }: { readonly texto: string }) {
   );
 }
 
-// ─── Painel de contagem ──────────────────────────────────────────────────────
+// ─── Os números do alto ──────────────────────────────────────────────────────
 
+const ICONE_DO_NUMERO: Readonly<Record<NumeroDaImportacao['chave'], ReactNode>> = {
+  fila: <SinalCaixa />,
+  rodando: <SinalRelogio />,
+  concluido: <SinalCerto />,
+  voce: <SinalAlerta />,
+};
+
+/** Os quatro números. O escuro é o de "precisam de você", que é a pergunta da tela. */
 export function Painel({
   contagem,
   prontos,
@@ -66,24 +78,17 @@ export function Painel({
   readonly prontos: number;
 }) {
   return (
-    <div className={estilo.painel}>
-      {STATUS_JOB.map((status) => (
-        <div key={status} className={estilo.cartao}>
-          <div className={estilo.cartaoNumero} style={{ color: COR_DO_STATUS[status] }}>
-            {contagem[status].toLocaleString(IDIOMA)}
-          </div>
-          <div className={estilo.cartaoRotulo}>{ROTULO_DO_STATUS[status]}</div>
-          <div className={estilo.cartaoExplicacao}>{EXPLICACAO_DO_STATUS[status]}</div>
-        </div>
-      ))}
-      <div className={estilo.cartao}>
-        <div className={estilo.cartaoNumero}>{prontos.toLocaleString(IDIOMA)}</div>
-        <div className={estilo.cartaoRotulo}>prontos agora</div>
-        <div className={estilo.cartaoExplicacao}>
-          na fila e com a hora de rodar já vencida — o que falhou espera o intervalo
-        </div>
-      </div>
-    </div>
+    <FaixaDeNumeros
+      itens={numerosDaImportacao(contagem, prontos).map((numero) => ({
+        rotulo: numero.rotulo,
+        valor: numero.valor.toLocaleString(IDIOMA),
+        nota: numero.nota,
+        tom: numero.tom,
+        icone: ICONE_DO_NUMERO[numero.chave],
+        escuro: numero.chave === 'voce',
+      }))}
+      rotulo="As entradas em números"
+    />
   );
 }
 
@@ -100,7 +105,7 @@ export function FormularioDeEntrada({ loja }: { readonly loja?: Plataforma | und
   return (
     <form action={enviarEntrada} className={estilo.formulario}>
       {loja !== undefined && <input name="loja" type="hidden" value={loja} />}
-      <label htmlFor="texto" className={estilo.cartaoRotulo}>
+      <label htmlFor="texto" className={estilo.rotuloDoCampo}>
         Cole um link, uma lista de links ou um texto
       </label>
       <textarea
@@ -108,15 +113,22 @@ export function FormularioDeEntrada({ loja }: { readonly loja?: Plataforma | und
         name="texto"
         rows={3}
         className={estilo.entrada}
-        style={{ marginTop: '0.375rem' }}
         placeholder="https://produto.mercadolivre.com.br/MLB-..."
       />
       <div className={estilo.linhaDoFormulario}>
-        <div>
-          <input type="file" name="arquivo" accept=".csv,.tsv,.txt,.xlsx,.xls" />
+        <div className={estilo.arquivo}>
+          <label htmlFor="arquivo" className={estilo.rotuloDoCampo}>
+            Ou suba uma planilha de exportação
+          </label>
+          <input
+            accept=".csv,.tsv,.txt,.xlsx,.xls"
+            className={estilo.entradaDeArquivo}
+            id="arquivo"
+            name="arquivo"
+            type="file"
+          />
           <p className={estilo.dica}>
-            ou suba uma planilha de exportação, até {MAX_UPLOAD_ROTULO}. Nada é descartado: o
-            original fica guardado por hash.
+            CSV ou Excel, até {MAX_UPLOAD_ROTULO}. Nada é descartado: o original fica guardado.
           </p>
         </div>
         <button type="submit" className={estilo.botao}>
@@ -138,26 +150,20 @@ export function TabelaDeJobs({
   readonly agora: Date;
   readonly vazio: string;
 }) {
-  if (jobs.length === 0) {
-    return (
-      <div className={estilo.envelopeDaTabela}>
-        <p className={estilo.vazio}>{vazio}</p>
-      </div>
-    );
-  }
+  if (jobs.length === 0) return <p className={estilo.vazio}>{vazio}</p>;
 
   return (
-    <div className={estilo.envelopeDaTabela}>
+    <div className={estilo.rolagem}>
       <table className={estilo.tabela}>
         <thead>
           <tr>
-            <th scope="col">quando</th>
-            <th scope="col">entrada</th>
-            <th scope="col">status</th>
-            <th scope="col">duração</th>
-            <th scope="col">resultado</th>
+            <th scope="col">Quando</th>
+            <th scope="col">Entrada</th>
+            <th scope="col">Situação</th>
+            <th scope="col">Duração</th>
+            <th scope="col">Resultado</th>
             <th scope="col">
-              <span className="sr-only">ações</span>
+              <span className="sr-only">Ações</span>
             </th>
           </tr>
         </thead>
@@ -185,7 +191,7 @@ function LinhaDeJob({ job, agora }: { readonly job: JobDetalhado; readonly agora
         {/*
           O identificador curto é o link para o detalhe. Fica aqui, e não num
           botão "ver", porque é o mesmo valor que aparece no log estruturado como
-          `jobId` — quem chegou pelo log procura por ele.
+          `jobId`, e quem chegou pelo log procura por ele.
         */}
         <div>
           <Link href={`${CAMINHO}/${job.id}`} className={estilo.linkDoJob} title={job.id}>
@@ -255,7 +261,7 @@ function LinhaDeJob({ job, agora }: { readonly job: JobDetalhado; readonly agora
           <form action={reenfileirar}>
             <input type="hidden" name="id" value={job.id} />
             <button type="submit" className={estilo.botaoSecundario}>
-              {job.status === 'concluido' ? 'rodar de novo' : 'tentar de novo'}
+              {job.status === 'concluido' ? 'Rodar de novo' : 'Tentar de novo'}
             </button>
           </form>
         )}

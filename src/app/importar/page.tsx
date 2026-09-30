@@ -82,59 +82,83 @@ export default async function PaginaDeImportacao({
 
   return (
     <main className={estilo.pagina}>
-      <h1 className={estilo.titulo}>Importar</h1>
-      <p className={estilo.subtitulo}>
-        Tudo que entra no sistema passa por aqui. Nada é descartado: entrada que o sistema não sabe
-        tratar fica em <strong>revisar</strong>, com o motivo, esperando decisão humana.
-      </p>
+      <header className={estilo.cabecalho}>
+        <h1 className={estilo.titulo}>Importar</h1>
+        <p className={estilo.subtitulo}>
+          Tudo que entra no sistema passa por aqui. Nada é descartado: entrada que o sistema não
+          sabe tratar fica para revisar, com o motivo, esperando a sua decisão.
+        </p>
+      </header>
 
       {aviso === null ? null : <AvisoDaAcao aviso={aviso} />}
       {filaParada === null ? null : <AvisoDeFilaParada texto={filaParada} />}
 
       <Painel contagem={contagem} prontos={prontos} />
 
-      <section className={estilo.secao}>
-        <h2 className={estilo.tituloDaSecao}>
-          {loja === undefined ? 'Nova entrada' : `Planilha da loja ${ROTULO_DA_PLATAFORMA[loja]}`}
-        </h2>
-        {loja !== undefined && (
-          <p className={estilo.subtitulo}>
-            A planilha que você subir aqui entra como da loja {ROTULO_DA_PLATAFORMA[loja]}, qualquer
-            que seja o nome do arquivo. <Link href={CAMINHO}>Importar de outra origem</Link>
-          </p>
-        )}
+      <section aria-labelledby="entrada-titulo" className={estilo.bloco}>
+        <div className={estilo.blocoTopo}>
+          <div>
+            <h2 className={estilo.blocoTitulo} id="entrada-titulo">
+              {loja === undefined
+                ? 'Nova entrada'
+                : `Planilha da loja ${ROTULO_DA_PLATAFORMA[loja]}`}
+            </h2>
+            <p className={estilo.blocoTexto}>
+              {loja === undefined ? (
+                'Um link de anúncio, uma lista deles, um texto de fornecedor ou a planilha que a loja exporta. O sistema reconhece o que é.'
+              ) : (
+                <>
+                  A planilha que você subir aqui entra como da loja {ROTULO_DA_PLATAFORMA[loja]},
+                  qualquer que seja o nome do arquivo.{' '}
+                  <Link href={CAMINHO}>Importar de outra origem</Link>
+                </>
+              )}
+            </p>
+          </div>
+        </div>
         <FormularioDeEntrada loja={loja} />
-        {prazoNaNuvem === null ? null : <p className={estilo.dica}>{prazoNaNuvem}</p>}
+        {prazoNaNuvem === null ? null : <p className={estilo.notaDoBloco}>{prazoNaNuvem}</p>}
       </section>
 
       {emRevisao.length === 0 ? null : (
-        <section className={estilo.secao}>
-          <h2 className={estilo.tituloDaSecao}>
-            Esperando revisão{' '}
-            <span className={estilo.contadorDoTitulo}>
-              ({emRevisao.length.toLocaleString(IDIOMA)})
+        <section aria-labelledby="revisao-titulo" className={estilo.cartaoDaTabela}>
+          <header className={estilo.topoDaTabela}>
+            <div>
+              <h2 className={estilo.blocoTitulo} id="revisao-titulo">
+                Esperando revisão
+              </h2>
+              <p className={estilo.blocoTexto}>
+                Não é erro. É entrada guardada que o sistema não conseguiu tratar sozinho: a
+                classificação ficou fraca, ou o extrator daquele tipo ainda não existe.
+              </p>
+            </div>
+            <span className={estilo.blocoNota}>
+              {emRevisao.length.toLocaleString(IDIOMA)}{' '}
+              {emRevisao.length === 1 ? 'entrada' : 'entradas'}
             </span>
-          </h2>
-          <p className={estilo.dica} style={{ marginBottom: '0.75rem' }}>
-            Não é erro. É entrada guardada que o sistema não conseguiu tratar sozinho — porque a
-            classificação ficou fraca, ou porque o extrator daquele tipo ainda não existe.
-          </p>
+          </header>
           <TabelaDeJobs jobs={emRevisao} agora={agora} vazio="Nada esperando revisão." />
         </section>
       )}
 
-      <section className={estilo.secao}>
-        <div className={estilo.acoesDaSecao}>
-          <h2 className={estilo.tituloDaSecao} style={{ margin: 0 }}>
-            Últimas {String(LIMITE_DA_LISTA)} entradas
-          </h2>
-          <div className={estilo.acoesDaSecao} style={{ gap: '1rem', marginBottom: 0 }}>
+      <section aria-labelledby="entradas-titulo" className={estilo.cartaoDaTabela}>
+        <header className={estilo.topoDaTabela}>
+          <div>
+            <h2 className={estilo.blocoTitulo} id="entradas-titulo">
+              Últimas {String(LIMITE_DA_LISTA)} entradas
+            </h2>
+            <p className={estilo.blocoTexto}>
+              Da mais nova para a mais velha. Quando algo dá errado, o erro aparece por extenso na
+              linha.
+            </p>
+          </div>
+          <div className={estilo.acoesDoTopo}>
             <AtualizacaoAutomatica
               ativa={haEntradaAndando({ prontos, rodando: contagem.rodando })}
             />
             <BotaoProcessarAgora limite={LIMITE_DE_PROCESSAMENTO_MANUAL} />
           </div>
-        </div>
+        </header>
         <TabelaDeJobs
           jobs={jobs}
           agora={agora}

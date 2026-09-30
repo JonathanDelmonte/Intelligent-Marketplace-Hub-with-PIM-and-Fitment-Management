@@ -119,7 +119,7 @@ function motivoDeExtratorAusente(tipo: TipoDeEntrada): string {
  */
 function motivoDePlataformaDesconhecida(): string {
   return (
-    'é planilha, mas o nome do arquivo não diz de qual plataforma — e o mapeamento ' +
+    'é planilha, mas o nome do arquivo não diz de qual plataforma, e o mapeamento ' +
     'de colunas depende disso. Não falta LLM: falta o nome. Renomeie incluindo a ' +
     `plataforma (por exemplo ${EXEMPLOS_DE_NOME_DE_EXPORTACAO.join(', ')}) e envie ` +
     'de novo. O conteúdo já está guardado, então reenviar não perde nada.'
@@ -336,7 +336,7 @@ export class ExecutorDeIngestao {
     if (links.length === 0) {
       return this.revisao(
         job,
-        'a página de lista não trouxe link de anúncio — a plataforma pode montar a lista no navegador. Cole os links dos anúncios, um por linha.',
+        'a página de lista não trouxe link de anúncio: a plataforma pode montar a lista no navegador. Cole os links dos anúncios, um por linha.',
       );
     }
 
@@ -398,7 +398,7 @@ export class ExecutorDeIngestao {
       return this.revisao(
         job,
         texto.trim() === ''
-          ? 'o PDF não tem texto — deve ser imagem escaneada. Tire um print da tabela e envie a imagem, que a IA lê; ou envie a tabela em planilha ou em texto.'
+          ? 'o PDF não tem texto: deve ser imagem escaneada. Tire um print da tabela e envie a imagem, que a IA lê; ou envie a tabela em planilha ou em texto.'
           : 'o PDF não tem linha com preço ou código de peça que desse para ler.',
       );
     }
@@ -499,7 +499,7 @@ export class ExecutorDeIngestao {
     if (capturas.length === 0) {
       return this.revisao(
         job,
-        'nenhuma linha com preço ou código de peça. Cole a tabela com um produto por linha — por exemplo "Refil PA21G - 38,00".',
+        'nenhuma linha com preço ou código de peça. Cole a tabela com um produto por linha, por exemplo "Refil PA21G - 38,00".',
       );
     }
     return this.gravarTodas(job, 'texto_colado', capturas);

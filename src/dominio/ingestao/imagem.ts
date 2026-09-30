@@ -67,7 +67,7 @@ export function leitorDeImagemCom(llm: ServicoDeLlm, modelo: string): LeitorDeIm
       return {
         tipo: 'ilegivel',
         motivo:
-          'o arquivo não é PNG, JPG, WEBP nem GIF — foto de iPhone vem em HEIC, que os modelos não leem. Tire um print da tela e envie o print.',
+          'o arquivo não é PNG, JPG, WEBP nem GIF: foto de iPhone vem em HEIC, que os modelos não leem. Tire um print da tela e envie o print.',
       };
     }
 

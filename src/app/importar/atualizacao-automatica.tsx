@@ -48,7 +48,7 @@ export function AtualizacaoAutomatica({
   if (!ativa) return null;
   return (
     <span className={estilo.alternarAuto} role="status">
-      atualizando sozinha enquanto há entrada andando
+      Atualizando sozinha enquanto há entrada andando
     </span>
   );
 }

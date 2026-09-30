@@ -33,6 +33,7 @@ import {
 } from '../apresentacao';
 import { reenfileirar } from '../acoes';
 import { AtualizacaoAutomatica } from '../atualizacao-automatica';
+import { SinalVoltar } from '../../ui/sinais';
 import estilo from '../importar.module.css';
 
 export const metadata: Metadata = { title: 'Entrada' };
@@ -64,51 +65,52 @@ export default async function PaginaDoJob({
   return (
     <main className={estilo.pagina}>
       <Link href={CAMINHO} className={estilo.voltar}>
-        voltar para a lista
+        <SinalVoltar />
+        Voltar para a lista
       </Link>
 
-      <h1 className={estilo.titulo}>{entrada.titulo}</h1>
-      <p className={estilo.subtitulo}>
-        {entrada.tipoDeEntrada === null
-          ? rotuloDoTipoDeJob(job.tipo)
-          : rotuloDoTipoDeEntrada(entrada.tipoDeEntrada)}
-        {entrada.site === null ? '' : ` · ${entrada.site}`}
-        {entrada.confiancaBp === null
-          ? ''
-          : ` · confiança ${String(Math.round(entrada.confiancaBp / 100))}%`}
-        {' · '}
-        <span style={{ color: COR_DO_STATUS[job.status], fontWeight: 600 }}>
-          {ROTULO_DO_STATUS[job.status]}
-        </span>{' '}
-        ({EXPLICACAO_DO_STATUS[job.status]})
-      </p>
-      <AtualizacaoAutomatica ativa={entradaAndando(job, agora)} />
+      <header className={estilo.cabecalho}>
+        <h1 className={estilo.titulo}>{entrada.titulo}</h1>
+        <p className={estilo.subtitulo}>
+          {entrada.tipoDeEntrada === null
+            ? rotuloDoTipoDeJob(job.tipo)
+            : rotuloDoTipoDeEntrada(entrada.tipoDeEntrada)}
+          {entrada.site === null ? '' : ` · ${entrada.site}`}
+          {entrada.confiancaBp === null
+            ? ''
+            : ` · confiança ${String(Math.round(entrada.confiancaBp / 100))}%`}
+        </p>
+        <p className={estilo.situacaoDoJob}>
+          <span className={estilo.etiqueta} style={{ color: COR_DO_STATUS[job.status] }}>
+            {ROTULO_DO_STATUS[job.status]}
+          </span>
+          <span className={estilo.situacaoExplicada}>{EXPLICACAO_DO_STATUS[job.status]}</span>
+          <AtualizacaoAutomatica ativa={entradaAndando(job, agora)} />
+        </p>
+      </header>
 
       {job.erro === null ? null : (
-        <section className={estilo.secao}>
-          <h2 className={estilo.tituloDaSecao}>
-            {job.status === 'pendente_revisao' ? 'Por que está esperando revisão' : 'Erro'}
+        <section
+          aria-labelledby="erro-titulo"
+          className={job.status === 'pendente_revisao' ? estilo.caixaDeRevisao : estilo.caixaDeErro}
+        >
+          <h2 className={estilo.caixaTitulo} id="erro-titulo">
+            {job.status === 'pendente_revisao' ? 'Por que está esperando revisão' : 'O erro'}
           </h2>
-          <div
-            className={
-              job.status === 'pendente_revisao' ? estilo.caixaDeRevisao : estilo.caixaDeErro
-            }
-          >
-            {job.erro}
-          </div>
+          <p className={estilo.caixaTexto}>{job.erro}</p>
         </section>
       )}
 
-      <section className={estilo.secao}>
-        <div className={estilo.acoesDaSecao}>
-          <h2 className={estilo.tituloDaSecao} style={{ margin: 0 }}>
+      <section aria-labelledby="ficha-titulo" className={estilo.bloco}>
+        <div className={estilo.blocoTopo}>
+          <h2 className={estilo.blocoTitulo} id="ficha-titulo">
             Ficha
           </h2>
           {job.status === 'rodando' ? null : (
             <form action={reenfileirar}>
               <input type="hidden" name="id" value={job.id} />
               <button type="submit" className={estilo.botaoSecundario}>
-                {job.status === 'concluido' ? 'rodar de novo' : 'tentar de novo'}
+                {job.status === 'concluido' ? 'Rodar de novo' : 'Tentar de novo'}
               </button>
             </form>
           )}
@@ -117,42 +119,50 @@ export default async function PaginaDoJob({
           {fichaDoJob(job, agora).map((item) => (
             <div key={item.rotulo} className={estilo.fichaItem}>
               <dt className={estilo.fichaRotulo}>{item.rotulo}</dt>
-              <dd className={estilo.fichaValor} style={{ margin: 0 }}>
-                {item.valor}
-              </dd>
+              <dd className={estilo.fichaValor}>{item.valor}</dd>
             </div>
           ))}
         </dl>
       </section>
 
       {metricas.length === 0 && progresso === null ? null : (
-        <section className={estilo.secao}>
-          <h2 className={estilo.tituloDaSecao}>Resultado</h2>
-          <div className={estilo.cartao}>
+        <section aria-labelledby="resultado-titulo" className={estilo.bloco}>
+          <h2 className={estilo.blocoTitulo} id="resultado-titulo">
+            Resultado
+          </h2>
+          <ul className={estilo.metricas}>
             {progresso === null ? null : (
-              <div className={estilo.detalheDaEntrada}>progresso: {progresso}</div>
+              <li className={estilo.detalheDaEntrada}>Progresso: {progresso}</li>
             )}
             {metricas.map((m) => (
-              <div
+              <li
                 key={m.rotulo}
                 className={m.alerta === true ? estilo.metricaAlerta : estilo.metrica}
               >
                 {m.rotulo}: {m.valor}
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       )}
 
       {rejeitadas.length === 0 ? null : (
-        <section className={estilo.secao}>
-          <h2 className={estilo.tituloDaSecao}>
-            Linhas recusadas <span className={estilo.contadorDoTitulo}>({rejeitadas.length})</span>
-          </h2>
-          <p className={estilo.dica}>
-            Nada foi descartado. Cada linha aparece como veio no arquivo, com o motivo — é o que
-            permite corrigir à mão sem reimportar a planilha inteira.
-          </p>
+        <section aria-labelledby="recusadas-titulo" className={estilo.bloco}>
+          <div className={estilo.blocoTopo}>
+            <div>
+              <h2 className={estilo.blocoTitulo} id="recusadas-titulo">
+                Linhas recusadas
+              </h2>
+              <p className={estilo.blocoTexto}>
+                Nada foi descartado. Cada linha aparece como veio no arquivo, com o motivo: é o que
+                permite corrigir à mão sem importar a planilha inteira de novo.
+              </p>
+            </div>
+            <span className={estilo.blocoNota}>
+              {rejeitadas.length.toLocaleString('pt-BR')}{' '}
+              {rejeitadas.length === 1 ? 'linha' : 'linhas'}
+            </span>
+          </div>
           {rejeitadas.map((linha, indice) => (
             <div
               key={`${String(linha.numeroDaLinha)}-${String(indice)}`}
@@ -161,20 +171,20 @@ export default async function PaginaDoJob({
               <div className={estilo.rejeitadaCabecalho}>
                 <span className={estilo.rejeitadaLinha}>
                   {linha.numeroDaLinha === null
-                    ? 'linha desconhecida'
-                    : `linha ${String(linha.numeroDaLinha)}`}
+                    ? 'Linha desconhecida'
+                    : `Linha ${String(linha.numeroDaLinha)}`}
                 </span>
                 <span className={estilo.rejeitadaMotivo}>{linha.motivo}</span>
               </div>
               {linha.problemas.length === 0 ? null : (
-                <ul className={estilo.listaDeProblemas} style={{ padding: '0.5rem 1.75rem' }}>
+                <ul className={estilo.listaDeProblemas}>
                   {linha.problemas.map((problema) => (
                     <li key={problema}>{problema}</li>
                   ))}
                 </ul>
               )}
               {linha.temColunasOriginais ? null : (
-                <p className={estilo.dica} style={{ padding: '0.5rem 0.875rem', margin: 0 }}>
+                <p className={estilo.dicaDaLinha}>
                   Entrada gravada antes de a linha original passar a ser guardada: abaixo estão os
                   campos já mapeados, não os nomes de coluna do arquivo.
                 </p>
@@ -197,20 +207,20 @@ export default async function PaginaDoJob({
       )}
 
       {payloadDaEntrada === null ? null : (
-        <section className={estilo.secao}>
-          <h2 className={estilo.tituloDaSecao}>Entrada gravada</h2>
-          <div className={estilo.bloco}>
-            <pre className={estilo.blocoTexto}>{payloadDaEntrada}</pre>
-          </div>
+        <section aria-labelledby="gravada-titulo" className={estilo.bloco}>
+          <h2 className={estilo.blocoTitulo} id="gravada-titulo">
+            Entrada gravada
+          </h2>
+          <pre className={estilo.codigo}>{payloadDaEntrada}</pre>
         </section>
       )}
 
       {payloadDoResultado === null ? null : (
-        <section className={estilo.secao}>
-          <h2 className={estilo.tituloDaSecao}>Resultado gravado</h2>
-          <div className={estilo.bloco}>
-            <pre className={estilo.blocoTexto}>{payloadDoResultado}</pre>
-          </div>
+        <section aria-labelledby="resultado-gravado-titulo" className={estilo.bloco}>
+          <h2 className={estilo.blocoTitulo} id="resultado-gravado-titulo">
+            Resultado gravado
+          </h2>
+          <pre className={estilo.codigo}>{payloadDoResultado}</pre>
         </section>
       )}
     </main>

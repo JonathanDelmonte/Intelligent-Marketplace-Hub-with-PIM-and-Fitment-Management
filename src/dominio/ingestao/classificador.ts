@@ -281,7 +281,7 @@ function classificarUrl(bruto: string): Classificacao {
       tipoDeEntrada: 'anuncio_marketplace',
       site,
       confiancaBp: 5000,
-      motivo: `site ${site} reconhecido, mas o formato do caminho não — tratando como anúncio`,
+      motivo: `site ${site} reconhecido, mas o formato do caminho não; tratando como anúncio`,
     };
   }
 
@@ -318,7 +318,7 @@ function classificarUrl(bruto: string): Classificacao {
     tipoDeEntrada: 'catalogo_distribuidor',
     site: null,
     confiancaBp: 6000,
-    motivo: 'site não reconhecido — tratando como catálogo de distribuidor',
+    motivo: 'site não reconhecido; tratando como catálogo de distribuidor',
   };
 }
 
@@ -336,7 +336,7 @@ function classificarArquivo(entrada: Extract<Entrada, { tipo: 'arquivo' }>): Cla
         tipoDeEntrada: 'planilha_exportacao',
         site: entrada.loja,
         confiancaBp: 9000,
-        motivo: `enviada pela área da loja ${entrada.loja} — mapeamento fixo, sem LLM`,
+        motivo: `enviada pela área da loja ${entrada.loja}: mapeamento fixo, sem LLM`,
       };
     }
     const pista = PISTAS_DE_EXPORTACAO.find((p) => p.padrao.test(entrada.nome));
@@ -345,14 +345,14 @@ function classificarArquivo(entrada: Extract<Entrada, { tipo: 'arquivo' }>): Cla
         tipoDeEntrada: 'planilha_exportacao',
         site: pista.site,
         confiancaBp: 8500,
-        motivo: `nome do arquivo indica exportação de ${pista.site} — mapeamento fixo, sem LLM`,
+        motivo: `nome do arquivo indica exportação de ${pista.site}: mapeamento fixo, sem LLM`,
       };
     }
     return {
       tipoDeEntrada: 'planilha_generica',
       site: null,
       confiancaBp: 7000,
-      motivo: 'planilha sem pista de plataforma — precisa de mapeamento de colunas',
+      motivo: 'planilha sem pista de plataforma: precisa de mapeamento de colunas',
     };
   }
 
@@ -361,7 +361,7 @@ function classificarArquivo(entrada: Extract<Entrada, { tipo: 'arquivo' }>): Cla
       tipoDeEntrada: 'tabela_precos_pdf',
       site: null,
       confiancaBp: 9000,
-      motivo: 'PDF — extração de tabela',
+      motivo: 'PDF: extração de tabela',
     };
   }
 
@@ -371,7 +371,7 @@ function classificarArquivo(entrada: Extract<Entrada, { tipo: 'arquivo' }>): Cla
       site: null,
       confiancaBp: 8000,
       // O caso comum de verdade: fornecedor manda foto da planilha no WhatsApp.
-      motivo: 'imagem — extração por visão (foto de tabela de fornecedor)',
+      motivo: 'imagem: extração por visão (foto de tabela de fornecedor)',
     };
   }
 
@@ -426,7 +426,7 @@ function classificarTexto(bruto: string): Classificacao {
       tipoDeEntrada: 'planilha_generica',
       site: null,
       confiancaBp: 6500,
-      motivo: 'texto com estrutura de tabela — tratando como planilha colada',
+      motivo: 'texto com estrutura de tabela; tratando como planilha colada',
     };
   }
 
