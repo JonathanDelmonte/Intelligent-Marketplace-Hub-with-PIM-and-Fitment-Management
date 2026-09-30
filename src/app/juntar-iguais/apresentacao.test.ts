@@ -10,6 +10,7 @@ import {
   cabecalhoDoPar,
   precoLegivel,
   rotuloDoNivel,
+  numerosDosPares,
 } from './apresentacao';
 
 describe('descreverAviso', () => {
@@ -229,5 +230,35 @@ describe('estadoDaLeitura', () => {
     const aviso = estadoDaLeitura({ esperando: 1, temChave: true });
     expect(aviso?.titulo).toBe('1 oferta espera a leitura do título pela IA.');
     expect(aviso?.corpo).toContain('vinte títulos por pedido');
+  });
+});
+
+describe('numerosDosPares', () => {
+  const contagem = { pendente: 0, automatico: 0, resolvido: 0, descartado: 0 };
+
+  it('nada esperando é boa notícia, e o descartado vira nota do que o sistema decidiu', () => {
+    const numeros = numerosDosPares({
+      contagem: { ...contagem, automatico: 4, descartado: 2 },
+      exemplos: { sim: 1, nao: 0 },
+      ocorrencias: 30,
+    });
+    expect(numeros.map((n) => [n.chave, n.valor])).toEqual([
+      ['voce', 0],
+      ['sistema', 4],
+      ['humano', 0],
+      ['ofertas', 30],
+    ]);
+    expect(numeros[0]).toMatchObject({ tom: 'alta', nota: 'nada na zona cinzenta' });
+    expect(numeros[1]?.nota).toBe('e 2 descartados por improváveis');
+    expect(numeros[3]?.nota).toBe('1 exemplo ensinado');
+  });
+
+  it('par esperando pede atenção', () => {
+    const [voce] = numerosDosPares({
+      contagem: { ...contagem, pendente: 3 },
+      exemplos: { sim: 0, nao: 0 },
+      ocorrencias: 10,
+    });
+    expect(voce).toMatchObject({ valor: 3, tom: 'atencao' });
   });
 });

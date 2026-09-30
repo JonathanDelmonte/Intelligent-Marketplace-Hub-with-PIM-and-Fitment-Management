@@ -92,9 +92,9 @@ export default async function PaginaDeJuntarIguais({
         <h1 className={estilo.titulo}>Juntar iguais</h1>
         <p className={estilo.subtitulo}>
           A mesma peça aparece em vários lugares: no anúncio de um concorrente, na planilha de dois
-          fornecedores. Aqui as ofertas do mesmo produto viram <strong>um produto só</strong> do seu
-          catálogo — e aí dá para ver qual fornecedor é mais barato e a que preço o mercado vende. O
-          sistema junta o que consegue provar; o que sobra vem para cá.
+          fornecedores. Aqui as ofertas do mesmo produto viram um produto só do seu catálogo, e aí
+          dá para ver qual fornecedor é mais barato e a que preço o mercado vende. O sistema junta o
+          que consegue provar; o que sobra vem para cá.
         </p>
       </header>
 
@@ -104,28 +104,37 @@ export default async function PaginaDeJuntarIguais({
 
       {leitura !== null && <AvisoDaAcao aviso={leitura} />}
 
-      <section className={estilo.secao} aria-label="Juntar automaticamente">
-        <BotaoResolverAgora limite={LIMITE_DE_RESOLUCAO_MANUAL} />
-      </section>
-
       {semProdutoComProposta.length > 0 && (
-        <section className={estilo.secao} aria-labelledby="sem-produto-titulo">
-          <h2 className={estilo.secaoTitulo} id="sem-produto-titulo">
-            Juntados pelo sistema, esperando um nome
-          </h2>
-          <p className={estilo.subtitulo}>
-            O sistema provou que são o mesmo produto e juntou sozinho. Falta o que ele não pode
-            fazer: dar nome. Com o produto criado, os preços das duas fontes aparecem juntos e a
-            ficha de compatibilidade começa a se montar.
-          </p>
+        <section aria-labelledby="sem-produto-titulo" className={estilo.bloco}>
+          <div className={estilo.blocoTopo}>
+            <div>
+              <h2 className={estilo.blocoTitulo} id="sem-produto-titulo">
+                Juntados pelo sistema, esperando um nome
+              </h2>
+              <p className={estilo.blocoTexto}>
+                O sistema provou que são o mesmo produto e juntou sozinho. Falta o que ele não pode
+                fazer: dar nome. Com o produto criado, os preços das duas fontes aparecem juntos e a
+                ficha de compatibilidade começa a se montar.
+              </p>
+            </div>
+          </div>
           <ParaCriarProduto pares={semProdutoComProposta} />
         </section>
       )}
 
-      <section className={estilo.secao} aria-labelledby="fila-titulo">
-        <h2 className={estilo.secaoTitulo} id="fila-titulo">
-          Esperando decisão
-        </h2>
+      <section aria-labelledby="fila-titulo" className={estilo.bloco}>
+        <div className={estilo.blocoTopo}>
+          <div>
+            <h2 className={estilo.blocoTitulo} id="fila-titulo">
+              Esperando decisão
+            </h2>
+            <p className={estilo.blocoTexto}>
+              Pares na zona cinzenta: nem parecidos o bastante para juntar sozinho, nem diferentes o
+              bastante para descartar. Os dois lados aparecem com os mesmos campos na mesma ordem.
+            </p>
+          </div>
+          <BotaoResolverAgora limite={LIMITE_DE_RESOLUCAO_MANUAL} />
+        </div>
         {estado !== null && <AvisoDaAcao aviso={estado} />}
         <Fila pares={comProposta} />
       </section>

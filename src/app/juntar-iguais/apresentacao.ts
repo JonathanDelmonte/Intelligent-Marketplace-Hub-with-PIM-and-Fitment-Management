@@ -64,7 +64,7 @@ export function descreverAviso(codigo: string | undefined, n: number | undefined
         tom: 'atencao',
         titulo: 'Decisão registrada, mas não deu para ligar ao produto.',
         corpo:
-          'A equivalência está gravada e vale como exemplo; a ligação ao produto falhou — em geral porque o perfil padrão aponta para um slug que não existe no banco. O erro está no log, e a ligação pode ser refeita depois sem perder nada.',
+          'A equivalência está gravada e vale como exemplo; a ligação ao produto falhou. Em geral é porque o perfil padrão aponta para um slug que não existe no banco. O erro está no log, e a ligação pode ser refeita depois sem perder nada.',
       };
     case 'sku_criado':
       return {
@@ -194,7 +194,7 @@ export function cabecalhoDoPar(par: {
 
   const titulo =
     par.decisao === 'mesmo'
-      ? `${maiuscula(quem)} achou que são o mesmo produto, com ${confiancaLegivel(par.confiancaBp)} de confiança — abaixo dos ${confiancaLegivel(CORTE_AGRUPAMENTO_BP)} que agrupam sozinho.`
+      ? `${maiuscula(quem)} achou que são o mesmo produto, com ${confiancaLegivel(par.confiancaBp)} de confiança, abaixo dos ${confiancaLegivel(CORTE_AGRUPAMENTO_BP)} que agrupam sozinho.`
       : par.decisao === 'diferente'
         ? `${maiuscula(quem)} achou que são produtos diferentes, com ${confiancaLegivel(par.confiancaBp)} de confiança.`
         : `${maiuscula(quem)} ficou em ${confiancaLegivel(par.confiancaBp)}, dentro da zona de revisão (${confiancaLegivel(CORTE_REVISAO_BP)} a ${confiancaLegivel(CORTE_AGRUPAMENTO_BP)}).`;
@@ -265,7 +265,7 @@ export function estadoDaLeitura(params: {
     tom: 'ok',
     titulo: `${quantas} a leitura do título pela IA.`,
     corpo:
-      'A leitura roda sozinha com o atalho aberto, vinte títulos por pedido — no plano gratuito, até mil por dia. Quando a cota do dia acaba, ela continua no dia seguinte.',
+      'A leitura roda sozinha com o atalho aberto, vinte títulos por pedido: no plano gratuito, até mil por dia. Quando a cota do dia acaba, ela continua no dia seguinte.',
   };
 }
 
@@ -287,7 +287,7 @@ export function estadoDaBase(params: {
       tom: 'atencao',
       titulo: 'Nada foi avaliado ainda.',
       corpo:
-        'A base tem ofertas, e nenhum par foi comparado. O botão acima faz a primeira passada.',
+        'A base tem ofertas, e nenhum par foi comparado. O botão "Tentar juntar" faz a primeira passada.',
     };
   }
   if (params.pendentes === 0) {
@@ -295,8 +295,71 @@ export function estadoDaBase(params: {
       tom: 'ok',
       titulo: 'Nada esperando por você.',
       corpo:
-        'Todo par avaliado foi decidido — pelo sistema ou por alguém. A fila enche de novo quando entrar oferta nova.',
+        'Todo par avaliado foi decidido, pelo sistema ou por alguém. A fila enche de novo quando entrar oferta nova.',
     };
   }
   return null;
+}
+
+export interface NumeroDosPares {
+  readonly chave: 'voce' | 'sistema' | 'humano' | 'ofertas';
+  readonly rotulo: string;
+  readonly valor: number;
+  readonly nota: string;
+  readonly tom: 'neutro' | 'alta' | 'baixa' | 'atencao';
+}
+
+/**
+ * Os quatro números do alto: o que espera você, o que o sistema decidiu, o que você
+ * decidiu, e quantas ofertas há para comparar.
+ *
+ * Eram seis cartões, um por situação do par e mais dois; o descartado virou nota do que
+ * o sistema decidiu, porque é decisão dele, e os exemplos ensinados viraram nota das
+ * ofertas, que é de onde eles saem.
+ */
+export function numerosDosPares(params: {
+  readonly contagem: Readonly<
+    Record<'pendente' | 'automatico' | 'resolvido' | 'descartado', number>
+  >;
+  readonly exemplos: { readonly sim: number; readonly nao: number };
+  readonly ocorrencias: number;
+}): readonly NumeroDosPares[] {
+  const { contagem, exemplos, ocorrencias } = params;
+  const ensinados = exemplos.sim + exemplos.nao;
+  return [
+    {
+      chave: 'voce',
+      rotulo: 'Esperando você',
+      valor: contagem.pendente,
+      nota: contagem.pendente === 0 ? 'nada na zona cinzenta' : 'só você decide estes',
+      tom: contagem.pendente === 0 ? 'alta' : 'atencao',
+    },
+    {
+      chave: 'sistema',
+      rotulo: 'Decididos pelo sistema',
+      valor: contagem.automatico,
+      nota:
+        contagem.descartado === 0
+          ? 'com evidência clara'
+          : `e ${String(contagem.descartado)} ${contagem.descartado === 1 ? 'descartado' : 'descartados'} por improváveis`,
+      tom: 'neutro',
+    },
+    {
+      chave: 'humano',
+      rotulo: 'Decididos por você',
+      valor: contagem.resolvido,
+      nota: 'nenhuma varredura desfaz',
+      tom: 'neutro',
+    },
+    {
+      chave: 'ofertas',
+      rotulo: 'Ofertas na base',
+      valor: ocorrencias,
+      nota:
+        ensinados === 0
+          ? 'nenhum exemplo ensinado ainda'
+          : `${String(ensinados)} ${ensinados === 1 ? 'exemplo ensinado' : 'exemplos ensinados'}`,
+      tom: 'neutro',
+    },
+  ];
 }
