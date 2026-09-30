@@ -13,12 +13,18 @@ declare const estilo: {
   readonly avisoCorpo: string;
   readonly avisoErro: string;
   readonly avisoTitulo: string;
+  readonly bloco: string;
+  readonly blocoNota: string;
+  readonly blocoTexto: string;
+  readonly blocoTextos: string;
+  readonly blocoTitulo: string;
+  readonly blocoTopo: string;
   readonly botao: string;
   readonly botaoMiudo: string;
   readonly botaoNao: string;
   readonly botaoNeutro: string;
-  readonly botaoSim: string;
   readonly botaoSecundario: string;
+  readonly botaoSim: string;
   readonly cabecalho: string;
   readonly campo: string;
   readonly cartao: string;
@@ -26,6 +32,7 @@ declare const estilo: {
   readonly cartaoNumero: string;
   readonly cartaoRotulo: string;
   readonly dica: string;
+  readonly dupla: string;
   readonly entrada: string;
   readonly envelopeDaTabela: string;
   readonly etiqueta: string;
@@ -41,6 +48,7 @@ declare const estilo: {
   readonly itemFonte: string;
   readonly itemSub: string;
   readonly itemTitulo: string;
+  readonly linhas: string;
   readonly lista: string;
   readonly pagina: string;
   readonly painel: string;

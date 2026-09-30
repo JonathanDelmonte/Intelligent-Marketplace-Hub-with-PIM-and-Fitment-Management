@@ -4,7 +4,8 @@
  * Cada número num cartão: o ícone num quadrado, o nome do número, o número grande e uma
  * nota embaixo. Um cartão por tela pode ser escuro, na cor da lateral: o do número que
  * mais importa ali. `base` é o desenho do pé do cartão (uma barra, uma lista curta),
- * quando o número pede um.
+ * quando o número pede um. Com `href`, o cartão inteiro vira link: o número "4 atrasados"
+ * leva aos quatro.
  *
  * Sem estado e sem diretiva: serve às telas de servidor e às de navegador.
  */
@@ -24,6 +25,8 @@ export interface NumeroDoPainel {
   readonly icone: ReactNode;
   readonly escuro?: boolean;
   readonly base?: ReactNode;
+  /** Para onde o cartão leva, quando o número tem uma lista por trás. */
+  readonly href?: string;
 }
 
 const CLASSE_DA_NOTA: Readonly<Record<TomDoNumero, readonly [string, string]>> = {
@@ -36,8 +39,8 @@ const CLASSE_DA_NOTA: Readonly<Record<TomDoNumero, readonly [string, string]>> =
 export function CartaoDeNumero({ numero }: { readonly numero: NumeroDoPainel }) {
   const escuro = numero.escuro === true;
   const [clara, escura] = CLASSE_DA_NOTA[numero.tom ?? 'neutro'];
-  return (
-    <div className={escuro ? estilo.cartaoEscuro : estilo.cartao}>
+  const conteudo = (
+    <>
       <div className={estilo.topo}>
         <span className={escuro ? estilo.iconeEscuro : estilo.icone}>{numero.icone}</span>
         <span className={escuro ? estilo.rotuloEscuro : estilo.rotulo}>{numero.rotulo}</span>
@@ -52,7 +55,15 @@ export function CartaoDeNumero({ numero }: { readonly numero: NumeroDoPainel }) 
         <p className={escuro ? escura : clara}>{numero.nota}</p>
       )}
       {numero.base === undefined ? null : <div className={estilo.base}>{numero.base}</div>}
-    </div>
+    </>
+  );
+  const classe = escuro ? estilo.cartaoEscuro : estilo.cartao;
+  return numero.href === undefined ? (
+    <div className={classe}>{conteudo}</div>
+  ) : (
+    <a className={`${classe} ${estilo.cartaoLink}`} href={numero.href}>
+      {conteudo}
+    </a>
   );
 }
 

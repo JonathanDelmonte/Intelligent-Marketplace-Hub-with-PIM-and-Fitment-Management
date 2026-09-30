@@ -7,6 +7,7 @@ declare const estilo: {
   readonly base: string;
   readonly cartao: string;
   readonly cartaoEscuro: string;
+  readonly cartaoLink: string;
   readonly faixa: string;
   readonly icone: string;
   readonly iconeEscuro: string;

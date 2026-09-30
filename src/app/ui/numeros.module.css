@@ -26,6 +26,29 @@
   box-shadow: var(--cartao-sombra);
 }
 
+/*
+ * O cartão que leva a uma lista. Sem sublinhado e sem cor de link: o que diz que ele
+ * leva a algum lugar é a borda que escurece e a mão do cursor.
+ */
+.cartaoLink {
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 120ms ease;
+}
+
+.cartaoLink:hover {
+  border-color: var(--tinta-3);
+}
+
+.cartaoEscuro.cartaoLink:hover {
+  border-color: color-mix(in srgb, var(--cartao-escuro) 70%, white);
+}
+
+.cartaoLink:focus-visible {
+  outline: var(--foco);
+  outline-offset: var(--foco-deslocamento);
+}
+
 /* O cartão escuro, na cor da lateral: um por tela, no número que mais importa ali. */
 .cartaoEscuro {
   background: var(--cartao-escuro);
