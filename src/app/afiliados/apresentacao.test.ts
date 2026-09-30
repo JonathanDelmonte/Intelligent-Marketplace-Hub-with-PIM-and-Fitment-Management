@@ -16,6 +16,7 @@ import {
   tagsDoAmbiente,
   textoDaDecisao,
   VARIAVEL_DA_TAG,
+  numerosDosAfiliados,
 } from './apresentacao';
 
 describe('tagsDoAmbiente', () => {
@@ -194,5 +195,35 @@ describe('descreverAviso', () => {
     const aviso = descreverAviso('numero_invalido');
     expect(aviso?.tom).toBe('erro');
     expect(aviso?.corpo).toContain('sem clicar');
+  });
+});
+
+describe('numerosDosAfiliados', () => {
+  it('sem clique, a venda por clique é travessão, e não zero', () => {
+    const numeros = numerosDosAfiliados({
+      pendentes: 3,
+      desempenho: { publicadas: 1, cliques: 0, conversoes: 0, conversaoBp: null, mensagem: '' },
+    });
+    expect(numeros.map((n) => [n.chave, n.valor])).toEqual([
+      ['fila', '3'],
+      ['publicadas', '1'],
+      ['cliques', '0'],
+      ['conversao', '—'],
+    ]);
+    expect(numeros[3]?.nota).toBe('sem clique, não há o que dividir');
+  });
+
+  it('venda que saiu do clique é boa notícia, em verde', () => {
+    const [, , cliques] = numerosDosAfiliados({
+      pendentes: 0,
+      desempenho: {
+        publicadas: 2,
+        cliques: 35,
+        conversoes: 3,
+        conversaoBp: pontosBase(857),
+        mensagem: '',
+      },
+    });
+    expect(cliques).toMatchObject({ valor: '35', nota: '3 viraram venda', tom: 'alta' });
   });
 });

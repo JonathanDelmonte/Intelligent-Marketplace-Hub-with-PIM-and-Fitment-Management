@@ -140,7 +140,7 @@ export function textoDaDecisao(decisao: DecisaoDePublicacao): TextoDaDecisao {
         tom: 'neutro',
         titulo: 'Nada na fila.',
         corpo:
-          'Acrescente uma oferta abaixo. O desconto é medido contra a referência que você informar — sem referência não há desconto para ordenar.',
+          'Acrescente uma oferta ao lado. O desconto é medido contra a referência que você informar: sem referência não há desconto para ordenar.',
       };
   }
 }
@@ -159,7 +159,7 @@ export function resumoDaFila(params: {
   const { pendentes, desempenho } = params;
 
   if (pendentes === 0 && desempenho.publicadas === 0) {
-    return 'Nenhuma oferta na fila. O desconto é medido contra a mediana de 90 dias — o monitor de preço é onde essa mediana aparece.';
+    return 'Nenhuma oferta na fila. O desconto é medido contra a mediana de 90 dias, e o monitor de preço é onde essa mediana aparece.';
   }
 
   const fila =
@@ -237,7 +237,7 @@ export function descreverAviso(codigo: string | undefined): Aviso | null {
         tom: 'erro',
         titulo: 'Sem tag de afiliado para essa plataforma.',
         corpo:
-          'Nada foi gravado. Link sem tag é link comum, e publicar um deles é trabalho que não paga comissão — configure a variável de ambiente da plataforma.',
+          'Nada foi gravado. Link sem tag é link comum, e publicar um deles é trabalho que não paga comissão. Configure a variável de ambiente da plataforma.',
       };
     case 'url_invalida':
       return {
@@ -256,9 +256,59 @@ export function descreverAviso(codigo: string | undefined): Aviso | null {
         tom: 'erro',
         titulo: 'Esses números não fecham.',
         corpo:
-          'Clique e conversão são inteiros não negativos, e conversão não passa de clique — ninguém compra sem clicar. Nada foi alterado.',
+          'Clique e conversão são inteiros não negativos, e conversão não passa de clique: ninguém compra sem clicar. Nada foi alterado.',
       };
     case 'falha':
       return { tom: 'erro', titulo: 'Não deu.', corpo: 'Nada foi gravado. O erro está no log.' };
   }
+}
+
+export interface NumeroDosAfiliados {
+  readonly chave: 'fila' | 'publicadas' | 'cliques' | 'conversao';
+  readonly rotulo: string;
+  readonly valor: string;
+  readonly nota: string;
+  readonly tom: 'neutro' | 'alta' | 'baixa' | 'atencao';
+}
+
+/**
+ * Os quatro números do alto: o que espera publicação, o que já saiu, os cliques e a
+ * venda por clique. A conversão aparece como travessão quando não houve clique, e não
+ * como 0%: zero afirmaria que o grupo não compra, quando o que houve foi ninguém clicar.
+ */
+export function numerosDosAfiliados(params: {
+  readonly pendentes: number;
+  readonly desempenho: Desempenho;
+}): readonly NumeroDosAfiliados[] {
+  const { pendentes, desempenho } = params;
+  return [
+    {
+      chave: 'fila',
+      rotulo: 'Na fila',
+      valor: pendentes.toLocaleString('pt-BR'),
+      nota: pendentes === 0 ? 'nada esperando' : 'esperando publicação',
+      tom: 'neutro',
+    },
+    {
+      chave: 'publicadas',
+      rotulo: 'Publicadas',
+      valor: desempenho.publicadas.toLocaleString('pt-BR'),
+      nota: 'saíram no grupo',
+      tom: 'neutro',
+    },
+    {
+      chave: 'cliques',
+      rotulo: 'Cliques',
+      valor: desempenho.cliques.toLocaleString('pt-BR'),
+      nota: `${desempenho.conversoes.toLocaleString('pt-BR')} ${desempenho.conversoes === 1 ? 'virou venda' : 'viraram venda'}`,
+      tom: desempenho.conversoes === 0 ? 'neutro' : 'alta',
+    },
+    {
+      chave: 'conversao',
+      rotulo: 'Venda por clique',
+      valor: desempenho.conversaoBp === null ? '—' : formatarPontosBase(desempenho.conversaoBp, 1),
+      nota: desempenho.conversaoBp === null ? 'sem clique, não há o que dividir' : 'do grupo',
+      tom: 'neutro',
+    },
+  ];
 }

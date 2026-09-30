@@ -6,17 +6,29 @@
  * oferta em dois momentos pede coisas diferentes, e um cartão que mostra os dois ao
  * mesmo tempo faz a pessoa escolher entre campos que não se aplicam.
  */
+import type { ReactNode } from 'react';
 import type { Desempenho } from '@/dominio/afiliados/publicacao';
 import type { OfertaGravada } from '@/dominio/afiliados/repositorio';
 import type { Plataforma } from '@/dominio/precificacao/tipos';
-import { formatarBRL, formatarPontosBase } from '@/lib/dinheiro';
+import { formatarBRL } from '@/lib/dinheiro';
+import { FaixaDeNumeros } from '../ui/numeros';
+import {
+  SinalAlerta,
+  SinalCaixa,
+  SinalCerto,
+  SinalEnvio,
+  SinalPercentual,
+  SinalSacola,
+} from '../ui/sinais';
 import { formatarAbsoluto, formatarRelativo } from '../ui/tempo';
 import { cadastrarOferta, informarDesempenho, marcarPublicada } from './acoes';
 import {
   etiquetaDoDesconto,
+  numerosDosAfiliados,
   ROTULO_DA_PLATAFORMA,
   VARIAVEL_DA_TAG,
   type Aviso,
+  type NumeroDosAfiliados,
   type TextoDaDecisao,
 } from './apresentacao';
 import estilo from './afiliados.module.css';
@@ -39,9 +51,9 @@ export function AvisoDaAcao({ aviso }: { readonly aviso: Aviso }) {
 /**
  * A decisão de publicar, em destaque.
  *
- * É a única coisa da tela que responde "e agora?", então fica antes da fila. Esperar
- * tem o mesmo peso visual de publicar: das duas, esperar é a que precisa de explicação
- * para não parecer defeito.
+ * É a única coisa da tela que responde "e agora?", então fica no alto da coluna do lado.
+ * Esperar tem o mesmo peso visual de publicar: das duas, esperar é a que precisa de
+ * explicação para não parecer defeito.
  */
 export function Decisao({ texto }: { readonly texto: TextoDaDecisao }) {
   const classe =
@@ -51,49 +63,45 @@ export function Decisao({ texto }: { readonly texto: TextoDaDecisao }) {
         ? estilo.decisaoAtencao
         : estilo.decisao;
   return (
-    <div className={classe}>
-      <strong className={estilo.decisaoTitulo}>{texto.titulo}</strong>
-      <span className={estilo.decisaoCorpo}>{texto.corpo}</span>
-    </div>
+    <section aria-labelledby="agora-titulo" className={classe}>
+      <span aria-hidden="true" className={estilo.decisaoSinal}>
+        {texto.tom === 'ok' ? <SinalCerto /> : <SinalAlerta />}
+      </span>
+      <div>
+        <h2 className={estilo.decisaoPergunta} id="agora-titulo">
+          Publicar agora?
+        </h2>
+        <p className={estilo.decisaoTitulo}>{texto.titulo}</p>
+        <p className={estilo.decisaoCorpo}>{texto.corpo}</p>
+      </div>
+    </section>
   );
 }
 
+const ICONE_DO_NUMERO: Readonly<Record<NumeroDosAfiliados['chave'], ReactNode>> = {
+  fila: <SinalCaixa />,
+  publicadas: <SinalEnvio />,
+  cliques: <SinalSacola />,
+  conversao: <SinalPercentual />,
+};
+
 /**
- * Os números do que foi publicado.
- *
- * A conversão aparece como travessão quando não houve clique, e não como 0%: zero
- * afirmaria que o grupo não compra, quando o que houve foi ninguém clicar — e as duas
- * leituras levam a ações opostas. A nota embaixo é a leitura, e fica junto do número
- * de propósito.
+ * Os quatro números do alto. O escuro é o da fila, que é o trabalho de hoje; a leitura
+ * do que o grupo respondeu fica no cartão dela, ao lado da fila.
  */
-export function PainelDeDesempenho({ desempenho }: { readonly desempenho: Desempenho }) {
+export function Numeros(props: { readonly pendentes: number; readonly desempenho: Desempenho }) {
   return (
-    <>
-      <ul className={estilo.painel}>
-        <li className={estilo.cartao}>
-          <span className={estilo.cartaoNumero}>{desempenho.publicadas}</span>
-          <span className={estilo.cartaoRotulo}>publicadas</span>
-        </li>
-        <li className={estilo.cartao}>
-          <span className={estilo.cartaoNumero}>{desempenho.cliques}</span>
-          <span className={estilo.cartaoRotulo}>cliques</span>
-        </li>
-        <li className={estilo.cartao}>
-          <span className={estilo.cartaoNumero}>{desempenho.conversoes}</span>
-          <span className={estilo.cartaoRotulo}>vendas</span>
-        </li>
-        <li className={estilo.cartao}>
-          <span className={estilo.cartaoNumero}>
-            {desempenho.conversaoBp === null ? '—' : formatarPontosBase(desempenho.conversaoBp, 1)}
-          </span>
-          <span className={estilo.cartaoRotulo}>venda por clique</span>
-          <span className={estilo.cartaoNota}>
-            {desempenho.conversaoBp === null ? 'sem clique, não há o que dividir' : 'do grupo'}
-          </span>
-        </li>
-      </ul>
-      <p className={estilo.dica}>{desempenho.mensagem}</p>
-    </>
+    <FaixaDeNumeros
+      itens={numerosDosAfiliados(props).map((numero) => ({
+        rotulo: numero.rotulo,
+        valor: numero.valor,
+        nota: numero.nota,
+        tom: numero.tom,
+        icone: ICONE_DO_NUMERO[numero.chave],
+        escuro: numero.chave === 'fila',
+      }))}
+      rotulo="Os afiliados em números"
+    />
   );
 }
 
@@ -115,7 +123,7 @@ function Oferta({
         : estilo.etiqueta;
 
   return (
-    <li className={destacada ? estilo.itemProximo : estilo.item}>
+    <li className={destacada ? `${estilo.item} ${estilo.itemProximo}` : estilo.item}>
       <div className={estilo.itemCabecalho}>
         <div>
           <h3 className={estilo.itemTitulo}>
@@ -162,7 +170,7 @@ function Oferta({
         <form action={informarDesempenho} className={estilo.numeros}>
           <input name="id" type="hidden" value={oferta.id} />
           <label className={estilo.campoMiudo}>
-            Cliques
+            <span className={estilo.rotulo}>Cliques</span>
             <input
               className={estilo.entradaMiuda}
               defaultValue={oferta.cliques}
@@ -173,7 +181,7 @@ function Oferta({
             />
           </label>
           <label className={estilo.campoMiudo}>
-            Vendas
+            <span className={estilo.rotulo}>Vendas</span>
             <input
               className={estilo.entradaMiuda}
               defaultValue={oferta.conversoes}
@@ -204,7 +212,7 @@ export function Fila({
   if (ofertas.length === 0) {
     return (
       <p className={estilo.vazio}>
-        Nada na fila. O link de afiliado não é o trabalho: o trabalho é achar a queda real — e é o
+        Nada na fila. O link de afiliado não é o trabalho: o trabalho é achar a queda real, e é o
         monitor de preço que diz qual oferta está abaixo da própria mediana.
       </p>
     );
@@ -236,7 +244,7 @@ export function FormularioDeOferta({
   return (
     <form action={cadastrarOferta} className={estilo.formulario}>
       <label className={estilo.campo}>
-        Plataforma
+        <span className={estilo.rotulo}>Loja</span>
         <select className={estilo.entrada} name="plataforma" required>
           {disponiveis.map((plataforma) => (
             <option key={plataforma} value={plataforma}>
@@ -247,7 +255,7 @@ export function FormularioDeOferta({
       </label>
 
       <label className={estilo.campoLargo}>
-        Link do anúncio
+        <span className={estilo.rotulo}>Link do anúncio</span>
         <input
           className={estilo.entrada}
           name="url"
@@ -256,13 +264,13 @@ export function FormularioDeOferta({
           type="url"
         />
         <span className={estilo.ajuda}>
-          Cole o endereço da página. A sua tag é acrescentada aqui — o que já estava na URL não é
+          Cole o endereço da página. A sua tag é acrescentada aqui, e o que já estava na URL não é
           jogado fora, porque às vezes é o que faz a página certa abrir.
         </span>
       </label>
 
       <label className={estilo.campo}>
-        Preço agora
+        <span className={estilo.rotulo}>Preço agora</span>
         <input
           className={estilo.entrada}
           inputMode="decimal"
@@ -274,7 +282,7 @@ export function FormularioDeOferta({
       </label>
 
       <label className={estilo.campo}>
-        Mediana de 90 dias
+        <span className={estilo.rotulo}>Mediana de 90 dias</span>
         <input
           className={estilo.entrada}
           inputMode="decimal"

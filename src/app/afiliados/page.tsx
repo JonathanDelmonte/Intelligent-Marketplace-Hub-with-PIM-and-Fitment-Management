@@ -32,7 +32,7 @@ import {
   Decisao,
   Fila,
   FormularioDeOferta,
-  PainelDeDesempenho,
+  Numeros,
   TagsQueFaltam,
 } from './componentes';
 import { LIMITE_DA_FILA } from './constantes';
@@ -75,52 +75,51 @@ export default async function PaginaDeAfiliados({
           a diferença entre um grupo que compra e um grupo em que todo mundo silenciou as
           notificações.
         </p>
-        <p className={estilo.resumo}>{resumoDaFila({ pendentes, desempenho })}</p>
       </header>
 
       {aviso !== null && <AvisoDaAcao aviso={aviso} />}
 
-      <section aria-labelledby="agora-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="agora-titulo">
-          Publicar agora?
-        </h2>
-        <Decisao texto={textoDaDecisao(decisao)} />
-      </section>
+      <Numeros desempenho={desempenho} pendentes={pendentes} />
 
-      <section aria-labelledby="fila-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="fila-titulo">
-          A fila
-        </h2>
-        <p className={estilo.dica}>
-          Ordenada por desconto real decrescente, porque o teto do dia existe e a última da fila
-          pode não sair. &ldquo;Saiu no grupo&rdquo; guarda a hora — é dela que sai o intervalo até
-          a próxima, e marcar duas vezes não a reescreve.
-        </p>
-        <Fila
-          agora={agora}
-          ofertas={ofertas}
-          proximaId={decisao.tipo === 'publicar' ? decisao.oferta.id : null}
-        />
-      </section>
+      <div className={estilo.grade}>
+        <section aria-labelledby="fila-titulo" className={estilo.bloco}>
+          <h2 className={estilo.blocoTitulo} id="fila-titulo">
+            A fila
+          </h2>
+          <p className={estilo.blocoTexto}>
+            {resumoDaFila({ pendentes, desempenho })} Ordenada por desconto real, porque o teto do
+            dia existe e a última da fila pode não sair.
+          </p>
+          <Fila
+            agora={agora}
+            ofertas={ofertas}
+            proximaId={decisao.tipo === 'publicar' ? decisao.oferta.id : null}
+          />
+        </section>
 
-      <section aria-labelledby="resposta-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="resposta-titulo">
-          O que o grupo respondeu
-        </h2>
-        <PainelDeDesempenho desempenho={desempenho} />
-      </section>
+        <div className={estilo.coluna}>
+          <Decisao texto={textoDaDecisao(decisao)} />
 
-      <section aria-labelledby="nova-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="nova-titulo">
-          Acrescentar oferta
-        </h2>
-        <p className={estilo.dica}>
-          A mediana de 90 dias é opcional e é o que mede o desconto: sem ela a oferta entra no fim
-          da fila, porque não há desconto medido para ordenar.
-        </p>
-        <FormularioDeOferta disponiveis={plataformasComTag(tags)} />
-        <TagsQueFaltam faltando={plataformasSemTag(tags)} />
-      </section>
+          <section aria-labelledby="nova-titulo" className={estilo.bloco}>
+            <h2 className={estilo.blocoTitulo} id="nova-titulo">
+              Acrescentar oferta
+            </h2>
+            <p className={estilo.blocoTexto}>
+              A mediana de 90 dias é opcional e é o que mede o desconto: sem ela a oferta entra no
+              fim da fila.
+            </p>
+            <FormularioDeOferta disponiveis={plataformasComTag(tags)} />
+            <TagsQueFaltam faltando={plataformasSemTag(tags)} />
+          </section>
+
+          <section aria-labelledby="resposta-titulo" className={estilo.bloco}>
+            <h2 className={estilo.blocoTitulo} id="resposta-titulo">
+              O que o grupo respondeu
+            </h2>
+            <p className={estilo.blocoTexto}>{desempenho.mensagem}</p>
+          </section>
+        </div>
+      </div>
     </main>
   );
 }

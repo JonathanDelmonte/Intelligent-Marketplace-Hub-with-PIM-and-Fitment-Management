@@ -243,6 +243,6 @@ export function medirDesempenho(ofertas: readonly OfertaMedida[]): Desempenho {
     cliques,
     conversoes,
     conversaoBp,
-    mensagem: `${contagem(cliques, 'clique', 'cliques')} e ${contagem(conversoes, 'venda', 'vendas')} em ${contagem(publicadas.length, 'oferta', 'ofertas')}. Clique sem venda é oferta que parece boa e não é — provavelmente o preço na página não é o do post.`,
+    mensagem: `${contagem(cliques, 'clique', 'cliques')} e ${contagem(conversoes, 'venda', 'vendas')} em ${contagem(publicadas.length, 'oferta', 'ofertas')}. Clique sem venda é oferta que parece boa e não é: provavelmente o preço na página não é o do post.`,
   };
 }

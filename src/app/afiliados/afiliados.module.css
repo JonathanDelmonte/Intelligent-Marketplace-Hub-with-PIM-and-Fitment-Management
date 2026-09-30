@@ -1,19 +1,23 @@
 /*
- * Estilo da tela de afiliados.
+ * Estilo da tela de afiliados, no desenho aprovado na Catálogo e preço (o porquê de cada
+ * forma está no cabeçalho de `catalogo/catalogo.module.css`). Cores só de variável de
+ * tema (ADR 0003).
  *
- * Quase tudo vem de `ui/comum.module.css` por `composes`. O que é desta tela: o painel
- * da decisão, o link inteiro do afiliado (texto para copiar, e por isso monoespaçado e
- * quebrável em qualquer ponto), e o formulário miúdo de clique e venda dentro do
- * cartão.
+ * Quatro números no alto; a fila à esquerda, e à direita a decisão de publicar, o
+ * formulário e a leitura do que o grupo respondeu. A decisão e a próxima oferta tinham
+ * uma borda colorida de um lado, e o link era azul em letra de código; agora a decisão
+ * é um cartão de fundo suave, a próxima é a linha realçada, e o link é texto cinza.
  */
 
 .pagina {
   composes: pagina from '../ui/comum.module.css';
-  --largura-pagina: 64rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .cabecalho {
-  composes: cabecalho from '../ui/comum.module.css';
+  margin-bottom: 0.5rem;
 }
 
 .titulo {
@@ -24,18 +28,30 @@
   composes: subtitulo from '../ui/comum.module.css';
 }
 
-.resumo {
-  composes: resumo from '../ui/comum.module.css';
-  font-size: 1.0625rem;
-  margin-top: 0.75rem;
+.grade {
+  align-items: start;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.5fr) minmax(20rem, 1fr);
 }
 
-.secao {
-  composes: secao from '../ui/comum.module.css';
+.coluna {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
 }
 
-.secaoTitulo {
-  composes: secaoTitulo from '../ui/comum.module.css';
+.bloco {
+  composes: bloco from '../ui/comum.module.css';
+}
+
+.blocoTitulo {
+  composes: blocoTitulo from '../ui/comum.module.css';
+}
+
+.blocoTexto {
+  composes: blocoTexto from '../ui/comum.module.css';
 }
 
 .aviso {
@@ -58,44 +74,96 @@
   composes: avisoCorpo from '../ui/comum.module.css';
 }
 
-.painel {
-  composes: painel from '../ui/comum.module.css';
+/* ── A decisão ────────────────────────────────────────────────────────────── */
+
+.decisao,
+.decisaoOk,
+.decisaoAtencao {
+  border-radius: var(--raio);
+  display: grid;
+  gap: 0.875rem;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  padding: 1.25rem 1.5rem;
 }
 
-.cartao {
-  composes: cartao from '../ui/comum.module.css';
+.decisao {
+  composes: bloco from '../ui/comum.module.css';
+  display: grid;
 }
 
-.cartaoNumero {
-  composes: cartaoNumero from '../ui/comum.module.css';
+.decisaoOk {
+  background: var(--lucro-suave);
 }
 
-.cartaoRotulo {
-  composes: cartaoRotulo from '../ui/comum.module.css';
+.decisaoAtencao {
+  background: var(--atencao-suave);
 }
 
-.cartaoNota {
-  composes: cartaoNota from '../ui/comum.module.css';
+.decisaoSinal {
+  align-items: center;
+  background: var(--cartao);
+  border-radius: var(--raio);
+  display: inline-flex;
+  height: 2rem;
+  justify-content: center;
+  width: 2rem;
 }
+
+.decisaoOk .decisaoSinal {
+  color: var(--lucro);
+}
+
+.decisaoAtencao .decisaoSinal {
+  color: var(--atencao);
+}
+
+.decisaoPergunta {
+  color: var(--tinta-2);
+  font-size: 0.78125rem;
+  font-weight: 540;
+  margin: 0;
+}
+
+.decisaoTitulo {
+  font-size: 1rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 0.125rem 0 0;
+}
+
+.decisaoCorpo {
+  color: var(--tinta-2);
+  font-size: 0.84375rem;
+  margin: 0.25rem 0 0;
+}
+
+/* ── A fila ───────────────────────────────────────────────────────────────── */
 
 .lista {
-  composes: lista from '../ui/comum.module.css';
+  list-style: none;
+  margin: 0.875rem 0 0;
+  padding: 0;
 }
 
 .item {
-  composes: item from '../ui/comum.module.css';
+  border-top: 1px solid var(--linha);
+  padding: 1rem 0;
 }
 
-/*
- * A próxima da fila.
- *
- * Borda no lado esquerdo, e não fundo colorido: a etiqueta "próxima" já diz qual é, e
- * a borda serve para achá-la de relance numa fila de vinte. Fundo aqui competiria com
- * o painel da decisão, que é onde a informação está escrita.
- */
+.item:last-child {
+  padding-bottom: 0;
+}
+
+/* A próxima a sair: a linha realçada, até as bordas do cartão. */
 .itemProximo {
-  composes: item from '../ui/comum.module.css';
-  border-left: 3px solid var(--cor-ok);
+  background: var(--realce);
+  margin: 0 -1.5rem;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.item.itemProximo:last-child {
+  padding-bottom: 1rem;
 }
 
 .itemCabecalho {
@@ -122,127 +190,34 @@
   composes: etiqueta etiquetaAtencao from '../ui/comum.module.css';
 }
 
+/* "Próxima": a etiqueta em preto, porque é a vez dela. */
 .etiquetaViva {
-  composes: etiqueta etiquetaViva from '../ui/comum.module.css';
+  composes: etiqueta from '../ui/comum.module.css';
+  color: var(--tinta);
+  font-weight: 620;
 }
 
-/* Duas etiquetas na mesma linha: "próxima" e o desconto. */
 .etiquetas {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.375rem;
+  gap: 0.375rem 0.875rem;
+  justify-content: flex-end;
 }
 
-.formulario {
-  composes: formulario from '../ui/comum.module.css';
-}
-
-/*
- * Campo de preço com teto de largura.
- *
- * Sem o teto, o campo compartilhado cresce e "49,90" ganha meia tela de caixa vazia —
- * caixa larga promete texto longo, e aqui o que cabe são seis caracteres.
- */
-.campo {
-  composes: campo from '../ui/comum.module.css';
-  --largura-campo: 12rem;
-  max-width: 20rem;
-}
-
-/* O link ocupa a linha: é o campo mais longo, e o mais colado de outro lugar. */
-.campoLargo {
-  composes: campo from '../ui/comum.module.css';
-  flex-basis: 100%;
-}
-
-.entrada {
-  composes: entrada from '../ui/comum.module.css';
-}
-
-.ajuda {
-  color: var(--cor-texto-fraco);
-  font-size: 0.75rem;
-  max-width: var(--medida-texto);
-}
-
-.botao {
-  composes: botao from '../ui/comum.module.css';
-}
-
-/* O botão ocupa a linha inteira do formulário, e não o resto de uma linha de campos. */
-.acao {
-  display: flex;
-  flex-basis: 100%;
-}
-
-.botaoMiudo {
-  composes: botaoMiudo from '../ui/comum.module.css';
-}
-
-.dica {
-  composes: dica from '../ui/comum.module.css';
-}
-
-.vazio {
-  composes: vazio from '../ui/comum.module.css';
-}
-
-/*
- * O painel da decisão.
- *
- * Fundo, e não borda: é a única coisa da tela que responde "e agora?", e é para ser
- * lida sem escolha. A cor fica no lado esquerdo — tom de fundo inteiro em verde ou
- * amarelo disputa com o resto da página.
- */
-.decisao {
-  background: var(--cor-superficie);
-  border: 1px solid var(--cor-borda);
-  border-left: 3px solid var(--cor-borda);
-  border-radius: var(--raio);
-  box-shadow: var(--sombra-cartao);
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin-top: 0.75rem;
-  padding: 0.875rem 1rem;
-}
-
-.decisaoOk {
-  composes: decisao;
-  border-left-color: var(--cor-ok);
-}
-
-.decisaoAtencao {
-  composes: decisao;
-  border-left-color: var(--cor-aviso);
-}
-
-.decisaoTitulo {
-  font-size: 1.0625rem;
-}
-
-.decisaoCorpo {
-  color: var(--cor-texto-fraco);
-  max-width: var(--medida-texto);
-}
-
-/*
- * O link de afiliado.
- *
- * Monoespaçado e quebrável em qualquer ponto porque é endereço: o que se faz com ele é
- * conferir a tag e copiar, e endereço quebrado em palavra inteira estoura a largura no
- * celular.
- */
+/* O link inteiro, para copiar e colar no grupo: cinza, e quebra em qualquer ponto. */
 .link {
-  color: var(--cor-primaria);
+  color: var(--tinta-2);
   display: block;
-  font-family: var(--fonte-mono);
-  font-size: 0.8125rem;
-  margin-top: 0.625rem;
+  font-size: 0.78125rem;
+  margin-top: 0.5rem;
   overflow-wrap: anywhere;
 }
 
-/* Clique e venda, dentro do cartão da oferta publicada. */
+.link:hover {
+  color: var(--tinta);
+}
+
 .numeros {
   align-items: flex-end;
   display: flex;
@@ -254,23 +229,93 @@
 .campoMiudo {
   display: flex;
   flex-direction: column;
-  font-size: 0.75rem;
-  font-weight: 600;
   gap: 0.25rem;
 }
 
-.entradaMiuda {
-  background: var(--cor-superficie);
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio-pequeno);
-  color: inherit;
-  /* 16px: abaixo disso o Safari do iPhone dá zoom ao focar o campo. */
-  font-size: 1rem;
-  padding: 0.375rem 0.5rem;
-  width: 6rem;
+.campoMiudo > .rotulo {
+  font-size: 0.75rem;
 }
 
-.entradaMiuda:focus-visible {
-  outline: var(--foco);
-  outline-offset: var(--foco-deslocamento);
+.entradaMiuda {
+  composes: entrada from '../ui/comum.module.css';
+  min-height: 2.125rem;
+  padding: 0.25rem 0.5rem;
+  width: 6.5rem;
+}
+
+.botaoMiudo {
+  composes: botaoMiudo from '../ui/comum.module.css';
+  margin-top: 0.75rem;
+}
+
+.numeros .botaoMiudo {
+  margin-top: 0;
+}
+
+.vazio {
+  composes: vazio from '../ui/comum.module.css';
+  margin-top: 0.875rem;
+}
+
+/* ── O formulário ─────────────────────────────────────────────────────────── */
+
+.formulario {
+  display: grid;
+  gap: 0.875rem 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 1rem;
+}
+
+.campo,
+.campoLargo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.campoLargo {
+  grid-column: 1 / -1;
+}
+
+.formulario > .campo:first-of-type {
+  grid-column: 1 / -1;
+}
+
+.rotulo {
+  color: var(--tinta);
+  font-size: 0.8125rem;
+  font-weight: 560;
+}
+
+.entrada {
+  composes: entrada from '../ui/comum.module.css';
+  width: 100%;
+}
+
+.ajuda {
+  color: var(--tinta-3);
+  font-size: 0.75rem;
+}
+
+.acao {
+  grid-column: 1 / -1;
+}
+
+.botao {
+  composes: botao from '../ui/comum.module.css';
+}
+
+.dica {
+  composes: dica from '../ui/comum.module.css';
+  border-top: 1px solid var(--linha);
+  margin-top: 1rem;
+  max-width: none;
+  padding-top: 0.875rem;
+}
+
+@media (max-width: 64rem) {
+  .grade {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
