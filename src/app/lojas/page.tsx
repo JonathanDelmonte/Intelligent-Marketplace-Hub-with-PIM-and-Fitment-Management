@@ -19,6 +19,7 @@ import { ROTULO_DA_PLATAFORMA } from '../ui/rotulos';
 import { LOJAS_A_CAMINHO, O_QUE_UMA_LOJA_NOVA_PRECISA } from './candidatas';
 import { IDENTIDADE_DA_LOJA } from './identidade';
 import { Selo } from './selo';
+import { SinalAvancar } from '../ui/sinais';
 import estilo from './lojas.module.css';
 
 export const metadata: Metadata = { title: 'Adicionar loja' };
@@ -65,10 +66,13 @@ export default async function PaginaDeLojas() {
                     <h3 className={estilo.lojaNome}>{ROTULO_DA_PLATAFORMA[plataforma]}</h3>
                   </div>
                   <p className={estilo.lojaTexto}>{registro.de(plataforma).comoConectar}</p>
-                  <p className={`${estilo.lojaRodape} ${estilo.lojaNaBarra}`}>
-                    {estado?.legenda ?? 'Sem dados'} ·{' '}
-                    <Link href={caminhoDaLoja(plataforma)}>abrir a área</Link>
-                  </p>
+                  <div className={estilo.lojaRodape}>
+                    <span className={estilo.lojaNaBarra}>{estado?.legenda ?? 'Sem dados'}</span>
+                    <Link className={estilo.lojaAbrir} href={caminhoDaLoja(plataforma)}>
+                      Abrir a área
+                      <SinalAvancar tamanho={12} />
+                    </Link>
+                  </div>
                 </article>
               </li>
             );
@@ -92,7 +96,9 @@ export default async function PaginaDeLojas() {
                   Entra com a planilha de pedidos e a comissão conferida. A integração vem depois,
                   se a loja abrir uma.
                 </p>
-                <p className={`${estilo.lojaRodape} ${estilo.lojaACaminho}`}>Ainda não atendida</p>
+                <div className={estilo.lojaRodape}>
+                  <span className={estilo.lojaACaminho}>Ainda não atendida</span>
+                </div>
               </article>
             </li>
           ))}
@@ -100,16 +106,14 @@ export default async function PaginaDeLojas() {
 
         <div className={estilo.blocoAbaixo}>
           <h3 className={estilo.blocoTitulo}>O que uma loja nova precisa para entrar</h3>
-          <ul>
+          <ol className={estilo.requisitos}>
             {O_QUE_UMA_LOJA_NOVA_PRECISA.map((item) => (
-              <li className={estilo.caminhoTexto} key={item}>
-                {item}
-              </li>
+              <li key={item}>{item}</li>
             ))}
-          </ul>
+          </ol>
           <p className={estilo.dica}>
             O que acelera: uma planilha de pedidos exportada do painel da loja e o link da página de
-            tarifas dela. Com isso a loja entra na barra, com a área, a visão geral e o assistente —
+            tarifas dela. Com isso a loja entra na barra, com a área, a visão geral e o assistente,
             sem tela nova.
           </p>
         </div>

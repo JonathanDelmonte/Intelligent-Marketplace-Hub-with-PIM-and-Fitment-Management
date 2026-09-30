@@ -303,7 +303,7 @@ export function capacidadesNaTela(mapa: MapaDeCapacidades): readonly CapacidadeN
         return {
           capacidade,
           rotulo,
-          como: `${frase(POR_ONDE[estado.modo])} — ainda não conferido`,
+          como: `${frase(POR_ONDE[estado.modo])}, ainda não conferido`,
           situacao: 'previsto',
         };
       case 'sem_credencial':

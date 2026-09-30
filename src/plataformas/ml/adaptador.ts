@@ -38,7 +38,7 @@ export class AdaptadorMercadoLivre extends AdaptadorBase {
     for (const capacidade of CAPACIDADES) {
       const estado = declarado[capacidade];
       // Sem token, tudo que depende de API oficial fica sem credencial — e a
-      // etiqueta honesta na UI é "sem conexão — importe a planilha".
+      // etiqueta honesta na UI é "sem conexão: importe a planilha".
       mapa[capacidade] =
         !this.opcoes.temCredencial && estado.tipo === 'presumido' && estado.modo === 'm3_api'
           ? { tipo: 'sem_credencial', modo: 'm3_api' }

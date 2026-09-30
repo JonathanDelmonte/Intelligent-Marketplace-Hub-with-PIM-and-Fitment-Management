@@ -248,9 +248,47 @@
   composes: tabela from '../ui/comum.module.css';
 }
 
+/*
+ * Tabela dentro do cartão com folga: ela vai até a borda do cartão, e a folga da primeira
+ * e da última coluna (1,5rem, a mesma do cartão) alinha o texto com o título. Sem isto as
+ * duas folgas somavam, e a tabela ficava recuada em relação ao resto do cartão.
+ */
+.bloco > .tabela {
+  margin-inline: -1.5rem;
+  width: calc(100% + 3rem);
+}
+
 .numeroDaTabela {
   text-align: right;
   white-space: nowrap;
+}
+
+.produtoDaTabela {
+  color: var(--tinta);
+  font-weight: 560;
+}
+
+.prontoParaAnunciar {
+  composes: etiqueta etiquetaOk from '../ui/comum.module.css';
+}
+
+.faltaParaAnunciar {
+  composes: etiqueta etiquetaAtencao from '../ui/comum.module.css';
+  white-space: normal;
+}
+
+/* As duas ações da linha, em botões miúdos, alinhadas à direita. */
+.acoesDaTabela {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.acaoMiuda {
+  composes: botaoMiudo from '../ui/comum.module.css';
+}
+
+.acaoMiuda + .acaoMiuda {
+  margin-left: 0.5rem;
 }
 
 .margemNegativa {
@@ -457,23 +495,68 @@
 }
 
 .lojaTexto {
-  color: var(--cor-texto-fraco);
+  color: var(--tinta-2);
   flex: 1;
-  font-size: var(--texto-menor);
+  font-size: 0.8125rem;
   margin: 0;
 }
 
 .lojaRodape {
-  font-size: var(--texto-menor);
-  font-weight: 600;
+  align-items: center;
+  border-top: 1px solid var(--linha);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  justify-content: space-between;
+  padding-top: 0.875rem;
 }
 
+/* Como a loja entra hoje: o ponto verde de quem já está na barra, e o texto. */
 .lojaNaBarra {
-  color: var(--cor-texto);
+  composes: etiqueta etiquetaOk from '../ui/comum.module.css';
 }
 
 .lojaACaminho {
-  color: var(--cor-texto-fraco);
+  composes: etiqueta from '../ui/comum.module.css';
+}
+
+.lojaAbrir {
+  composes: botaoMiudo from '../ui/comum.module.css';
+}
+
+/* O que uma loja nova precisa: passos numerados num quadrado, e não marcadores. */
+.requisitos {
+  counter-reset: requisito;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  list-style: none;
+  margin: 0.875rem 0 0;
+  padding: 0;
+}
+
+.requisitos li {
+  align-items: center;
+  color: var(--tinta-2);
+  counter-increment: requisito;
+  display: grid;
+  font-size: 0.84375rem;
+  gap: 0.625rem;
+  grid-template-columns: 1.375rem 1fr;
+}
+
+.requisitos li::before {
+  align-items: center;
+  background: var(--realce);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  color: var(--tinta-2);
+  content: counter(requisito);
+  display: inline-flex;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  height: 1.375rem;
+  justify-content: center;
 }
 
 .secao {

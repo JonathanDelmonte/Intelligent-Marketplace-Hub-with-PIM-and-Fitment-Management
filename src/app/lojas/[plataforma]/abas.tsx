@@ -83,7 +83,7 @@ export async function AbaAnuncios({
       </div>
       <p className={estilo.dica}>
         O sistema ainda não lê os anúncios já publicados {naLoja(plataforma)}. Aqui está o seu
-        catálogo, com o que falta a cada produto para anunciar nesta loja — o preço sai com as taxas
+        catálogo, com o que falta a cada produto para anunciar nesta loja. O preço sai com as taxas
         dela.
       </p>
       {candidatos.length === 0 ? (
@@ -106,12 +106,22 @@ export async function AbaAnuncios({
               const faltas = faltasDoProduto(c);
               return (
                 <tr key={c.id}>
-                  <td>{c.titulo}</td>
-                  <td>{faltas.length === 0 ? 'pronto para anunciar' : faltas.join(', ')}</td>
-                  <td className={estilo.numeroDaTabela}>
-                    <Link href={caminhoDoSimulador(c.id, plataforma)}>Preço nesta loja</Link>
-                    {' · '}
-                    <Link href={caminhoParaMontar({ skuId: c.id, plataforma })}>
+                  <td className={estilo.produtoDaTabela}>{c.titulo}</td>
+                  <td>
+                    {faltas.length === 0 ? (
+                      <span className={estilo.prontoParaAnunciar}>pronto para anunciar</span>
+                    ) : (
+                      <span className={estilo.faltaParaAnunciar}>falta {faltas.join(', ')}</span>
+                    )}
+                  </td>
+                  <td className={estilo.acoesDaTabela}>
+                    <Link className={estilo.acaoMiuda} href={caminhoDoSimulador(c.id, plataforma)}>
+                      Preço nesta loja
+                    </Link>
+                    <Link
+                      className={estilo.acaoMiuda}
+                      href={caminhoParaMontar({ skuId: c.id, plataforma })}
+                    >
                       Montar anúncio
                     </Link>
                   </td>

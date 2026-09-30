@@ -119,11 +119,11 @@ export function motivoDeIndisponibilidade(estado: EstadoDaCapacidade): string | 
         ? 'bloqueado pela plataforma'
         : `bloqueado pela plataforma desde ${estado.desde}`;
     case 'sem_credencial':
-      return 'sem conexão — importe a planilha';
+      return 'sem conexão: importe a planilha';
     case 'inexistente':
       return estado.alternativa === null
         ? 'a plataforma não oferece isso'
-        : `a plataforma não oferece isso — ${estado.alternativa}`;
+        : `a plataforma não oferece isso: ${estado.alternativa}`;
   }
 }
 

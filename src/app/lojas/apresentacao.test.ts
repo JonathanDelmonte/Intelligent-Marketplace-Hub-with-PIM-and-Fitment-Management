@@ -137,7 +137,7 @@ describe('capacidadesNaTela', () => {
     const mapa = await new AdaptadorMercadoLivre({ temCredencial: false }).capacidades();
     const porCapacidade = new Map(capacidadesNaTela(mapa).map((c) => [c.capacidade, c]));
     expect(porCapacidade.get('ler_pedidos')?.situacao).toBe('sem_conexao');
-    expect(porCapacidade.get('ler_pedidos')?.como).toBe('Sem conexão — importe a planilha');
+    expect(porCapacidade.get('ler_pedidos')?.como).toBe('Sem conexão: importe a planilha');
     expect(porCapacidade.get('buscar_terceiros')?.situacao).toBe('bloqueado');
   });
 });

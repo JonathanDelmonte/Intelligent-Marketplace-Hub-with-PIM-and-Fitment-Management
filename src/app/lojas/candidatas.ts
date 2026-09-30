@@ -34,8 +34,8 @@ export const LOJAS_A_CAMINHO: readonly LojaACaminho[] = [
 
 /** O que uma loja nova precisa ter no sistema para entrar, na ordem em que se consegue. */
 export const O_QUE_UMA_LOJA_NOVA_PRECISA: readonly string[] = [
-  'as colunas da planilha de pedidos, tiradas de uma exportação de verdade do painel dela;',
-  'a tabela de comissão e de taxa por item, conferida na página de tarifas dela;',
-  'o limite de caracteres do título do anúncio;',
-  'o formato do arquivo de importação de anúncios.',
+  'As colunas da planilha de pedidos, tiradas de uma exportação de verdade do painel dela',
+  'A tabela de comissão e de taxa por item, conferida na página de tarifas dela',
+  'O limite de caracteres do título do anúncio',
+  'O formato do arquivo de importação de anúncios',
 ];

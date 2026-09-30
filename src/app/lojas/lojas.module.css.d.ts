@@ -8,7 +8,9 @@ declare const estilo: {
   readonly abaAtual: string;
   readonly abaContagem: string;
   readonly abas: string;
+  readonly acaoMiuda: string;
   readonly acoes: string;
+  readonly acoesDaTabela: string;
   readonly barra: string;
   readonly barraVazia: string;
   readonly bloco: string;
@@ -35,12 +37,14 @@ declare const estilo: {
   readonly estadoPlanilha: string;
   readonly etiquetaDepende: string;
   readonly etiquetaHoje: string;
+  readonly faltaParaAnunciar: string;
   readonly figura: string;
   readonly grade: string;
   readonly grafico: string;
   readonly identidade: string;
   readonly legenda: string;
   readonly loja: string;
+  readonly lojaAbrir: string;
   readonly lojaACaminho: string;
   readonly lojaCabecalho: string;
   readonly lojaNaBarra: string;
@@ -61,6 +65,9 @@ declare const estilo: {
   readonly pontoConectada: string;
   readonly pontoPlanilha: string;
   readonly pontoSemDados: string;
+  readonly produtoDaTabela: string;
+  readonly prontoParaAnunciar: string;
+  readonly requisitos: string;
   readonly secao: string;
   readonly secaoTitulo: string;
   readonly situacao: string;
