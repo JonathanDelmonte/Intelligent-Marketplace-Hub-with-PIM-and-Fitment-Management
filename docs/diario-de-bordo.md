@@ -26,6 +26,93 @@ Convenção de marcação:
 
 ---
 
+## 2026-09-30: o desenho aprovado em todas as telas
+
+### 🔀 O dono aprovou o piloto, e o desenho foi para o resto
+
+"Aprovado, aplica esse design no resto das telas." Só computador, como no piloto: o
+celular continua por último. A ordem foi a camada comum primeiro e depois tela por
+tela, para o sistema nunca ficar com metade das telas num desenho e metade no outro.
+
+### 🔀 Os nomes antigos das cores apontam para as novas
+
+As telas usavam `--cor-texto`, `--cor-superficie`, `--cor-borda` e companhia. Em vez de
+trocar os nomes em trinta módulos de uma vez, eles passaram a apontar para os papéis do
+piloto (`--tinta`, `--cartao`, `--cartao-borda`), em `globals.css`, e o canto virou 4 px
+em todo lugar. Isso mudou todas as telas num commit só, sem quebrar nenhuma; o resto foi
+trabalho tela por tela. Na camada comum entraram também as peças que se repetem: o
+cartão com cabeçalho (`.bloco`), o cartão de tabela, a faixa de números com o cartão
+escuro (`ui/numeros.tsx`, que agora aceita link) e os sinais, que saíram do catálogo
+para `ui/sinais.tsx`.
+
+### 🔀 Cada tela: números no alto, um assunto por cartão, linha em vez de cartão dentro de cartão
+
+O padrão das telas agora é o do piloto: a faixa de números com um cartão escuro no que
+mais importa, e cada assunto num cartão branco com título e a frase do que ele faz. O
+que era lista de cartões virou linhas dentro do cartão. O que mudou de verdade, além da
+roupa:
+
+- **Postar hoje**: os 31 cartões altos, um por pedido, viraram uma tabela agrupada por
+  prazo, e a tela caiu de 6.075 para 3.088 px de altura. Os números do alto levam ao
+  grupo deles, porque o grupo dos sem prazo vem primeiro e pode ter trinta linhas.
+- **Importar**: seis cartões de situação viraram quatro, com "Precisam de você" (o que
+  falhou mais o que espera revisão) no cartão escuro, que é a pergunta de quem abre a tela.
+- **Fiscal**: a explicação de cada código (NCM, CEST, CST, cClassTrib) se repetia embaixo
+  de cada campo de cada produto; agora é uma legenda só, no alto do cartão.
+- **Fornecedores**: as cinco perguntas da triagem ganharam um cartão ao lado do cadastro,
+  com o porquê de cada uma.
+- **Assistente**: as perguntas prontas eram cápsulas arredondadas; agora são uma lista
+  com o desenho de cada uma, ao lado da conversa.
+- **Entrar, criar conta, trocar senha**: o cartão ganhou um painel escuro com o nome do
+  sistema e o que ele faz, porque um formulário sozinho não diz onde a pessoa está
+  entrando.
+- **Bipar na loja**: era uma coluna estreita de celular também no computador. Agora é
+  como as outras, com os números do alto contados pela decisão de cada leitura (a
+  consulta já existia e nenhuma tela usava). No celular, que é onde ela mais trabalha,
+  o leitor vem antes dos números, e o campo e o botão continuam grandes.
+
+Saíram de todas as telas: borda colorida de um lado (monitor, afiliados, fiscal, leitor,
+checklist do anúncio), rótulo em caixa alta, cápsula arredondada, o azul da marca em
+link e em número, e letra de código em link e em identificador.
+
+### 🐛 `nth-child` em formulário de ação do servidor erra a conta
+
+No cadastro da consignação, o campo do produto devia ocupar a linha toda, e quem ocupou
+foi o do contato, deixando um buraco ao lado do parceiro. O formulário com ação do
+servidor ganha do React um campo escondido logo no começo, e `nth-child(3)` passou a
+contar a partir dele. A foto da tela pegou; o teste não pegaria. Trocado por uma classe
+no campo largo, que não depende de posição. Vale para qualquer formulário com
+`action={...}`: nada de seletor por posição dentro dele.
+
+### 🐛 A lista de leituras mostrava o nome interno do veredito
+
+"nao compra" e "nao comprou", sem til: a tela trocava o sublinhado do valor guardado por
+espaço e mostrava o resultado. Agora usa a frase curta do veredito ("Não compra") e o
+rótulo da decisão que o domínio já tinha ("não comprei").
+
+### 🔀 Travessão fora do texto que a pessoa lê
+
+O dono apontou o travessão como sinal de texto feito no automático. Saíram uns 120, das
+frases das telas e das mensagens do domínio que chegam nelas (o motivo da importação, o
+aviso do anúncio, a resposta pronta para o comprador, a mensagem para o parceiro da
+consignação), trocados por dois-pontos, vírgula ou ponto, conforme a frase. Quatro
+testes conferiam o travessão e mudaram junto. Ficaram, de propósito: o "—" de valor
+vazio numa célula de tabela, que é convenção e não frase; os comentários de código; e os
+textos de instrução da IA (`INSTRUCOES_*`), porque mudar o texto muda o `hash_conteudo`
+e faria o sistema pagar de novo leituras que já estão no cache.
+
+### 🧹 O que ficou para depois
+
+- **Celular.** Postar hoje é a tela de bancada, e no telefone a tabela rola dentro do
+  cartão. A versão de celular dela entra com a das outras telas, que é o último passo
+  pedido pelo dono.
+- **Modo escuro.** As cores já são por papel; falta o segundo jogo de valores.
+- **Bipar na loja no celular** ficou como estava por dentro (campo e botão grandes), mas
+  a ordem nova, com os números no fim, só foi vista no computador. Conferir no telefone
+  junto com as outras.
+
+---
+
 ## 2026-09-27: o segundo piloto da Catálogo e preço
 
 ### 🔀 O primeiro piloto foi recusado, e o dono disse o que queria

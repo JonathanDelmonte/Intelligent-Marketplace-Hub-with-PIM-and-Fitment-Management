@@ -877,10 +877,16 @@ de cada um, a meta livre (percentual ou reais por venda) e, no produto, o gráfi
 lucro que também escolhe o preço. A Mona Sans passou a ser a fonte do sistema. Só
 computador, por decisão do dono; o registro está no diário de 27/09.
 
-**O que falta para fechar a C.17:** as telas que ainda têm o desenho antigo serem migradas.
-A direção foi aprovada em 24/09 junto com a navegação por loja (C.19 a C.23, ADR 0009): a
-casca é a barra nova, escura e dividida por loja, e a tela inicial virou a visão geral. A
-área da loja, o assistente e a visão geral já nasceram no desenho novo.
+**30/09: o desenho aprovado em todas as telas.** O dono aprovou o segundo piloto e pediu o
+mesmo desenho no resto. A camada comum mudou primeiro (as cores antigas passaram a apontar
+para as do piloto), e depois cada tela: números no alto com um cartão escuro, um assunto
+por cartão, linhas em vez de cartão dentro de cartão, e nenhum travessão no texto que a
+pessoa lê. O registro, com o que mudou em cada tela, está no diário de 30/09.
+
+**O que falta para fechar a C.17:** o celular, que o dono deixou por último, e o modo
+escuro, que é futuro. A direção foi aprovada em 24/09 junto com a navegação por loja (C.19
+a C.23, ADR 0009): a casca é a barra nova, escura e dividida por loja, e a tela inicial
+virou a visão geral.
 
 **C.19 a C.23 são a navegação por loja.** O dono pediu cada loja com a área e o painel dela,
 conectar fácil, uma IA geral e a separação entre o que é de uma loja e o que serve a todas.
