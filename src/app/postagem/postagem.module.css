@@ -1,18 +1,29 @@
 /*
- * Estilo da tela de postagem. Cores só de variável de tema (convenções, 3.1).
+ * Estilo da tela de postagem, no desenho aprovado na Catálogo e preço (o porquê de cada
+ * forma está no cabeçalho de `catalogo/catalogo.module.css`). Cores só de variável de
+ * tema (ADR 0003).
  *
- * É a tela que a especificação chama de mais usada do sistema, e o uso real dela é
- * com o celular na mão e a caixa na bancada. Então: cartão em coluna única, alvo de
- * toque grande no botão de confirmar, e nada que exija precisão de mouse.
+ * A fila era uma pilha de cartões, um por pedido, com o campo do rastreio e o botão
+ * verde embaixo de cada um: trinta pedidos davam seis telas de rolagem. Agora é uma
+ * tabela em grupos de urgência dentro de um cartão, como a de preços, e o botão é de
+ * contorno, que escurece ao passar o mouse: com trinta botões pretos a tela inteira
+ * gritava, e nenhum se destacava.
+ *
+ * Só computador por enquanto (decisão do dono, 27/09). No telefone a tabela rola dentro
+ * do cartão, e a versão de celular desta tela, que é a de bancada, entra com as outras.
  */
 
 .pagina {
   composes: pagina from '../ui/comum.module.css';
-  --largura-pagina: 64rem;
 }
 
 .cabecalho {
-  composes: cabecalho from '../ui/comum.module.css';
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
 }
 
 .titulo {
@@ -23,19 +34,11 @@
   composes: subtitulo from '../ui/comum.module.css';
 }
 
-/* Fica logo abaixo do subtítulo, e é a frase que se lê primeiro. */
-.resumo {
-  composes: resumo from '../ui/comum.module.css';
-  font-size: 1.0625rem;
-  margin-top: 0.75rem;
-}
-
-.secao {
-  composes: secao from '../ui/comum.module.css';
-}
-
-.secaoTitulo {
-  composes: secaoTitulo from '../ui/comum.module.css';
+/* O dia de hoje por extenso, no canto: "hoje" é a palavra do título. */
+.hoje {
+  color: var(--tinta-3);
+  font-size: 0.78125rem;
+  white-space: nowrap;
 }
 
 .aviso {
@@ -58,115 +61,508 @@
   composes: avisoCorpo from '../ui/comum.module.css';
 }
 
-.painel {
-  composes: painel from '../ui/comum.module.css';
+/* ── Os cartões ────────────────────────────────────────────────────────────── */
+
+.cartaoDaFila,
+.cartaoDoRepasse {
+  background: var(--cartao);
+  border: 1px solid var(--cartao-borda);
+  border-radius: var(--raio);
+  box-shadow: var(--cartao-sombra);
 }
 
-.cartao {
-  composes: cartao from '../ui/comum.module.css';
+.cartaoDoRepasse {
+  margin-top: 1rem;
 }
 
-.cartaoNumero {
-  composes: cartaoNumero from '../ui/comum.module.css';
-}
-
-.cartaoRotulo {
-  composes: cartaoRotulo from '../ui/comum.module.css';
-}
-
-.cartaoNota {
-  composes: cartaoNota from '../ui/comum.module.css';
-}
-
-.fila {
+.topoDoCartao {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--linha);
   display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
+  gap: 2rem;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+}
+
+.topoTextos {
+  min-width: 0;
+}
+
+.tituloDoCartao {
+  font-size: 0.9375rem;
+  font-weight: 650;
+  letter-spacing: -0.012em;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.textoDoCartao {
+  color: var(--tinta-2);
+  font-size: 0.8125rem;
+  margin: 0.25rem 0 0;
+  max-width: var(--medida-texto);
+}
+
+/* O nome de uma tela não quebra no meio: "Postar / hoje" em duas linhas lê errado. */
+.textoDoCartao a {
+  white-space: nowrap;
+}
+
+.contaDaFila {
+  color: var(--tinta-3);
+  font-size: 0.78125rem;
+  padding-top: 0.125rem;
+  white-space: nowrap;
+}
+
+.rodapeDoCartao {
+  border-top: 1px solid var(--linha);
+  padding: 0.875rem 1.5rem;
+}
+
+.legenda {
+  color: var(--tinta-3);
+  font-size: 0.75rem;
+  margin: 0;
+  max-width: var(--medida-texto);
+}
+
+/* A fila vazia é boa notícia, e diz o que fazer se não devia estar vazia. */
+.filaVazia {
+  align-items: center;
+  color: var(--tinta-2);
+  display: flex;
+  font-size: 0.84375rem;
+  gap: 0.625rem;
+  margin: 0;
+  padding: 1.5rem;
+}
+
+.filaVaziaSinal {
+  align-items: center;
+  background: var(--lucro-suave);
+  border-radius: var(--raio);
+  color: var(--lucro);
+  display: inline-flex;
+  flex: none;
+  height: 1.75rem;
+  justify-content: center;
+  width: 1.75rem;
+}
+
+/* ── A tabela ──────────────────────────────────────────────────────────────── */
+
+/* A tabela rola dentro do cartão, e não empurra a página (o motivo está em comum). */
+.rolagem {
+  overflow-x: auto;
+  position: relative;
+}
+
+.tabela {
+  border-collapse: collapse;
+  font-size: 0.84375rem;
+  min-width: 52rem;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.tabela th,
+.tabela td {
+  border-bottom: 1px solid var(--linha);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.tabela thead th {
+  color: var(--tinta-3);
+  font-size: 0.75rem;
+  font-weight: 540;
+  padding-bottom: 0.625rem;
+  padding-top: 0.625rem;
+  white-space: nowrap;
+}
+
+.tabela th:first-child,
+.tabela td:first-child {
+  padding-left: 1.5rem;
+}
+
+.tabela th:last-child,
+.tabela td:last-child {
+  padding-right: 1.5rem;
+}
+
+.tabela tbody:last-child tr:last-child td {
+  border-bottom: 0;
+}
+
+.cabecaPedido {
+  width: auto;
+}
+
+.cabecaLoja {
+  width: 10rem;
+}
+
+.cabecaPrazo {
+  width: 10rem;
+}
+
+.cabecaUnidades {
+  width: 6rem;
+}
+
+.tabela .cabecaUnidades,
+.tabela .unidades,
+.tabela .unidadesVarias,
+.tabela .celulaAcao {
+  text-align: right;
+}
+
+.cabecaRastreio {
+  width: 13rem;
+}
+
+.cabecaAcao {
+  width: 8.5rem;
+}
+
+/*
+ * O cabeçalho do grupo: o ponto na cor da urgência, o nome, quantos, e a frase que diz
+ * o que fazer com eles. Fundo de realce, para o olho achar onde um grupo começa.
+ */
+.grupo {
+  scroll-margin-top: 1rem;
+}
+
+.linhaDoGrupo th {
+  background: var(--realce);
+  font-weight: 400;
+  padding-bottom: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.grupoCabeca {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.625rem;
+}
+
+.pontoAlerta,
+.pontoAtencao,
+.pontoNeutro {
+  align-self: center;
+  border-radius: 50%;
+  flex: none;
+  height: 0.5rem;
+  width: 0.5rem;
+}
+
+.pontoAlerta {
+  background: var(--perda-cheio);
+}
+
+.pontoAtencao {
+  background: var(--atencao-cheio);
+}
+
+.pontoNeutro {
+  background: var(--dado-3);
+}
+
+.grupoTitulo {
+  color: var(--tinta);
+  font-size: 0.8125rem;
+  font-weight: 620;
+}
+
+.grupoConta {
+  color: var(--tinta-3);
+  font-size: 0.8125rem;
+  font-weight: 560;
+}
+
+.grupoExplicacao {
+  color: var(--tinta-3);
+  font-size: 0.78125rem;
+}
+
+.linha td {
+  transition: background 120ms ease;
+}
+
+.linha:hover td {
+  background: var(--realce);
+}
+
+/* O nome vai até duas linhas, e só então corta: nome de peça se reconhece pelo fim. */
+.produto,
+.produtoSem {
+  -webkit-box-orient: vertical;
+  display: -webkit-box;
+  font-size: 0.875rem;
+  font-weight: 580;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  letter-spacing: -0.005em;
+  line-height: 1.35;
+  overflow: hidden;
+}
+
+.produto {
+  color: var(--tinta);
+}
+
+.produtoSem {
+  color: var(--tinta-3);
+  font-weight: 500;
+}
+
+.pedidoNumero {
+  color: var(--tinta-3);
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 0.125rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loja {
+  align-items: center;
+  color: var(--tinta-2);
+  display: inline-flex;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.etiqueta {
+  composes: etiqueta from '../ui/comum.module.css';
+}
+
+.etiquetaOk {
+  composes: etiqueta etiquetaOk from '../ui/comum.module.css';
+}
+
+.etiquetaAtencao {
+  composes: etiqueta etiquetaAtencao from '../ui/comum.module.css';
+}
+
+.etiquetaAlerta {
+  composes: etiqueta etiquetaAlerta from '../ui/comum.module.css';
+}
+
+.unidades {
+  color: var(--tinta-2);
+}
+
+/* Mais de uma unidade é o que se esquece na hora de fechar a caixa. */
+.unidadesVarias {
+  color: var(--tinta);
+  font-weight: 680;
+}
+
+.campoDoRastreio {
+  display: block;
+}
+
+.entradaDoRastreio {
+  composes: entrada from '../ui/comum.module.css';
+  min-height: 2.25rem;
+  padding-bottom: 0.3125rem;
+  padding-top: 0.3125rem;
+  width: 100%;
+}
+
+/*
+ * "Postei": contorno em repouso, preto quando a linha é a da vez (mouse em cima ou foco
+ * no campo do rastreio). Com o botão preto em todas as linhas, trinta botões iguais
+ * disputavam o olho; assim a linha em que se está trabalhando é a que fala.
+ */
+.botaoPostei {
+  align-items: center;
+  background: var(--cartao);
+  border: 1px solid var(--cartao-borda);
+  border-radius: var(--raio);
+  color: var(--tinta);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 560;
+  gap: 0.375rem;
+  min-height: 2.25rem;
+  padding: 0.375rem 0.875rem;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+  white-space: nowrap;
+}
+
+.linha:hover .botaoPostei,
+.linha:focus-within .botaoPostei {
+  background: var(--tinta);
+  border-color: var(--tinta);
+  color: var(--cartao);
+}
+
+.botaoPostei:focus-visible {
+  outline: var(--foco);
+  outline-offset: var(--foco-deslocamento);
+}
+
+/* ── O repasse de cada loja ───────────────────────────────────────────────── */
+
+.repasses {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.item {
-  composes: item from '../ui/comum.module.css';
+.repasse {
+  align-items: center;
+  border-bottom: 1px solid var(--linha);
+  display: grid;
+  gap: 0.875rem;
+  grid-template-columns: auto 10rem 1fr auto;
+  padding: 0.875rem 1.5rem;
 }
 
-.itemCabecalho {
-  composes: itemCabecalho from '../ui/comum.module.css';
+.repasse:last-child {
+  border-bottom: 0;
 }
 
-.itemTitulo {
-  composes: itemTitulo from '../ui/comum.module.css';
-  overflow-wrap: anywhere;
+.repasseLoja {
+  font-size: 0.875rem;
+  font-weight: 580;
 }
 
-.itemSub {
-  composes: itemSub from '../ui/comum.module.css';
+.repasseAbrir {
+  composes: botaoMiudo from '../ui/comum.module.css';
 }
 
-.etiqueta {
-  composes: etiqueta from '../ui/comum.module.css';
-  white-space: nowrap;
-}
-
-.etiquetaAtencao {
-  composes: etiquetaAtencao from '../ui/comum.module.css';
-}
-
-.etiquetaAlerta {
-  composes: etiquetaAlerta from '../ui/comum.module.css';
-}
-
-.formulario {
-  composes: formulario from '../ui/comum.module.css';
-}
-
-.campo {
-  composes: campo from '../ui/comum.module.css';
-  --largura-campo: 14rem;
-}
-
-.entrada {
-  composes: entrada from '../ui/comum.module.css';
-}
-
-/* Alvo de toque grande: esta tela é usada de celular, com a caixa na mão. */
-.botaoSim {
-  composes: botaoSim from '../ui/comum.module.css';
-}
+/* ── A lista de diferenças, na aba Repasse de cada loja ───────────────────── */
 
 .dica {
   composes: dica from '../ui/comum.module.css';
+  margin: 0 0 0.75rem;
+}
+
+.vazio {
+  composes: vazio from '../ui/comum.module.css';
+}
+
+/*
+ * A tabela das diferenças mora dentro do bloco da aba, que já tem margem: a primeira e
+ * a última coluna encostam na margem dele, sem recuo próprio.
+ */
+.tabelaDoRepasse {
+  border-collapse: collapse;
+  font-size: 0.84375rem;
+  min-width: 40rem;
+  width: 100%;
+}
+
+.tabelaDoRepasse th,
+.tabelaDoRepasse td {
+  border-bottom: 1px solid var(--linha);
+  padding: 0.5rem 1rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.tabelaDoRepasse thead th {
+  border-top: 1px solid var(--linha);
+  color: var(--tinta-3);
+  font-size: 0.75rem;
+  font-weight: 540;
+  white-space: nowrap;
+}
+
+.tabelaDoRepasse th:first-child,
+.tabelaDoRepasse td:first-child {
+  padding-left: 0;
+}
+
+.tabelaDoRepasse th:last-child,
+.tabelaDoRepasse td:last-child {
+  padding-right: 0;
+}
+
+.cabecaData {
+  width: 7.5rem;
+}
+
+.tabelaDoRepasse .cabecaValor {
+  text-align: right;
+  width: 9rem;
+}
+
+.cabecaConferir {
+  width: 11rem;
+}
+
+.pedidoDoRepasse {
+  color: var(--tinta);
+  font-weight: 580;
+  overflow-wrap: anywhere;
+}
+
+.dataDoRepasse {
+  color: var(--tinta-2);
+  white-space: nowrap;
+}
+
+.tabelaDoRepasse .valor,
+.tabelaDoRepasse .valorAMenos,
+.tabelaDoRepasse .valorAMais,
+.tabelaDoRepasse .celulaAcao {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.valor {
+  color: var(--tinta-2);
+}
+
+/* A menos é dinheiro que faltou, em vermelho; a mais é a favor, em verde. */
+.valorAMenos {
+  color: var(--perda);
+  font-weight: 580;
+}
+
+.valorAMais {
+  color: var(--lucro);
+  font-weight: 580;
 }
 
 .divergencias {
-  color: var(--cor-texto-fraco);
-  font-size: 0.875rem;
+  font-size: 0.84375rem;
+  list-style: none;
   margin: 0.5rem 0 0;
-  padding-left: 1.125rem;
+  padding: 0;
 }
 
-/*
- * A linha da divergência, com o botão de conferir ao lado do número.
- *
- * `flex-wrap` porque no telefone o botão desce, e `gap` em duas medidas para a
- * quebra não colar o botão no texto da linha de cima.
- */
+/* A linha do que já foi conferido, com o botão de desfazer ao lado. */
 .divergencia {
-  align-items: baseline;
+  align-items: center;
+  border-top: 1px solid var(--linha);
+  color: var(--tinta-2);
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 0.75rem;
+  gap: 0.375rem 1rem;
   justify-content: space-between;
+  padding: 0.5rem 0;
 }
 
-/*
- * Botão discreto: conferir é registro, não decisão de dinheiro.
- *
- * O `botaoSim` verde ao lado de cada linha daria a esta lista o peso visual da fila
- * de postagem, que é a tela mais usada — e a lista de diferenças é a de olhar de vez
- * em quando.
- */
+.divergencia strong {
+  color: var(--tinta);
+  font-weight: 580;
+}
+
 /*
  * A lista do que já foi conferido, recolhida.
  *
@@ -174,49 +570,20 @@
  * não foi, e a lista existe para desfazer um clique errado, não para ser lida.
  */
 .conferidas {
-  color: var(--cor-texto-fraco);
-  font-size: 0.875rem;
-  margin-top: 0.75rem;
+  color: var(--tinta-2);
+  font-size: 0.84375rem;
+  margin-top: 0.875rem;
 }
 
 .conferidas > summary {
   cursor: pointer;
+  font-weight: 540;
 }
 
+/*
+ * Botão discreto: conferir é registro, não decisão de dinheiro, e a lista de diferenças
+ * é a de olhar de vez em quando, não a fila do dia.
+ */
 .botaoConferido {
-  composes: botaoSecundario from '../ui/comum.module.css';
-  font-size: 0.75rem;
-  padding: 0.25rem 0.5rem;
-}
-
-.vazio {
-  composes: vazio from '../ui/comum.module.css';
-}
-
-/* O repasse de cada loja, com o atalho para a aba dela (ADR 0009). */
-.repasses {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  list-style: none;
-  margin: 0.75rem 0 0;
-  padding: 0;
-}
-
-.repasse {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.625rem;
-}
-
-.repasseCalmo {
-  color: var(--cor-texto-fraco);
-  font-size: 0.875rem;
-}
-
-.repasseAberto {
-  color: var(--cor-texto);
-  font-size: 0.875rem;
-  font-weight: 600;
+  composes: botaoMiudo from '../ui/comum.module.css';
 }

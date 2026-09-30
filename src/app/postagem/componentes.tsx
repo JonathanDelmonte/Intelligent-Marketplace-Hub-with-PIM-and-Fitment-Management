@@ -6,6 +6,7 @@
  * bancada, então tem de funcionar em rede ruim e com a aba recarregada.
  */
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import type { FilaDoDia, ItemDaFila } from '@/dominio/pedidos/fila-do-dia';
 import { ehPlataforma, type Plataforma } from '@/dominio/precificacao/tipos';
 import type { Centavos } from '@/lib/dinheiro';
@@ -15,16 +16,22 @@ import { contagem } from '@/lib/texto';
 import { caminhoDaAba } from '../lojas/caminhos';
 import { IDENTIDADE_DA_LOJA } from '../lojas/identidade';
 import { Selo } from '../lojas/selo';
+import { FaixaDeNumeros } from '../ui/numeros';
 import { ROTULO_DA_PLATAFORMA } from '../ui/rotulos';
+import { SinalAlerta, SinalAvancar, SinalCaixa, SinalCerto, SinalRelogio } from '../ui/sinais';
 import { IDIOMA } from '../ui/tempo';
 import { confirmarPostagem, desfazerConferenciaDeRepasse, marcarRepasseConferido } from './acoes';
 import {
-  divergenciaEmTexto,
+  diferencaCurta,
+  gruposDaFila,
+  numerosDaFila,
   repasseDaLojaEmTexto,
-  rotuloDaUrgencia,
+  semProdutoEmTexto,
   tempoRestanteEmTexto,
   tomDaUrgencia,
   type Aviso,
+  type NumeroDaFila,
+  type TomDaUrgencia,
 } from './apresentacao';
 import estilo from './postagem.module.css';
 
@@ -60,23 +67,31 @@ export function AvisoDeConsignacao({ texto }: { readonly texto: string }) {
   );
 }
 
+const ICONE_DO_NUMERO: Readonly<Record<NumeroDaFila['chave'], ReactNode>> = {
+  atrasado: <SinalAlerta />,
+  hoje: <SinalRelogio />,
+  sem_prazo: <SinalCaixa />,
+  postados: <SinalCerto />,
+};
+
+/**
+ * Os quatro números do alto. O escuro é o do atraso, que é o número que muda o que se
+ * faz primeiro; os que têm fila atrás levam ao grupo deles na tabela.
+ */
 export function Painel({ fila }: { readonly fila: FilaDoDia }) {
-  const cartoes = [
-    { rotulo: 'Atrasados', valor: fila.porUrgencia.atrasado, nota: 'comece por estes' },
-    { rotulo: 'Para hoje', valor: fila.porUrgencia.hoje, nota: 'ainda dá tempo' },
-    { rotulo: 'Sem prazo', valor: fila.porUrgencia.sem_prazo, nota: 'não se sabe se atrasou' },
-    { rotulo: 'Já postados', valor: fila.jaPostados, nota: 'saíram da fila' },
-  ];
   return (
-    <div className={estilo.painel}>
-      {cartoes.map((c) => (
-        <div className={estilo.cartao} key={c.rotulo}>
-          <span className={estilo.cartaoNumero}>{c.valor}</span>
-          <span className={estilo.cartaoRotulo}>{c.rotulo}</span>
-          <span className={estilo.cartaoNota}>{c.nota}</span>
-        </div>
-      ))}
-    </div>
+    <FaixaDeNumeros
+      itens={numerosDaFila(fila).map((numero) => ({
+        rotulo: numero.rotulo,
+        valor: numero.valor.toLocaleString(IDIOMA),
+        nota: numero.nota,
+        tom: numero.tom,
+        icone: ICONE_DO_NUMERO[numero.chave],
+        escuro: numero.chave === 'atrasado',
+        ...(numero.ancora === null ? {} : { href: numero.ancora }),
+      }))}
+      rotulo="A fila de postagem em números"
+    />
   );
 }
 
@@ -96,86 +111,201 @@ function nomeDaLoja(plataforma: string): string {
   return ehPlataforma(plataforma) ? ROTULO_DA_PLATAFORMA[plataforma] : plataforma;
 }
 
-function CartaoDoPedido({
+/** O ponto do grupo e a etiqueta do prazo, na cor da urgência. */
+const CLASSE_DO_PONTO: Readonly<Record<TomDaUrgencia, string>> = {
+  alerta: estilo.pontoAlerta,
+  atencao: estilo.pontoAtencao,
+  neutro: estilo.pontoNeutro,
+};
+
+const CLASSE_DO_PRAZO: Readonly<Record<TomDaUrgencia, string>> = {
+  alerta: estilo.etiquetaAlerta,
+  atencao: estilo.etiquetaAtencao,
+  neutro: estilo.etiqueta,
+};
+
+/**
+ * Uma linha da fila: o que é, de onde, quanto tempo falta, e o botão.
+ *
+ * O campo do rastreio mora numa casa e o botão em outra, e os dois são do mesmo
+ * formulário pelo atributo `form`, que é HTML comum: um `form` não pode abraçar uma linha
+ * de tabela. Sem JavaScript no navegador, como antes.
+ */
+function LinhaDoPedido({
   item,
   voltar,
+  mostrarLoja,
 }: {
   readonly item: ItemDaFila;
   readonly voltar: string | undefined;
+  readonly mostrarLoja: boolean;
 }) {
-  const tom = tomDaUrgencia(item.urgencia);
-  const classe =
-    tom === 'alerta'
-      ? `${estilo.etiqueta} ${estilo.etiquetaAlerta}`
-      : tom === 'atencao'
-        ? `${estilo.etiqueta} ${estilo.etiquetaAtencao}`
-        : estilo.etiqueta;
-
+  const formulario = `postar-${item.id}`;
   return (
-    <li className={estilo.item}>
-      <div className={estilo.itemCabecalho}>
-        <div>
-          <h3 className={estilo.itemTitulo}>
-            {item.tituloDoProduto ?? 'produto não identificado'}
-          </h3>
-          <p className={estilo.itemSub}>
-            {nomeDaLoja(item.plataforma)} · {item.idExterno}
-            {item.qtd > 1 ? ` · ${String(item.qtd)} unidades` : ''}
-          </p>
-        </div>
-        <span className={classe}>
-          {rotuloDaUrgencia(item.urgencia)} · {tempoRestanteEmTexto(item.horasRestantes)}
+    <tr className={estilo.linha}>
+      <td>
+        <span className={item.tituloDoProduto === null ? estilo.produtoSem : estilo.produto}>
+          {item.tituloDoProduto ?? 'Produto não identificado'}
         </span>
-      </div>
-
-      {item.tituloDoProduto === null && (
-        <p className={estilo.dica}>
-          Este pedido não casou com nenhum produto do catálogo, então não tem margem calculada.
-          Cadastre o código de barras no produto e reimporte a planilha.
-        </p>
-      )}
-
-      <form action={confirmarPostagem} className={estilo.formulario}>
-        <input name="pedidoId" type="hidden" value={item.id} />
-        <CampoDeVolta voltar={voltar} />
-        <label className={estilo.campo}>
-          <span>Rastreio (opcional)</span>
+        <span className={estilo.pedidoNumero}>Pedido {item.idExterno}</span>
+      </td>
+      {mostrarLoja ? (
+        <td>
+          <span className={estilo.loja}>
+            {ehPlataforma(item.plataforma) ? (
+              <Selo identidade={IDENTIDADE_DA_LOJA[item.plataforma]} tamanho={20} />
+            ) : null}
+            {nomeDaLoja(item.plataforma)}
+          </span>
+        </td>
+      ) : null}
+      <td>
+        <span className={CLASSE_DO_PRAZO[tomDaUrgencia(item.urgencia)]}>
+          {tempoRestanteEmTexto(item.horasRestantes)}
+        </span>
+      </td>
+      <td className={item.qtd > 1 ? estilo.unidadesVarias : estilo.unidades}>
+        {item.qtd.toLocaleString(IDIOMA)}
+      </td>
+      <td>
+        <label className={estilo.campoDoRastreio}>
+          <span className="sr-only">Rastreio do pedido {item.idExterno}, se tiver</span>
           <input
-            className={estilo.entrada}
+            className={estilo.entradaDoRastreio}
             defaultValue={item.rastreio ?? ''}
+            form={formulario}
             name="rastreio"
-            placeholder="BR123456789BR"
             type="text"
           />
         </label>
-        <button className={estilo.botaoSim} type="submit">
-          Postei este
-        </button>
-      </form>
-    </li>
+      </td>
+      <td className={estilo.celulaAcao}>
+        <form action={confirmarPostagem} id={formulario}>
+          <input name="pedidoId" type="hidden" value={item.id} />
+          <CampoDeVolta voltar={voltar} />
+          <button className={estilo.botaoPostei} type="submit">
+            <SinalCerto tamanho={14} />
+            Postei
+            <span className="sr-only"> o pedido {item.idExterno}</span>
+          </button>
+        </form>
+      </td>
+    </tr>
   );
 }
 
+/**
+ * A fila como tabela, em grupos de urgência.
+ *
+ * Eram cartões, um por pedido, com o campo e o botão embaixo: trinta pedidos davam seis
+ * telas de rolagem. Na tabela cabem numa, e o grupo diz a urgência uma vez só, no alto
+ * de cada bloco. Serve a "Postar hoje" e à aba Pedidos de cada loja, onde a coluna da
+ * loja sai, porque ali todas são a mesma.
+ */
 export function Fila({
   fila,
+  titulo,
+  texto,
   voltar,
+  mostrarLoja = true,
 }: {
   readonly fila: FilaDoDia;
+  readonly titulo: string;
+  readonly texto: ReactNode;
   readonly voltar?: string | undefined;
+  readonly mostrarLoja?: boolean;
 }) {
-  if (fila.itens.length === 0) {
-    return (
-      <p className={estilo.vazio}>
-        Nada na fila. Se você acabou de vender, importe a planilha de vendas em Importar.
-      </p>
-    );
-  }
+  const grupos = gruposDaFila(fila);
+  const semProduto = semProdutoEmTexto(
+    fila.itens.filter((item) => item.tituloDoProduto === null).length,
+  );
+  const colunas = mostrarLoja ? 6 : 5;
+
   return (
-    <ul className={estilo.fila}>
-      {fila.itens.map((item) => (
-        <CartaoDoPedido item={item} key={item.id} voltar={voltar} />
-      ))}
-    </ul>
+    <section aria-labelledby="fila-titulo" className={estilo.cartaoDaFila}>
+      <header className={estilo.topoDoCartao}>
+        <div className={estilo.topoTextos}>
+          <h2 className={estilo.tituloDoCartao} id="fila-titulo">
+            {titulo}
+          </h2>
+          <p className={estilo.textoDoCartao}>{texto}</p>
+        </div>
+        {fila.itens.length === 0 ? null : (
+          <span className={estilo.contaDaFila}>
+            {contagem(fila.itens.length, 'pedido na fila', 'pedidos na fila')}
+          </span>
+        )}
+      </header>
+
+      {fila.itens.length === 0 ? (
+        <p className={estilo.filaVazia}>
+          <span className={estilo.filaVaziaSinal}>
+            <SinalCerto tamanho={16} />
+          </span>
+          Nada na fila. Se você acabou de vender, importe a planilha de vendas em{' '}
+          <Link href="/importar">Importar</Link>.
+        </p>
+      ) : (
+        <div className={estilo.rolagem}>
+          <table className={estilo.tabela}>
+            <thead>
+              <tr>
+                <th className={estilo.cabecaPedido} scope="col">
+                  Pedido
+                </th>
+                {mostrarLoja ? (
+                  <th className={estilo.cabecaLoja} scope="col">
+                    Loja
+                  </th>
+                ) : null}
+                <th className={estilo.cabecaPrazo} scope="col">
+                  Prazo
+                </th>
+                <th className={estilo.cabecaUnidades} scope="col">
+                  Unidades
+                </th>
+                <th className={estilo.cabecaRastreio} scope="col">
+                  Rastreio (se tiver)
+                </th>
+                <th className={estilo.cabecaAcao} scope="col">
+                  <span className="sr-only">Confirmar a postagem</span>
+                </th>
+              </tr>
+            </thead>
+            {grupos.map((grupo) => (
+              <tbody className={estilo.grupo} id={grupo.ancora} key={grupo.urgencia}>
+                <tr className={estilo.linhaDoGrupo}>
+                  <th colSpan={colunas} scope="rowgroup">
+                    <span className={estilo.grupoCabeca}>
+                      <span aria-hidden="true" className={CLASSE_DO_PONTO[grupo.tom]} />
+                      <span className={estilo.grupoTitulo}>{grupo.titulo}</span>
+                      <span className={estilo.grupoConta}>
+                        {grupo.itens.length.toLocaleString(IDIOMA)}
+                      </span>
+                      <span className={estilo.grupoExplicacao}>{grupo.explicacao}</span>
+                    </span>
+                  </th>
+                </tr>
+                {grupo.itens.map((item) => (
+                  <LinhaDoPedido
+                    item={item}
+                    key={item.id}
+                    mostrarLoja={mostrarLoja}
+                    voltar={voltar}
+                  />
+                ))}
+              </tbody>
+            ))}
+          </table>
+        </div>
+      )}
+
+      {semProduto === null ? null : (
+        <footer className={estilo.rodapeDoCartao}>
+          <p className={estilo.legenda}>{semProduto}</p>
+        </footer>
+      )}
+    </section>
   );
 }
 
@@ -260,31 +390,58 @@ export function Divergencias({
   return (
     <>
       <p className={estilo.dica}>
-        Aqui aparecem taxas que não estavam na conta. Vale conferir no extrato da plataforma antes
-        de aceitar como custo.
+        Pedidos em que a loja pagou diferente do que as taxas explicam: uma taxa que não estava na
+        conta, ou um desconto que não se sabia. Vale conferir no extrato antes de aceitar como
+        custo.
       </p>
-      <ul className={estilo.divergencias}>
-        {divergencias.map((d) => (
-          <li className={estilo.divergencia} key={d.id}>
-            <span>
-              <strong>{d.idExterno}</strong> · {d.data.toLocaleDateString(IDIOMA)} ·{' '}
-              {divergenciaEmTexto(d.divergencia)} (informado {formatarBRL(d.repasseInformado)})
-            </span>
-            {/*
-              Sem este botão a lista só cresce: a consulta esconde o que já foi
-              conferido, e nada escrevia a data. Divergência investigada voltava
-              para sempre, e lista que só cresce ninguém lê.
-            */}
-            <form action={marcarRepasseConferido}>
-              <input name="pedidoId" type="hidden" value={d.id} />
-              <CampoDeVolta voltar={voltar} />
-              <button className={estilo.botaoConferido} type="submit">
-                Conferi no extrato
-              </button>
-            </form>
-          </li>
-        ))}
-      </ul>
+      <div className={estilo.rolagem}>
+        <table className={estilo.tabelaDoRepasse}>
+          <thead>
+            <tr>
+              <th scope="col">Pedido</th>
+              <th className={estilo.cabecaData} scope="col">
+                Data
+              </th>
+              <th className={estilo.cabecaValor} scope="col">
+                Diferença
+              </th>
+              <th className={estilo.cabecaValor} scope="col">
+                A loja informou
+              </th>
+              <th className={estilo.cabecaConferir} scope="col">
+                <span className="sr-only">Conferir</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {divergencias.map((d) => (
+              <tr className={estilo.linha} key={d.id}>
+                <td className={estilo.pedidoDoRepasse}>{d.idExterno}</td>
+                <td className={estilo.dataDoRepasse}>{d.data.toLocaleDateString(IDIOMA)}</td>
+                <td className={d.divergencia < 0 ? estilo.valorAMenos : estilo.valorAMais}>
+                  {diferencaCurta(d.divergencia)}
+                </td>
+                <td className={estilo.valor}>{formatarBRL(d.repasseInformado)}</td>
+                <td className={estilo.celulaAcao}>
+                  {/*
+                    Sem este botão a lista só cresce: a consulta esconde o que já foi
+                    conferido, e nada escrevia a data. Divergência investigada voltava
+                    para sempre, e lista que só cresce ninguém lê.
+                  */}
+                  <form action={marcarRepasseConferido}>
+                    <input name="pedidoId" type="hidden" value={d.id} />
+                    <CampoDeVolta voltar={voltar} />
+                    <button className={estilo.botaoConferido} type="submit">
+                      Conferi no extrato
+                      <span className="sr-only"> o pedido {d.idExterno}</span>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <Conferidas conferidas={conferidas} voltar={voltar} />
     </>
   );
@@ -303,16 +460,34 @@ export function RepasseNasLojas({
   readonly lojas: readonly { readonly plataforma: Plataforma; readonly paraConferir: number }[];
 }) {
   return (
-    <ul className={estilo.repasses}>
-      {lojas.map(({ plataforma, paraConferir }) => (
-        <li className={estilo.repasse} key={plataforma}>
-          <Selo identidade={IDENTIDADE_DA_LOJA[plataforma]} tamanho={24} />
-          <Link href={caminhoDaAba(plataforma, 'repasse')}>{ROTULO_DA_PLATAFORMA[plataforma]}</Link>
-          <span className={paraConferir === 0 ? estilo.repasseCalmo : estilo.repasseAberto}>
-            {repasseDaLojaEmTexto(paraConferir)}
-          </span>
-        </li>
-      ))}
-    </ul>
+    <section aria-labelledby="repasse-titulo" className={estilo.cartaoDoRepasse}>
+      <header className={estilo.topoDoCartao}>
+        <div className={estilo.topoTextos}>
+          <h2 className={estilo.tituloDoCartao} id="repasse-titulo">
+            Repasse de cada loja
+          </h2>
+          <p className={estilo.textoDoCartao}>
+            O dinheiro que a loja pagou diferente do que as taxas explicam. A conferência mora na
+            aba Repasse de cada loja, com o extrato daquela loja do lado.
+          </p>
+        </div>
+      </header>
+      <ul className={estilo.repasses}>
+        {lojas.map(({ plataforma, paraConferir }) => (
+          <li className={estilo.repasse} key={plataforma}>
+            <Selo identidade={IDENTIDADE_DA_LOJA[plataforma]} tamanho={28} />
+            <span className={estilo.repasseLoja}>{ROTULO_DA_PLATAFORMA[plataforma]}</span>
+            <span className={paraConferir === 0 ? estilo.etiquetaOk : estilo.etiquetaAtencao}>
+              {repasseDaLojaEmTexto(paraConferir)}
+            </span>
+            <Link className={estilo.repasseAbrir} href={caminhoDaAba(plataforma, 'repasse')}>
+              {paraConferir === 0 ? 'Abrir' : 'Conferir'}
+              <span className="sr-only"> o repasse de {ROTULO_DA_PLATAFORMA[plataforma]}</span>
+              <SinalAvancar tamanho={12} />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

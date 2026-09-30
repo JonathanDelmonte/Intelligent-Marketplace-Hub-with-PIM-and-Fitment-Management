@@ -18,7 +18,7 @@ import { carregarPerfil } from '@/dominio/perfil';
 import { PLATAFORMAS } from '@/dominio/precificacao/tipos';
 import { banco } from '@/infra/banco/cliente';
 import { RepositorioDeConsignacao } from '@/dominio/consignacao/repositorio';
-import { avisoDeConsignacao, descreverAviso } from './apresentacao';
+import { avisoDeConsignacao, descreverAviso, hojeEmTexto } from './apresentacao';
 import { AvisoDaAcao, AvisoDeConsignacao, Fila, Painel, RepasseNasLojas } from './componentes';
 import { LIMITE_DA_FILA, LIMITE_DE_DIVERGENCIAS } from './constantes';
 import estilo from './postagem.module.css';
@@ -63,12 +63,14 @@ export default async function PaginaDePostagem({
   return (
     <main className={estilo.pagina}>
       <header className={estilo.cabecalho}>
-        <h1 className={estilo.titulo}>Postar hoje</h1>
-        <p className={estilo.subtitulo}>
-          Em ordem de prazo, não de data da venda: atraso em conta nova é o que mais custa em
-          reputação. Pedido sem prazo aparece no topo, porque não saber se atrasou é o problema.
-        </p>
-        <p className={estilo.resumo}>{resumoDaFila(fila)}</p>
+        <div>
+          <h1 className={estilo.titulo}>Postar hoje</h1>
+          <p className={estilo.subtitulo}>
+            Em ordem de prazo, não de data da venda: atraso em conta nova é o que mais custa em
+            reputação.
+          </p>
+        </div>
+        <span className={estilo.hoje}>{hojeEmTexto(agora)}</span>
       </header>
 
       {aviso !== null && <AvisoDaAcao aviso={aviso} />}
@@ -76,22 +78,9 @@ export default async function PaginaDePostagem({
 
       <Painel fila={fila} />
 
-      <section aria-labelledby="fila-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="fila-titulo">
-          Fila
-        </h2>
-        <Fila fila={fila} />
-      </section>
+      <Fila fila={fila} texto={resumoDaFila(fila)} titulo="Pedidos para postar" />
 
-      <section aria-labelledby="repasse-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="repasse-titulo">
-          Repasse de cada loja
-        </h2>
-        <p className={estilo.dica}>
-          A conferência mora na aba Repasse de cada loja, com o extrato daquela loja do lado.
-        </p>
-        <RepasseNasLojas lojas={repassePorLoja} />
-      </section>
+      <RepasseNasLojas lojas={repassePorLoja} />
     </main>
   );
 }

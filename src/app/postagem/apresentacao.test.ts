@@ -1,16 +1,38 @@
 import { describe, expect, it } from 'vitest';
-import { URGENCIAS } from '@/dominio/pedidos/fila-do-dia';
+import { URGENCIAS, montarFilaDoDia, type PedidoParaPostar } from '@/dominio/pedidos/fila-do-dia';
 import { centavos, reaisParaCentavos } from '@/lib/dinheiro';
 import {
   CODIGOS_DE_AVISO,
   avisoDeConsignacao,
   descreverAviso,
-  divergenciaEmTexto,
+  diferencaCurta,
+  gruposDaFila,
+  hojeEmTexto,
+  numerosDaFila,
   rotuloDaUrgencia,
+  semProdutoEmTexto,
   tempoRestanteEmTexto,
   tomDaUrgencia,
   repasseDaLojaEmTexto,
 } from './apresentacao';
+
+/** Meio-dia de uma quarta-feira em São Paulo. */
+const AGORA = new Date('2026-09-30T15:00:00Z');
+const HORA = 60 * 60 * 1000;
+
+/** Um pedido com o prazo a tantas horas de agora (negativo é atraso), ou sem prazo. */
+function pedido(id: string, horas: number | null, postado = false): PedidoParaPostar {
+  return {
+    id,
+    idExterno: `pedido-${id}`,
+    plataforma: 'ml',
+    qtd: 1,
+    tituloDoProduto: 'Refil',
+    prazoPostagemAte: horas === null ? null : new Date(AGORA.getTime() + horas * HORA),
+    postagemConfirmadaEm: postado ? AGORA : null,
+    rastreio: null,
+  };
+}
 
 describe('tomDaUrgencia', () => {
   it('só o atraso é alerta', () => {
@@ -54,14 +76,10 @@ describe('tempoRestanteEmTexto', () => {
   });
 });
 
-describe('divergenciaEmTexto', () => {
-  it('diz de que lado está a diferença', () => {
-    expect(divergenciaEmTexto(centavos(0 - reaisParaCentavos(4)))).toContain('a menos');
-    expect(divergenciaEmTexto(reaisParaCentavos(4))).toContain('a mais');
-  });
-
-  it('mostra o valor absoluto formatado', () => {
-    expect(divergenciaEmTexto(centavos(0 - reaisParaCentavos(4)))).toContain('4,00');
+describe('diferencaCurta', () => {
+  it('diz de que lado está a diferença, com o valor sem sinal', () => {
+    expect(diferencaCurta(centavos(0 - reaisParaCentavos(4)))).toMatch(/^R\$\s4,00 a menos$/u);
+    expect(diferencaCurta(reaisParaCentavos(4))).toMatch(/^R\$\s4,00 a mais$/u);
   });
 });
 
@@ -124,5 +142,101 @@ describe('repasseDaLojaEmTexto', () => {
     expect(repasseDaLojaEmTexto(0)).toBe('nada para conferir');
     expect(repasseDaLojaEmTexto(1)).toBe('1 pedido com repasse diferente do esperado');
     expect(repasseDaLojaEmTexto(3)).toBe('3 pedidos com repasse diferente do esperado');
+  });
+});
+
+describe('numerosDaFila', () => {
+  it('diz os quatro números na ordem do alto', () => {
+    const fila = montarFilaDoDia(
+      [pedido('a', -2), pedido('b', null), pedido('c', null), pedido('d', 3, true)],
+      AGORA,
+    );
+    expect(numerosDaFila(fila).map((n) => [n.chave, n.valor])).toEqual([
+      ['atrasado', 1],
+      ['hoje', 0],
+      ['sem_prazo', 2],
+      ['postados', 1],
+    ]);
+  });
+
+  it('o número com fila atrás leva ao grupo dele, e o zero não leva a lugar nenhum', () => {
+    const fila = montarFilaDoDia([pedido('a', -2), pedido('b', 3, true)], AGORA);
+    const [atrasados, hoje, , postados] = numerosDaFila(fila);
+    expect(atrasados?.ancora).toBe('#grupo-atrasado');
+    expect(hoje?.ancora).toBeNull();
+    // O que já saiu da fila não tem grupo na tabela.
+    expect(postados?.ancora).toBeNull();
+  });
+
+  it('o zero fala: nenhum atraso é boa notícia, e vem em verde', () => {
+    const [atrasados] = numerosDaFila(montarFilaDoDia([], AGORA));
+    expect(atrasados).toMatchObject({ valor: 0, tom: 'alta', nota: 'nenhum passou do prazo' });
+  });
+
+  it('atraso é vermelho, e o dia e o sem prazo pedem atenção', () => {
+    const fila = montarFilaDoDia([pedido('a', -2), pedido('b', 3), pedido('c', null)], AGORA);
+    expect(numerosDaFila(fila).map((n) => n.tom)).toEqual([
+      'baixa',
+      'atencao',
+      'atencao',
+      'neutro',
+    ]);
+  });
+});
+
+describe('gruposDaFila', () => {
+  it('corta a fila onde a urgência muda, na ordem em que ela vem', () => {
+    const fila = montarFilaDoDia(
+      [pedido('a', -2), pedido('b', null), pedido('c', 3), pedido('d', null)],
+      AGORA,
+    );
+    const grupos = gruposDaFila(fila);
+    expect(grupos.map((g) => g.urgencia)).toEqual(['sem_prazo', 'atrasado', 'hoje']);
+    expect(grupos[0]?.itens.map((i) => i.id)).toEqual(['b', 'd']);
+    expect(grupos[0]?.ancora).toBe('grupo-sem_prazo');
+  });
+
+  it('fila vazia não tem grupo, para a tabela não mostrar cabeçalho sem linha', () => {
+    expect(gruposDaFila(montarFilaDoDia([], AGORA))).toEqual([]);
+  });
+
+  it('todo grupo tem título, frase e o tom da urgência', () => {
+    // Uma de cada: sem prazo, atraso, hoje, amanhã (24h depois do meio-dia) e depois.
+    const fila = montarFilaDoDia(
+      [pedido('a', null), pedido('b', -2), pedido('c', 3), pedido('d', 24), pedido('e', 72)],
+      AGORA,
+    );
+    const grupos = gruposDaFila(fila);
+    expect(grupos.map((g) => g.urgencia)).toEqual([...URGENCIAS]);
+    for (const grupo of grupos) {
+      expect(grupo.titulo, grupo.urgencia).not.toBe('');
+      expect(grupo.explicacao, grupo.urgencia).not.toBe('');
+      expect(grupo.tom, grupo.urgencia).toBe(tomDaUrgencia(grupo.urgencia));
+    }
+  });
+});
+
+describe('semProdutoEmTexto', () => {
+  it('sem pedido sem produto, não há frase', () => {
+    expect(semProdutoEmTexto(0)).toBeNull();
+  });
+
+  it('concorda o verbo com o número, e diz o que fazer', () => {
+    expect(semProdutoEmTexto(1)).toContain('1 pedido não casou');
+    expect(semProdutoEmTexto(1)).toContain('não tem margem');
+    expect(semProdutoEmTexto(3)).toContain('3 pedidos não casaram');
+    expect(semProdutoEmTexto(3)).toContain('não têm margem');
+    expect(semProdutoEmTexto(3)).toContain('código de barras');
+  });
+});
+
+describe('hojeEmTexto', () => {
+  it('diz o dia por extenso, com a primeira letra maiúscula', () => {
+    expect(hojeEmTexto(AGORA)).toBe('Quarta-feira, 30 de setembro');
+  });
+
+  it('o dia é o de São Paulo, e não o do servidor', () => {
+    // 1h de quinta em UTC ainda é 22h de quarta em São Paulo.
+    expect(hojeEmTexto(new Date('2026-10-01T01:00:00Z'))).toBe('Quarta-feira, 30 de setembro');
   });
 });

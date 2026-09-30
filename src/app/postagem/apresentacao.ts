@@ -5,9 +5,16 @@
  * diz "atrasado" ou "ainda dá tempo" muda o que a pessoa faz nos próximos minutos,
  * e isso merece teste.
  */
-import { ROTULO_DA_URGENCIA, type Urgencia } from '@/dominio/pedidos/fila-do-dia';
+import {
+  FUSO_PADRAO,
+  ROTULO_DA_URGENCIA,
+  type FilaDoDia,
+  type ItemDaFila,
+  type Urgencia,
+} from '@/dominio/pedidos/fila-do-dia';
 import { contagem } from '@/lib/texto';
 import { centavos, formatarBRL, type Centavos } from '@/lib/dinheiro';
+import { IDIOMA } from '../ui/tempo';
 
 export type TomDaUrgencia = 'alerta' | 'atencao' | 'neutro';
 
@@ -48,12 +55,23 @@ export function tempoRestanteEmTexto(horas: number | null): string {
   return `faltam ${String(Math.trunc(horas / 24))} dias`;
 }
 
-/** Divergência de repasse em texto, dizendo de que lado ela está. */
-export function divergenciaEmTexto(divergencia: Centavos): string {
-  if (divergencia < 0) {
-    return `${formatarBRL(centavos(Math.abs(divergencia)))} a menos do que as taxas explicam`;
-  }
-  return `${formatarBRL(divergencia)} a mais do que as taxas explicam`;
+/**
+ * A divergência curta, para a casa da tabela: "R$ 11,29 a menos". O "do que as taxas
+ * explicam" fica uma vez só, na frase de cima da tabela, e não em cada linha.
+ */
+export function diferencaCurta(divergencia: Centavos): string {
+  if (divergencia < 0) return `${formatarBRL(centavos(Math.abs(divergencia)))} a menos`;
+  return `${formatarBRL(divergencia)} a mais`;
+}
+
+/**
+ * O repasse de uma loja, como a linha do atalho o diz. O repasse mora na área de cada
+ * loja (ADR 0009), e aqui só aparece quanto espera conferência em cada uma.
+ */
+export function repasseDaLojaEmTexto(paraConferir: number): string {
+  return paraConferir === 0
+    ? 'nada para conferir'
+    : `${contagem(paraConferir, 'pedido', 'pedidos')} com repasse diferente do esperado`;
 }
 
 /**
@@ -66,16 +84,6 @@ export function divergenciaEmTexto(divergencia: Centavos): string {
  *
  * `null` quando não há nada a dizer, para a tela não renderizar caixa vazia.
  */
-/**
- * O repasse de uma loja, como a linha do atalho o diz. O repasse mora na área de cada
- * loja (ADR 0009), e aqui só aparece quanto espera conferência em cada uma.
- */
-export function repasseDaLojaEmTexto(paraConferir: number): string {
-  return paraConferir === 0
-    ? 'nada para conferir'
-    : `${contagem(paraConferir, 'pedido', 'pedidos')} com repasse diferente do esperado`;
-}
-
 export function avisoDeConsignacao(unidadesEmRisco: number): string | null {
   if (unidadesEmRisco <= 0) return null;
   const unidades = contagem(unidadesEmRisco, 'unidade', 'unidades');
@@ -114,7 +122,7 @@ export function descreverAviso(codigo: string | undefined): Aviso | null {
         tom: 'ok',
         titulo: 'Repasse conferido',
         corpo:
-          'A linha saiu da lista de diferenças. O pedido não mudou: a diferença continua registrada e recalculável — o que ficou gravado é que você já olhou.',
+          'A linha saiu da lista de diferenças. O pedido não mudou: a diferença continua registrada e recalculável, e o que ficou gravado é que você já olhou.',
       };
     case 'repasse_de_volta':
       return {
@@ -135,4 +143,147 @@ export function descreverAviso(codigo: string | undefined): Aviso | null {
         corpo: 'Nada foi alterado. Tente de novo; se repetir, o log do servidor tem o motivo.',
       };
   }
+}
+
+// ─── A tela em números e em grupos ───────────────────────────────────────────
+
+/** O tom da nota de um número do alto, na escala de `ui/numeros`. */
+export type TomDoNumeroDaFila = 'neutro' | 'alta' | 'baixa' | 'atencao';
+
+export interface NumeroDaFila {
+  readonly chave: 'atrasado' | 'hoje' | 'sem_prazo' | 'postados';
+  readonly rotulo: string;
+  readonly valor: number;
+  readonly nota: string;
+  readonly tom: TomDoNumeroDaFila;
+  /** O grupo da tabela que o cartão abre; `null` quando não há o que abrir. */
+  readonly ancora: string | null;
+}
+
+/** A âncora do grupo de uma urgência na tabela, para o número do alto levar até ele. */
+export function ancoraDoGrupo(urgencia: Urgencia): string {
+  return `grupo-${urgencia}`;
+}
+
+/**
+ * Os quatro números do alto: o que passou do prazo, o que vence hoje, o que não tem
+ * prazo e o que já saiu.
+ *
+ * O zero também fala, e fala bem: "nenhum passou do prazo" em verde é o que a pessoa quer
+ * ler, e um zero mudo parece dado faltando. Cada número com fila atrás leva ao grupo dele
+ * na tabela, porque o grupo dos sem prazo vem primeiro e pode ter trinta linhas.
+ */
+export function numerosDaFila(fila: FilaDoDia): readonly NumeroDaFila[] {
+  const { atrasado, hoje, sem_prazo: semPrazo } = fila.porUrgencia;
+  const ancora = (urgencia: Urgencia, quantos: number): string | null =>
+    quantos === 0 ? null : `#${ancoraDoGrupo(urgencia)}`;
+  return [
+    {
+      chave: 'atrasado',
+      rotulo: 'Atrasados',
+      valor: atrasado,
+      nota: atrasado === 0 ? 'nenhum passou do prazo' : 'comece por estes',
+      tom: atrasado === 0 ? 'alta' : 'baixa',
+      ancora: ancora('atrasado', atrasado),
+    },
+    {
+      chave: 'hoje',
+      rotulo: 'Para hoje',
+      valor: hoje,
+      nota: hoje === 0 ? 'nada vence hoje' : 'vencem hoje, e ainda dá tempo',
+      tom: hoje === 0 ? 'neutro' : 'atencao',
+      ancora: ancora('hoje', hoje),
+    },
+    {
+      chave: 'sem_prazo',
+      rotulo: 'Sem prazo',
+      valor: semPrazo,
+      nota: semPrazo === 0 ? 'todos têm prazo' : 'não se sabe se atrasou',
+      tom: semPrazo === 0 ? 'neutro' : 'atencao',
+      ancora: ancora('sem_prazo', semPrazo),
+    },
+    {
+      chave: 'postados',
+      rotulo: 'Já postados',
+      valor: fila.jaPostados,
+      nota: fila.jaPostados === 0 ? 'nenhum ainda' : 'saíram da fila',
+      tom: fila.jaPostados === 0 ? 'neutro' : 'alta',
+      ancora: null,
+    },
+  ];
+}
+
+/** O título e a frase de cada grupo da tabela. */
+const GRUPO_DA_URGENCIA: Readonly<
+  Record<Urgencia, { readonly titulo: string; readonly explicacao: string }>
+> = {
+  sem_prazo: {
+    titulo: 'Sem prazo definido',
+    explicacao: 'A planilha não trouxe o prazo. Confira na loja se ainda dá tempo.',
+  },
+  atrasado: { titulo: 'Atrasados', explicacao: 'O prazo já passou. Poste estes primeiro.' },
+  hoje: { titulo: 'Para hoje', explicacao: 'Vencem hoje, e ainda dá tempo.' },
+  amanha: { titulo: 'Para amanhã', explicacao: 'Dá para adiantar, se sobrar tempo hoje.' },
+  depois: { titulo: 'Depois', explicacao: 'Sem pressa por enquanto.' },
+};
+
+export interface GrupoDaFila {
+  readonly urgencia: Urgencia;
+  readonly titulo: string;
+  readonly explicacao: string;
+  readonly tom: TomDaUrgencia;
+  readonly ancora: string;
+  readonly itens: readonly ItemDaFila[];
+}
+
+/**
+ * A fila em grupos de urgência, na ordem em que ela já vem.
+ *
+ * A ordem é a da fila (`fila-do-dia`), que decide e testa: sem prazo primeiro, depois o
+ * atraso, depois o dia. Aqui só se corta onde a urgência muda, para a tabela dizer em
+ * que grupo cada linha está sem repetir a palavra em todas elas.
+ */
+export function gruposDaFila(fila: FilaDoDia): readonly GrupoDaFila[] {
+  const grupos = new Map<Urgencia, ItemDaFila[]>();
+  for (const item of fila.itens) {
+    const lista = grupos.get(item.urgencia);
+    if (lista === undefined) grupos.set(item.urgencia, [item]);
+    else lista.push(item);
+  }
+  return [...grupos].map(([urgencia, itens]) => ({
+    urgencia,
+    ...GRUPO_DA_URGENCIA[urgencia],
+    tom: tomDaUrgencia(urgencia),
+    ancora: ancoraDoGrupo(urgencia),
+    itens,
+  }));
+}
+
+/**
+ * O pé da tabela quando há pedido que não casou com produto do catálogo.
+ *
+ * Uma frase para todos, e não uma por linha: repetida em cada pedido, a explicação
+ * empurrava a fila para baixo e ninguém a lia da segunda vez em diante.
+ */
+export function semProdutoEmTexto(quantos: number): string | null {
+  if (quantos <= 0) return null;
+  const pedidos = contagem(quantos, 'pedido não casou', 'pedidos não casaram');
+  const margem = quantos === 1 ? 'não tem margem calculada' : 'não têm margem calculada';
+  return `${pedidos} com nenhum produto do catálogo, então ${margem}. Cadastre o código de barras no produto e importe a planilha de novo.`;
+}
+
+/**
+ * O dia de hoje por extenso, no fuso de quem vende: "Quarta-feira, 30 de setembro".
+ *
+ * Mora no alto da tela porque "hoje" é a palavra do título, e a aba fica aberta de um dia
+ * para o outro.
+ */
+export function hojeEmTexto(agora: Date, fuso: string = FUSO_PADRAO): string {
+  const texto = new Intl.DateTimeFormat(IDIOMA, {
+    day: 'numeric',
+    month: 'long',
+    timeZone: fuso,
+    weekday: 'long',
+  }).format(agora);
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
 }

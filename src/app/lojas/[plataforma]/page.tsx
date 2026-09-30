@@ -15,6 +15,7 @@ import { notFound } from 'next/navigation';
 import { lerAmbiente } from '@/config/ambiente';
 import { estadoDaLoja } from '@/dominio/lojas/estado';
 import { DIAS_DO_PAINEL, janelasDoPainel, somarPainel } from '@/dominio/lojas/painel';
+import { resumoDaFila } from '@/dominio/pedidos/fila-do-dia';
 import { RepositorioDeLojas } from '@/dominio/lojas/repositorio';
 import { RepositorioDePedidos } from '@/dominio/pedidos/repositorio';
 import { carregarPerfil } from '@/dominio/perfil';
@@ -33,7 +34,11 @@ import {
 import { JANELA_DIAS, LIMITE_DE_PERGUNTAS } from '../../perguntas/constantes';
 import { descreverAviso as avisoDaPostagem } from '../../postagem/apresentacao';
 import { AvisoDaAcao as AvisoDaPostagem, Fila } from '../../postagem/componentes';
-import { LIMITE_DA_FILA, LIMITE_DE_DIVERGENCIAS } from '../../postagem/constantes';
+import {
+  CAMINHO as CAMINHO_DA_POSTAGEM,
+  LIMITE_DA_FILA,
+  LIMITE_DE_DIVERGENCIAS,
+} from '../../postagem/constantes';
 import { ROTULO_DA_PLATAFORMA, daLoja } from '../../ui/rotulos';
 import { numerosDoPainel, pendenciasDaLoja } from '../apresentacao';
 import { caminhoDaAba, lerAba } from '../caminhos';
@@ -165,15 +170,18 @@ export default async function PaginaDaLoja({
         ))}
 
       {aba === 'pedidos' && (
-        <section className={estilo.bloco}>
-          <div className={estilo.blocoCabecalho}>
-            <h2 className={estilo.blocoTitulo}>Para postar</h2>
-            <span className={estilo.blocoNota}>
-              em ordem de prazo; todas as lojas juntas em Postar hoje
-            </span>
-          </div>
-          <Fila fila={fila} voltar={caminhoDaAba(plataforma, 'pedidos')} />
-        </section>
+        <Fila
+          fila={fila}
+          mostrarLoja={false}
+          texto={
+            <>
+              {resumoDaFila(fila)} As lojas juntas ficam em{' '}
+              <Link href={CAMINHO_DA_POSTAGEM}>Postar hoje</Link>.
+            </>
+          }
+          titulo="Para postar"
+          voltar={caminhoDaAba(plataforma, 'pedidos')}
+        />
       )}
 
       {aba === 'anuncios' && <AbaAnuncios perfil={perfil.id} plataforma={plataforma} />}
