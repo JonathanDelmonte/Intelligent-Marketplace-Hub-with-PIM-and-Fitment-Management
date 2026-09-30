@@ -1,48 +1,205 @@
 /*
- * Estilo do leitor de código de barras.
- *
- * Desenhado para celular na mão, de pé, numa loja: alvo de toque grande, veredito
- * legível de longe, e nada que dependa de passar o mouse. As cores vêm de
+ * Estilo do leitor de código de barras, no desenho aprovado na Catálogo e preço (o porquê
+ * de cada forma está no cabeçalho de `catalogo/catalogo.module.css`). Cores só de
  * variável de tema (ADR 0003).
+ *
+ * No computador a tela é como as outras: números no alto, o leitor à esquerda e as
+ * últimas leituras à direita. No celular, que é onde o leitor mais trabalha (de pé, numa
+ * loja), tudo vira uma coluna com o leitor primeiro e os números no fim, e o campo e o
+ * botão crescem, porque o dedo erra mais que o cursor.
  */
 
-/* Coluna estreita e folga menor: é tela de celular, de pé, na loja. */
 .pagina {
   composes: pagina from '../ui/comum.module.css';
-  --largura-pagina: 34rem;
-  padding: 1.25rem 1rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cabecalho {
+  margin-bottom: 0.5rem;
 }
 
 .titulo {
   composes: titulo from '../ui/comum.module.css';
-  font-size: 1.375rem;
-  overflow-wrap: anywhere;
 }
 
 .subtitulo {
   composes: subtitulo from '../ui/comum.module.css';
 }
 
-.secao {
-  composes: secao from '../ui/comum.module.css';
-  margin-top: 1.5rem;
+.numeros {
+  min-width: 0;
 }
 
-.tituloDaSecao {
-  composes: secaoTitulo from '../ui/comum.module.css';
+.grade {
+  align-items: start;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
-/* ── Câmera ─────────────────────────────────────────────────────────────── */
+.coluna {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.bloco {
+  composes: bloco from '../ui/comum.module.css';
+}
+
+.blocoTopo {
+  composes: blocoTopo from '../ui/comum.module.css';
+}
+
+.blocoTextos {
+  composes: blocoTextos from '../ui/comum.module.css';
+}
+
+.blocoTitulo {
+  composes: blocoTitulo from '../ui/comum.module.css';
+}
+
+.blocoTexto {
+  composes: blocoTexto from '../ui/comum.module.css';
+}
+
+.etiqueta {
+  composes: etiqueta from '../ui/comum.module.css';
+  white-space: nowrap;
+}
+
+.etiquetaOk {
+  composes: etiqueta etiquetaOk from '../ui/comum.module.css';
+  white-space: nowrap;
+}
+
+.etiquetaAtencao {
+  composes: etiqueta etiquetaAtencao from '../ui/comum.module.css';
+  white-space: nowrap;
+}
+
+.etiquetaAlerta {
+  composes: etiqueta etiquetaAlerta from '../ui/comum.module.css';
+  white-space: nowrap;
+}
+
+.botao {
+  composes: botao from '../ui/comum.module.css';
+}
+
+.botaoSecundario {
+  composes: botaoSecundario from '../ui/comum.module.css';
+}
+
+.botaoMiudo {
+  composes: botaoMiudo from '../ui/comum.module.css';
+  margin-top: 1rem;
+}
+
+/* ── O leitor ─────────────────────────────────────────────────────────────── */
+
+.leitor {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.campos {
+  display: grid;
+  gap: 0.875rem 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 1.125rem;
+}
+
+.campo,
+.campoLargo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.campoLargo {
+  grid-column: 1 / -1;
+}
+
+.rotulo {
+  color: var(--tinta);
+  font-size: 0.8125rem;
+  font-weight: 560;
+}
+
+.entrada {
+  composes: entrada from '../ui/comum.module.css';
+  width: 100%;
+}
+
+.entradaInvalida {
+  border-color: var(--perda);
+}
+
+.ajuda,
+.ajudaErro {
+  font-size: 0.78125rem;
+  margin: 0;
+}
+
+.ajuda {
+  color: var(--tinta-3);
+}
+
+.ajudaErro {
+  color: var(--perda);
+}
+
+.acoes {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  margin-top: 1.125rem;
+}
+
+.detalhe {
+  color: var(--tinta-3);
+  font-size: 0.78125rem;
+}
+
+.ajudaDaCamera {
+  color: var(--tinta-3);
+  font-size: 0.78125rem;
+  margin: 0.75rem 0 0;
+}
+
+/*
+ * Nota curta, em fundo âmbar suave, embaixo do que ela comenta. Não compõe do aviso
+ * comum de propósito: aquele tem título e corpo, e aqui a nota é uma frase.
+ */
+.nota {
+  background: var(--atencao-suave);
+  border-radius: var(--raio);
+  color: var(--tinta);
+  font-size: 0.8125rem;
+  margin-top: 0.875rem;
+  padding: 0.625rem 0.875rem;
+}
+
+.envelopeDaCamera {
+  margin-top: 1rem;
+  position: relative;
+}
 
 /*
  * O preto aqui não é cor de tema: é o fundo atrás do quadro do vídeo, que aparece
  * nas bordas quando a proporção da câmera não casa com a do elemento. Tema claro ou
- * escuro, esse fundo é preto — é o que faz a imagem da câmera parecer imagem de
+ * escuro, esse fundo é preto: é o que faz a imagem da câmera parecer imagem de
  * câmera. Única cor literal do sistema, e é por isso que está anotada.
  */
 .camera {
   background: #000;
-  border: 1px solid var(--cor-borda);
   border-radius: var(--raio);
   display: block;
   max-height: 50vh;
@@ -50,123 +207,57 @@
   width: 100%;
 }
 
-.cameraDesligada {
-  align-items: center;
-  background: var(--cor-superficie);
-  border: 1px dashed var(--cor-borda);
-  border-radius: var(--raio);
-  color: var(--cor-texto-fraco);
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  justify-content: center;
-  min-height: 8rem;
-  padding: 1.25rem;
-  text-align: center;
-}
-
 .alvo {
-  border: 2px solid var(--cor-primaria);
+  border: 2px solid var(--cartao);
   border-radius: var(--raio);
   inset: 25% 10%;
   pointer-events: none;
   position: absolute;
 }
 
-.envelopeDaCamera {
-  position: relative;
-}
-
-/* ── Formulário ─────────────────────────────────────────────────────────── */
-
-/* Cartão, e não linha de campos: no celular cada campo ocupa a largura toda. */
-.formulario {
-  background: var(--cor-superficie);
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio);
-  box-shadow: var(--sombra-cartao);
-  padding: 0.875rem;
-}
-
-.rotulo {
-  display: block;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-}
-
-.entrada {
-  composes: entrada from '../ui/comum.module.css';
-  /* Folga maior que nas outras telas: o dedo erra mais que o cursor. */
-  padding: 0.75rem;
-}
-
-.entradaInvalida {
-  border-color: var(--cor-erro);
-}
-
-.linha {
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: 1fr 1fr;
-  margin-top: 0.75rem;
-}
-
-.ajuda {
-  color: var(--cor-texto-fraco);
-  font-size: 0.75rem;
-  margin: 0.25rem 0 0;
-}
-
-.ajudaErro {
-  color: var(--cor-erro);
-  font-size: 0.75rem;
-  margin: 0.25rem 0 0;
-}
-
-/* Largura toda e 3rem de altura: é o botão que se aperta com o polegar. */
-.botao {
-  composes: botao from '../ui/comum.module.css';
-  font-size: 1rem;
-  margin-top: 0.75rem;
-  min-height: 3rem;
-  width: 100%;
-}
-
-.botaoSecundario {
-  composes: botaoSecundario from '../ui/comum.module.css';
-  font-size: 0.875rem;
-  min-height: 2.5rem;
-  padding: 0.375rem 0.875rem;
-}
-
-.linhaDeBotoes {
+/* A fila do aparelho e o tamanho da base, no pé do cartão. */
+.estado {
+  align-items: center;
+  border-top: 1px solid var(--linha);
+  color: var(--tinta-3);
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
+  font-size: 0.8125rem;
+  gap: 0.5rem 1rem;
+  justify-content: space-between;
+  margin-top: 1.125rem;
+  padding-top: 0.875rem;
 }
 
-/* ── Veredito ───────────────────────────────────────────────────────────── */
+.estadoAlerta {
+  color: var(--atencao);
+}
 
+/* ── O veredito ───────────────────────────────────────────────────────────── */
+
+/* O fundo vem da cor do veredito, suave; a chamada grande leva a cor cheia. */
 .veredito {
-  background: var(--cor-superficie);
-  border: 1px solid var(--cor-borda);
-  border-left-width: 4px;
   border-radius: var(--raio);
-  padding: 1rem;
+  padding: 1.25rem 1.5rem 1.5rem;
 }
 
 .chamada {
   font-size: 1.75rem;
   font-weight: 700;
+  letter-spacing: -0.025em;
   line-height: 1.1;
+  margin: 0;
 }
 
 .chamadaApoio {
-  color: var(--cor-texto-fraco);
+  color: var(--tinta-2);
+  font-size: 0.84375rem;
+  margin: 0.5rem 0 0;
+}
+
+.teto {
   font-size: 0.875rem;
-  margin-top: 0.25rem;
+  margin: 0.875rem 0 0;
 }
 
 .numeroDestaque {
@@ -175,32 +266,44 @@
   font-weight: 700;
 }
 
-.grade {
+/*
+ * Os números do veredito: rótulo em cima, número embaixo, separados por um traço. Não
+ * é o cartão comum: dentro do cartão do veredito, cartão dentro de cartão só afasta os
+ * números uns dos outros.
+ */
+.celulas {
   display: grid;
-  gap: 0.5rem 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
-  margin-top: 0.875rem;
+  gap: 0.625rem 1.25rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 1rem;
 }
 
-/*
- * Célula da grade do veredito: rótulo em cima, número embaixo, separada por um
- * traço. Não é o cartão comum — dentro do cartão de veredito, cartão dentro de
- * cartão só afasta os números uns dos outros.
- */
 .celula {
-  border-top: 1px solid var(--cor-borda);
-  padding-top: 0.375rem;
+  border-top: 1px solid color-mix(in srgb, var(--tinta) 12%, transparent);
+  padding-top: 0.5rem;
 }
 
 .celulaRotulo {
-  color: var(--cor-texto-fraco);
-  font-size: 0.6875rem;
-  letter-spacing: 0.02em;
+  color: var(--tinta-3);
+  display: block;
+  font-size: 0.75rem;
+}
+
+.celulaRotulo::first-letter {
   text-transform: uppercase;
 }
 
 .celulaValor {
+  font-size: 0.9375rem;
   font-variant-numeric: tabular-nums;
+  font-weight: 620;
+  margin-top: 0.125rem;
+}
+
+.proprio {
+  color: var(--tinta-2);
+  font-size: 0.84375rem;
+  margin: 0.875rem 0 0;
 }
 
 .motivos {
@@ -210,89 +313,119 @@
 }
 
 .motivo {
-  border-top: 1px solid var(--cor-borda);
-  font-size: 0.875rem;
+  border-top: 1px solid color-mix(in srgb, var(--tinta) 12%, transparent);
+  font-size: 0.84375rem;
   padding: 0.5rem 0;
 }
 
 .motivoVermelho {
-  color: var(--cor-erro);
+  color: var(--perda);
 }
 
 .motivoAmarelo {
-  color: var(--cor-aviso);
+  color: var(--atencao);
 }
 
 .motivoInformativo {
-  color: var(--cor-texto-fraco);
+  color: var(--tinta-2);
 }
 
-/* ── Estado e fila ──────────────────────────────────────────────────────── */
+.presuncao {
+  color: var(--tinta-3);
+  font-size: 0.78125rem;
+  margin: 0.75rem 0 0;
+}
 
-.barraDeEstado {
+/* Comprou ou não: a resposta que ensina o sistema, no pé do cartão do produto. */
+.decisao {
   align-items: center;
-  color: var(--cor-texto-fraco);
+  border-top: 1px solid color-mix(in srgb, var(--tinta) 12%, transparent);
   display: flex;
   flex-wrap: wrap;
-  font-size: 0.8125rem;
-  gap: 0.5rem 1rem;
-  justify-content: space-between;
+  gap: 0.625rem;
   margin-top: 1rem;
+  padding-top: 1rem;
 }
 
-.barraDeEstadoAlerta {
-  color: var(--cor-aviso);
+.decisaoPergunta {
+  font-size: 0.875rem;
+  font-weight: 620;
+  margin-right: auto;
 }
 
-.etiqueta {
-  composes: etiqueta from '../ui/comum.module.css';
-  white-space: nowrap;
-}
-
-/*
- * Nota em linha: texto curto em âmbar, embaixo do que ele comenta.
- *
- * Não compõe do aviso comum de propósito — aquele é um cartão de largura inteira,
- * e aqui a nota mora dentro do cartão de veredito, onde um segundo cartão só
- * empurraria o número para baixo da dobra do celular.
- */
-.nota {
-  background: var(--cor-superficie);
-  border: 1px solid var(--cor-borda);
-  border-left: 3px solid var(--cor-aviso);
-  border-radius: var(--raio);
-  color: var(--cor-aviso);
-  font-size: 0.8125rem;
-  margin-top: 0.75rem;
-  padding: 0.625rem 0.875rem;
-}
-
-/* ── Histórico ──────────────────────────────────────────────────────────── */
+/* ── Últimas leituras ─────────────────────────────────────────────────────── */
 
 .historico {
   list-style: none;
-  margin: 0;
+  margin: 0.875rem 0 0;
   padding: 0;
 }
 
 .leitura {
-  border-bottom: 1px solid var(--cor-borda);
+  align-items: center;
+  border-top: 1px solid var(--linha);
+  display: grid;
+  gap: 0.25rem 1rem;
+  grid-template-columns: minmax(0, 1fr) auto 6.5rem;
+  padding: 0.75rem 0;
+}
+
+.leitura:last-child {
+  padding-bottom: 0;
+}
+
+.leituraTextos {
   display: flex;
-  gap: 0.75rem;
-  justify-content: space-between;
-  padding: 0.625rem 0;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
 }
 
 .leituraCodigo {
   font-family: var(--fonte-mono);
   font-size: 0.8125rem;
+  font-weight: 560;
 }
 
 .leituraDetalhe {
-  color: var(--cor-texto-fraco);
-  font-size: 0.75rem;
+  color: var(--tinta-3);
+  font-size: 0.78125rem;
 }
 
-.vazio {
-  composes: vazio from '../ui/comum.module.css';
+.leituraDecisao {
+  color: var(--tinta-2);
+  font-size: 0.8125rem;
+  text-align: right;
+}
+
+.leituraDecisao::first-letter {
+  text-transform: uppercase;
+}
+
+@media (max-width: 64rem) {
+  .grade {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* No celular: o leitor antes dos números, e alvo de toque grande. */
+@media (max-width: 48rem) {
+  .numeros {
+    order: 1;
+  }
+
+  .entrada {
+    font-size: 1rem;
+    padding: 0.75rem;
+  }
+
+  .acoes .botao {
+    font-size: 1rem;
+    min-height: 3rem;
+    width: 100%;
+  }
+
+  .celulas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

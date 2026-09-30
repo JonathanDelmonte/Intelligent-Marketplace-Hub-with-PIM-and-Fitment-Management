@@ -36,6 +36,7 @@ import {
   avaliarLocalmente,
   contarCodigos,
   COR_DO_VEREDITO,
+  FUNDO_DO_VEREDITO,
   custoPorUnidade,
   descreverConfianca,
   descreverFila,
@@ -207,7 +208,7 @@ export function Leitor({ quantidadeNaBase }: { readonly quantidadeNaBase: number
   async function avaliar(codigo: string): Promise<void> {
     const custo = interpretarCusto(custoTexto);
     if (custo === null) {
-      setErro('informe o custo antes de ler o código');
+      setErro('Informe o custo antes de ler o código.');
       return;
     }
 
@@ -283,8 +284,8 @@ export function Leitor({ quantidadeNaBase }: { readonly quantidadeNaBase: number
       });
       setErro(
         local.gtinValido === null
-          ? 'sem rede, e este código não passa no dígito verificador. Confira os dígitos.'
-          : 'sem rede: guardei a leitura e avalio quando a conexão voltar.',
+          ? 'Sem rede, e este código não passa no dígito verificador. Confira os dígitos.'
+          : 'Sem rede: guardei a leitura e avalio quando a conexão voltar.',
       );
     } finally {
       setAvaliando(false);
@@ -355,70 +356,84 @@ export function Leitor({ quantidadeNaBase }: { readonly quantidadeNaBase: number
   const estadoDaFila = descreverFila({ pendentes, travadas, online, persistente });
 
   return (
-    <div>
-      <section className={estilo.secao}>
-        <div className={estilo.formulario}>
-          <label className={estilo.rotulo} htmlFor="custo">
-            Quanto custa, por unidade
-          </label>
-          <input
-            id="custo"
-            className={
-              custoTexto !== '' && !custoValido
-                ? `${estilo.entrada} ${estilo.entradaInvalida}`
-                : estilo.entrada
-            }
-            inputMode="decimal"
-            autoComplete="off"
-            placeholder="12,50"
-            value={custoTexto}
-            onChange={(e) => {
-              setCustoTexto(e.target.value);
-            }}
-          />
-          {custoTexto !== '' && !custoValido ? (
-            <p className={estilo.ajudaErro}>
-              não entendi esse valor. Use vírgula para centavos, sem separador de milhar.
+    <div className={estilo.leitor}>
+      <section className={estilo.bloco}>
+        <div className={estilo.blocoTopo}>
+          <div className={estilo.blocoTextos}>
+            <h2 className={estilo.blocoTitulo}>Avaliar um produto</h2>
+            <p className={estilo.blocoTexto}>
+              O custo primeiro, depois o código: sem o custo não existe veredito.
             </p>
-          ) : (
-            <p className={estilo.ajuda}>
-              fica preenchido entre leituras, para o saldão de preço único.
-            </p>
-          )}
+          </div>
+          <span className={online ? estilo.etiquetaOk : estilo.etiquetaAtencao}>
+            {online ? 'Com rede' : 'Sem rede'}
+          </span>
+        </div>
 
-          <div className={estilo.linha}>
-            <div>
-              <label className={estilo.rotulo} htmlFor="unidades">
-                Unidades no lote
-              </label>
-              <input
-                id="unidades"
-                className={estilo.entrada}
-                inputMode="numeric"
-                value={unidadesTexto}
-                onChange={(e) => {
-                  setUnidadesTexto(e.target.value);
-                }}
-              />
-            </div>
-            <div>
-              <label className={estilo.rotulo} htmlFor="codigo">
-                Código
-              </label>
-              <input
-                id="codigo"
-                className={estilo.entrada}
-                inputMode="numeric"
-                autoComplete="off"
-                placeholder="7896541200121"
-                value={codigoTexto}
-                onChange={(e) => {
-                  setCodigoTexto(e.target.value);
-                }}
-              />
-            </div>
+        <div className={estilo.campos}>
+          <div className={estilo.campoLargo}>
+            <label className={estilo.rotulo} htmlFor="custo">
+              Quanto custa, por unidade
+            </label>
+            <input
+              id="custo"
+              className={
+                custoTexto !== '' && !custoValido
+                  ? `${estilo.entrada} ${estilo.entradaInvalida}`
+                  : estilo.entrada
+              }
+              inputMode="decimal"
+              autoComplete="off"
+              placeholder="12,50"
+              value={custoTexto}
+              onChange={(e) => {
+                setCustoTexto(e.target.value);
+              }}
+            />
+            {custoTexto !== '' && !custoValido ? (
+              <p className={estilo.ajudaErro}>
+                Não entendi esse valor. Use vírgula para centavos, sem separador de milhar.
+              </p>
+            ) : (
+              <p className={estilo.ajuda}>
+                Fica preenchido entre leituras, para o saldão de preço único.
+              </p>
+            )}
           </div>
 
+          <div className={estilo.campo}>
+            <label className={estilo.rotulo} htmlFor="unidades">
+              Unidades no lote
+            </label>
+            <input
+              id="unidades"
+              className={estilo.entrada}
+              inputMode="numeric"
+              value={unidadesTexto}
+              onChange={(e) => {
+                setUnidadesTexto(e.target.value);
+              }}
+            />
+          </div>
+          <div className={estilo.campo}>
+            <label className={estilo.rotulo} htmlFor="codigo">
+              Código
+            </label>
+            <input
+              id="codigo"
+              className={estilo.entrada}
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="7896541200121"
+              value={codigoTexto}
+              onChange={(e) => {
+                setCodigoTexto(e.target.value);
+              }}
+            />
+          </div>
+        </div>
+
+        <div className={estilo.acoes}>
           <button
             type="button"
             className={estilo.botao}
@@ -427,130 +442,112 @@ export function Leitor({ quantidadeNaBase }: { readonly quantidadeNaBase: number
               void avaliar(codigoTexto.trim());
             }}
           >
-            {avaliando ? 'avaliando...' : 'Avaliar'}
+            {avaliando ? 'Avaliando…' : 'Avaliar'}
           </button>
-
-          <div className={estilo.linhaDeBotoes}>
-            {camera === 'ligada' ? (
-              <button type="button" className={estilo.botaoSecundario} onClick={pararCamera}>
-                desligar câmera
-              </button>
-            ) : (
-              <button
-                type="button"
-                className={estilo.botaoSecundario}
-                onClick={() => {
-                  void ligarCamera();
-                }}
-              >
-                {camera === 'pedindo' ? 'pedindo acesso...' : 'ler com a câmera'}
-              </button>
-            )}
-            {detectorUsado === null ? null : (
-              <span className={estilo.leituraDetalhe}>
-                decodificador: {detectorUsado === 'nativo' ? 'do sistema' : 'WebAssembly'}
-              </span>
-            )}
-          </div>
-
-          {erro === null ? null : <div className={estilo.nota}>{erro}</div>}
+          {camera === 'ligada' ? (
+            <button type="button" className={estilo.botaoSecundario} onClick={pararCamera}>
+              Desligar câmera
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={estilo.botaoSecundario}
+              onClick={() => {
+                void ligarCamera();
+              }}
+            >
+              {camera === 'pedindo' ? 'Pedindo acesso…' : 'Ler com a câmera'}
+            </button>
+          )}
+          {detectorUsado === null ? null : (
+            <span className={estilo.detalhe}>
+              Decodificador: {detectorUsado === 'nativo' ? 'do sistema' : 'WebAssembly'}
+            </span>
+          )}
         </div>
-      </section>
 
-      {camera === 'ligada' || camera === 'pedindo' ? (
-        <section className={estilo.secao}>
+        {erro === null ? null : <div className={estilo.nota}>{erro}</div>}
+
+        {camera === 'ligada' || camera === 'pedindo' ? (
           <div className={estilo.envelopeDaCamera}>
             <video ref={video} className={estilo.camera} muted playsInline />
             <div className={estilo.alvo} />
           </div>
-        </section>
-      ) : null}
+        ) : null}
 
-      {camera === 'negada' || camera === 'sem_camera' ? (
-        <div className={estilo.nota}>
-          sem acesso à câmera. Digite o código no campo acima — a avaliação é a mesma.
-        </div>
-      ) : null}
+        {camera === 'negada' || camera === 'sem_camera' ? (
+          <div className={estilo.nota}>
+            Sem acesso à câmera. Digite o código no campo acima: a avaliação é a mesma.
+          </div>
+        ) : null}
 
-      {camera === 'desligada' && !temDetectorNativo() ? (
-        <p className={estilo.ajuda}>
-          este navegador não tem decodificador nativo: ao ligar a câmera, o leitor baixa um
-          decodificador de 900 KB uma única vez, e depois funciona offline.
-        </p>
-      ) : null}
+        {camera === 'desligada' && !temDetectorNativo() ? (
+          <p className={estilo.ajudaDaCamera}>
+            Este navegador não tem decodificador nativo: ao ligar a câmera, o leitor baixa um
+            decodificador de 900 KB uma única vez, e depois funciona offline.
+          </p>
+        ) : null}
 
-      {avaliacao === null ? null : <PainelDoVeredito avaliacao={avaliacao} />}
-
-      {avaliacao?.veredito === null || avaliacao === null ? null : (
-        <div className={estilo.linhaDeBotoes}>
-          <button
-            type="button"
-            className={estilo.botaoSecundario}
-            onClick={() => {
-              void registrarDecisao('comprou');
-            }}
-          >
-            comprei
-          </button>
-          <button
-            type="button"
-            className={estilo.botaoSecundario}
-            onClick={() => {
-              void registrarDecisao('nao_comprou');
-            }}
-          >
-            não comprei
-          </button>
-        </div>
-      )}
-
-      <div
-        className={
-          estadoDaFila.alerta
-            ? `${estilo.barraDeEstado} ${estilo.barraDeEstadoAlerta}`
-            : estilo.barraDeEstado
-        }
-      >
-        <span>
-          <span className={estilo.etiqueta}>{online ? 'com rede' : 'sem rede'}</span>{' '}
-          {estadoDaFila.texto}
-        </span>
-        <span>{contarCodigos(quantidadeNaBase)}</span>
-      </div>
-
-      {travadas > 0 ? (
-        <button
-          type="button"
-          className={estilo.botaoSecundario}
-          onClick={() => {
-            void (async () => {
-              await fila.current?.destravar();
-              await descarregar();
-            })();
-          }}
+        <div
+          className={
+            estadoDaFila.alerta ? `${estilo.estado} ${estilo.estadoAlerta}` : estilo.estado
+          }
         >
-          tentar enviar de novo
-        </button>
-      ) : null}
+          <span>{estadoDaFila.texto}</span>
+          <span>{contarCodigos(quantidadeNaBase)}</span>
+        </div>
 
-      {persistente ? null : <div className={estilo.nota}>{AVISO_SEM_PERSISTENCIA}</div>}
+        {travadas > 0 ? (
+          <button
+            type="button"
+            className={estilo.botaoSecundario}
+            onClick={() => {
+              void (async () => {
+                await fila.current?.destravar();
+                await descarregar();
+              })();
+            }}
+          >
+            Tentar enviar de novo
+          </button>
+        ) : null}
+
+        {persistente ? null : <div className={estilo.nota}>{AVISO_SEM_PERSISTENCIA}</div>}
+      </section>
+
+      {avaliacao === null ? null : (
+        <PainelDoVeredito
+          avaliacao={avaliacao}
+          aoDecidir={(decisao) => {
+            void registrarDecisao(decisao);
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function PainelDoVeredito({ avaliacao }: { readonly avaliacao: AvaliacaoDeGtin }) {
+/**
+ * O veredito, num cartão com o fundo na cor dele. A pergunta de comprar ou não fica no pé
+ * do cartão, porque é sobre este produto e mais nenhum.
+ */
+function PainelDoVeredito({
+  avaliacao,
+  aoDecidir,
+}: {
+  readonly avaliacao: AvaliacaoDeGtin;
+  readonly aoDecidir: (decisao: 'comprou' | 'nao_comprou') => void;
+}) {
   if (avaliacao.gtinValido === null) {
     return (
-      <section className={estilo.secao}>
-        <div className={estilo.veredito} style={{ borderLeftColor: 'var(--cor-erro)' }}>
-          <div className={estilo.chamada} style={{ color: 'var(--cor-erro)' }}>
-            Código inválido
-          </div>
-          <p className={estilo.chamadaApoio}>
-            {avaliacao.gtinLido} não passa no dígito verificador. Provavelmente foi lido ou digitado
-            errado — confira antes de decidir, porque código errado acha o produto errado.
-          </p>
-        </div>
+      <section className={estilo.veredito} style={{ background: 'var(--perda-suave)' }}>
+        <p className={estilo.chamada} style={{ color: 'var(--perda)' }}>
+          Código inválido
+        </p>
+        <p className={estilo.chamadaApoio}>
+          {avaliacao.gtinLido} não passa no dígito verificador. Provavelmente foi lido ou digitado
+          errado. Confira antes de decidir, porque código errado acha o produto errado.
+        </p>
       </section>
     );
   }
@@ -563,74 +560,96 @@ function PainelDoVeredito({ avaliacao }: { readonly avaliacao: AvaliacaoDeGtin }
   const confianca = descreverConfianca(v?.confiancaBp ?? 0);
 
   return (
-    <section className={estilo.secao}>
-      <div className={estilo.veredito} style={{ borderLeftColor: COR_DO_VEREDITO[veredito] }}>
-        <div className={estilo.chamada} style={{ color: COR_DO_VEREDITO[veredito] }}>
-          {CHAMADA_DO_VEREDITO[veredito]}
-        </div>
-        <p className={estilo.chamadaApoio}>
-          {semAvaliacao ? 'código válido · ' : ''}
-          {avaliacao.gtinValido.formatado} · {avaliacao.gtinValido.tipo}
-          {avaliacao.gtinValido.nivelDeEmbalagem === 'agrupamento' ? ' · caixa' : ''} ·{' '}
-          {confianca.rotulo}
-          {avaliacao.gtinValido.prefixo === null ? '' : ` · ${avaliacao.gtinValido.prefixo}`}
+    <section className={estilo.veredito} style={{ background: FUNDO_DO_VEREDITO[veredito] }}>
+      <p className={estilo.chamada} style={{ color: COR_DO_VEREDITO[veredito] }}>
+        {CHAMADA_DO_VEREDITO[veredito]}
+      </p>
+      <p className={estilo.chamadaApoio}>
+        {semAvaliacao ? 'Código válido · ' : ''}
+        {avaliacao.gtinValido.formatado} · {avaliacao.gtinValido.tipo}
+        {avaliacao.gtinValido.nivelDeEmbalagem === 'agrupamento' ? ' · caixa' : ''} ·{' '}
+        {confianca.rotulo}
+        {avaliacao.gtinValido.prefixo === null ? '' : ` · ${avaliacao.gtinValido.prefixo}`}
+      </p>
+
+      {v?.custoMaximoParaComprar === null || v === null ? null : (
+        <p className={estilo.teto}>
+          Pago até{' '}
+          <span className={estilo.numeroDestaque} style={{ color: COR_DO_VEREDITO[veredito] }}>
+            {formatarReais(v.custoMaximoParaComprar)}
+          </span>{' '}
+          por unidade
         </p>
+      )}
 
-        {v?.custoMaximoParaComprar === null || v === null ? null : (
-          <p style={{ marginTop: '0.75rem', marginBottom: 0 }}>
-            pago até{' '}
-            <span className={estilo.numeroDestaque} style={{ color: COR_DO_VEREDITO[veredito] }}>
-              {formatarReais(v.custoMaximoParaComprar)}
-            </span>{' '}
-            por unidade
-          </p>
-        )}
-
-        <div className={estilo.grade}>
-          <Item rotulo="preço praticado" valor={formatarReais(v?.precoDeReferencia ?? null)} />
-          <Item rotulo="margem" valor={formatarReais(v?.margem?.margemReais ?? null)} />
-          <Item rotulo="margem %" valor={formatarPercentual(v?.margem?.margemPontosBase ?? null)} />
-          <Item rotulo="markup" valor={formatarMarkup(v?.margem?.markupSobreCusto ?? null)} />
-          <Item rotulo="anúncios vistos" valor={String(avaliacao.ocorrencias)} />
-          <Item
-            rotulo="já avaliei"
-            valor={
-              avaliacao.avaliacoesAnteriores === 0
-                ? 'primeira vez'
-                : `${String(avaliacao.avaliacoesAnteriores)}x`
-            }
-          />
-        </div>
-
-        {avaliacao.skuProprio === null ? null : (
-          <p className={estilo.chamadaApoio} style={{ marginTop: '0.75rem' }}>
-            já é seu: {avaliacao.skuProprio.titulo}
-            {avaliacao.skuProprio.custoAtual === null
-              ? ''
-              : ` · custo atual ${formatarReais(avaliacao.skuProprio.custoAtual)}`}
-          </p>
-        )}
-
-        {v === null ? null : (
-          <ul className={estilo.motivos}>
-            {v.motivos.map((m) => (
-              <li
-                key={m.codigo}
-                className={`${estilo.motivo} ${CLASSE_DO_MOTIVO[m.severidade] ?? ''}`}
-              >
-                {m.mensagem}
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <p className={estilo.ajuda} style={{ marginTop: '0.75rem' }}>
-          presumindo {String(avaliacao.presumido.pesoGramas)} g de peso,{' '}
-          {formatarReais(avaliacao.presumido.embalagemCentavos)} de embalagem e{' '}
-          {formatarPercentual(avaliacao.presumido.devolucaoBp)} de devolução. Peso errado muda a
-          faixa de frete e portanto a margem.
-        </p>
+      <div className={estilo.celulas}>
+        <Item rotulo="preço praticado" valor={formatarReais(v?.precoDeReferencia ?? null)} />
+        <Item rotulo="margem" valor={formatarReais(v?.margem?.margemReais ?? null)} />
+        <Item rotulo="margem %" valor={formatarPercentual(v?.margem?.margemPontosBase ?? null)} />
+        <Item rotulo="markup" valor={formatarMarkup(v?.margem?.markupSobreCusto ?? null)} />
+        <Item rotulo="anúncios vistos" valor={String(avaliacao.ocorrencias)} />
+        <Item
+          rotulo="já avaliei"
+          valor={
+            avaliacao.avaliacoesAnteriores === 0
+              ? 'primeira vez'
+              : `${String(avaliacao.avaliacoesAnteriores)}x`
+          }
+        />
       </div>
+
+      {avaliacao.skuProprio === null ? null : (
+        <p className={estilo.proprio}>
+          Já é seu: {avaliacao.skuProprio.titulo}
+          {avaliacao.skuProprio.custoAtual === null
+            ? ''
+            : ` · custo atual ${formatarReais(avaliacao.skuProprio.custoAtual)}`}
+        </p>
+      )}
+
+      {v === null ? null : (
+        <ul className={estilo.motivos}>
+          {v.motivos.map((m) => (
+            <li
+              key={m.codigo}
+              className={`${estilo.motivo} ${CLASSE_DO_MOTIVO[m.severidade] ?? ''}`}
+            >
+              {m.mensagem}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <p className={estilo.presuncao}>
+        Presumindo {String(avaliacao.presumido.pesoGramas)} g de peso,{' '}
+        {formatarReais(avaliacao.presumido.embalagemCentavos)} de embalagem e{' '}
+        {formatarPercentual(avaliacao.presumido.devolucaoBp)} de devolução. Peso errado muda a faixa
+        de frete e portanto a margem.
+      </p>
+
+      {v === null ? null : (
+        <div className={estilo.decisao}>
+          <span className={estilo.decisaoPergunta}>Levou?</span>
+          <button
+            type="button"
+            className={estilo.botaoSecundario}
+            onClick={() => {
+              aoDecidir('comprou');
+            }}
+          >
+            Comprei
+          </button>
+          <button
+            type="button"
+            className={estilo.botaoSecundario}
+            onClick={() => {
+              aoDecidir('nao_comprou');
+            }}
+          >
+            Não comprei
+          </button>
+        </div>
+      )}
     </section>
   );
 }

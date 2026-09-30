@@ -16,11 +16,13 @@ import {
   custoPorUnidade,
   descreverConfianca,
   descreverFila,
+  detalheDaLeitura,
   formatarMarkup,
   formatarPercentual,
   formatarReais,
   interpretarCusto,
   novoIdLocal,
+  numerosDoLeitor,
   rotuloDoVeredito,
 } from './apresentacao';
 
@@ -106,7 +108,7 @@ describe('identificador local', () => {
 describe('estado da fila', () => {
   it('fila vazia diz que está tudo sincronizado', () => {
     expect(descreverFila({ pendentes: 0, travadas: 0, online: true, persistente: true })).toEqual({
-      texto: 'tudo sincronizado',
+      texto: 'Tudo sincronizado',
       alerta: false,
     });
   });
@@ -186,5 +188,47 @@ describe('plural de código', () => {
     expect(contarCodigos(0)).toBe('0 códigos na base');
     expect(contarCodigos(1)).toBe('1 código na base');
     expect(contarCodigos(2)).toBe('2 códigos na base');
+  });
+});
+
+describe('números do alto', () => {
+  const nenhuma = { comprou: 0, nao_comprou: 0, indeciso: 0, sem_decisao: 0 };
+
+  it('soma as leituras e conta "ainda não decidi" como sem decisão', () => {
+    const [base, leituras, comprei, naoComprei] = numerosDoLeitor({
+      quantidadeNaBase: 1234,
+      porDecisao: { comprou: 3, nao_comprou: 5, indeciso: 1, sem_decisao: 2 },
+    });
+    expect(base).toMatchObject({ chave: 'base', valor: 1234, tom: 'neutro' });
+    expect(leituras).toMatchObject({ valor: 11, nota: '3 sem decisão' });
+    expect(comprei?.valor).toBe(3);
+    expect(naoComprei?.valor).toBe(5);
+  });
+
+  it('base vazia pede planilha, com a cor de atenção', () => {
+    const [base] = numerosDoLeitor({ quantidadeNaBase: 0, porDecisao: nenhuma });
+    expect(base).toMatchObject({ nota: 'importe uma planilha para comparar', tom: 'atencao' });
+  });
+
+  it('diz quando não há leitura, e quando todas têm decisão', () => {
+    expect(numerosDoLeitor({ quantidadeNaBase: 2, porDecisao: nenhuma })[1]?.nota).toBe(
+      'nada lido ainda',
+    );
+    const decididas = numerosDoLeitor({
+      quantidadeNaBase: 2,
+      porDecisao: { ...nenhuma, comprou: 1, nao_comprou: 1 },
+    });
+    expect(decididas[1]?.nota).toBe('todas com decisão');
+  });
+});
+
+describe('detalhe da leitura na lista', () => {
+  it('mostra o custo, e o praticado quando há', () => {
+    const texto = detalheDaLeitura({ custoUnitario: 1250, precoDeReferencia: 3990 });
+    expect(texto).toMatch(/^Custo R\$\s12,50 · praticado R\$\s39,90$/u);
+  });
+
+  it('sem custo e sem praticado, diz só o que falta', () => {
+    expect(detalheDaLeitura({ custoUnitario: null, precoDeReferencia: null })).toBe('Sem custo');
   });
 });

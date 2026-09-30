@@ -8,17 +8,31 @@
 import { ROTULO_DO_TIPO, formatarGtin, normalizarGtin, prefixoGs1 } from '@/dominio/gtin';
 import { centavos, formatarBRL, lerReaisDigitados, type Centavos } from '@/lib/dinheiro';
 import { contagem } from '@/lib/texto';
+import type { Decisao } from '@/dominio/leitor/leituras';
 import { ROTULO_DO_VEREDITO, type Veredito } from '@/dominio/leitor/veredito';
 
 export const IDIOMA = 'pt-BR';
 
 /** Cor por veredito. Variável CSS, nunca cor literal (ADR 0003). */
 export const COR_DO_VEREDITO: Readonly<Record<Veredito, string>> = {
-  compra: 'var(--cor-ok)',
-  compra_com_ressalva: 'var(--cor-aviso)',
-  nao_compra: 'var(--cor-erro)',
-  sem_dado_recente: 'var(--cor-texto-fraco)',
-  sem_dado: 'var(--cor-texto-fraco)',
+  compra: 'var(--lucro)',
+  compra_com_ressalva: 'var(--atencao)',
+  nao_compra: 'var(--perda)',
+  sem_dado_recente: 'var(--tinta-3)',
+  sem_dado: 'var(--tinta-3)',
+};
+
+/**
+ * O fundo do cartão do veredito, na mesma cor dita suave. Era uma borda grossa de um
+ * lado só; no desenho aprovado (27/09) a cor do estado é fundo, e a chamada grande
+ * carrega a cor cheia.
+ */
+export const FUNDO_DO_VEREDITO: Readonly<Record<Veredito, string>> = {
+  compra: 'var(--lucro-suave)',
+  compra_com_ressalva: 'var(--atencao-suave)',
+  nao_compra: 'var(--perda-suave)',
+  sem_dado_recente: 'var(--realce)',
+  sem_dado: 'var(--realce)',
 };
 
 /**
@@ -134,28 +148,28 @@ export function descreverFila(params: {
 }): { readonly texto: string; readonly alerta: boolean } {
   if (params.travadas > 0) {
     return {
-      texto: `${contagem(params.travadas, 'leitura', 'leituras')} ${params.travadas === 1 ? 'não subiu' : 'não subiram'} depois de várias tentativas.`,
+      texto: `${contagem(params.travadas, 'leitura', 'leituras')} ${params.travadas === 1 ? 'não subiu' : 'não subiram'} depois de várias tentativas`,
       alerta: true,
     };
   }
   if (params.pendentes === 0) {
-    return { texto: 'tudo sincronizado', alerta: false };
+    return { texto: 'Tudo sincronizado', alerta: false };
   }
   if (!params.online) {
     return {
-      texto: `${contagem(params.pendentes, 'leitura guardada', 'leituras guardadas')} no aparelho, esperando rede.`,
+      texto: `${contagem(params.pendentes, 'leitura guardada', 'leituras guardadas')} no aparelho, esperando rede`,
       alerta: false,
     };
   }
   return {
-    texto: `${contagem(params.pendentes, 'leitura', 'leituras')} subindo...`,
+    texto: `${contagem(params.pendentes, 'leitura', 'leituras')} subindo…`,
     alerta: false,
   };
 }
 
 /** Aviso de que a fila não sobrevive ao recarregamento. */
 export const AVISO_SEM_PERSISTENCIA =
-  'este navegador não deixa guardar dado local: se a página recarregar antes de ' +
+  'Este navegador não deixa guardar dado local: se a página recarregar antes de ' +
   'sincronizar, as leituras somem.';
 
 // ─── Avaliação possível sem rede ─────────────────────────────────────────────
@@ -200,4 +214,81 @@ export function avaliarLocalmente(codigo: string): {
 export function contarCodigos(quantidade: number): string {
   const formatado = quantidade.toLocaleString(IDIOMA);
   return quantidade === 1 ? `${formatado} código na base` : `${formatado} códigos na base`;
+}
+
+// ─── Os números do alto e a lista de leituras ────────────────────────────────
+
+/** Um número do alto da tela. O ícone é escolha da tela; a conta e o texto ficam aqui. */
+export interface NumeroDoLeitor {
+  readonly chave: 'base' | 'leituras' | 'comprei' | 'naoComprei';
+  readonly rotulo: string;
+  readonly valor: number;
+  readonly nota: string;
+  readonly tom: 'neutro' | 'alta' | 'baixa' | 'atencao';
+}
+
+function notaDasLeituras(leituras: number, semDecisao: number): string {
+  if (leituras === 0) return 'nada lido ainda';
+  if (semDecisao === 0) return 'todas com decisão';
+  return `${String(semDecisao)} sem decisão`;
+}
+
+/**
+ * Os quatro números do alto: o tamanho da base e o que as leituras renderam.
+ *
+ * A base é o número que mais importa, porque decide se o leitor tem com o que comparar:
+ * sem ela, toda leitura termina em "sem dado". "Ainda não decidi" conta como sem
+ * decisão, porque nos dois casos falta a resposta que ensina o sistema.
+ */
+export function numerosDoLeitor(params: {
+  readonly quantidadeNaBase: number;
+  readonly porDecisao: Readonly<Record<Decisao | 'sem_decisao', number>>;
+}): readonly NumeroDoLeitor[] {
+  const { comprou, indeciso } = params.porDecisao;
+  const naoComprou = params.porDecisao.nao_comprou;
+  const semDecisao = indeciso + params.porDecisao.sem_decisao;
+  const leituras = comprou + naoComprou + semDecisao;
+  const base = params.quantidadeNaBase;
+  return [
+    {
+      chave: 'base',
+      rotulo: 'Códigos na base',
+      valor: base,
+      nota: base === 0 ? 'importe uma planilha para comparar' : 'para comparar o preço',
+      tom: base === 0 ? 'atencao' : 'neutro',
+    },
+    {
+      chave: 'leituras',
+      rotulo: 'Leituras',
+      valor: leituras,
+      nota: notaDasLeituras(leituras, semDecisao),
+      tom: 'neutro',
+    },
+    {
+      chave: 'comprei',
+      rotulo: 'Comprei',
+      valor: comprou,
+      nota: 'produtos que você levou',
+      tom: 'neutro',
+    },
+    {
+      chave: 'naoComprei',
+      rotulo: 'Não comprei',
+      valor: naoComprou,
+      nota: 'produtos que você deixou',
+      tom: 'neutro',
+    },
+  ];
+}
+
+/** A linha de baixo de uma leitura da lista: o custo informado e o preço que o mercado pratica. */
+export function detalheDaLeitura(leitura: {
+  readonly custoUnitario: number | null;
+  readonly precoDeReferencia: number | null;
+}): string {
+  const custo =
+    leitura.custoUnitario === null ? 'Sem custo' : `Custo ${formatarReais(leitura.custoUnitario)}`;
+  return leitura.precoDeReferencia === null
+    ? custo
+    : `${custo} · praticado ${formatarReais(leitura.precoDeReferencia)}`;
 }
