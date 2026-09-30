@@ -9,9 +9,15 @@ declare const estilo: {
   readonly botao: string;
   readonly campo: string;
   readonly cartao: string;
+  readonly chamada: string;
   readonly entrada: string;
   readonly erro: string;
   readonly formulario: string;
+  readonly formularioDaTela: string;
+  readonly painel: string;
+  readonly pontoIcone: string;
+  readonly pontos: string;
+  readonly sigla: string;
   readonly sistema: string;
   readonly subtitulo: string;
   readonly tela: string;
