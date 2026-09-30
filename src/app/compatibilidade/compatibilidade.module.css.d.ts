@@ -9,25 +9,30 @@
  */
 declare const estilo: {
   readonly acoes: string;
+  readonly aparelhoNome: string;
   readonly aparelhos: string;
+  readonly aparelhoTipo: string;
   readonly aviso: string;
   readonly avisoAtencao: string;
   readonly avisoCorpo: string;
   readonly avisoErro: string;
   readonly avisoTitulo: string;
+  readonly baixar: string;
+  readonly bloco: string;
+  readonly blocoNota: string;
+  readonly blocoTexto: string;
+  readonly blocoTitulo: string;
+  readonly blocoTopo: string;
   readonly botao: string;
+  readonly botaoBaixar: string;
   readonly botaoNao: string;
   readonly botaoSecundario: string;
-  readonly botaoBaixar: string;
   readonly botaoSim: string;
   readonly cabecalho: string;
   readonly campo: string;
   readonly campoLargo: string;
   readonly campos: string;
-  readonly cartao: string;
-  readonly cartaoNota: string;
-  readonly cartaoNumero: string;
-  readonly cartaoRotulo: string;
+  readonly coluna: string;
   readonly detalhe: string;
   readonly dica: string;
   readonly entrada: string;
@@ -38,19 +43,16 @@ declare const estilo: {
   readonly evidencias: string;
   readonly fila: string;
   readonly formulario: string;
+  readonly grade: string;
   readonly item: string;
   readonly itemCabecalho: string;
   readonly itemSub: string;
   readonly itemTitulo: string;
-  readonly legenda: string;
   readonly leituraDoCodigo: string;
   readonly pagina: string;
-  readonly painel: string;
   readonly resposta: string;
   readonly retidas: string;
   readonly rolagem: string;
-  readonly secao: string;
-  readonly secaoTitulo: string;
   readonly situacao: string;
   readonly subtitulo: string;
   readonly tabela: string;
@@ -59,4 +61,5 @@ declare const estilo: {
   readonly trechos: string;
   readonly vazio: string;
 };
+
 export default estilo;

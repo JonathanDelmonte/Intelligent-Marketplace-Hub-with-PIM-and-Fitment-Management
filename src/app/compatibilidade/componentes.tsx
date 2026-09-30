@@ -6,11 +6,14 @@
  * o que garante que ela funcione em telefone ruim e em rede ruim — e é onde a
  * conferência de compatibilidade acontece na prática, com o aparelho na mão.
  */
+import type { ReactNode } from 'react';
 import type { Evidencia } from '@/dominio/compatibilidade/evidencia';
 import type { Ficha, Resposta } from '@/dominio/compatibilidade/ficha';
 import type { SkuParaFicha } from '@/dominio/compatibilidade/repositorio';
 import type { Decisao } from '@/dominio/compatibilidade/resolucao';
 import { contagem } from '@/lib/texto';
+import { FaixaDeNumeros, type TomDoNumero } from '../ui/numeros';
+import { SinalAlerta, SinalCerto, SinalFechar, SinalRelogio } from '../ui/sinais';
 import { cadastrarAparelho, decidirLinha, procurarNosAnuncios, trazerDaFonte } from './acoes';
 import { CAMINHO_DO_ARQUIVO } from './constantes';
 import {
@@ -40,6 +43,11 @@ export function AvisoDaAcao({ aviso }: { readonly aviso: Aviso }) {
   );
 }
 
+/**
+ * Os quatro números do alto. O escuro é o de "esperando você", que é o trabalho da
+ * tela; o dos aparelhos cadastrados foi para o cartão dos aparelhos, onde ele explica
+ * alguma coisa.
+ */
 export function Painel({
   numeros,
 }: {
@@ -48,60 +56,72 @@ export function Painel({
     readonly emRevisao: number;
     readonly comConflito: number;
     readonly naoServe: number;
-    readonly aparelhos: number;
   };
 }) {
-  const cartoes = [
+  const cartoes: readonly {
+    readonly rotulo: string;
+    readonly valor: number;
+    readonly nota: string;
+    readonly tom: TomDoNumero;
+    readonly icone: ReactNode;
+    readonly escuro?: boolean;
+  }[] = [
+    {
+      rotulo: 'Esperando você',
+      valor: numeros.emRevisao,
+      nota: numeros.emRevisao === 0 ? 'nada para conferir' : 'um clique resolve cada uma',
+      tom: numeros.emRevisao === 0 ? 'alta' : 'atencao',
+      icone: <SinalRelogio />,
+      escuro: true,
+    },
     {
       rotulo: 'Prontas para o anúncio',
       valor: numeros.publicaveis,
       nota: 'provado o bastante para publicar',
-    },
-    {
-      rotulo: 'Esperando você',
-      valor: numeros.emRevisao,
-      nota: 'um clique resolve cada uma',
+      tom: numeros.publicaveis === 0 ? 'neutro' : 'alta',
+      icone: <SinalCerto />,
     },
     {
       rotulo: 'Com fontes discordando',
       valor: numeros.comConflito,
-      nota: 'olhe estas primeiro',
+      nota: numeros.comConflito === 0 ? 'nenhuma fonte contra outra' : 'olhe estas primeiro',
+      tom: numeros.comConflito === 0 ? 'neutro' : 'baixa',
+      icone: <SinalAlerta />,
     },
     {
       rotulo: 'Marcadas como não serve',
       valor: numeros.naoServe,
       nota: 'evita sugerir o modelo errado',
-    },
-    {
-      rotulo: 'Aparelhos cadastrados',
-      valor: numeros.aparelhos,
-      nota: 'é o que o sistema sabe procurar',
+      tom: 'neutro',
+      icone: <SinalFechar />,
     },
   ];
 
   return (
-    <div className={estilo.painel}>
-      {cartoes.map((c) => (
-        <div className={estilo.cartao} key={c.rotulo}>
-          <span className={estilo.cartaoNumero}>{c.valor}</span>
-          <span className={estilo.cartaoRotulo}>{c.rotulo}</span>
-          <span className={estilo.cartaoNota}>{c.nota}</span>
-        </div>
-      ))}
-    </div>
+    <FaixaDeNumeros
+      itens={cartoes.map((c) => ({
+        rotulo: c.rotulo,
+        valor: c.valor.toLocaleString('pt-BR'),
+        nota: c.nota,
+        tom: c.tom,
+        icone: c.icone,
+        escuro: c.escuro === true,
+      }))}
+      rotulo="A compatibilidade em números"
+    />
   );
 }
 
 export function BotaoProcurar() {
   return (
     <form action={procurarNosAnuncios}>
-      <button className={estilo.botaoSecundario} type="submit">
+      <button
+        className={estilo.botaoSecundario}
+        title="Lê o título de cada anúncio que você já importou e anota em que aparelhos ele diz que a peça serve. Não chama nenhuma plataforma e não gasta nada."
+        type="submit"
+      >
         Procurar nos anúncios já capturados
       </button>
-      <p className={estilo.dica}>
-        Lê o título de cada anúncio que você já importou e anota em que aparelhos ele diz que a peça
-        serve. Não chama nenhuma plataforma e não gasta nada.
-      </p>
     </form>
   );
 }
@@ -221,7 +241,7 @@ export function FichaPublicavel({ ficha }: { readonly ficha: Ficha }) {
       ) : (
         <div className={estilo.rolagem}>
           <table className={estilo.tabela}>
-            <caption className={estilo.legenda}>
+            <caption className="sr-only">
               É isto que vai para a ficha do anúncio, e o que dá para responder a comprador sem
               medo.
             </caption>
@@ -251,15 +271,20 @@ export function FichaPublicavel({ ficha }: { readonly ficha: Ficha }) {
 
       {ficha.retidas.length > 0 && (
         <details className={estilo.detalhe}>
-          <summary>{ficha.retidas.length} fora da ficha — por que cada uma ficou de fora</summary>
+          <summary>
+            {contagem(ficha.retidas.length, 'modelo ficou', 'modelos ficaram')} fora da ficha, e por
+            quê
+          </summary>
           <ul className={estilo.retidas}>
             {ficha.retidas.map((l) => (
               <li key={`${l.marca}:${l.modelo}:${l.variante ?? ''}`}>
                 <strong>
                   {l.marca} {l.modelo}
-                </strong>{' '}
-                — {explicarRetencao(l.motivo)}
-                {l.conflito === null ? '' : `: ${l.conflito}`}
+                </strong>
+                <span>
+                  {explicarRetencao(l.motivo)}
+                  {l.conflito === null ? '' : `: ${l.conflito}`}
+                </span>
               </li>
             ))}
           </ul>
@@ -309,14 +334,14 @@ export function FormularioDeAparelho() {
           <input className={estilo.entrada} name="variante" placeholder="220v" type="text" />
         </label>
       </div>
+      <p className={estilo.dica}>
+        Copie marca e modelo como estão na etiqueta do aparelho. O sistema reconhece que PA21G e
+        PA21X são o mesmo aparelho em outra cor, e usa isso para sugerir, nunca para publicar sem
+        você confirmar.
+      </p>
       <button className={estilo.botao} type="submit">
         Cadastrar aparelho
       </button>
-      <p className={estilo.dica}>
-        Copie marca e modelo como estão na etiqueta do aparelho. O sistema reconhece que PA21G e
-        PA21X são o mesmo aparelho em outra cor, e usa isso para sugerir — nunca para publicar sem
-        você confirmar.
-      </p>
     </form>
   );
 }
@@ -338,8 +363,9 @@ export function ListaDeAparelhos({
     <ul className={estilo.aparelhos}>
       {aparelhos.map((a) => (
         <li key={a.id}>
-          <strong>{a.rotulo}</strong> <span className={estilo.itemSub}>{a.tipo}</span>
-          {a.explicacao !== null && <div className={estilo.leituraDoCodigo}>{a.explicacao}</div>}
+          <span className={estilo.aparelhoNome}>{a.rotulo}</span>
+          <span className={estilo.aparelhoTipo}>{a.tipo}</span>
+          {a.explicacao !== null && <span className={estilo.leituraDoCodigo}>{a.explicacao}</span>}
         </li>
       ))}
     </ul>
@@ -396,7 +422,7 @@ export function ResponderComprador({
           <p className={estilo.dica}>
             {resposta.tipo === 'serve'
               ? `Pode enviar: ${resposta.fontes.join(', ')}.`
-              : 'Confira antes de prometer — a base ainda não sustenta uma confirmação.'}
+              : 'Confira antes de prometer: a base ainda não sustenta uma confirmação.'}
           </p>
         </>
       )}
@@ -439,7 +465,7 @@ export function EscolhaDeProduto({
         >
           {produtos.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.titulo} —{' '}
+              {p.titulo} ·{' '}
               {p.linhas === 0
                 ? 'nada registrado'
                 : contagem(p.linhas, 'linha registrada', 'linhas registradas')}
@@ -548,15 +574,15 @@ export function BaixarFicha({
   if (publicaveis === 0) return null;
 
   return (
-    <>
+    <div className={estilo.baixar}>
       <a className={estilo.botaoBaixar} href={`${CAMINHO_DO_ARQUIVO}?sku=${skuId}`}>
         Baixar a ficha em planilha
       </a>
       <p className={estilo.dica}>
         {contagem(publicaveis, 'linha publicável', 'linhas publicáveis')}, separadas por ponto e
-        vírgula, que é o que a planilha brasileira abre. Só o publicável entra — afirmar na vitrine
-        o que está abaixo do corte é o caminho curto para a devolução.
+        vírgula, que é o que a planilha brasileira abre. Só o publicável entra: afirmar na vitrine o
+        que está abaixo do corte é o caminho curto para a devolução.
       </p>
-    </>
+    </div>
   );
 }

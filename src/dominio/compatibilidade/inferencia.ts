@@ -257,7 +257,7 @@ export function inferirCompatibilidade(entrada: EntradaDaInferencia): ResultadoD
           negativa: false,
           forcaBp: confiancaBp,
         },
-        motivo: `${alvo.rotulo} é da mesma linha de ${origem.aparelho.rotulo} — vale conferir, não vale publicar`,
+        motivo: `${alvo.rotulo} é da mesma linha de ${origem.aparelho.rotulo}: vale conferir, não vale publicar`,
       });
     }
   }

@@ -139,7 +139,7 @@ export function explicarSituacao(linha: LinhaParaTela): string {
   // confiança ser diferente.
   const temIrmao = linha.evidencias.some((e) => e.tipo === 'inferencia_familia');
   return temIrmao
-    ? 'Deduzido de um modelo irmão — o mesmo aparelho em outra variação. É hipótese boa, e hipótese não publica: confirme ou descarte.'
+    ? 'Deduzido de um modelo irmão, que é o mesmo aparelho em outra variação. É hipótese boa, e hipótese não publica: confirme ou descarte.'
     : 'Deduzido da linha vizinha de um modelo confirmado. Aparelho diferente, então é pista de onde olhar, não prova.';
 }
 
@@ -224,7 +224,7 @@ export function descreverAviso(
       return {
         tom: 'atencao',
         titulo: 'Faltou preencher',
-        corpo: 'Tipo, marca e modelo são obrigatórios — sem os três não há como casar nada.',
+        corpo: 'Tipo, marca e modelo são obrigatórios: sem os três não há como casar nada.',
       };
     case 'coletado':
       return {
@@ -241,7 +241,7 @@ export function descreverAviso(
         tom: 'atencao',
         titulo: 'Nada mudou',
         corpo:
-          'Os anúncios foram lidos e não havia afirmação nova — o que existia já estava na base.',
+          'Os anúncios foram lidos e não havia afirmação nova. O que existia já estava na base.',
       };
     case 'sem_anuncio':
       return {
@@ -261,7 +261,7 @@ export function descreverAviso(
         tom: 'erro',
         titulo: 'Esse produto não é deste perfil',
         corpo:
-          'A ficha abaixo é de outro produto — o de abertura. Escolha na lista antes de responder a um comprador: ficha errada com cara de ficha certa é o erro que esta tela existe para não deixar acontecer.',
+          'A ficha abaixo é de outro produto, o de abertura. Escolha na lista antes de responder a um comprador: ficha errada com cara de ficha certa é o erro que esta tela existe para não deixar acontecer.',
       };
     case 'fonte_lida':
       return {
@@ -278,7 +278,7 @@ export function descreverAviso(
       return {
         tom: 'atencao',
         titulo: `${contagem(quantidade ?? 0, 'aparelho espera', 'aparelhos esperam')} sua conferência`,
-        corpo: `A fonte cita o aparelho, mas não cita o código deste produto — pode estar falando de outra peça. Está na fila, com o trecho, para você decidir.${comForca}`,
+        corpo: `A fonte cita o aparelho, mas não cita o código deste produto, e pode estar falando de outra peça. Está na fila, com o trecho, para você decidir.${comForca}`,
       };
     }
     case 'fonte_sem_codigo_do_produto':
@@ -313,7 +313,7 @@ export function descreverAviso(
       return {
         tom: 'atencao',
         titulo: 'Faltou a fonte',
-        corpo: 'Envie o PDF, cole o link ou cole o texto — um dos três.',
+        corpo: 'Envie o PDF, cole o link ou cole o texto: um dos três.',
       };
     case 'fonte_grande':
       return {
@@ -365,7 +365,7 @@ export function estadoDaBase(numeros: {
       tom: 'atencao',
       titulo: 'Nenhum aparelho cadastrado',
       corpo:
-        'Cadastre o primeiro aparelho abaixo — marca e modelo, como está na etiqueta. Sem isso não há o que casar com os títulos dos anúncios.',
+        'Cadastre o primeiro aparelho ao lado: marca e modelo, como está na etiqueta. Sem isso não há o que casar com os títulos dos anúncios.',
     };
   }
   if (numeros.publicaveis === 0 && numeros.emRevisao === 0) {

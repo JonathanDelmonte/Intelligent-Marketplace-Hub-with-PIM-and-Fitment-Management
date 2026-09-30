@@ -137,7 +137,7 @@ export default async function PaginaDeCompatibilidade({
         <h1 className={estilo.titulo}>Em que aparelhos a peça serve</h1>
         <p className={estilo.subtitulo}>
           Na peça de reposição o comprador não pergunta preço, pergunta “serve no meu modelo?”. Quem
-          responde certo vende sem disputar centavo — e quem responde errado paga frete de volta.
+          responde certo vende sem disputar centavo, e quem responde errado paga frete de volta.
           Então aqui cada afirmação vem com a fonte, e só vai para o anúncio o que tem{' '}
           {emPorcento(LIMIAR_PUBLICACAO_BP)} ou mais de evidência e nenhuma fonte discordando.
         </p>
@@ -147,56 +147,87 @@ export default async function PaginaDeCompatibilidade({
 
       <Painel numeros={estado} />
 
-      <section className={estilo.secao} aria-label="Procurar evidência">
-        <BotaoProcurar />
-      </section>
+      <div className={estilo.grade}>
+        <div className={estilo.coluna}>
+          <section aria-labelledby="fila-titulo" className={estilo.bloco}>
+            <div className={estilo.blocoTopo}>
+              <div>
+                <h2 className={estilo.blocoTitulo} id="fila-titulo">
+                  Esperando sua conferência
+                </h2>
+                <p className={estilo.blocoTexto}>
+                  Hipóteses com evidência, mas sem prova bastante para publicar. Um clique decide
+                  cada uma.
+                </p>
+              </div>
+              <BotaoProcurar />
+            </div>
+            {diagnostico !== null && <AvisoDaAcao aviso={diagnostico} />}
+            <Fila linhas={linhas} />
+          </section>
 
-      <section className={estilo.secao} aria-labelledby="fila-titulo">
-        <h2 className={estilo.secaoTitulo} id="fila-titulo">
-          Esperando sua conferência
-        </h2>
-        {diagnostico !== null && <AvisoDaAcao aviso={diagnostico} />}
-        <Fila linhas={linhas} />
-      </section>
+          {emFoco !== null && (
+            <section aria-labelledby="ficha-titulo" className={estilo.bloco}>
+              <div className={estilo.blocoTopo}>
+                <div>
+                  <h2 className={estilo.blocoTitulo} id="ficha-titulo">
+                    Ficha de {emFoco.titulo}
+                  </h2>
+                  <p className={estilo.blocoTexto}>
+                    É isto que vai para a ficha do anúncio, e o que dá para responder a comprador
+                    sem medo.
+                  </p>
+                </div>
+              </div>
+              <EscolhaDeProduto escolhido={emFoco} pergunta={pergunta} produtos={escolha.lista} />
+              <FichaPublicavel ficha={ficha} />
+              <BaixarFicha publicaveis={ficha.publicaveis.length} skuId={emFoco.id} />
+              <FormularioDeFonte
+                codigosDoProduto={codigosDoProduto(emFoco.titulo, indexarPorCodigo(aparelhos)).map(
+                  (c) => comoEstaNoTitulo(emFoco.titulo, c),
+                )}
+                skuId={emFoco.id}
+              />
+            </section>
+          )}
+        </div>
 
-      {emFoco !== null && (
-        <section aria-labelledby="ficha-titulo" className={estilo.secao}>
-          <h2 className={estilo.secaoTitulo} id="ficha-titulo">
-            Ficha de {emFoco.titulo}
-          </h2>
-          <EscolhaDeProduto escolhido={emFoco} pergunta={pergunta} produtos={escolha.lista} />
-          <FichaPublicavel ficha={ficha} />
-          <BaixarFicha publicaveis={ficha.publicaveis.length} skuId={emFoco.id} />
-          <FormularioDeFonte
-            codigosDoProduto={codigosDoProduto(emFoco.titulo, indexarPorCodigo(aparelhos)).map(
-              (c) => comoEstaNoTitulo(emFoco.titulo, c),
-            )}
-            skuId={emFoco.id}
-          />
-        </section>
-      )}
+        <div className={estilo.coluna}>
+          {emFoco !== null && (
+            <section aria-labelledby="responder-titulo" className={estilo.bloco}>
+              <h2 className={estilo.blocoTitulo} id="responder-titulo">
+                Responder um comprador
+              </h2>
+              <p className={estilo.blocoTexto}>
+                A resposta sai pronta para copiar, e só afirma quando a ficha sustenta.
+              </p>
+              <ResponderComprador
+                pergunta={pergunta}
+                produto={emFoco.titulo}
+                resposta={resposta}
+                skuId={emFoco.id}
+              />
+            </section>
+          )}
 
-      {emFoco !== null && (
-        <section aria-labelledby="responder-titulo" className={estilo.secao}>
-          <h2 className={estilo.secaoTitulo} id="responder-titulo">
-            Responder um comprador
-          </h2>
-          <ResponderComprador
-            pergunta={pergunta}
-            produto={emFoco.titulo}
-            resposta={resposta}
-            skuId={emFoco.id}
-          />
-        </section>
-      )}
-
-      <section className={estilo.secao} aria-labelledby="aparelhos-titulo">
-        <h2 className={estilo.secaoTitulo} id="aparelhos-titulo">
-          Aparelhos que o sistema conhece
-        </h2>
-        <FormularioDeAparelho />
-        <ListaDeAparelhos aparelhos={aparelhosNaTela} />
-      </section>
+          <section aria-labelledby="aparelhos-titulo" className={estilo.bloco}>
+            <div className={estilo.blocoTopo}>
+              <div>
+                <h2 className={estilo.blocoTitulo} id="aparelhos-titulo">
+                  Aparelhos que o sistema conhece
+                </h2>
+                <p className={estilo.blocoTexto}>É o que ele sabe procurar nos títulos.</p>
+              </div>
+              <span className={estilo.blocoNota}>
+                {estado.aparelhos.toLocaleString('pt-BR')}{' '}
+                {estado.aparelhos === 1 ? 'aparelho' : 'aparelhos'}
+              </span>
+            </div>
+            <FormularioDeAparelho />
+            <ListaDeAparelhos aparelhos={aparelhosNaTela} />
+          </section>
+        </div>
+      </div>
     </main>
   );
 }

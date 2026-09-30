@@ -1,20 +1,17 @@
 /*
- * Estilo da tela de compatibilidade.
+ * Estilo da tela de compatibilidade, no desenho aprovado na Catálogo e preço (o porquê
+ * de cada forma está no cabeçalho de `catalogo/catalogo.module.css`). Cores só de
+ * variável de tema (ADR 0003).
  *
- * Cores vêm de variável do tema: nenhuma cor literal de marca entra aqui (ADR
- * 0003, e a regra 3.1 das convenções).
- *
- * A decisão de layout que manda no arquivo: a fila de conferência é uma lista de
- * cartões, não uma tabela. Tabela de seis colunas em telefone obriga rolagem
- * horizontal, e a conferência de compatibilidade é justamente o trabalho que se faz
- * com o aparelho na mão, longe do computador. A única tabela da tela é a ficha
- * publicável, que é para ler e conferir — e ela mora dentro de um container com
- * rolagem própria.
+ * Duas colunas de cartões: à esquerda o trabalho (a fila de conferência e a ficha do
+ * produto), à direita o que se consulta (responder um comprador e os aparelhos que o
+ * sistema conhece). A fila continua lista, e não tabela: a conferência é o trabalho que
+ * se faz com o aparelho na mão. Os itens dela são linhas dentro do cartão, separadas por
+ * um fio, e não cartões dentro de cartão.
  */
 
 .pagina {
   composes: pagina from '../ui/comum.module.css';
-  --largura-pagina: 76rem;
 }
 
 .cabecalho {
@@ -30,12 +27,39 @@
   composes: subtitulo from '../ui/comum.module.css';
 }
 
-.secao {
-  composes: secao from '../ui/comum.module.css';
+.grade {
+  align-items: start;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.6fr) minmax(20rem, 1fr);
 }
 
-.secaoTitulo {
-  composes: secaoTitulo from '../ui/comum.module.css';
+.coluna {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.bloco {
+  composes: bloco from '../ui/comum.module.css';
+}
+
+.blocoTopo {
+  composes: blocoTopo from '../ui/comum.module.css';
+}
+
+.blocoTitulo {
+  composes: blocoTitulo from '../ui/comum.module.css';
+  overflow-wrap: anywhere;
+}
+
+.blocoTexto {
+  composes: blocoTexto from '../ui/comum.module.css';
+}
+
+.blocoNota {
+  composes: blocoNota from '../ui/comum.module.css';
 }
 
 /* ─── Avisos ──────────────────────────────────────────────────────────────── */
@@ -60,41 +84,21 @@
   composes: avisoCorpo from '../ui/comum.module.css';
 }
 
-/* ─── Painel de números ───────────────────────────────────────────────────── */
-
-.painel {
-  composes: painel from '../ui/comum.module.css';
-}
-
-.cartao {
-  composes: cartao from '../ui/comum.module.css';
-}
-
-.cartaoNumero {
-  composes: cartaoNumero from '../ui/comum.module.css';
-}
-
-.cartaoRotulo {
-  composes: cartaoRotulo from '../ui/comum.module.css';
-}
-
-.cartaoNota {
-  composes: cartaoNota from '../ui/comum.module.css';
-}
-
 /* ─── Fila de conferência ─────────────────────────────────────────────────── */
 
 .fila {
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
 .item {
-  composes: item from '../ui/comum.module.css';
+  border-top: 1px solid var(--linha);
+  padding: 1rem 0;
+}
+
+.item:last-child {
+  padding-bottom: 0;
 }
 
 .itemCabecalho {
@@ -103,7 +107,6 @@
 
 .itemTitulo {
   composes: itemTitulo from '../ui/comum.module.css';
-  overflow-wrap: anywhere;
 }
 
 .itemSub {
@@ -112,28 +115,47 @@
 
 .etiqueta {
   composes: etiqueta from '../ui/comum.module.css';
-  white-space: nowrap;
 }
 
 .etiquetaNao {
-  border-color: var(--cor-erro);
-  color: var(--cor-erro);
+  composes: etiquetaAlerta from '../ui/comum.module.css';
 }
 
 .etiquetaNeutra {
-  border-color: var(--cor-borda);
-  color: var(--cor-texto-fraco);
+  composes: etiqueta from '../ui/comum.module.css';
 }
 
 .situacao {
-  margin: 0.75rem 0 0;
+  color: var(--tinta);
+  font-size: 0.875rem;
+  margin: 0.625rem 0 0;
 }
 
 .evidencias {
-  color: var(--cor-texto-fraco);
-  font-size: 0.875rem;
+  color: var(--tinta-2);
+  font-size: 0.8125rem;
   margin: 0.5rem 0 0;
   padding-left: 1.125rem;
+}
+
+/* O que a fonte disse, entre aspas: fundo suave, e o nome da fonte em peso. */
+.trechos {
+  background: var(--realce);
+  border-radius: var(--raio);
+  color: var(--tinta-2);
+  font-size: 0.8125rem;
+  list-style: none;
+  margin: 0.625rem 0 0;
+  padding: 0.625rem 0.875rem;
+}
+
+.trechos li + li {
+  margin-top: 0.25rem;
+}
+
+.trechoFonte {
+  color: var(--tinta);
+  font-weight: 600;
 }
 
 .acoes {
@@ -142,8 +164,6 @@
   gap: 0.5rem;
   margin-top: 0.875rem;
 }
-
-/* ─── Botões ──────────────────────────────────────────────────────────────── */
 
 .botaoSim {
   composes: botaoSim from '../ui/comum.module.css';
@@ -158,127 +178,184 @@
 }
 
 .botaoSecundario {
-  composes: botaoSecundario from '../ui/comum.module.css';
+  composes: botaoMiudo from '../ui/comum.module.css';
+  white-space: nowrap;
 }
 
-/*
- * O link de baixar com forma de botão, como na tela de anúncio.
- *
- * `text-decoration: none` porque sublinhado dentro de botão lê como defeito, e
- * `inline-block` porque `a` sem isso ignora o `padding` vertical.
- */
-.botaoBaixar {
-  composes: botaoSim from '../ui/comum.module.css';
-  display: inline-block;
-  margin-top: 0.75rem;
-  padding: 0.625rem 1.25rem;
-  text-decoration: none;
-}
-
-/* O seletor de produto: campo e botão na mesma linha, quebrando no telefone. */
-.escolha {
-  align-items: flex-end;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 0.75rem;
-  margin-bottom: 1rem;
+.vazio {
+  composes: vazio from '../ui/comum.module.css';
 }
 
 .dica {
   composes: dica from '../ui/comum.module.css';
 }
 
-/* ─── Ficha ───────────────────────────────────────────────────────────────── */
+/* ─── A ficha ─────────────────────────────────────────────────────────────── */
 
+/* A escolha do produto: o seletor e o botão na mesma linha, no alto do cartão. */
+.escolha {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.escolha .campo {
+  flex: 1 1 18rem;
+}
+
+/* A tabela encosta nas bordas do cartão, como a de preços. */
 .rolagem {
-  overflow-x: auto;
+  composes: rolagem from '../ui/comum.module.css';
+  border-top: 1px solid var(--linha);
+  margin: 0 -1.5rem;
 }
 
 .tabela {
   composes: tabela from '../ui/comum.module.css';
-  min-width: 34rem;
-}
-
-.legenda {
-  color: var(--cor-texto-fraco);
-  font-size: 0.875rem;
-  margin-bottom: 0.5rem;
-  text-align: left;
 }
 
 .detalhe {
-  margin-top: 1rem;
+  border-top: 1px solid var(--linha);
+  font-size: 0.84375rem;
+  margin: 0 0 0;
+  padding-top: 0.875rem;
+}
+
+.detalhe > summary {
+  color: var(--tinta-2);
+  cursor: pointer;
+}
+
+.detalhe > summary:hover {
+  color: var(--tinta);
 }
 
 .retidas {
-  color: var(--cor-texto-fraco);
-  font-size: 0.875rem;
+  list-style: none;
   margin: 0.5rem 0 0;
-  padding-left: 1.125rem;
+  padding: 0;
 }
 
-/* ─── Cadastro de aparelho ────────────────────────────────────────────────── */
+.retidas li {
+  border-top: 1px solid var(--linha);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem 0.75rem;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+}
+
+.retidas li span {
+  color: var(--tinta-3);
+}
+
+.baixar {
+  border-top: 1px solid var(--linha);
+  margin-top: 0;
+  padding: 1rem 0;
+}
+
+/*
+ * Baixar a ficha é um `<a>`: é navegação para uma rota que devolve arquivo. Preto, como
+ * a ação principal de toda tela.
+ */
+.botaoBaixar {
+  composes: botao from '../ui/comum.module.css';
+  text-decoration: none;
+}
+
+/* ─── Formulários ─────────────────────────────────────────────────────────── */
 
 .formulario {
-  composes: formulario from '../ui/comum.module.css';
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.formulario .botao {
+  align-self: flex-start;
 }
 
 .campos {
   display: grid;
-  /* O formulário comum é uma linha que quebra; a grade ocupa a linha inteira. */
-  flex: 1 1 100%;
   gap: 0.75rem;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  margin-bottom: 0.875rem;
-}
-
-.campoLargo {
-  flex: 1 1 100%;
-}
-
-.trechos {
-  font-size: 0.875rem;
-  margin: 0.5rem 0 0;
-  overflow-wrap: anywhere;
-  padding-left: 1.125rem;
-}
-
-.trechoFonte {
-  color: var(--cor-texto-fraco);
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
 }
 
 .campo {
-  composes: campo from '../ui/comum.module.css';
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.campo > span {
+  color: var(--tinta);
+  font-size: 0.8125rem;
+  font-weight: 560;
+}
+
+.campoLargo {
+  grid-column: 1 / -1;
 }
 
 .entrada {
   composes: entrada from '../ui/comum.module.css';
+  width: 100%;
 }
 
+/* A resposta pronta para copiar: o texto como vai para o comprador, num quadro. */
+.resposta {
+  background: var(--lucro-suave);
+  border-radius: var(--raio);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  margin: 0.25rem 0 0;
+  padding: 0.875rem 1rem;
+}
+
+/* ─── Aparelhos ───────────────────────────────────────────────────────────── */
+
 .aparelhos {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
   list-style: none;
-  margin: 1rem 0 0;
+  margin: 1.25rem 0 0;
   padding: 0;
 }
 
-.leituraDoCodigo {
-  color: var(--cor-texto-fraco);
-  font-family: var(--fonte-mono);
+.aparelhos li {
+  border-top: 1px solid var(--linha);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem 0.5rem;
+  padding: 0.625rem 0;
+}
+
+.aparelhos li:last-child {
+  padding-bottom: 0;
+}
+
+.aparelhoNome {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.aparelhoTipo {
+  color: var(--tinta-3);
   font-size: 0.8125rem;
-  margin-top: 0.125rem;
-  overflow-wrap: anywhere;
 }
 
-.resposta {
-  background: var(--cor-fundo);
-  border-left: 3px solid var(--cor-primaria);
-  margin: 0.875rem 0 0;
-  padding: 0.75rem 1rem;
+/* Como o sistema leu o código do modelo, peça por peça. */
+.leituraDoCodigo {
+  color: var(--tinta-2);
+  flex-basis: 100%;
+  font-size: 0.78125rem;
 }
 
-.vazio {
-  composes: vazio from '../ui/comum.module.css';
+@media (max-width: 64rem) {
+  .grade {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

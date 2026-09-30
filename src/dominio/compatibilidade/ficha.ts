@@ -261,7 +261,7 @@ export function responder(params: {
     return {
       tipo: 'sem_modelo',
       texto:
-        'Para confirmar, me diga o modelo do aparelho — costuma estar na etiqueta atrás ou embaixo.',
+        'Para confirmar, me diga o modelo do aparelho. Costuma estar na etiqueta atrás ou embaixo.',
       codigos: [],
       aparelho: null,
       confiancaBp: 0,
@@ -291,7 +291,7 @@ export function responder(params: {
   if (boa !== undefined) {
     return {
       tipo: 'serve',
-      texto: `Serve, sim — ${boa.aparelho.marca} ${boa.aparelho.modelo} está na nossa tabela de compatibilidade.`,
+      texto: `Serve, sim. O ${boa.aparelho.marca} ${boa.aparelho.modelo} está na nossa tabela de compatibilidade.`,
       codigos,
       aparelho: boa.aparelho,
       confiancaBp: boa.confiancaBp,
@@ -303,7 +303,7 @@ export function responder(params: {
   if (duvidosa !== undefined) {
     return {
       tipo: 'em_duvida',
-      texto: `Ainda não posso confirmar para esse modelo — prefiro checar do que garantir errado. Me dá um instante que eu confiro no manual do fabricante e volto.`,
+      texto: `Ainda não posso confirmar para esse modelo, e prefiro checar do que garantir errado. Me dá um instante que eu confiro no manual do fabricante e volto.`,
       codigos,
       aparelho: duvidosa.aparelho,
       confiancaBp: duvidosa.confiancaBp,
@@ -316,7 +316,7 @@ export function responder(params: {
     const inferida = parente.evidencias.every((e) => ehInferida(e.tipo));
     return {
       tipo: 'parente_confirmado',
-      texto: `Esse modelo é da mesma linha do ${parente.aparelho.marca} ${parente.aparelho.modelo}, que já está confirmado${inferida ? '' : ' pelo fabricante'} — mas eu não confirmo o seu sem checar. Me dá um instante.`,
+      texto: `Esse modelo é da mesma linha do ${parente.aparelho.marca} ${parente.aparelho.modelo}, que já está confirmado${inferida ? '' : ' pelo fabricante'}, mas eu não confirmo o seu sem checar. Me dá um instante.`,
       codigos,
       aparelho: parente.aparelho,
       confiancaBp: parente.confiancaBp,
@@ -326,7 +326,7 @@ export function responder(params: {
 
   return {
     tipo: 'nao_sei',
-    texto: `Não tenho esse modelo na tabela ainda. Vou checar com o fabricante e te respondo — prefiro confirmar do que arriscar.`,
+    texto: `Não tenho esse modelo na tabela ainda. Vou checar com o fabricante e te respondo: prefiro confirmar do que arriscar.`,
     codigos,
     aparelho: null,
     confiancaBp: 0,

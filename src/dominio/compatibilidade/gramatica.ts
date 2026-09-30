@@ -80,7 +80,7 @@ export const MOTIVOS_DE_RECUSA = [
 export type MotivoDeRecusa = (typeof MOTIVOS_DE_RECUSA)[number];
 
 const TEXTO_DA_RECUSA: Readonly<Record<MotivoDeRecusa, string>> = {
-  sem_marca: 'sem marca — código de modelo sozinho não identifica fabricante',
+  sem_marca: 'sem marca: código de modelo sozinho não identifica fabricante',
   sem_modelo: 'sem modelo',
   nao_e_codigo: 'o modelo não tem forma de código de fabricante',
   forma_desconhecida: 'código reconhecido, mas fora da forma letras+dígitos+letras',
