@@ -89,7 +89,7 @@ export const ROTULO_DA_METRICA: Readonly<Record<Metrica, string>> = {
 
 /** O que o assistente sabe responder, para quem perguntou o que ele não sabe. */
 export const O_QUE_EU_RESPONDO =
-  'faturamento, pedidos, ticket médio, margem, os mais vendidos, o que postar e repasse diferente do esperado — de uma loja, de cada loja ou de todas; hoje, ontem, 7, 30 ou 90 dias, este mês ou o mês passado.';
+  'faturamento, pedidos, ticket médio, margem, os mais vendidos, o que postar e repasse diferente do esperado. De uma loja, de cada loja ou de todas; hoje, ontem, 7, 30 ou 90 dias, este mês ou o mês passado.';
 
 // ─── Como a pergunta foi entendida, e quando não há resposta ─────────────────
 
@@ -108,7 +108,7 @@ export function textoDeComoEntendi(como: ComoEntendi): string {
       return `Entendi a pergunta pelas palavras, sem usar IA. ${numeros}`;
     case 'ia':
       return como.deCache
-        ? `A IA gratuita já tinha traduzido esta pergunta antes, e a tradução foi reaproveitada — não gastou cota. ${numeros} A IA não vê nem calcula número.`
+        ? `A IA gratuita já tinha traduzido esta pergunta antes, e a tradução foi reaproveitada: não gastou cota. ${numeros} A IA não vê nem calcula número.`
         : `A IA gratuita traduziu a pergunta para a consulta acima. ${numeros} A IA não vê nem calcula número.`;
   }
 }
@@ -165,7 +165,7 @@ export function avisoSemResposta(
       return {
         titulo: 'Não entendi a pergunta pelas palavras.',
         corpo:
-          'E a IA, que tentaria entender de outro jeito, não está ligada. Reescreva dizendo o que quer saber — faturamento, pedidos, margem, o que postar — ou use uma pergunta pronta.',
+          'E a IA, que tentaria entender de outro jeito, não está ligada. Reescreva dizendo o que quer saber (faturamento, pedidos, margem, o que postar) ou use uma pergunta pronta.',
         detalhe:
           'Para ligar a IA gratuita, cole a chave do OpenRouter em LLM_API_KEY, no arquivo .env.',
         tom: 'neutro',
@@ -173,7 +173,7 @@ export function avisoSemResposta(
     case 'cota':
       return {
         titulo: 'A cota gratuita de IA acabou por agora.',
-        corpo: `Ela volta ${quandoVolta(motivo.ate, agora, fuso)}. Até lá, as perguntas prontas e as que eu entendo pelas palavras continuam respondendo — só a pergunta que precisa da IA espera.`,
+        corpo: `Ela volta ${quandoVolta(motivo.ate, agora, fuso)}. Até lá, as perguntas prontas e as que eu entendo pelas palavras continuam respondendo. Só a pergunta que precisa da IA espera.`,
         detalhe: null,
         tom: 'atencao',
       };

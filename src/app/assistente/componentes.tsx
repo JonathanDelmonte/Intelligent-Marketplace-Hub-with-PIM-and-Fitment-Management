@@ -3,17 +3,34 @@
  * `apresentacao.ts`, que tem teste.
  */
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import type { Plataforma } from '@/dominio/precificacao/tipos';
-import { IconeDaPorta } from '../icones';
 import { IDENTIDADE_DA_LOJA } from '../lojas/identidade';
 import { Selo } from '../lojas/selo';
-import type { AvisoDoAssistente, LinhaDaResposta, Resposta } from './apresentacao';
-import { CAMINHO, caminhoDaPronta, PERGUNTAS_PRONTAS } from './constantes';
+import {
+  SinalAlerta,
+  SinalAvancar,
+  SinalCaixa,
+  SinalCarteira,
+  SinalFaisca,
+  SinalGrafico,
+  SinalMoedas,
+  SinalPercentual,
+  SinalRelogio,
+  SinalSacola,
+} from '../ui/sinais';
+import {
+  O_QUE_EU_RESPONDO,
+  type AvisoDoAssistente,
+  type LinhaDaResposta,
+  type Resposta,
+} from './apresentacao';
+import { CAMINHO, caminhoDaPronta, PERGUNTAS_PRONTAS, type IdDaPergunta } from './constantes';
 import estilo from './assistente.module.css';
 
 /**
  * A caixa da pergunta. Formulário GET, de propósito: a pergunta fica na URL, e a
- * resposta pode ser recarregada, guardada nos favoritos e aberta de novo amanhã — com os
+ * resposta pode ser recarregada, guardada nos favoritos e aberta de novo amanhã, com os
  * números de amanhã.
  */
 export function CaixaDePergunta({
@@ -24,39 +41,122 @@ export function CaixaDePergunta({
   readonly loja: Plataforma | undefined;
 }) {
   return (
-    <form action={CAMINHO} className={estilo.caixa} method="get">
-      <label className="sr-only" htmlFor="pergunta">
-        Sua pergunta
-      </label>
-      <input
-        autoComplete="off"
-        className={estilo.campo}
-        defaultValue={texto}
-        id="pergunta"
-        maxLength={300}
-        name="pergunta"
-        placeholder="Ex.: quanto vendi no Mercado Livre este mês?"
-        type="text"
-      />
-      {loja === undefined ? null : <input name="loja" type="hidden" value={loja} />}
-      <button className={estilo.botao} type="submit">
-        Perguntar
-      </button>
-    </form>
+    <section aria-labelledby="pergunta-titulo" className={estilo.caixa}>
+      <div className={estilo.caixaTopo}>
+        <span aria-hidden="true" className={estilo.caixaIcone}>
+          <SinalFaisca />
+        </span>
+        <h2 className={estilo.caixaTitulo} id="pergunta-titulo">
+          O que você quer saber?
+        </h2>
+      </div>
+      <form action={CAMINHO} className={estilo.caixaLinha} method="get">
+        <label className="sr-only" htmlFor="pergunta">
+          Sua pergunta
+        </label>
+        <input
+          autoComplete="off"
+          className={estilo.campo}
+          defaultValue={texto}
+          id="pergunta"
+          maxLength={300}
+          name="pergunta"
+          placeholder="Ex.: quanto vendi no Mercado Livre este mês?"
+          type="text"
+        />
+        {loja === undefined ? null : <input name="loja" type="hidden" value={loja} />}
+        <button className={estilo.botao} type="submit">
+          Perguntar
+        </button>
+      </form>
+    </section>
   );
 }
 
+/** O desenho de cada pronta: o que ela responde, num relance. */
+const SINAL_DA_PRONTA: Readonly<Record<IdDaPergunta, ReactNode>> = {
+  faturamento_por_loja: <SinalMoedas />,
+  postar_hoje: <SinalCaixa />,
+  margem_por_loja: <SinalPercentual />,
+  mais_vendidos: <SinalSacola />,
+  vendas_hoje: <SinalRelogio />,
+  resumo_do_mes: <SinalGrafico />,
+  repasse: <SinalCarteira />,
+};
+
+/**
+ * As perguntas prontas, num cartão ao lado. Eram cápsulas arredondadas embaixo da caixa;
+ * numa lista com o desenho de cada uma, dá para achar a pergunta pelo olho, e o "não
+ * usam IA" fica dito uma vez só, no alto.
+ */
 export function Prontas({ loja }: { readonly loja: Plataforma | undefined }) {
   return (
-    <ul aria-label="Perguntas prontas" className={estilo.prontas}>
-      {PERGUNTAS_PRONTAS.map((p) => (
-        <li key={p.id}>
-          <Link className={estilo.pronta} href={caminhoDaPronta(p.id, loja)}>
-            {p.rotulo}
-          </Link>
+    <section aria-labelledby="prontas-titulo" className={estilo.bloco}>
+      <h2 className={estilo.blocoTitulo} id="prontas-titulo">
+        Perguntas prontas
+      </h2>
+      <p className={estilo.blocoTexto}>Respondem na hora, e nenhuma gasta a cota de IA.</p>
+      <ul className={estilo.prontas}>
+        {PERGUNTAS_PRONTAS.map((p) => (
+          <li key={p.id}>
+            <Link className={estilo.pronta} href={caminhoDaPronta(p.id, loja)}>
+              <span aria-hidden="true" className={estilo.prontaIcone}>
+                {SINAL_DA_PRONTA[p.id]}
+              </span>
+              <span className={estilo.prontaRotulo}>{p.rotulo}</span>
+              <span aria-hidden="true" className={estilo.prontaSeta}>
+                <SinalAvancar tamanho={12} />
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** O que o assistente faz com a pergunta, no pé da coluna do lado. */
+export function ComoEuRespondo() {
+  return (
+    <section aria-labelledby="como-titulo" className={estilo.bloco}>
+      <h2 className={estilo.blocoTitulo} id="como-titulo">
+        Como eu respondo
+      </h2>
+      <ol className={estilo.passos}>
+        <li>
+          Sei responder sobre {O_QUE_EU_RESPONDO} Pergunta sem período é sobre os últimos 30 dias.
         </li>
-      ))}
-    </ul>
+        <li>
+          Primeiro tento entender pelas palavras, sem IA. Só quando não entendo a pergunta ela vai
+          para a IA gratuita, que a traduz numa dessas consultas. A IA nunca vê nem calcula número.
+        </li>
+        <li>
+          Os números são os mesmos da área de cada loja e da visão geral: pedidos gravados, por
+          planilha ou pela API. Quando a planilha de uma loja para antes do período, a resposta diz
+          até quando ela vai.
+        </li>
+        <li>
+          A IA gratuita tem cota. Quando ela acaba, as perguntas prontas e as que eu entendo pelas
+          palavras continuam respondendo.
+        </li>
+      </ol>
+    </section>
+  );
+}
+
+/** Antes da primeira pergunta: o que dá para perguntar, em exemplos. */
+export function Comeco() {
+  return (
+    <section aria-label="Antes da primeira pergunta" className={estilo.comeco}>
+      <span aria-hidden="true" className={estilo.comecoIcone}>
+        <SinalFaisca tamanho={20} />
+      </span>
+      <p className={estilo.comecoTitulo}>Faça uma pergunta, ou comece por uma pronta.</p>
+      <p className={estilo.comecoTexto}>
+        Por exemplo: quanto vendi ontem na Shopee, qual produto mais vendeu este mês, ou qual loja
+        deu mais margem nos últimos 90 dias.
+      </p>
+    </section>
   );
 }
 
@@ -75,7 +175,7 @@ function Linha({ linha }: { readonly linha: LinhaDaResposta }) {
   );
 }
 
-/** A pergunta como foi feita, no alto da resposta — é o que dá sentido ao resto. */
+/** A pergunta como foi feita, no alto da resposta: é o que dá sentido ao resto. */
 function Perguntado({ texto }: { readonly texto: string }) {
   return (
     <p className={estilo.perguntado}>
@@ -99,7 +199,7 @@ export function CartaoDaResposta({
       <Perguntado texto={pergunta} />
       <div className={estilo.corpo}>
         <p className={estilo.entendido}>
-          <IconeDaPorta nome="assistente" tamanho={16} />
+          <SinalFaisca tamanho={14} />
           <span>
             Entendi assim: <strong>{resposta.entendido}</strong>
           </span>
@@ -127,7 +227,12 @@ export function CartaoDaResposta({
         {resposta.notas.length === 0 ? null : (
           <ul aria-label="O que falta nestes números" className={estilo.notas}>
             {resposta.notas.map((nota) => (
-              <li key={nota}>{nota}</li>
+              <li className={estilo.nota} key={nota}>
+                <span aria-hidden="true" className={estilo.notaSinal}>
+                  <SinalAlerta tamanho={14} />
+                </span>
+                {nota}
+              </li>
             ))}
           </ul>
         )}
@@ -135,6 +240,7 @@ export function CartaoDaResposta({
         {resposta.acao === null ? null : (
           <Link className={estilo.acao} href={resposta.acao.href}>
             {resposta.acao.rotulo}
+            <SinalAvancar tamanho={12} />
           </Link>
         )}
       </div>

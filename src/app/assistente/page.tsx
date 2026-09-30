@@ -18,8 +18,15 @@ import { ehPlataforma, type Plataforma } from '@/dominio/precificacao/tipos';
 import { IDENTIDADE_DA_LOJA } from '../lojas/identidade';
 import { Selo } from '../lojas/selo';
 import { naLoja } from '../ui/rotulos';
-import { avisoSemResposta, O_QUE_EU_RESPONDO, textoDeComoEntendi } from './apresentacao';
-import { CaixaDePergunta, CartaoDaResposta, Prontas, SemResposta } from './componentes';
+import { avisoSemResposta, textoDeComoEntendi } from './apresentacao';
+import {
+  CaixaDePergunta,
+  CartaoDaResposta,
+  Comeco,
+  ComoEuRespondo,
+  Prontas,
+  SemResposta,
+} from './componentes';
 import { CAMINHO, lerPronta } from './constantes';
 import { responder } from './dados';
 import estilo from './assistente.module.css';
@@ -77,46 +84,28 @@ export default async function PaginaDoAssistente({
         )}
       </header>
 
-      <CaixaDePergunta loja={loja} texto={texto} />
-      <Prontas loja={loja} />
+      <div className={estilo.grade}>
+        <div className={estilo.principal}>
+          <CaixaDePergunta loja={loja} texto={texto} />
 
-      {resultado === null ? (
-        <p className={estilo.vazio}>
-          Faça uma pergunta, ou comece por uma pronta — as prontas respondem na hora e não usam IA.
-        </p>
-      ) : resultado.tipo === 'resposta' ? (
-        <CartaoDaResposta
-          pergunta={texto}
-          resposta={resultado.resposta}
-          rodape={textoDeComoEntendi(resultado.como)}
-        />
-      ) : (
-        <SemResposta aviso={avisoSemResposta(resultado.motivo, agora)} pergunta={texto} />
-      )}
+          {resultado === null ? (
+            <Comeco />
+          ) : resultado.tipo === 'resposta' ? (
+            <CartaoDaResposta
+              pergunta={texto}
+              resposta={resultado.resposta}
+              rodape={textoDeComoEntendi(resultado.como)}
+            />
+          ) : (
+            <SemResposta aviso={avisoSemResposta(resultado.motivo, agora)} pergunta={texto} />
+          )}
+        </div>
 
-      <details className={estilo.como}>
-        <summary className={estilo.comoResumo}>Como eu respondo</summary>
-        <ul className={estilo.comoLista}>
-          <li>
-            Eu sei responder sobre {O_QUE_EU_RESPONDO} Pergunta sem período é sobre os últimos 30
-            dias.
-          </li>
-          <li>
-            Primeiro tento entender pelas palavras, sem IA. Só quando não entendo a pergunta vai
-            para a IA gratuita, que a traduz numa dessas consultas — ela nunca vê nem calcula
-            número.
-          </li>
-          <li>
-            Os números são os mesmos da área de cada loja e da visão geral: pedidos gravados, por
-            planilha ou pela API. Quando a planilha de uma loja para antes do período, a resposta
-            diz até quando ela vai.
-          </li>
-          <li>
-            A IA gratuita tem cota. Quando ela acaba, as perguntas prontas e as que eu entendo pelas
-            palavras continuam respondendo.
-          </li>
-        </ul>
-      </details>
+        <aside aria-label="Perguntas prontas e como eu respondo" className={estilo.lateral}>
+          <Prontas loja={loja} />
+          <ComoEuRespondo />
+        </aside>
+      </div>
     </main>
   );
 }
