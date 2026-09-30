@@ -1,21 +1,24 @@
 /*
- * Estilo da tela "Meu negócio". Cores só de variável de tema (convenções, 3.1).
+ * Estilo da tela Meu negócio, no desenho aprovado na Catálogo e preço (o porquê de cada
+ * forma está no cabeçalho de `catalogo/catalogo.module.css`). Cores só de variável de
+ * tema (ADR 0003).
  *
- * Um formulário de dez campos, preenchido uma vez e revisto de vez em quando. Os campos
- * vêm em três grupos pelo que decidem, cada grupo numa moldura, e cada campo com a dica
- * embaixo dizendo o que muda quando ele muda.
- *
- * O que é comum a todas as telas vem de `ui/comum.module.css` por `composes`. Aqui fica
- * o que é desta tela: o formulário em coluna, a moldura de cada grupo e a dica miúda.
+ * O formulário à esquerda, um cartão por grupo de campos (quem vende, nota fiscal,
+ * imposto e teto); à direita as vendas do mês por loja. Os grupos eram `fieldset` com o
+ * título na borda, que é o desenho padrão do navegador; agora o título mora dentro do
+ * cartão, como em todo cartão do sistema. O `legend` flutua para deixar de ser o título
+ * de borda e virar um bloco comum, sem mudar o que o leitor de tela anuncia.
  */
 
 .pagina {
   composes: pagina from '../ui/comum.module.css';
-  --largura-pagina: 56rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .cabecalho {
-  composes: cabecalho from '../ui/comum.module.css';
+  margin-bottom: 0.5rem;
 }
 
 .titulo {
@@ -26,16 +29,27 @@
   composes: subtitulo from '../ui/comum.module.css';
 }
 
-.resumo {
-  composes: resumo from '../ui/comum.module.css';
+.grade {
+  align-items: start;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.7fr) minmax(19rem, 1fr);
 }
 
-.secao {
-  composes: secao from '../ui/comum.module.css';
+.coluna {
+  min-width: 0;
 }
 
-.secaoTitulo {
-  composes: secaoTitulo from '../ui/comum.module.css';
+.bloco {
+  composes: bloco from '../ui/comum.module.css';
+}
+
+.blocoTitulo {
+  composes: blocoTitulo from '../ui/comum.module.css';
+}
+
+.blocoTexto {
+  composes: blocoTexto from '../ui/comum.module.css';
 }
 
 .aviso {
@@ -58,70 +72,63 @@
   composes: avisoCorpo from '../ui/comum.module.css';
 }
 
-.painel {
-  composes: painel from '../ui/comum.module.css';
-}
-
-.cartao {
-  composes: cartao from '../ui/comum.module.css';
-}
-
-.cartaoNumero {
-  composes: cartaoNumero from '../ui/comum.module.css';
-}
-
-.cartaoRotulo {
-  composes: cartaoRotulo from '../ui/comum.module.css';
-}
-
 .vazio {
   composes: vazio from '../ui/comum.module.css';
 }
 
-/*
- * O formulário é uma coluna de grupos, e não a linha que quebra das outras telas: os
- * grupos são o que dá ordem aos dez campos.
- */
+/* ── O formulário ─────────────────────────────────────────────────────────── */
+
 .formulario {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  margin-top: 0.875rem;
 }
 
-/* `min-width: 0` porque fieldset tem largura mínima do conteúdo, e estouraria no celular. */
+/* `min-width: 0` porque fieldset tem largura mínima do conteúdo, e estouraria a coluna. */
 .grupo {
-  background: var(--cor-superficie);
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.875rem;
+  composes: bloco from '../ui/comum.module.css';
   margin: 0;
   min-width: 0;
-  padding: 0.75rem 1rem 1rem;
 }
 
 .grupoTitulo {
-  font-weight: 600;
-  padding: 0 0.375rem;
+  float: left;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  letter-spacing: -0.012em;
+  margin: 0 0 1rem;
+  padding: 0;
+  width: 100%;
 }
 
-/* Doze rem cabem os quatro campos da nota fiscal numa linha, sem um sobrar sozinho. */
+.campos {
+  clear: both;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
 .campo {
-  composes: campo from '../ui/comum.module.css';
-  --largura-campo: 12rem;
+  color: var(--tinta);
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8125rem;
+  font-weight: 560;
+  gap: 0.375rem;
+  min-width: 0;
 }
 
 .entrada {
   composes: entrada from '../ui/comum.module.css';
+  width: 100%;
 }
 
 /* A dica de campo é miúda: está ali para quem tem a dúvida, e não para ser lida sempre. */
 .dica {
-  composes: dica from '../ui/comum.module.css';
+  color: var(--tinta-3);
   font-size: 0.75rem;
-  margin: 0;
+  font-weight: 400;
+  line-height: 1.45;
 }
 
 .botao {
@@ -134,6 +141,62 @@
   opacity: 0.6;
 }
 
+/* ── As vendas do mês ─────────────────────────────────────────────────────── */
+
+.vendas {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+
+.venda {
+  align-items: center;
+  border-top: 1px solid var(--linha);
+  display: grid;
+  gap: 0.375rem 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 0.75rem 0;
+}
+
+.vendaLoja {
+  font-size: 0.875rem;
+  font-weight: 580;
+}
+
+.vendaNumero {
+  font-size: 1.125rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+/* A fatia da loja no total, na cor dela, embaixo do nome. */
+.fatia {
+  background: var(--dado-4);
+  border-radius: 2px;
+  grid-column: 2 / -1;
+  height: 0.375rem;
+  overflow: hidden;
+}
+
+.fatiaCheia {
+  display: block;
+  height: 100%;
+}
+
+.nota {
+  border-top: 1px solid var(--linha);
+  color: var(--tinta-2);
+  font-size: 0.8125rem;
+  margin: 0;
+  padding-top: 0.875rem;
+}
+
 .link {
-  color: var(--cor-primaria);
+  color: var(--tinta);
+}
+
+@media (max-width: 64rem) {
+  .grade {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

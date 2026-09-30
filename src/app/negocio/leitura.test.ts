@@ -56,23 +56,23 @@ describe('lerFormularioDoNegocio', () => {
 
   it('recusa dinheiro com ponto de milhar, dizendo em que campo e como escrever', () => {
     expect(motivo({ ...VALIDO, tetoAnual: '81.000' })).toBe(
-      'Teto de receita do ano, em reais — use um valor como 81,05, sem ponto de milhar.',
+      'Teto de receita do ano, em reais: use um valor como 81,05, sem ponto de milhar.',
     );
   });
 
   it('recusa alíquota acima de 100%', () => {
-    expect(motivo({ ...VALIDO, aliquotaSimples: '150' })).toContain('Alíquota efetiva do Simples');
+    expect(motivo({ ...VALIDO, aliquotaSimples: '150' })).toContain('Alíquota do Simples');
   });
 
   it('a recusa do esquema também diz o campo', () => {
-    expect(motivo({ ...VALIDO, documento: '529.982.247-25' })).toMatch(/^CPF ou CNPJ — /);
-    expect(motivo({ ...VALIDO, uf: 'XX' })).toBe('Estado — estado desconhecido');
+    expect(motivo({ ...VALIDO, documento: '529.982.247-25' })).toMatch(/^CPF ou CNPJ: /);
+    expect(motivo({ ...VALIDO, uf: 'XX' })).toBe('Estado: estado desconhecido');
     expect(motivo({ ...VALIDO, certificadoValidoAte: '2027-02-30' })).toMatch(
-      /^Certificado válido até — /,
+      /^Certificado válido até: /,
     );
   });
 
   it('regime fora da lista é recusado em português', () => {
-    expect(motivo({ ...VALIDO, regime: 'lucro_real' })).toBe('Regime — regime desconhecido');
+    expect(motivo({ ...VALIDO, regime: 'lucro_real' })).toBe('Regime: regime desconhecido');
   });
 });

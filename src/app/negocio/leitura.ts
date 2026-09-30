@@ -46,7 +46,7 @@ export function valoresDoFormulario(dados: FormData): ValoresDoFormulario {
 }
 
 function recusa(campo: CampoDoFormulario, motivo: string): LeituraDoFormulario {
-  return { tipo: 'invalido', motivo: `${ROTULO_DO_CAMPO[campo]} — ${motivo}` };
+  return { tipo: 'invalido', motivo: `${ROTULO_DO_CAMPO[campo]}: ${motivo}` };
 }
 
 const REAIS = 'use um valor como 81,05, sem ponto de milhar.';

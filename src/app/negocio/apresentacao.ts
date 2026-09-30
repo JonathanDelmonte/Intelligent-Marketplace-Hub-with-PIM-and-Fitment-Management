@@ -55,7 +55,7 @@ export const ROTULO_DO_CAMPO: Readonly<Record<CampoDoFormulario, string>> = {
   abertoEm: 'CNPJ aberto em',
   certificadoValidoAte: 'Certificado válido até',
   dasMensal: 'DAS do mês, em reais',
-  aliquotaSimples: 'Alíquota efetiva do Simples, em %',
+  aliquotaSimples: 'Alíquota do Simples, em %',
   tetoAnual: 'Teto de receita do ano, em reais',
 };
 
@@ -113,7 +113,7 @@ export function resumoDasVendas(vendas: Readonly<Record<Plataforma, number>>): s
   if (total === 0) {
     return 'Nenhum pedido importado nos últimos 30 dias. O número aparece aqui quando a planilha de pedidos de uma plataforma for importada.';
   }
-  return `${contagem(total, 'venda', 'vendas')} nos últimos 30 dias, contadas dos pedidos importados — ninguém precisa digitar.`;
+  return `${contagem(total, 'venda', 'vendas')} nos últimos 30 dias, contadas dos pedidos importados: ninguém precisa digitar.`;
 }
 
 export const CODIGOS_DE_AVISO = ['gravado'] as const;

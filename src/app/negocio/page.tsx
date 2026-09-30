@@ -22,6 +22,8 @@ import { PLATAFORMAS } from '@/dominio/precificacao/tipos';
 import { banco } from '@/infra/banco/cliente';
 import { formatarBRL } from '@/lib/dinheiro';
 import { CAMINHO as CAMINHO_FISCAL } from '../fiscal/constantes';
+import { IDENTIDADE_DA_LOJA } from '../lojas/identidade';
+import { Selo } from '../lojas/selo';
 import { ROTULO_DA_PLATAFORMA } from '../ui/rotulos';
 import { descreverAviso, resumoDasVendas, valoresGravados } from './apresentacao';
 import { AvisoDaAcao } from './componentes';
@@ -52,6 +54,8 @@ export default async function PaginaDoNegocio({
   const codigo = parametros['r'];
   const aviso = descreverAviso(Array.isArray(codigo) ? codigo[0] : codigo);
 
+  const total = PLATAFORMAS.reduce((soma, plataforma) => soma + vendas[plataforma], 0);
+
   return (
     <main className={estilo.pagina}>
       <header className={estilo.cabecalho}>
@@ -65,44 +69,56 @@ export default async function PaginaDoNegocio({
 
       {aviso !== null && <AvisoDaAcao aviso={aviso} />}
 
-      <section aria-labelledby="dados-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="dados-titulo">
-          Dados do negócio
-        </h2>
-        {dados === null ? (
-          <p className={estilo.vazio}>
-            O perfil deste sistema não foi encontrado no banco. Rode a semeadura (npm run db:seed) e
-            volte a esta tela.
-          </p>
-        ) : (
-          <FormularioDoNegocio
-            gravados={valoresGravados(dados)}
-            tetoDoMei={formatarBRL(TETO_MEI_ANUAL)}
-          />
-        )}
-      </section>
+      <div className={estilo.grade}>
+        <section aria-label="Dados do negócio" className={estilo.coluna}>
+          {dados === null ? (
+            <p className={estilo.vazio}>
+              O perfil deste sistema não foi encontrado no banco. Rode a semeadura (npm run db:seed)
+              e volte a esta tela.
+            </p>
+          ) : (
+            <FormularioDoNegocio
+              gravados={valoresGravados(dados)}
+              tetoDoMei={formatarBRL(TETO_MEI_ANUAL)}
+            />
+          )}
+        </section>
 
-      <section aria-labelledby="vendas-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="vendas-titulo">
-          Vendas dos últimos 30 dias
-        </h2>
-        <p className={estilo.resumo}>{resumoDasVendas(vendas)}</p>
-        <ul className={estilo.painel}>
-          {PLATAFORMAS.map((plataforma) => (
-            <li className={estilo.cartao} key={plataforma}>
-              <span className={estilo.cartaoNumero}>{vendas[plataforma]}</span>
-              <span className={estilo.cartaoRotulo}>{ROTULO_DA_PLATAFORMA[plataforma]}</span>
-            </li>
-          ))}
-        </ul>
-        <p className={estilo.resumo}>
-          É com esse número que a{' '}
-          <Link className={estilo.link} href={`${CAMINHO_FISCAL}#emissor`}>
-            tela fiscal recomenda o emissor de nota
-          </Link>{' '}
-          e que o DAS do MEI é rateado por peça.
-        </p>
-      </section>
+        <section aria-labelledby="vendas-titulo" className={estilo.bloco}>
+          <h2 className={estilo.blocoTitulo} id="vendas-titulo">
+            Vendas dos últimos 30 dias
+          </h2>
+          <p className={estilo.blocoTexto}>{resumoDasVendas(vendas)}</p>
+          <ul className={estilo.vendas}>
+            {PLATAFORMAS.map((plataforma) => (
+              <li className={estilo.venda} key={plataforma}>
+                <Selo identidade={IDENTIDADE_DA_LOJA[plataforma]} tamanho={28} />
+                <span className={estilo.vendaLoja}>{ROTULO_DA_PLATAFORMA[plataforma]}</span>
+                <span className={estilo.vendaNumero}>
+                  {vendas[plataforma].toLocaleString('pt-BR')}
+                </span>
+                {/* A fatia de cada loja, na cor dela: a única cor de loja fora do selo. */}
+                <span aria-hidden="true" className={estilo.fatia}>
+                  <span
+                    className={estilo.fatiaCheia}
+                    style={{
+                      background: IDENTIDADE_DA_LOJA[plataforma].fundo,
+                      width: `${String(total === 0 ? 0 : (vendas[plataforma] / total) * 100)}%`,
+                    }}
+                  />
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className={estilo.nota}>
+            É com esse número que a{' '}
+            <Link className={estilo.link} href={`${CAMINHO_FISCAL}#emissor`}>
+              tela fiscal recomenda o emissor de nota
+            </Link>{' '}
+            e que o DAS do MEI é rateado por peça.
+          </p>
+        </section>
+      </div>
     </main>
   );
 }
