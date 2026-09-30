@@ -81,7 +81,7 @@ function oQueFalta(entrada: EntradaDoEmissor): string[] {
   }
   if (entrada.certificadoValidoAte === null) {
     falta.push(
-      'Certificado digital e-CNPJ A1, que assina a nota — de R$ 130 a R$ 235 por ano, válido por um ano.',
+      'Certificado digital e-CNPJ A1, que assina a nota: de R$ 130 a R$ 235 por ano, válido por um ano.',
     );
   } else if (entrada.certificadoValidoAte.getTime() < entrada.agora.getTime()) {
     falta.push(
@@ -124,7 +124,7 @@ function opcaoPeloVolume(entrada: EntradaDoEmissor): {
       titulo: 'Um hub que emite sozinho nas três plataformas',
       porque: [
         `São ${String(fora)} vendas por mês fora do Mercado Livre, e emitir cada uma à mão vira trabalho de todo dia.`,
-        'Um hub com emissor (como o Bling) importa o pedido e emite a nota sozinho no Mercado Livre, na Shopee e na Amazon. É a primeira opção paga — os planos começam em R$ 55 por mês.',
+        'Um hub com emissor (como o Bling) importa o pedido e emite a nota sozinho no Mercado Livre, na Shopee e na Amazon. É a primeira opção paga: os planos começam em R$ 55 por mês.',
         'Até lá, o caminho gratuito continua valendo: o emissor do Mercado Livre para as vendas de lá, e o do Sebrae para as outras.',
         ...ressalvaDoEstado,
       ],
@@ -149,7 +149,7 @@ function opcaoPeloVolume(entrada: EntradaDoEmissor): {
     opcao: 'sebrae',
     titulo: 'O emissor gratuito do Sebrae',
     porque: [
-      `São ${String(fora)} vendas por mês, todas fora do Mercado Livre — cabem no emissor gratuito do Sebrae, à mão.`,
+      `São ${String(fora)} vendas por mês, todas fora do Mercado Livre. Cabem no emissor gratuito do Sebrae, à mão.`,
       `Acima de ${String(NOTAS_A_MAO_POR_MES)} por mês, um hub que emite sozinho passa a valer o que custa.`,
     ],
   };

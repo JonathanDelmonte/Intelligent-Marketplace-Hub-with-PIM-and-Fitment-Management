@@ -6,14 +6,17 @@
  * SKU tem o formulário aberto ao lado do que falta nele, e não atrás de um clique.
  */
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { CAMPOS_FISCAIS, PARA_QUE_SERVE, VALORES_COMUNS } from '@/dominio/fiscal/codigos';
 import type { CampoFiscal } from '@/dominio/fiscal/codigos';
 import type { RecomendacaoDeEmissor } from '@/dominio/fiscal/emissor';
-import { AREAS_REGULADAS, REGRAS } from '@/dominio/fiscal/regulada';
+import { AREAS_REGULADAS, REGRAS, type AreaRegulada } from '@/dominio/fiscal/regulada';
 import type { PrazoAvaliado } from '@/dominio/fiscal/prazos';
 import type { ResumoFiscal, SkuFiscal } from '@/dominio/fiscal/repositorio';
 import type { AvaliacaoDoTeto } from '@/dominio/fiscal/teto';
 import type { RegimeFiscal } from '@/dominio/precificacao/tipos';
+import { FaixaDeNumeros } from '../ui/numeros';
+import { SinalCerto, SinalPercentual, SinalRelogio } from '../ui/sinais';
 import { gravarCodigos, informarReceitaExterna, sugerirCodigos } from './acoes';
 import {
   ROTULO_DA_SITUACAO,
@@ -25,10 +28,21 @@ import {
   tomDoEmissor,
   tomDoPrazo,
   tomDoTeto,
+  numerosFiscais,
   type Aviso,
+  type NumeroFiscal,
 } from './apresentacao';
 import { CAMINHO as CAMINHO_DO_NEGOCIO } from '../negocio/constantes';
 import estilo from './fiscal.module.css';
+
+/**
+ * A área regulada como opção da lista, com maiúscula: no domínio o nome dela vive no meio
+ * da frase ("marcado como cosmético"), e na lista ele abre a linha.
+ */
+function opcaoDaArea(area: AreaRegulada): string {
+  const rotulo = REGRAS.find((r) => r.area === area)?.rotulo ?? area;
+  return rotulo.charAt(0).toUpperCase() + rotulo.slice(1);
+}
 
 export function AvisoDaAcao({ aviso }: { readonly aviso: Aviso }) {
   const classe =
@@ -42,6 +56,35 @@ export function AvisoDaAcao({ aviso }: { readonly aviso: Aviso }) {
       <strong className={estilo.avisoTitulo}>{aviso.titulo}</strong>
       <span className={estilo.avisoCorpo}>{aviso.corpo}</span>
     </div>
+  );
+}
+
+const ICONE_DO_NUMERO: Readonly<Record<NumeroFiscal['chave'], ReactNode>> = {
+  prazo: <SinalRelogio />,
+  teto: <SinalPercentual />,
+  cadastro: <SinalCerto />,
+};
+
+/** Os três números do alto. O escuro é o do próximo prazo, que é o que tem data. */
+export function Numeros(props: {
+  readonly prazos: readonly PrazoAvaliado[];
+  readonly teto: AvaliacaoDoTeto;
+  readonly regime: RegimeFiscal;
+  readonly resumo: ResumoFiscal;
+}) {
+  return (
+    <FaixaDeNumeros
+      itens={numerosFiscais(props).map((numero) => ({
+        rotulo: numero.rotulo,
+        valor: numero.valor,
+        ...(numero.resto === null ? {} : { resto: numero.resto }),
+        nota: numero.nota,
+        tom: numero.tom,
+        icone: ICONE_DO_NUMERO[numero.chave],
+        escuro: numero.chave === 'prazo',
+      }))}
+      rotulo="O fiscal em números"
+    />
   );
 }
 
@@ -92,7 +135,7 @@ export function Teto({
     return (
       <p className={estilo.vazio}>
         O teto anual vale para o regime MEI. Este perfil está como {regime.toUpperCase()}, então não
-        há teto a controlar aqui — o que não quer dizer que não haja obrigação. O regime se muda em{' '}
+        há teto a controlar aqui, o que não quer dizer que não haja obrigação. O regime se muda em{' '}
         <Link className={estilo.link} href={CAMINHO_DO_NEGOCIO}>
           Meu negócio
         </Link>
@@ -112,8 +155,21 @@ export function Teto({
   return (
     <>
       <div className={estilo.itemCabecalho}>
-        <p className={estilo.resumo}>{resumoDoTeto(teto)}</p>
+        <p className={estilo.tetoResumo}>{resumoDoTeto(teto)}</p>
         <span className={classe}>{ROTULO_DA_SITUACAO[teto.situacao]}</span>
+      </div>
+      {/* A barra do teto: quanto já foi, na cor da situação. */}
+      <div aria-hidden="true" className={estilo.barraDoTeto}>
+        <span
+          className={
+            tom === 'alerta'
+              ? estilo.barraPerda
+              : tom === 'atencao'
+                ? estilo.barraAtencao
+                : estilo.barraLucro
+          }
+          style={{ width: `${String(Math.min(100, teto.usadoBp / 100))}%` }}
+        />
       </div>
       <p className={estilo.itemCorpo}>{teto.mensagem}</p>
 
@@ -123,8 +179,8 @@ export function Teto({
       */}
       <form action={informarReceitaExterna} className={estilo.formularioMagro}>
         <input name="ano" type="hidden" value={ano} />
-        <label className={estilo.campo}>
-          Receita de {ano} fora das plataformas, em reais
+        <label className={estilo.campoLargo}>
+          <span className={estilo.rotulo}>Receita de {ano} fora das lojas, em reais</span>
           <input
             className={estilo.entrada}
             inputMode="decimal"
@@ -159,7 +215,7 @@ export function Emissor({ recomendacao }: { readonly recomendacao: RecomendacaoD
         : estilo.etiqueta;
 
   return (
-    <div className={estilo.item}>
+    <div>
       <div className={estilo.itemCabecalho}>
         <h3 className={estilo.itemTitulo}>{recomendacao.titulo}</h3>
         <span className={classe}>{ROTULO_DA_SITUACAO_DO_EMISSOR[recomendacao.situacao]}</span>
@@ -227,13 +283,13 @@ function CartaoDoSku({
   const daSugestao = sugestao !== null && sugestao.skuId === item.id;
 
   return (
-    <li className={item.estado.prontoPara2027 ? estilo.itemFeito : estilo.item}>
+    <li className={estilo.produto}>
       <div className={estilo.itemCabecalho}>
         <h3 className={estilo.itemTitulo}>{item.tituloInterno}</h3>
         <span
           className={
             item.estado.prontoPara2027
-              ? estilo.etiqueta
+              ? `${estilo.etiqueta} ${estilo.etiquetaOk}`
               : `${estilo.etiqueta} ${estilo.etiquetaAlerta}`
           }
         >
@@ -261,7 +317,7 @@ function CartaoDoSku({
 
       {daSugestao && sugestao?.porque !== null && sugestao?.porque !== undefined && (
         <p className={estilo.itemAcao}>
-          Por que esse NCM: {sugestao.porque} — confira e grave, ou apague e preencha à mão.
+          Por que esse NCM: {sugestao.porque}. Confira e grave, ou apague e preencha à mão.
         </p>
       )}
 
@@ -270,36 +326,33 @@ function CartaoDoSku({
         {campoDoFoco}
         {CAMPOS_FISCAIS.map((campo) => (
           <label className={estilo.campo} key={campo}>
-            {rotuloDoCampo(campo)}
+            <span className={estilo.rotulo}>{rotuloDoCampo(campo)}</span>
             <input
               className={estilo.entrada}
               defaultValue={valorAtual(item, campo, sugestao)}
               inputMode="numeric"
               name={campo}
               placeholder={(comuns[campo] ?? [])[0] ?? ''}
+              title={PARA_QUE_SERVE[campo]}
               type="text"
             />
-            <span className={estilo.itemFonte}>{PARA_QUE_SERVE[campo]}</span>
           </label>
         ))}
 
         <label className={estilo.campo}>
-          Categoria regulada
+          <span className={estilo.rotulo}>Categoria regulada</span>
           <select
             className={estilo.entrada}
             defaultValue={item.categoriaRegulada ?? ''}
             name="categoriaRegulada"
           >
-            <option value="">não é regulada</option>
+            <option value="">Não é regulada</option>
             {AREAS_REGULADAS.map((area) => (
               <option key={area} value={area}>
-                {REGRAS.find((r) => r.area === area)?.rotulo ?? area}
+                {opcaoDaArea(area)}
               </option>
             ))}
           </select>
-          <span className={estilo.itemFonte}>
-            O que você marcar aqui manda: a detecção pelo título é só sugestão.
-          </span>
         </label>
 
         <button className={estilo.botao} type="submit">
@@ -328,10 +381,30 @@ export function Cadastro({
     );
   }
   return (
-    <ul className={estilo.lista}>
-      {resumo.skus.map((s) => (
-        <CartaoDoSku foco={foco} item={s} key={s.id} regime={resumo.regime} sugestao={sugestao} />
-      ))}
-    </ul>
+    <>
+      {/*
+        O que é cada código, uma vez só no alto: embaixo de cada campo de cada produto,
+        a mesma explicação se repetia cinco vezes por tela.
+      */}
+      <dl className={estilo.legenda}>
+        {CAMPOS_FISCAIS.map((campo) => (
+          <div className={estilo.legendaItem} key={campo}>
+            <dt className={estilo.legendaNome}>{rotuloDoCampo(campo)}</dt>
+            <dd className={estilo.legendaTexto}>{PARA_QUE_SERVE[campo]}</dd>
+          </div>
+        ))}
+        <div className={estilo.legendaItem}>
+          <dt className={estilo.legendaNome}>Categoria regulada</dt>
+          <dd className={estilo.legendaTexto}>
+            O que você marcar aqui manda: a detecção pelo título é só sugestão.
+          </dd>
+        </div>
+      </dl>
+      <ul className={estilo.produtos}>
+        {resumo.skus.map((s) => (
+          <CartaoDoSku foco={foco} item={s} key={s.id} regime={resumo.regime} sugestao={sugestao} />
+        ))}
+      </ul>
+    </>
   );
 }

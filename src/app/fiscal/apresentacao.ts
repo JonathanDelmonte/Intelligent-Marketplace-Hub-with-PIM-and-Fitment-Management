@@ -10,6 +10,7 @@ import type { RecomendacaoDeEmissor } from '@/dominio/fiscal/emissor';
 import type { PrazoAvaliado, UrgenciaDoPrazo } from '@/dominio/fiscal/prazos';
 import type { ResumoFiscal } from '@/dominio/fiscal/repositorio';
 import type { AvaliacaoDoTeto, SituacaoDoTeto } from '@/dominio/fiscal/teto';
+import type { RegimeFiscal } from '@/dominio/precificacao/tipos';
 import { formatarBRL, formatarPontosBase } from '@/lib/dinheiro';
 
 export type Tom = 'alerta' | 'atencao' | 'neutro';
@@ -101,7 +102,7 @@ export function resumoDoTeto(teto: AvaliacaoDoTeto): string {
   const usado = formatarPontosBase(teto.usadoBp, 0);
 
   if (teto.situacao === 'estourou') {
-    return `${formatarBRL(teto.acumulado)} de receita contra um teto de ${formatarBRL(teto.teto)} — ${usado} do teto.`;
+    return `${formatarBRL(teto.acumulado)} de receita contra um teto de ${formatarBRL(teto.teto)}: ${usado} do teto.`;
   }
 
   const cabe =
@@ -133,7 +134,7 @@ export function resumoDoCadastro(resumo: ResumoFiscal): string {
     return `${quantos} com NCM, CST e cClassTrib preenchidos. A nota de 2027 sai.`;
   }
 
-  return `${String(resumo.pendentes)} de ${String(resumo.skus.length)} produtos ainda não têm o cadastro fiscal completo. A partir de 04/01/2027, cada um desses é uma nota rejeitada — e nota rejeitada é venda que não pode ser enviada.`;
+  return `${String(resumo.pendentes)} de ${String(resumo.skus.length)} produtos ainda não têm o cadastro fiscal completo. A partir de 04/01/2027, cada um desses é uma nota rejeitada, e nota rejeitada é venda que não pode ser enviada.`;
 }
 
 export function rotuloDoCampo(campo: CampoFiscal): string {
@@ -179,7 +180,7 @@ export function descreverAviso(codigo: string | undefined, motivo?: string): Avi
         tom: 'ok',
         titulo: 'Cadastro gravado',
         corpo:
-          'Campo em branco apaga o código que estava lá, o que é útil para corrigir — e some da lista de pendência só quando os três obrigatórios estiverem preenchidos.',
+          'Campo em branco apaga o código que estava lá, o que é útil para corrigir. O produto sai da lista de pendência só quando os três obrigatórios estiverem preenchidos.',
       };
     case 'formato':
       return {
@@ -193,7 +194,7 @@ export function descreverAviso(codigo: string | undefined, motivo?: string): Avi
         tom: 'ok',
         titulo: 'Sugestão preenchida, ainda não gravada',
         corpo:
-          'Os campos vieram preenchidos com a sugestão e a justificativa está abaixo deles. Confira e clique em Gravar — nada foi escrito no produto até você confirmar.',
+          'Os campos vieram preenchidos com a sugestão e a justificativa está abaixo deles. Confira e clique em Gravar: nada foi escrito no produto até você confirmar.',
       };
     case 'sem_chave':
       return {
@@ -233,4 +234,101 @@ export function descreverAviso(codigo: string | undefined, motivo?: string): Avi
         corpo: 'Nada foi alterado. Tente de novo; se repetir, o log do servidor tem o motivo.',
       };
   }
+}
+
+export interface NumeroFiscal {
+  readonly chave: 'prazo' | 'teto' | 'cadastro';
+  readonly rotulo: string;
+  readonly valor: string;
+  readonly resto: string | null;
+  readonly nota: string;
+  readonly tom: 'neutro' | 'alta' | 'baixa' | 'atencao';
+}
+
+/**
+ * Os três números do alto: quanto falta para o próximo prazo que atinge o regime, quanto
+ * do teto já foi (ou, fora do MEI, que não há teto), e quantos produtos estão prontos
+ * para a nota de 2027.
+ *
+ * O prazo é o que ainda não passou e é do regime de hoje, o mais perto. Prazo que passou
+ * está no cartão dos prazos, dito como passou; aqui o número é o que vem.
+ */
+export function numerosFiscais(params: {
+  readonly prazos: readonly PrazoAvaliado[];
+  readonly teto: AvaliacaoDoTeto;
+  readonly regime: RegimeFiscal;
+  readonly resumo: ResumoFiscal;
+}): readonly NumeroFiscal[] {
+  const { prazos, teto, regime, resumo } = params;
+  const proximo = prazos
+    .filter((p) => p.meAtinge && p.diasRestantes >= 0)
+    .reduce<PrazoAvaliado | null>(
+      (perto, p) => (perto === null || p.diasRestantes < perto.diasRestantes ? p : perto),
+      null,
+    );
+  const prontos = resumo.skus.length - resumo.pendentes;
+
+  const numeroDoPrazo: NumeroFiscal =
+    proximo === null
+      ? {
+          chave: 'prazo',
+          rotulo: 'Próximo prazo',
+          valor: 'Nenhum',
+          resto: null,
+          nota: 'nada vence para o seu regime',
+          tom: 'alta',
+        }
+      : {
+          chave: 'prazo',
+          rotulo: 'Próximo prazo',
+          valor: proximo.diasRestantes.toLocaleString('pt-BR'),
+          resto: proximo.diasRestantes === 1 ? 'dia' : 'dias',
+          nota: proximo.titulo,
+          tom:
+            proximo.urgencia === 'agora'
+              ? 'baixa'
+              : proximo.urgencia === 'este_mes'
+                ? 'atencao'
+                : 'neutro',
+        };
+
+  const numeroDoTeto: NumeroFiscal =
+    regime === 'mei'
+      ? {
+          chave: 'teto',
+          rotulo: 'Teto do MEI usado',
+          valor: formatarPontosBase(teto.usadoBp, 0),
+          resto: null,
+          nota: `${formatarBRL(teto.acumulado)} de ${formatarBRL(teto.teto)}`,
+          tom:
+            teto.situacao === 'estourou'
+              ? 'baixa'
+              : teto.situacao === 'tranquilo'
+                ? 'alta'
+                : 'atencao',
+        }
+      : {
+          chave: 'teto',
+          rotulo: 'Teto do ano',
+          valor: 'Sem teto',
+          resto: null,
+          nota: 'o teto anual é só do MEI',
+          tom: 'neutro',
+        };
+
+  const numeroDoCadastro: NumeroFiscal = {
+    chave: 'cadastro',
+    rotulo: 'Prontos para 2027',
+    valor: prontos.toLocaleString('pt-BR'),
+    resto: `de ${resumo.skus.length.toLocaleString('pt-BR')}`,
+    nota:
+      resumo.skus.length === 0
+        ? 'nenhum produto no catálogo'
+        : resumo.pendentes === 0
+          ? 'todos com o cadastro completo'
+          : `${String(resumo.pendentes)} ${resumo.pendentes === 1 ? 'produto falta completar' : 'produtos faltam completar'}`,
+    tom: resumo.skus.length === 0 ? 'neutro' : resumo.pendentes === 0 ? 'alta' : 'baixa',
+  };
+
+  return [numeroDoPrazo, numeroDoTeto, numeroDoCadastro];
 }

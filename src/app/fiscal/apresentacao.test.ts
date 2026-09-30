@@ -10,6 +10,7 @@ import {
   ROTULO_DA_SITUACAO_DO_EMISSOR,
   descreverAviso,
   diaEmTexto,
+  numerosFiscais,
   prazoEmTexto,
   resumoDoCadastro,
   resumoDoTeto,
@@ -221,5 +222,59 @@ describe('avisos e rótulos', () => {
   it('o motivo é cortado: a URL não pode virar um parágrafo na tela', () => {
     const corpo = descreverAviso('sugestao_falhou', 'x'.repeat(2_000))?.corpo ?? '';
     expect(corpo.length).toBeLessThan(450);
+  });
+});
+
+describe('numerosFiscais', () => {
+  const teto = avaliarTeto(
+    { receitaBruta: reaisParaCentavos(40_000), receitaExterna: reaisParaCentavos(0) },
+    { agora: SETEMBRO },
+  );
+
+  it('o prazo do alto é o mais perto que ainda não passou e atinge o regime', () => {
+    const prazos = avaliarPrazos({ agora: SETEMBRO, regime: 'mei' });
+    const [prazo] = numerosFiscais({ prazos, teto, regime: 'mei', resumo: resumo() });
+    const esperado = prazos
+      .filter((p) => p.meAtinge && p.diasRestantes >= 0)
+      .sort((a, b) => a.diasRestantes - b.diasRestantes)[0];
+    expect(esperado).toBeDefined();
+    expect(prazo?.valor).toBe(esperado?.diasRestantes.toLocaleString('pt-BR'));
+    expect(prazo?.nota).toBe(esperado?.titulo);
+  });
+
+  it('fora do MEI não há teto, e o número diz isso em vez de mostrar zero', () => {
+    const [, numeroDoTeto] = numerosFiscais({
+      prazos: [],
+      teto,
+      regime: 'simples',
+      resumo: resumo(),
+    });
+    expect(numeroDoTeto).toMatchObject({ valor: 'Sem teto', tom: 'neutro' });
+  });
+
+  it('no MEI mostra quanto do teto foi, e a nota diz os valores', () => {
+    const [, numeroDoTeto] = numerosFiscais({ prazos: [], teto, regime: 'mei', resumo: resumo() });
+    expect(numeroDoTeto?.rotulo).toBe('Teto do MEI usado');
+    expect(numeroDoTeto?.nota).toContain('40.000,00');
+  });
+
+  it('conta os produtos prontos para 2027, e o que falta vem em vermelho', () => {
+    const [, , cadastro] = numerosFiscais({
+      prazos: [],
+      teto,
+      regime: 'mei',
+      resumo: resumo({ skus: [skuFiscal(), skuFiscal({ id: 's2' })], pendentes: 1 }),
+    });
+    expect(cadastro).toMatchObject({
+      valor: '1',
+      resto: 'de 2',
+      nota: '1 produto falta completar',
+      tom: 'baixa',
+    });
+  });
+
+  it('sem prazo à frente, o número diz que não há nada, em verde', () => {
+    const [prazo] = numerosFiscais({ prazos: [], teto, regime: 'mei', resumo: resumo() });
+    expect(prazo).toMatchObject({ valor: 'Nenhum', tom: 'alta' });
   });
 });

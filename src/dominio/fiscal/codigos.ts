@@ -63,7 +63,7 @@ export const ROTULO_DO_CAMPO: Readonly<Record<CampoFiscal, string>> = {
  */
 export const PARA_QUE_SERVE: Readonly<Record<CampoFiscal, string>> = {
   ncm: 'Diz o que o produto é, na classificação usada por toda a cadeia. É o código que decide alíquota e regra de substituição tributária.',
-  cest: 'Só vale para mercadoria sujeita a substituição tributária. Fora desse caso, fica vazio — e vazio não é pendência.',
+  cest: 'Só vale para mercadoria sujeita a substituição tributária. Fora desse caso, fica vazio, e vazio não é pendência.',
   cst: 'Diz como o item é tributado nesta operação. Entra nos grupos de IBS/CBS que a NF-e passa a exigir.',
   cclasstrib:
     'Classificação tributária do item na reforma. É o campo novo, e o que mais falta nos cadastros antigos.',
@@ -146,7 +146,7 @@ export function textoDoProblema(problema: ProblemaNoCodigo): string {
   if (problema.tipo === 'formato') {
     return `${rotulo} não está no formato: é ${problema.comoE}. Ponto e espaço são ignorados, então dá para colar como está na tabela.`;
   }
-  return `${rotulo} fora dos valores que eu conheço (${problema.conhecidos.join(', ')}). Gravei do mesmo jeito — a lista é o que eu conheço, não o que existe —, mas vale conferir.`;
+  return `${rotulo} fora dos valores que eu conheço (${problema.conhecidos.join(', ')}). Gravei do mesmo jeito (a lista é o que eu conheço, não o que existe), mas vale conferir.`;
 }
 
 export interface CadastroFiscalDoSku {

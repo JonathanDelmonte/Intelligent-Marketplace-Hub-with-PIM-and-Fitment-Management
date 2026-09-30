@@ -54,7 +54,7 @@ export const REGRAS: readonly RegraDaArea[] = [
     orgao: 'ANVISA',
     rotulo: 'suplemento alimentar',
     exigencia:
-      'Registro ou notificação na ANVISA, rótulo conforme a RDC aplicável, e a documentação do fabricante à mão — o Mercado Livre pede na revisão.',
+      'Registro ou notificação na ANVISA, rótulo conforme a RDC aplicável, e a documentação do fabricante à mão: o Mercado Livre pede na revisão.',
     consequencia: 'Anúncio irregular de suplemento é cancelado, e a conta fica marcada.',
     palavras: [
       'suplemento',
@@ -186,7 +186,7 @@ function mensagemDe(regra: RegraDaArea, origem: Origem): string {
   const abertura =
     origem === 'marcado_no_sku'
       ? `Este produto está marcado como ${regra.rotulo}.`
-      : `O título sugere ${regra.rotulo} — pode ser engano meu, e quem decide é você.`;
+      : `O título sugere ${regra.rotulo}, mas pode ser engano meu, e quem decide é você.`;
 
   return `${abertura} ${regra.orgao}: ${regra.exigencia} ${regra.consequencia}`;
 }

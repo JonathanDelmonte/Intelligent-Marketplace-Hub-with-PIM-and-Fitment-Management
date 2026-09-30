@@ -32,8 +32,17 @@ import { carregarPerfil } from '@/dominio/perfil';
 import { RepositorioDoNegocio, inicioDaJanelaDoMes } from '@/dominio/perfil/negocio';
 import { banco } from '@/infra/banco/cliente';
 import { descreverAviso, resumoDoCadastro } from './apresentacao';
-import { AvisoDaAcao, Cadastro, Emissor, Prazos, Teto, type SugestaoNaTela } from './componentes';
+import {
+  AvisoDaAcao,
+  Cadastro,
+  Emissor,
+  Numeros,
+  Prazos,
+  Teto,
+  type SugestaoNaTela,
+} from './componentes';
 import { CAMINHO as CAMINHO_DO_CATALOGO } from '../catalogo/constantes';
+import { SinalVoltar } from '../ui/sinais';
 import { CAMINHO } from './constantes';
 import estilo from './fiscal.module.css';
 
@@ -115,51 +124,69 @@ export default async function PaginaFiscal({
       {aviso !== null && <AvisoDaAcao aviso={aviso} />}
 
       {focado !== undefined && (
-        <section aria-labelledby="cadastro-titulo" className={estilo.secao}>
-          <h2 className={estilo.secaoTitulo} id="cadastro-titulo">
-            Cadastro fiscal deste produto
-          </h2>
-          <p className={estilo.resumo}>
-            <Link className={estilo.link} href={`${CAMINHO_DO_CATALOGO}/${focado.id}`}>
-              ← Voltar ao produto
-            </Link>
-            {' · '}
-            <Link className={estilo.link} href={CAMINHO}>
-              Ver todos, com prazos e teto
-            </Link>
-          </p>
+        <section aria-labelledby="cadastro-titulo" className={estilo.bloco}>
+          <div className={estilo.blocoTopo}>
+            <div>
+              <h2 className={estilo.blocoTitulo} id="cadastro-titulo">
+                Cadastro fiscal deste produto
+              </h2>
+              <p className={estilo.caminhos}>
+                <Link className={estilo.link} href={`${CAMINHO_DO_CATALOGO}/${focado.id}`}>
+                  <SinalVoltar />
+                  Voltar ao produto
+                </Link>
+                <Link className={estilo.link} href={CAMINHO}>
+                  Ver todos, com prazos e teto
+                </Link>
+              </p>
+            </div>
+          </div>
           <Cadastro foco={focado.id} resumo={{ ...resumo, skus: [focado] }} sugestao={sugestao} />
         </section>
       )}
 
       {focado === undefined && (
         <>
-          <section aria-labelledby="prazos-titulo" className={estilo.secao}>
-            <h2 className={estilo.secaoTitulo} id="prazos-titulo">
-              Prazos
-            </h2>
-            <Prazos prazos={prazos} />
-          </section>
+          <Numeros prazos={prazos} regime={resumo.regime} resumo={resumo} teto={teto} />
 
-          <section aria-labelledby="teto-titulo" className={estilo.secao}>
-            <h2 className={estilo.secaoTitulo} id="teto-titulo">
-              Teto do ano
-            </h2>
-            <Teto ano={ano} regime={resumo.regime} teto={teto} />
-          </section>
+          <div className={estilo.grade}>
+            <section aria-labelledby="prazos-titulo" className={estilo.bloco}>
+              <h2 className={estilo.blocoTitulo} id="prazos-titulo">
+                Prazos
+              </h2>
+              <p className={estilo.blocoTexto}>
+                O que muda, quando, e o que fazer antes. O que não é do seu regime aparece mais
+                claro.
+              </p>
+              <Prazos prazos={prazos} />
+            </section>
 
-          <section aria-labelledby="emissor-titulo" className={estilo.secao} id="emissor">
-            <h2 className={estilo.secaoTitulo} id="emissor-titulo">
-              Emissor de nota fiscal
-            </h2>
-            <Emissor recomendacao={emissor} />
-          </section>
+            <div className={estilo.coluna}>
+              <section aria-labelledby="teto-titulo" className={estilo.bloco}>
+                <h2 className={estilo.blocoTitulo} id="teto-titulo">
+                  Teto do ano
+                </h2>
+                <Teto ano={ano} regime={resumo.regime} teto={teto} />
+              </section>
 
-          <section aria-labelledby="cadastro-titulo" className={estilo.secao}>
-            <h2 className={estilo.secaoTitulo} id="cadastro-titulo">
-              Cadastro fiscal por produto
-            </h2>
-            <p className={estilo.resumo}>{resumoDoCadastro(resumo)}</p>
+              <section aria-labelledby="emissor-titulo" className={estilo.bloco} id="emissor">
+                <h2 className={estilo.blocoTitulo} id="emissor-titulo">
+                  Emissor de nota fiscal
+                </h2>
+                <Emissor recomendacao={emissor} />
+              </section>
+            </div>
+          </div>
+
+          <section aria-labelledby="cadastro-titulo" className={estilo.bloco}>
+            <div className={estilo.blocoTopo}>
+              <div>
+                <h2 className={estilo.blocoTitulo} id="cadastro-titulo">
+                  Cadastro fiscal por produto
+                </h2>
+                <p className={estilo.blocoTexto}>{resumoDoCadastro(resumo)}</p>
+              </div>
+            </div>
             <Cadastro resumo={resumo} sugestao={sugestao} />
           </section>
         </>

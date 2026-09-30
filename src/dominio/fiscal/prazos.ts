@@ -97,7 +97,7 @@ export const PRAZOS: readonly PrazoFiscal[] = [
     titulo: 'NF-e sem os grupos de IBS/CBS passa a ser rejeitada',
     rotuloCurto: 'NF-e com IBS e CBS',
     consequencia:
-      'Cada nota sai rejeitada até o cadastro fiscal do item estar completo — e nota rejeitada é venda que não pode ser enviada.',
+      'Cada nota sai rejeitada até o cadastro fiscal do item estar completo, e nota rejeitada é venda que não pode ser enviada.',
     oQueFazer:
       'Preencher NCM, CST e cClassTrib de cada SKU ativo. Com 20 SKUs é uma tarde; com 200 no meio da operação é uma semana.',
     base: 'Reforma tributária: obrigatoriedade dos grupos de IBS/CBS para MEI e Simples',

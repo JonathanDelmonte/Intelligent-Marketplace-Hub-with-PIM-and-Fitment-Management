@@ -175,7 +175,7 @@ export async function sugerirClassificacao(
     return {
       tipo: 'nada_a_classificar',
       motivo:
-        'o título é curto demais para classificar. Dê um nome ao produto antes — a sugestão sai do texto, e não há texto.',
+        'o título é curto demais para classificar. Dê um nome ao produto antes: a sugestão sai do texto, e não há texto.',
     };
   }
 

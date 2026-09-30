@@ -171,7 +171,7 @@ function mensagemDe(
   }
 
   const sobreOFuturo = projecaoEstoura
-    ? ` No ritmo até aqui, a projeção passa do teto antes do fim do ano — é hipótese, calculada em linha reta, e serve para decidir agora e não em dezembro.${mesesQueFaltam > 0 ? ' Dá para segurar reduzindo o faturamento mensal ou preparando a mudança de regime.' : ''}`
+    ? ` No ritmo até aqui, a projeção passa do teto antes do fim do ano. É hipótese, calculada em linha reta, e serve para decidir agora e não em dezembro.${mesesQueFaltam > 0 ? ' Dá para segurar reduzindo o faturamento mensal ou preparando a mudança de regime.' : ''}`
     : ' No ritmo até aqui, a projeção fecha o ano dentro do teto.';
 
   switch (situacao) {
