@@ -2,7 +2,8 @@
  * "Publicar em": uma linha por loja, com a conta dela e a montagem do anúncio (ADR 0009).
  *
  * Morava no catálogo e só a tela de anúncio a usa desde que o catálogo passou a mostrar
- * uma loja por vez. Veio para cá como estava.
+ * uma loja por vez. No desenho aprovado (27/09), o link deixou de ser azul: link é texto
+ * sublinhado, e o botão é de contorno.
  */
 
 .publicar {
@@ -15,15 +16,15 @@
 
 .publicarLoja {
   align-items: center;
-  border-top: 1px solid var(--cor-borda);
+  border-top: 1px solid var(--linha);
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
   padding: 0.75rem 0;
 }
 
-.publicarLoja:first-child {
-  border-top: none;
+.publicarLoja:last-child {
+  padding-bottom: 0;
 }
 
 .publicarTextos {
@@ -34,12 +35,13 @@
 }
 
 .publicarNome {
+  font-size: 0.875rem;
   font-weight: 600;
 }
 
 .publicarNota {
-  color: var(--cor-texto-fraco);
-  font-size: var(--texto-miudo);
+  color: var(--tinta-3);
+  font-size: 0.78125rem;
 }
 
 .publicarAcoes {
@@ -49,10 +51,14 @@
 }
 
 .link {
-  color: var(--cor-primaria);
+  color: var(--tinta-2);
+  font-size: 0.8125rem;
+}
+
+.link:hover {
+  color: var(--tinta);
 }
 
 .botaoSecundario {
-  composes: botaoSecundario from '../ui/comum.module.css';
-  text-decoration: none;
+  composes: botaoMiudo from '../ui/comum.module.css';
 }

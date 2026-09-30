@@ -80,7 +80,7 @@ export function gerarDescricao(dados: DadosDaDescricao): DescricaoGerada {
   const retidas = dados.ficha.retidas.length;
   const convite =
     retidas > 0
-      ? 'Não achou o seu modelo na lista? Pergunte aqui com o modelo do aparelho — a lista tem só o que está confirmado, e eu confiro o resto na hora.'
+      ? 'Não achou o seu modelo na lista? Pergunte aqui com o modelo do aparelho: a lista tem só o que está confirmado, e eu confiro o resto na hora.'
       : compatibilidade === ''
         ? ''
         : 'Tem dúvida sobre o seu modelo? Pergunte aqui com o modelo do aparelho.';

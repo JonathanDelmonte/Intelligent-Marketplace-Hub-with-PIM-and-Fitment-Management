@@ -29,6 +29,7 @@ import { salvarCategoria } from './acoes';
 import { contagem } from '@/lib/texto';
 import { CAMINHO, CAMINHO_DO_ARQUIVO, QUANTIDADE_PADRAO } from './constantes';
 import { ROTULO_DA_PLATAFORMA } from '../ui/rotulos';
+import { SinalCaixa, SinalCerto, SinalEtiqueta, SinalLapis } from '../ui/sinais';
 import estilo from './anuncios.module.css';
 
 /** Rótulo de cada plataforma. Nome de plataforma não é marca do sistema (ADR 0003). */
@@ -65,16 +66,16 @@ export function Formulario({
   if (candidatos.length === 0) {
     return (
       <p className={estilo.vazio}>
-        Nenhum produto no catálogo ainda. O anúncio é montado a partir de um SKU — com o título, o
-        código de barras e a ficha de compatibilidade dele.
+        Nenhum produto no catálogo ainda. O anúncio é montado a partir de um produto: com o título,
+        o código de barras e a ficha de compatibilidade dele.
       </p>
     );
   }
 
   return (
     <form action={CAMINHO} className={estilo.formulario} method="get">
-      <label className={estilo.campo}>
-        Produto
+      <label className={estilo.campoProduto}>
+        <span className={estilo.rotulo}>Produto</span>
         <select className={estilo.entrada} defaultValue={valores.skuId ?? ''} name="sku" required>
           {candidatos.map((c) => (
             <option key={c.id} value={c.id}>
@@ -84,7 +85,7 @@ export function Formulario({
         </select>
       </label>
       <label className={estilo.campo}>
-        Plataforma
+        <span className={estilo.rotulo}>Loja</span>
         <select className={estilo.entrada} defaultValue={valores.plataforma} name="plataforma">
           {PLATAFORMAS.map((p) => (
             <option key={p} value={p}>
@@ -94,7 +95,7 @@ export function Formulario({
         </select>
       </label>
       <label className={estilo.campo}>
-        Preço, em reais
+        <span className={estilo.rotulo}>Preço, em reais</span>
         <input
           className={estilo.entrada}
           defaultValue={valores.preco}
@@ -106,7 +107,7 @@ export function Formulario({
         />
       </label>
       <label className={estilo.campo}>
-        Quantidade
+        <span className={estilo.rotulo}>Quantidade</span>
         <input
           className={estilo.entrada}
           defaultValue={valores.quantidade}
@@ -122,7 +123,7 @@ export function Formulario({
         o anúncio corrige aqui, sem mexer no catálogo.
       */}
       <label className={estilo.campoLargo}>
-        Tipo do produto, como o comprador diria
+        <span className={estilo.rotulo}>Tipo do produto, como o comprador diria</span>
         <input
           className={estilo.entrada}
           defaultValue={valores.tipoProduto}
@@ -132,9 +133,43 @@ export function Formulario({
         />
       </label>
       <button className={estilo.botao} type="submit">
-        Montar
+        Montar anúncio
       </button>
     </form>
+  );
+}
+
+/** O que sai da tela, antes de montar: as três peças, cada uma com o porquê dela. */
+export function OQueSai() {
+  const pecas = [
+    {
+      icone: <SinalEtiqueta />,
+      titulo: 'Título',
+      texto: 'Com os códigos de modelo que o comprador digita na busca, até o limite da loja.',
+    },
+    {
+      icone: <SinalLapis />,
+      titulo: 'Descrição',
+      texto: 'Com a tabela de onde a peça serve, só com o que tem prova bastante para publicar.',
+    },
+    {
+      icone: <SinalCaixa />,
+      titulo: 'Arquivo de importação',
+      texto: 'No formato da loja, para subir na importação em massa. Nada é publicado sozinho.',
+    },
+  ];
+  return (
+    <ul aria-label="O que sai daqui" className={estilo.pecas}>
+      {pecas.map((peca) => (
+        <li className={estilo.peca} key={peca.titulo}>
+          <span aria-hidden="true" className={estilo.pecaIcone}>
+            {peca.icone}
+          </span>
+          <span className={estilo.pecaTitulo}>{peca.titulo}</span>
+          <span className={estilo.pecaTexto}>{peca.texto}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -142,20 +177,24 @@ function ItemDoChecklist({ item }: { readonly item: ItemDaConferencia }) {
   const tom = tomDaExigencia(item.exigencia);
   const classe =
     tom === 'alerta'
-      ? `${estilo.etiqueta} ${estilo.etiquetaAlerta}`
+      ? estilo.etiquetaAlerta
       : tom === 'atencao'
-        ? `${estilo.etiqueta} ${estilo.etiquetaAtencao}`
+        ? estilo.etiquetaAtencao
         : estilo.etiqueta;
 
   return (
-    <li className={item.preenchido ? estilo.itemFeito : estilo.itemFalta}>
-      <div className={estilo.itemCabecalho}>
-        <span className={estilo.itemTitulo}>
-          {item.preenchido ? '✓' : '—'} {rotuloDoAtributo(item.atributo)}
+    <li className={estilo.itemDoChecklist}>
+      <span aria-hidden="true" className={item.preenchido ? estilo.marcaFeita : estilo.marcaFalta}>
+        {item.preenchido ? <SinalCerto tamanho={12} /> : null}
+      </span>
+      <div className={estilo.itemTextos}>
+        <span className={item.preenchido ? estilo.itemFeito : estilo.itemFalta}>
+          <span className="sr-only">{item.preenchido ? 'Preenchido: ' : 'Falta: '}</span>
+          {rotuloDoAtributo(item.atributo)}
         </span>
-        {!item.preenchido && <span className={classe}>{rotuloDaExigencia(item.exigencia)}</span>}
+        {!item.preenchido && <p className={estilo.itemPorque}>{item.porque}</p>}
       </div>
-      {!item.preenchido && <p className={estilo.itemSub}>{item.porque}</p>}
+      {!item.preenchido && <span className={classe}>{rotuloDaExigencia(item.exigencia)}</span>}
     </li>
   );
 }
@@ -180,7 +219,7 @@ export function ConsertarCategoria({
       <input name="skuId" type="hidden" value={skuId} />
       <input name="voltarPara" type="hidden" value={voltarPara} />
       <label className={estilo.campo}>
-        Código da categoria na plataforma
+        <span className={estilo.rotulo}>Código da categoria na loja</span>
         <input
           className={estilo.entrada}
           name="categoria"
@@ -199,8 +238,8 @@ export function ConsertarCategoria({
 export function Checklist({ conferencia }: { readonly conferencia: Conferencia }) {
   return (
     <>
-      <p className={estilo.resumo}>{resumoDaConferencia(conferencia)}</p>
-      <ul className={estilo.lista}>
+      <p className={estilo.blocoTexto}>{resumoDaConferencia(conferencia)}</p>
+      <ul className={estilo.checklist}>
         {conferencia.itens.map((i) => (
           <ItemDoChecklist item={i} key={i.atributo} />
         ))}
@@ -215,7 +254,7 @@ export function Catalogo({ avaliacao }: { readonly avaliacao: AvaliacaoDeCatalog
     return (
       <p className={estilo.vazio}>
         Nenhum sinal de ficha de catálogo neste produto. Sem ficha, o anúncio disputa a vitrine por
-        conta própria — que é a situação boa para conta sem reputação verde.
+        conta própria, que é a situação boa para conta sem reputação verde.
       </p>
     );
   }
@@ -247,17 +286,19 @@ export function Ficha({ ficha }: { readonly ficha: Ficha }) {
 
   return (
     <>
-      <p className={estilo.resumo}>
+      <p className={estilo.blocoTexto}>
         {contagem(ficha.publicaveis.length, 'modelo publicável', 'modelos publicáveis')} e{' '}
         {contagem(ficha.retidas.length, 'retido', 'retidos')}. Só o publicável entra no título e na
-        descrição — afirmar na vitrine o que está abaixo do corte é o caminho curto para a
-        devolução.
+        descrição: afirmar na vitrine o que está abaixo do corte é o caminho curto para a devolução.
       </p>
       {ficha.retidas.length > 0 && (
-        <ul className={estilo.listaFraca}>
+        <ul className={estilo.retidas}>
           {ficha.retidas.map((r) => (
             <li key={`${r.marca}-${r.modelo}-${r.variante ?? ''}`}>
-              {r.marca} {r.modelo} — retido: {r.motivo.replace(/_/g, ' ')}
+              <span className={estilo.retidaModelo}>
+                {r.marca} {r.modelo}
+              </span>
+              <span className={estilo.retidaMotivo}>retido: {r.motivo.replace(/_/g, ' ')}</span>
             </li>
           ))}
         </ul>
@@ -280,14 +321,17 @@ export function Resultado({
 }) {
   return (
     <>
-      <p className={estilo.tituloGerado}>{montado.titulo.titulo}</p>
+      {/* A vitrine: o título do tamanho em que aparece na loja, e o preço embaixo. */}
+      <div className={estilo.vitrine}>
+        <p className={estilo.tituloGerado}>{montado.titulo.titulo}</p>
+        <p className={estilo.vitrinePreco}>{formatarBRL(preco)}</p>
+        <p className={estilo.vitrineQuantidade}>
+          {contagem(montado.anuncio.quantidade, 'unidade', 'unidades')} à venda
+        </p>
+      </div>
       <p className={estilo.dica}>{resumoDoTitulo(montado.titulo)}</p>
 
-      <p className={estilo.resumo}>
-        Preço: {formatarBRL(preco)} · Quantidade: {montado.anuncio.quantidade}
-      </p>
-
-      <h3 className={estilo.subtitulo}>Descrição</h3>
+      <h3 className={estilo.subtituloDoBloco}>Descrição</h3>
       <pre className={estilo.descricao}>{montado.anuncio.descricao ?? '(sem descrição)'}</pre>
 
       {/*
@@ -295,20 +339,18 @@ export function Resultado({
         botão que não existe: o primeiro promete e o segundo explica.
       */}
       {montado.conferencia.podeExportar ? (
-        <>
-          <p>
-            <a className={estilo.botaoBaixar} href={linkDoArquivo}>
-              Baixar o arquivo de importação
-            </a>
-          </p>
+        <div className={estilo.baixar}>
+          <a className={estilo.botaoBaixar} href={linkDoArquivo}>
+            Baixar o arquivo de importação
+          </a>
           {/*
             Onde subir vem do adaptador, não de texto nesta tela: cada plataforma põe
             a importação em massa num lugar diferente, e é o adaptador que sabe qual.
           */}
           {instrucao !== null && <p className={estilo.dica}>{instrucao}</p>}
-        </>
+        </div>
       ) : (
-        <p className={estilo.dica}>
+        <p className={estilo.baixarAinda}>
           O arquivo de importação aparece aqui quando o que impede exportar estiver preenchido.
         </p>
       )}

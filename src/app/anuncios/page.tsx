@@ -37,6 +37,7 @@ import {
   ConsertarCategoria,
   Ficha,
   Formulario,
+  OQueSai,
   Resultado,
   VALORES_PADRAO,
   linkDoArquivo,
@@ -155,63 +156,80 @@ export default async function PaginaDeAnuncios({
         <h1 className={estilo.titulo}>Montar anúncio</h1>
         <p className={estilo.subtitulo}>
           Título com os códigos de modelo que o comprador busca, descrição com a tabela de onde
-          serve, e o arquivo de importação da plataforma. O preço vem de fora: quem decide preço é a
-          precificação, não o gerador de anúncio.
+          serve, e o arquivo de importação da loja. O preço vem de fora: quem decide preço é a conta
+          de Catálogo e preço, não o gerador de anúncio.
         </p>
       </header>
 
       {aviso !== null && <AvisoDaAcao aviso={aviso} />}
 
-      <Formulario candidatos={candidatos} valores={valores} />
+      <section aria-labelledby="formulario-titulo" className={estilo.bloco}>
+        <h2 className={estilo.blocoTitulo} id="formulario-titulo">
+          O que anunciar
+        </h2>
+        <p className={estilo.blocoTexto}>
+          Escolha o produto e a loja. O resto vem do catálogo e da ficha de onde serve.
+        </p>
+        <Formulario candidatos={candidatos} valores={valores} />
+      </section>
 
-      {montado !== null && leitura.tipo === 'ok' && (
-        <>
-          <section aria-labelledby="anuncio-titulo" className={estilo.secao}>
-            <h2 className={estilo.secaoTitulo} id="anuncio-titulo">
-              O anúncio
-            </h2>
-            <Resultado
-              instrucao={instrucao}
-              linkDoArquivo={linkDoArquivo(comoQueryString(leitura.parametros))}
-              montado={montado}
-              preco={leitura.parametros.preco}
-            />
-          </section>
-
-          <section aria-labelledby="outras-titulo" className={estilo.secao}>
-            <h2 className={estilo.secaoTitulo} id="outras-titulo">
-              Montar também para
-            </h2>
-            <PublicarEm lojas={outrasLojas(leitura.parametros)} />
-          </section>
-
-          <section aria-labelledby="checklist-titulo" className={estilo.secao}>
-            <h2 className={estilo.secaoTitulo} id="checklist-titulo">
-              Checklist de atributos
-            </h2>
-            <Checklist conferencia={montado.conferencia} />
-            {montado.conferencia.bloqueiam.some((i) => i.atributo === 'categoria') && (
-              <ConsertarCategoria
-                skuId={leitura.parametros.skuId}
-                voltarPara={`${CAMINHO}?${comoQueryString(leitura.parametros)}`}
+      {montado === null || leitura.tipo !== 'ok' ? (
+        <OQueSai />
+      ) : (
+        <div className={estilo.grade}>
+          <div className={estilo.coluna}>
+            <section aria-labelledby="anuncio-titulo" className={estilo.bloco}>
+              <h2 className={estilo.blocoTitulo} id="anuncio-titulo">
+                O anúncio
+              </h2>
+              <Resultado
+                instrucao={instrucao}
+                linkDoArquivo={linkDoArquivo(comoQueryString(leitura.parametros))}
+                montado={montado}
+                preco={leitura.parametros.preco}
               />
-            )}
-          </section>
+            </section>
 
-          <section aria-labelledby="onde-serve-titulo" className={estilo.secao}>
-            <h2 className={estilo.secaoTitulo} id="onde-serve-titulo">
-              Onde serve
-            </h2>
-            {dados !== null && <Ficha ficha={dados.ficha} />}
-          </section>
+            <section aria-labelledby="outras-titulo" className={estilo.bloco}>
+              <h2 className={estilo.blocoTitulo} id="outras-titulo">
+                Montar também para
+              </h2>
+              <p className={estilo.blocoTexto}>
+                A mesma ficha serve a todas as lojas. O que muda é o preço, porque a comissão muda.
+              </p>
+              <PublicarEm lojas={outrasLojas(leitura.parametros)} />
+            </section>
+          </div>
 
-          <section aria-labelledby="catalogo-titulo" className={estilo.secao}>
-            <h2 className={estilo.secaoTitulo} id="catalogo-titulo">
-              Catálogo do Mercado Livre
-            </h2>
-            {catalogo !== null && <Catalogo avaliacao={catalogo} />}
-          </section>
-        </>
+          <div className={estilo.coluna}>
+            <section aria-labelledby="checklist-titulo" className={estilo.bloco}>
+              <h2 className={estilo.blocoTitulo} id="checklist-titulo">
+                Checklist de atributos
+              </h2>
+              <Checklist conferencia={montado.conferencia} />
+              {montado.conferencia.bloqueiam.some((i) => i.atributo === 'categoria') && (
+                <ConsertarCategoria
+                  skuId={leitura.parametros.skuId}
+                  voltarPara={`${CAMINHO}?${comoQueryString(leitura.parametros)}`}
+                />
+              )}
+            </section>
+
+            <section aria-labelledby="onde-serve-titulo" className={estilo.bloco}>
+              <h2 className={estilo.blocoTitulo} id="onde-serve-titulo">
+                Onde serve
+              </h2>
+              {dados !== null && <Ficha ficha={dados.ficha} />}
+            </section>
+
+            <section aria-labelledby="catalogo-titulo" className={estilo.bloco}>
+              <h2 className={estilo.blocoTitulo} id="catalogo-titulo">
+                Catálogo do Mercado Livre
+              </h2>
+              {catalogo !== null && <Catalogo avaliacao={catalogo} />}
+            </section>
+          </div>
+        </div>
       )}
     </main>
   );

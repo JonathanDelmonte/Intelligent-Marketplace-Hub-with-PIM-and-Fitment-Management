@@ -163,7 +163,7 @@ const PORQUE: Readonly<Record<Atributo, string>> = {
   ean: 'Sem código de barras: boa parte das categorias exige GTIN, e a importação recusa a linha inteira quando exige e não vem.',
   marca:
     'Busca por marca é como o comprador de peça chega. Sem marca o anúncio só aparece em busca por texto solto.',
-  peso: 'Sem peso o frete sai errado — e frete errado come a margem inteira sem aparecer em lugar nenhum.',
+  peso: 'Sem peso o frete sai errado, e frete errado come a margem inteira sem aparecer em lugar nenhum.',
   dimensoes:
     'Sem dimensão a plataforma estima a embalagem, e estimativa alta é frete alto no seu bolso.',
   descricao:
@@ -177,7 +177,7 @@ const PORQUE: Readonly<Record<Atributo, string>> = {
   medida:
     'Nesta peça a medida é o que decide se serve. Anunciar sem ela é vender para quem vai devolver.',
   quantidade_embalagem:
-    'Quantas peças vêm é a primeira pergunta em consumível — e a primeira devolução quando o comprador esperava duas.',
+    'Quantas peças vêm é a primeira pergunta em consumível, e a primeira devolução quando o comprador esperava duas.',
 };
 
 /** O que a conferência lê do produto. Tudo que pode faltar é nulo, nunca ausente. */

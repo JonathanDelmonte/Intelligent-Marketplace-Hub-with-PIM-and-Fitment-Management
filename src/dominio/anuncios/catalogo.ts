@@ -156,7 +156,7 @@ function mensagemDe(presenca: Presenca, reputacao: Reputacao, vendedores: number
 
   const comoSabe =
     presenca === 'confirmada'
-      ? 'Este produto tem ficha de catálogo no ML — uma das ocorrências aponta para a ficha.'
+      ? 'Este produto tem ficha de catálogo no ML: uma das ocorrências aponta para a ficha.'
       : `Este produto provavelmente tem ficha de catálogo no ML: ${vendedores} vendedores diferentes no mesmo código de barras. Confirme abrindo o anúncio de um deles.`;
 
   const oQueFazer =
@@ -164,7 +164,7 @@ function mensagemDe(presenca: Presenca, reputacao: Reputacao, vendedores: number
       ? 'Com reputação verde isso é a favor: dá para disputar a posição destacada e ficar com a vitrine inteira em vez de dividir.'
       : reputacao === 'abaixo_de_verde'
         ? 'Sem reputação verde você não ganha a posição destacada e fica em "outras opções de compra", que é quase invisível. Conte com volume baixo até a reputação subir.'
-        : 'Se a sua conta não tem reputação verde, você não ganha a posição destacada e fica em "outras opções de compra", que é quase invisível — vale checar antes de comprar estoque.';
+        : 'Se a sua conta não tem reputação verde, você não ganha a posição destacada e fica em "outras opções de compra", que é quase invisível. Vale checar antes de comprar estoque.';
 
   return `${comoSabe} ${oQueFazer}`;
 }

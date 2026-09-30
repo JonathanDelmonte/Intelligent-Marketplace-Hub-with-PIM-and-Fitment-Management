@@ -13,4 +13,5 @@ declare const estilo: {
   readonly publicarNota: string;
   readonly publicarTextos: string;
 };
+
 export default estilo;

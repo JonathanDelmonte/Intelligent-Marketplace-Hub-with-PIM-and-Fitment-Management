@@ -83,7 +83,7 @@ export function resumoDaConferencia(conferencia: Conferencia): string {
 
   if (conferencia.devolvem.length > 0) {
     const nomes = conferencia.devolvem.map((i) => rotuloDoAtributo(i.atributo)).join(', ');
-    return `Dá para exportar, mas falta ${nomes} — e é o que volta como devolução. Checklist ${preenchido} preenchido.`;
+    return `Dá para exportar, mas falta ${nomes}, e é o que volta como devolução. Checklist ${preenchido} preenchido.`;
   }
 
   if (conferencia.faltando.length > 0) {
@@ -99,7 +99,7 @@ export function resumoDaConferencia(conferencia: Conferencia): string {
 export function resumoDoTitulo(titulo: TituloGerado): string {
   const tamanho = `${String(titulo.titulo.length)} de ${String(titulo.limite)} caracteres`;
   if (titulo.modelosCortados.length === 0) return `${tamanho}, e todos os modelos couberam.`;
-  return `${tamanho}. Ficaram de fora: ${titulo.modelosCortados.join(', ')} — cada modelo fora é uma busca em que o anúncio não aparece. Dois anúncios com três modelos cada alcançam mais gente que um com três de seis.`;
+  return `${tamanho}. Ficaram de fora: ${titulo.modelosCortados.join(', ')}. Cada modelo fora é uma busca em que o anúncio não aparece. Dois anúncios com três modelos cada alcançam mais gente que um com três de seis.`;
 }
 
 /** O alerta de catálogo, quando há. `null` quando não há nada a dizer. */
@@ -131,9 +131,9 @@ export function descreverCandidato(candidato: CandidatoAAnuncio): string {
   if (candidato.compatibilidadesPublicaveis === 0) faltas.push('sem modelo publicável');
 
   if (faltas.length === 0) {
-    return `${candidato.titulo} — ${contagem(candidato.compatibilidadesPublicaveis, 'modelo publicável', 'modelos publicáveis')}`;
+    return `${candidato.titulo} · ${contagem(candidato.compatibilidadesPublicaveis, 'modelo publicável', 'modelos publicáveis')}`;
   }
-  return `${candidato.titulo} — ${faltas.join(', ')}`;
+  return `${candidato.titulo} · ${faltas.join(', ')}`;
 }
 
 export const CODIGOS_DE_AVISO = ['sku_inexistente', 'parametros'] as const;

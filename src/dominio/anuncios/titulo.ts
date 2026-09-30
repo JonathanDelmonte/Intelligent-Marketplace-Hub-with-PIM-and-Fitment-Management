@@ -281,7 +281,7 @@ export function gerarTitulo(dados: DadosDoTitulo, limite: number): TituloGerado 
   }
   if (cortados.length > 0) {
     avisos.push(
-      `${contagem(cortados.length, 'modelo', 'modelos')} ${cortados.length === 1 ? 'não coube' : 'não couberam'}: ${cortados.join(', ')}. Cada um é uma busca em que o anúncio não aparece — vale considerar um segundo anúncio.`,
+      `${contagem(cortados.length, 'modelo', 'modelos')} ${cortados.length === 1 ? 'não coube' : 'não couberam'}: ${cortados.join(', ')}. Cada um é uma busca em que o anúncio não aparece: vale considerar um segundo anúncio.`,
     );
   }
   const sobra = limite - titulo.length;
