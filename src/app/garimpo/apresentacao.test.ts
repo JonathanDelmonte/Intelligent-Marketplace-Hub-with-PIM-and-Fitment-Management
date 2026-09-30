@@ -12,6 +12,7 @@ import {
   ROTULO_DA_FAMILIA,
   situacaoDoDossie,
   textoDoEstadoDaFerramenta,
+  numerosDoGarimpo,
 } from './apresentacao';
 
 describe('situacaoDoDossie', () => {
@@ -212,5 +213,35 @@ describe('descreverAviso', () => {
 
   it('teto inválido lembra por que o teto existe', () => {
     expect(descreverAviso('teto_invalido')?.corpo).toContain('fatura');
+  });
+});
+
+describe('numerosDoGarimpo', () => {
+  it('diz os quatro números, e as perguntas possíveis contra o total', () => {
+    const numeros = numerosDoGarimpo({
+      dossies: 1,
+      achados: 5,
+      valeContinuar: 0,
+      familiasPossiveis: 6,
+      familiasTotais: 7,
+    });
+    expect(numeros.map((n) => [n.chave, n.valor])).toEqual([
+      ['alvos', '1'],
+      ['achados', '5'],
+      ['continuar', '0'],
+      ['perguntas', '6'],
+    ]);
+    expect(numeros[3]).toMatchObject({ resto: 'de 7', tom: 'atencao' });
+  });
+
+  it('sem alvo, a nota diz onde abrir o primeiro', () => {
+    const [alvos] = numerosDoGarimpo({
+      dossies: 0,
+      achados: 0,
+      valeContinuar: 0,
+      familiasPossiveis: 7,
+      familiasTotais: 7,
+    });
+    expect(alvos?.nota).toBe('abra o primeiro abaixo');
   });
 });

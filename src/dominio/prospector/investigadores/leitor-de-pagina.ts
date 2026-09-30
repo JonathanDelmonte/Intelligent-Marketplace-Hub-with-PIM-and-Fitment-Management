@@ -117,7 +117,7 @@ export class InvestigadorDePagina implements Investigador {
       achados.push({
         id: `quem_ja_vende:${semParametros(url).slice(0, 200)}`,
         familia: 'quem_ja_vende',
-        oQue: `${quem} vende "${nome}" por ${formatarBRL(preco)}${marca === null ? '' : ` — marca ${marca}`}${gtin === null ? '' : `, GTIN ${gtin}`}.`,
+        oQue: `${quem} vende "${nome}" por ${formatarBRL(preco)}${marca === null ? '' : `, marca ${marca}`}${gtin === null ? '' : `, GTIN ${gtin}`}.`,
         origemUrl: url,
         achadoEm: agora,
       });

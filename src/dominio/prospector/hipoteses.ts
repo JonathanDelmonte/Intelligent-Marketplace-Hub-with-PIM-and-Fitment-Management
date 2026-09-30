@@ -88,7 +88,7 @@ export const DEFINICOES: readonly DefinicaoDeFamilia[] = [
     familia: 'quem_fabrica',
     pergunta: 'Quem fabrica isso?',
     porQueImporta:
-      'Achar o fabricante é o que permite achar o distribuidor dele — e às vezes comprar direto. Também resolve a marca quando o anúncio não diz.',
+      'Achar o fabricante é o que permite achar o distribuidor dele, e às vezes comprar direto. Também resolve a marca quando o anúncio não diz.',
     ferramentas: ['busca_web', 'visao', 'ler_pagina'],
     valorBase: 80,
   },
@@ -120,7 +120,7 @@ export const DEFINICOES: readonly DefinicaoDeFamilia[] = [
     familia: 'quem_ja_vende',
     pergunta: 'Quem já vende isso, e quão forte é?',
     porQueImporta:
-      'Mede concorrência sem depender da API de busca bloqueada. Informa a decisão, mas não muda preço de compra — por isso vale menos que as de custo.',
+      'Mede concorrência sem depender da API de busca bloqueada. Informa a decisão, mas não muda preço de compra, e por isso vale menos que as de custo.',
     ferramentas: ['busca_web', 'ler_pagina'],
     valorBase: 50,
   },

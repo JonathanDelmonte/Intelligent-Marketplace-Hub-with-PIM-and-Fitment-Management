@@ -254,7 +254,7 @@ function clausulaDeAberta(abertas: number, motivo: MotivoDeParada | null): strin
     case 'orcamento_passos':
     case 'orcamento_reais':
     case null:
-      return `${contagem(abertas, 'hipótese em aberto', 'hipóteses em aberto')} — dá para continuar de onde parou.`;
+      return `${contagem(abertas, 'hipótese em aberto', 'hipóteses em aberto')}: dá para continuar de onde parou.`;
     case 'fronteira_vazia':
       return `${quantas}, esperando ferramenta.`;
     case 'saturacao':

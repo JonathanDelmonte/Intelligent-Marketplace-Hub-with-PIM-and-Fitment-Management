@@ -158,7 +158,7 @@ export function proximoPasso(estado: EstadoDaBusca, limites: LimitesDaBusca): Pr
     return {
       tipo: 'parar',
       motivo: 'saturacao',
-      explicacao: `${String(estado.passosSemAchado)} investigações seguidas sem achado novo. Parar aqui é ter terminado, não ter esbarrado no teto — aumentar o orçamento não traria mais nada.`,
+      explicacao: `${String(estado.passosSemAchado)} investigações seguidas sem achado novo. Parar aqui é ter terminado, não ter esbarrado no teto: aumentar o orçamento não traria mais nada.`,
     };
   }
 

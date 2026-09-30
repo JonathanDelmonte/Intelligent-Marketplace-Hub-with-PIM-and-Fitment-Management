@@ -7,17 +7,21 @@
  * motivo de parada ficam abertos, porque são a razão de olhar a tela.
  */
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { PLATAFORMAS } from '@/dominio/precificacao/tipos';
 import { fronteiraRestante } from '@/dominio/prospector/dossie';
 import type { DossieGravado } from '@/dominio/prospector/repositorio';
 import { definicaoDaFamilia, FERRAMENTAS, type Ferramenta } from '@/dominio/prospector/hipoteses';
 import { estadoDaFerramenta, O_QUE_A_FERRAMENTA_FAZ } from '@/dominio/prospector/ferramentas';
 import { caminhoDoProdutoNovo } from '../catalogo/apresentacao';
+import { FaixaDeNumeros } from '../ui/numeros';
 import { ROTULO_DA_PLATAFORMA } from '../ui/rotulos';
+import { SinalBusca, SinalCaixa, SinalCerto, SinalRelogio } from '../ui/sinais';
 import { formatarAbsoluto, formatarRelativo } from '../ui/tempo';
 import { investigarAlvo } from './acoes';
 import {
   explicacaoAcrescenta,
+  numerosDoGarimpo,
   reaisDoTeto,
   linhaDaFronteira,
   orcamentoLegivel,
@@ -26,6 +30,7 @@ import {
   situacaoDoDossie,
   textoDoEstadoDaFerramenta,
   type Aviso,
+  type NumeroDoGarimpo,
 } from './apresentacao';
 import { ACHADOS_NA_TELA, TETO_PASSOS_PADRAO } from './constantes';
 import estilo from './garimpo.module.css';
@@ -42,6 +47,31 @@ export function AvisoDaAcao({ aviso }: { readonly aviso: Aviso }) {
       <strong className={estilo.avisoTitulo}>{aviso.titulo}</strong>
       <span className={estilo.avisoCorpo}>{aviso.corpo}</span>
     </div>
+  );
+}
+
+const ICONE_DO_NUMERO: Readonly<Record<NumeroDoGarimpo['chave'], ReactNode>> = {
+  alvos: <SinalBusca />,
+  achados: <SinalCerto />,
+  continuar: <SinalRelogio />,
+  perguntas: <SinalCaixa />,
+};
+
+/** Os quatro números do alto. O escuro é o dos achados, que é o que o garimpo entrega. */
+export function Numeros(props: Parameters<typeof numerosDoGarimpo>[0]) {
+  return (
+    <FaixaDeNumeros
+      itens={numerosDoGarimpo(props).map((numero) => ({
+        rotulo: numero.rotulo,
+        valor: numero.valor,
+        ...(numero.resto === null ? {} : { resto: numero.resto }),
+        nota: numero.nota,
+        tom: numero.tom,
+        icone: ICONE_DO_NUMERO[numero.chave],
+        escuro: numero.chave === 'achados',
+      }))}
+      rotulo="O garimpo em números"
+    />
   );
 }
 
@@ -148,8 +178,8 @@ function Dossie({
 
       {/*
         "Publicar em" (ADR 0009): o garimpo serve a todas as lojas, e quando vira venda
-        pergunta em qual. O link abre o cadastro do produto com o alvo como nome — para
-        conferir, porque o nome não muda depois — e a loja escolhida segue até o preço.
+        pergunta em qual. O link abre o cadastro do produto com o alvo como nome (para
+        conferir, porque o nome não muda depois), e a loja escolhida segue até o preço.
       */}
       <div className={estilo.publicarEm}>
         <span className={estilo.publicarEmRotulo}>Publicar em</span>
@@ -167,13 +197,13 @@ function Dossie({
       {/*
         Continuar é passar um teto maior, e é por isso que o teto é campo e não botão:
         a mensagem de parada do domínio diz exatamente isso, e sem os dois números aqui
-        a pessoa teria de reabrir o alvo pelo formulário de baixo — que recusa, com
-        razão, para não reescrever o plano.
+        a pessoa teria de reabrir o alvo pelo formulário, que recusa, com razão, para não
+        reescrever o plano.
       */}
       <form action={investigarAlvo} className={estilo.continuar}>
         <input name="alvo" type="hidden" value={dossie.alvo} />
         <label className={estilo.campoMiudo}>
-          Teto em reais
+          <span className={estilo.rotulo}>Teto em reais</span>
           <input
             className={estilo.entradaMiuda}
             defaultValue={reaisDoTeto(dossie.orcamentoCentavos)}
@@ -184,7 +214,7 @@ function Dossie({
           />
         </label>
         <label className={estilo.campoMiudo}>
-          Teto em passos
+          <span className={estilo.rotulo}>Teto em passos</span>
           <input
             className={estilo.entradaMiuda}
             defaultValue={dossie.orcamentoPassos}
@@ -202,9 +232,9 @@ function Dossie({
       </form>
 
       {dossie.achados.length > 0 && (
-        <details className={estilo.bloco}>
-          <summary className={estilo.resumoDoBloco}>
-            ver os {dossie.achados.length} achados, com a origem de cada um
+        <details className={estilo.detalhe}>
+          <summary className={estilo.detalheResumo}>
+            Ver os {dossie.achados.length} achados, com a origem de cada um
           </summary>
           <ul className={estilo.listaMiuda}>
             {dossie.achados.slice(0, ACHADOS_NA_TELA).map((achado) => (
@@ -229,9 +259,9 @@ function Dossie({
         </details>
       )}
 
-      <details className={estilo.bloco}>
-        <summary className={estilo.resumoDoBloco}>
-          ver as {dossie.hipoteses.length} hipóteses
+      <details className={estilo.detalhe}>
+        <summary className={estilo.detalheResumo}>
+          Ver as {dossie.hipoteses.length} hipóteses
         </summary>
         <ul className={estilo.listaMiuda}>
           {dossie.hipoteses.map((hipotese) => (
@@ -249,9 +279,9 @@ function Dossie({
       </details>
 
       {restaram.length > 0 && (
-        <details className={estilo.bloco}>
-          <summary className={estilo.resumoDoBloco}>
-            ver o que ficou na fronteira ({restaram.length})
+        <details className={estilo.detalhe}>
+          <summary className={estilo.detalheResumo}>
+            Ver o que ficou na fronteira ({restaram.length})
           </summary>
           <ul className={estilo.listaMiuda}>
             {restaram.map((item, indice) => {
@@ -285,7 +315,7 @@ export function Dossies({
     return (
       <p className={estilo.vazio}>
         Nenhum alvo aberto. O prospector não varre: ele investiga, com alvo, teto e critério de
-        parada — e o alvo é a parte que só você sabe escolher.
+        parada. O alvo é a parte que só você sabe escolher.
       </p>
     );
   }
@@ -312,7 +342,7 @@ export function FormularioDeAlvo({ tetoPadrao }: { readonly tetoPadrao: string }
   return (
     <form action={investigarAlvo} className={estilo.formulario}>
       <label className={estilo.campoLargo}>
-        O alvo
+        <span className={estilo.rotulo}>O alvo</span>
         <input
           className={estilo.entrada}
           maxLength={120}
@@ -329,7 +359,7 @@ export function FormularioDeAlvo({ tetoPadrao }: { readonly tetoPadrao: string }
       </label>
 
       <label className={estilo.campo}>
-        Teto em reais
+        <span className={estilo.rotulo}>Teto em reais</span>
         <input
           className={estilo.entrada}
           defaultValue={tetoPadrao}
@@ -341,7 +371,7 @@ export function FormularioDeAlvo({ tetoPadrao }: { readonly tetoPadrao: string }
       </label>
 
       <label className={estilo.campo}>
-        Teto em passos
+        <span className={estilo.rotulo}>Teto em passos</span>
         <input
           className={estilo.entrada}
           defaultValue={TETO_PASSOS_PADRAO}

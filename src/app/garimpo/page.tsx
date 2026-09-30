@@ -28,8 +28,8 @@ import { RepositorioDeDossies } from '@/dominio/prospector/repositorio';
 import { banco } from '@/infra/banco/cliente';
 import { centavos } from '@/lib/dinheiro';
 import estilo from './garimpo.module.css';
-import { descreverAviso, reaisDoTeto, resumoDoGarimpo } from './apresentacao';
-import { AvisoDaAcao, Dossies, Ferramentas, FormularioDeAlvo } from './componentes';
+import { descreverAviso, reaisDoTeto } from './apresentacao';
+import { AvisoDaAcao, Dossies, Ferramentas, FormularioDeAlvo, Numeros } from './componentes';
 import { LIMITE_DE_DOSSIES } from './constantes';
 
 export const metadata: Metadata = { title: 'Garimpo de oportunidade' };
@@ -68,62 +68,62 @@ export default async function PaginaDeGarimpo({
         <p className={estilo.subtitulo}>
           Varrer a internet inteira é caro e inútil. O que roda aqui é investigação dirigida: um
           alvo, sete perguntas que mudam decisão de compra e de venda, teto declarado antes de
-          começar, e parada por ter terminado — não por ter esbarrado no limite.
-        </p>
-        <p className={estilo.resumo}>
-          {resumoDoGarimpo({
-            dossies: dossies.length,
-            achados: dossies.reduce((soma, d) => soma + d.achados.length, 0),
-            valeContinuar: continuaveis.length,
-            familiasPossiveis: possiveis.length,
-            familiasTotais: FAMILIAS_DE_HIPOTESE.length,
-          })}
+          começar, e parada por ter terminado, não por ter esbarrado no limite.
         </p>
       </header>
 
       {aviso !== null && <AvisoDaAcao aviso={aviso} />}
 
-      <section aria-labelledby="ferramentas-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="ferramentas-titulo">
-          O que dá para investigar hoje
-        </h2>
-        <p className={estilo.dica}>
-          Cada pergunta depende de uma ferramenta, e ferramenta ausente é estado normal, não erro: o
-          item fica na fronteira e não é escolhido, em vez de gastar um passo para descobrir no meio
-          que não dava. Acrescentar uma ferramenta é registrar um investigador — e ela passa a
-          aparecer aqui como disponível, sem mais nada.
-        </p>
-        <Ferramentas prontas={FERRAMENTAS_PRONTAS} />
-      </section>
+      <Numeros
+        achados={dossies.reduce((soma, d) => soma + d.achados.length, 0)}
+        dossies={dossies.length}
+        familiasPossiveis={possiveis.length}
+        familiasTotais={FAMILIAS_DE_HIPOTESE.length}
+        valeContinuar={continuaveis.length}
+      />
 
-      <section aria-labelledby="dossies-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="dossies-titulo">
-          Dossiês
-        </h2>
-        <p className={estilo.dica}>
-          Um por alvo, e o parcial é o caminho normal: o dossiê é salvo a cada passo, então o teto —
-          ou uma ferramenta que quebrou — interrompe sem perder o que já foi descoberto. Cada achado
-          carrega a URL de onde veio: achado sem fonte não é auditável, e a tela marca quando isso
-          acontece. Continuar é pedir um teto maior no próprio cartão.
-        </p>
-        <Dossies
-          agora={agora}
-          dossies={dossies}
-          idsQueValeContinuar={continuaveis.map((d) => d.id)}
-        />
-      </section>
+      <div className={estilo.grade}>
+        <div className={estilo.coluna}>
+          <section aria-labelledby="alvo-titulo" className={estilo.bloco}>
+            <h2 className={estilo.blocoTitulo} id="alvo-titulo">
+              Investigar um alvo
+            </h2>
+            <p className={estilo.blocoTexto}>
+              Escreve o plano (as sete perguntas, em ordem de valor por custo), grava o teto e põe a
+              investigação na fila. Alvo que já tem dossiê continua de onde parou, com o teto que
+              você pedir.
+            </p>
+            <FormularioDeAlvo tetoPadrao={tetoPadrao} />
+          </section>
 
-      <section aria-labelledby="alvo-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="alvo-titulo">
-          Investigar um alvo
-        </h2>
-        <p className={estilo.dica}>
-          Escreve o plano — as sete hipóteses e a fronteira, em ordem de valor por custo —, grava o
-          teto e põe a investigação na fila. Alvo que já tem dossiê não é reaberto: o plano fica
-          como está e a investigação continua de onde parou, com o teto que você pedir aqui.
-        </p>
-        <FormularioDeAlvo tetoPadrao={tetoPadrao} />
-      </section>
+          <section aria-labelledby="dossies-titulo" className={estilo.bloco}>
+            <h2 className={estilo.blocoTitulo} id="dossies-titulo">
+              Dossiês
+            </h2>
+            <p className={estilo.blocoTexto}>
+              Um por alvo, salvo a cada passo: o teto, ou uma ferramenta que quebrou, interrompe sem
+              perder o que já foi descoberto. Cada achado carrega a URL de onde veio, e o que não
+              tem fonte aparece marcado.
+            </p>
+            <Dossies
+              agora={agora}
+              dossies={dossies}
+              idsQueValeContinuar={continuaveis.map((d) => d.id)}
+            />
+          </section>
+        </div>
+
+        <section aria-labelledby="ferramentas-titulo" className={estilo.bloco}>
+          <h2 className={estilo.blocoTitulo} id="ferramentas-titulo">
+            O que dá para investigar hoje
+          </h2>
+          <p className={estilo.blocoTexto}>
+            Cada pergunta depende de uma ferramenta. Ferramenta ausente é estado normal, não erro: a
+            pergunta espera, em vez de gastar um passo para descobrir que não dava.
+          </p>
+          <Ferramentas prontas={FERRAMENTAS_PRONTAS} />
+        </section>
+      </div>
     </main>
   );
 }

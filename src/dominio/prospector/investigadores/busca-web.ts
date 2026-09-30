@@ -85,12 +85,12 @@ function oQueORespondeu(familia: FamiliaDeHipotese, resultado: ResultadoDeBusca)
     const precos = precosNoTexto(texto);
     if (precos.length === 0) return null;
     const menor = precos.reduce((a, b) => (b < a ? b : a));
-    return `${formatarBRL(menor)} em ${onde}: ${resultado.titulo}. Preço do trecho da busca — a página confirma.`;
+    return `${formatarBRL(menor)} em ${onde}: ${resultado.titulo}. Preço do trecho da busca; a página confirma.`;
   }
 
   const sinal = SINAL[familia];
   if (sinal === undefined || !sinal.test(texto)) return null;
-  return `${resultado.titulo} (${onde})${resultado.trecho === '' ? '' : ` — ${resultado.trecho.slice(0, 160)}`}`;
+  return `${resultado.titulo} (${onde})${resultado.trecho === '' ? '' : `: ${resultado.trecho.slice(0, 160)}`}`;
 }
 
 export interface OpcoesDaBuscaWeb extends OpcoesDoBuscador {

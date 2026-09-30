@@ -85,7 +85,7 @@ export function situacaoDoDossie(dossie: {
           tom: 'neutro',
           rotulo: 'esperando a fila',
           explicacao:
-            'O plano está escrito e nenhum passo foi gasto. A investigação entra pela fila — quem a tira de lá é o processador, que dá para rodar na tela de importação.',
+            'O plano está escrito e nenhum passo foi gasto. A investigação entra pela fila, e quem a tira de lá é o processador, que dá para rodar na tela de importação.',
           valeContinuar: false,
         }
       : {
@@ -260,7 +260,7 @@ export function descreverAviso(codigo: string | undefined): Aviso | null {
         tom: 'ok',
         titulo: 'Alvo aberto, e investigação na fila.',
         corpo:
-          'As sete hipóteses estão na fronteira, em ordem de valor por custo, e o teto está declarado. O que rodar depende de ferramenta disponível — o resto fica esperando.',
+          'As sete hipóteses estão na fronteira, em ordem de valor por custo, e o teto está declarado. O que rodar depende de ferramenta disponível, e o resto fica esperando.',
       };
     case 'na_fila':
       return {
@@ -293,4 +293,62 @@ export function descreverAviso(codigo: string | undefined): Aviso | null {
     case 'falha':
       return { tom: 'erro', titulo: 'Não deu.', corpo: 'Nada foi gravado. O erro está no log.' };
   }
+}
+
+export interface NumeroDoGarimpo {
+  readonly chave: 'alvos' | 'achados' | 'continuar' | 'perguntas';
+  readonly rotulo: string;
+  readonly valor: string;
+  readonly resto: string | null;
+  readonly nota: string;
+  readonly tom: 'neutro' | 'alta' | 'baixa' | 'atencao';
+}
+
+/**
+ * Os quatro números do alto: alvos abertos, achados, dossiês que vale continuar, e
+ * quantas das perguntas dá para fazer com as ferramentas de hoje. É a mesma conta de
+ * `resumoDoGarimpo`, em números que se leem num relance.
+ */
+export function numerosDoGarimpo(params: {
+  readonly dossies: number;
+  readonly achados: number;
+  readonly valeContinuar: number;
+  readonly familiasPossiveis: number;
+  readonly familiasTotais: number;
+}): readonly NumeroDoGarimpo[] {
+  const { dossies, achados, valeContinuar, familiasPossiveis, familiasTotais } = params;
+  return [
+    {
+      chave: 'alvos',
+      rotulo: 'Alvos abertos',
+      valor: dossies.toLocaleString('pt-BR'),
+      resto: null,
+      nota: dossies === 0 ? 'abra o primeiro abaixo' : 'um dossiê por alvo',
+      tom: 'neutro',
+    },
+    {
+      chave: 'achados',
+      rotulo: 'Achados',
+      valor: achados.toLocaleString('pt-BR'),
+      resto: null,
+      nota: achados === 0 ? 'nenhum ainda' : 'cada um com a origem',
+      tom: achados === 0 ? 'neutro' : 'alta',
+    },
+    {
+      chave: 'continuar',
+      rotulo: 'Vale continuar',
+      valor: valeContinuar.toLocaleString('pt-BR'),
+      resto: null,
+      nota: valeContinuar === 0 ? 'nenhum parou no meio' : 'pararam no teto com pergunta aberta',
+      tom: valeContinuar === 0 ? 'neutro' : 'atencao',
+    },
+    {
+      chave: 'perguntas',
+      rotulo: 'Perguntas possíveis',
+      valor: familiasPossiveis.toLocaleString('pt-BR'),
+      resto: `de ${String(familiasTotais)}`,
+      nota: 'com as ferramentas de hoje',
+      tom: familiasPossiveis === familiasTotais ? 'alta' : 'atencao',
+    },
+  ];
 }
