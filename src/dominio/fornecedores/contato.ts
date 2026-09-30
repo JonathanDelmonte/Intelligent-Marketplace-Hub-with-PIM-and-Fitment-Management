@@ -46,7 +46,7 @@ export function linhaDoProduto(produto: ProdutoDoContato): string {
   if (modelos.length > 0) {
     partes.push(`serve em ${modelos.join(', ')}`);
   }
-  return partes.join(' — ');
+  return partes.join(', ');
 }
 
 /**

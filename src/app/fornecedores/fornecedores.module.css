@@ -1,19 +1,22 @@
 /*
- * Estilo da tela de fornecedores. Cores só de variável de tema (convenções, 3.1).
+ * Estilo da tela de fornecedores, no desenho aprovado na Catálogo e preço (o porquê de
+ * cada forma está no cabeçalho de `catalogo/catalogo.module.css`). Cores só de variável
+ * de tema (ADR 0003).
  *
- * Cartão, não tabela, pela mesma razão da tela de compatibilidade: são cinco
- * respostas mais o veredito e a mensagem de contato por fornecedor, e isso em
- * tabela obriga rolagem horizontal em telefone. As cinco respostas são uma
- * `dl` em grade, que empilha sozinha quando não cabe.
+ * Quatro números no alto; a lista à esquerda, com cada fornecedor numa linha do cartão,
+ * e à direita o cadastro e as cinco perguntas que ele vai responder. As respostas tinham
+ * rótulo em caixa alta; agora é frase comum, em cinza, num quadro de fundo suave.
  */
 
 .pagina {
   composes: pagina from '../ui/comum.module.css';
-  --largura-pagina: 76rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .cabecalho {
-  composes: cabecalho from '../ui/comum.module.css';
+  margin-bottom: 0.5rem;
 }
 
 .titulo {
@@ -25,12 +28,31 @@
   composes: subtitulo from '../ui/comum.module.css';
 }
 
-.secao {
-  composes: secao from '../ui/comum.module.css';
+.grade {
+  align-items: start;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.6fr) minmax(20rem, 1fr);
 }
 
-.secaoTitulo {
-  composes: secaoTitulo from '../ui/comum.module.css';
+.coluna {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.bloco {
+  composes: bloco from '../ui/comum.module.css';
+}
+
+.blocoTitulo {
+  composes: blocoTitulo from '../ui/comum.module.css';
+}
+
+.blocoTexto {
+  composes: blocoTexto from '../ui/comum.module.css';
+  margin-bottom: 0.875rem;
 }
 
 .aviso {
@@ -53,32 +75,21 @@
   composes: avisoCorpo from '../ui/comum.module.css';
 }
 
-.painel {
-  composes: painel from '../ui/comum.module.css';
-}
-
-.cartao {
-  composes: cartao from '../ui/comum.module.css';
-}
-
-.cartaoNumero {
-  composes: cartaoNumero from '../ui/comum.module.css';
-}
-
-.cartaoRotulo {
-  composes: cartaoRotulo from '../ui/comum.module.css';
-}
-
-.cartaoNota {
-  composes: cartaoNota from '../ui/comum.module.css';
-}
+/* ── A lista ──────────────────────────────────────────────────────────────── */
 
 .lista {
-  composes: lista from '../ui/comum.module.css';
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .item {
-  composes: item from '../ui/comum.module.css';
+  border-top: 1px solid var(--linha);
+  padding: 1.125rem 0;
+}
+
+.item:last-child {
+  padding-bottom: 0;
 }
 
 .itemCabecalho {
@@ -96,7 +107,6 @@
 
 .etiqueta {
   composes: etiqueta from '../ui/comum.module.css';
-  white-space: nowrap;
 }
 
 .etiquetaAtencao {
@@ -108,64 +118,115 @@
 }
 
 .motivos {
-  color: var(--cor-texto-fraco);
-  font-size: 0.875rem;
-  margin: 0.75rem 0 0;
+  color: var(--tinta-2);
+  font-size: 0.84375rem;
+  margin: 0.625rem 0 0;
   padding-left: 1.125rem;
 }
 
+/* As respostas: um quadro de fundo suave, com o rótulo cinza em cima de cada uma. */
 .respostas {
+  background: var(--realce);
+  border-radius: var(--raio);
   display: grid;
-  gap: 0.5rem 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.625rem 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   margin: 0.875rem 0 0;
+  padding: 0.75rem 1rem;
 }
 
 .respostas dt {
-  color: var(--cor-texto-fraco);
+  color: var(--tinta-3);
   font-size: 0.75rem;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
 }
 
 .respostas dd {
+  font-size: 0.84375rem;
   margin: 0.125rem 0 0;
 }
 
 .detalhe {
+  border-top: 1px solid var(--linha);
+  font-size: 0.84375rem;
   margin-top: 0.875rem;
+  padding-top: 0.75rem;
 }
 
+.detalhe > summary {
+  color: var(--tinta-2);
+  cursor: pointer;
+}
+
+.detalhe > summary:hover {
+  color: var(--tinta);
+}
+
+.conferencia {
+  font-size: 0.84375rem;
+  margin: 0.5rem 0 0;
+}
+
+.conferenciaAlerta {
+  color: var(--perda);
+  font-size: 0.84375rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0;
+}
+
+.enderecos {
+  font-size: 0.84375rem;
+  margin: 0.5rem 0 0.75rem;
+  overflow-wrap: anywhere;
+  padding-left: 1.125rem;
+}
+
+.mensagem {
+  background: var(--realce);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  color: var(--tinta);
+  font: inherit;
+  font-size: 0.84375rem;
+  line-height: 1.55;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  width: 100%;
+}
+
+/* ── Formulários ──────────────────────────────────────────────────────────── */
+
 .formulario {
-  composes: formulario from '../ui/comum.module.css';
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin-top: 0.75rem;
+}
+
+.formulario > .botao {
+  align-self: flex-start;
 }
 
 .campos {
   display: grid;
-  /* O formulário comum é uma linha que quebra; a grade de campos ocupa a linha inteira,
-     e o botão desce para baixo dela em vez de se espremer ao lado. */
-  flex: 1 1 100%;
-  gap: 0.75rem;
-  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
-  margin-bottom: 0.875rem;
+  gap: 0.75rem 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
 }
 
 .campo {
-  composes: campo from '../ui/comum.module.css';
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.campo > span {
+  color: var(--tinta);
+  font-size: 0.8125rem;
+  font-weight: 560;
 }
 
 .entrada {
   composes: entrada from '../ui/comum.module.css';
-}
-
-.mensagem {
-  background: var(--cor-fundo);
-  border: 1px solid var(--cor-borda);
-  border-radius: 0.375rem;
-  color: var(--cor-texto);
-  font: inherit;
-  margin-top: 0.75rem;
-  padding: 0.75rem;
   width: 100%;
 }
 
@@ -175,27 +236,55 @@
 
 .dica {
   composes: dica from '../ui/comum.module.css';
+  margin: 0;
 }
 
-.vazio {
-  composes: vazio from '../ui/comum.module.css';
+/* ── As cinco perguntas ──────────────────────────────────────────────────── */
+
+.perguntas {
+  counter-reset: pergunta;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  list-style: none;
+  margin: 0.875rem 0 0;
+  padding: 0;
 }
 
-.conferencia {
-  font-size: 0.875rem;
-  margin: 0.5rem 0 0;
+.perguntas li {
+  counter-increment: pergunta;
+  display: grid;
+  gap: 0.125rem 0.625rem;
+  grid-template-columns: 1.375rem 1fr;
 }
 
-.conferenciaAlerta {
-  color: var(--cor-erro);
-  font-size: 0.875rem;
+.perguntas li::before {
+  align-items: center;
+  background: var(--realce);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  color: var(--tinta-2);
+  content: counter(pergunta);
+  display: inline-flex;
+  font-size: 0.6875rem;
   font-weight: 600;
-  margin: 0.5rem 0 0;
+  grid-row: span 2;
+  height: 1.375rem;
+  justify-content: center;
 }
 
-.enderecos {
-  font-size: 0.875rem;
-  margin: 0.5rem 0 0.75rem;
-  overflow-wrap: anywhere;
-  padding-left: 1.125rem;
+.perguntaTexto {
+  font-size: 0.84375rem;
+  font-weight: 580;
+}
+
+.perguntaPorque {
+  color: var(--tinta-3);
+  font-size: 0.78125rem;
+}
+
+@media (max-width: 64rem) {
+  .grade {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

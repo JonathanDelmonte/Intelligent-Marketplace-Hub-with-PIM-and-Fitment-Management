@@ -16,7 +16,7 @@ import { RepositorioDeFornecedores } from '@/dominio/fornecedores/repositorio';
 import { carregarPerfil } from '@/dominio/perfil';
 import { banco } from '@/infra/banco/cliente';
 import { descreverAviso, estadoDaBase } from './apresentacao';
-import { AvisoDaAcao, FormularioDeCadastro, Lista, Painel } from './componentes';
+import { AvisoDaAcao, CincoPerguntas, FormularioDeCadastro, Lista, Painel } from './componentes';
 import { LIMITE_DA_LISTA } from './constantes';
 import estilo from './fornecedores.module.css';
 
@@ -57,9 +57,9 @@ export default async function PaginaDeFornecedores({
         <h1 className={estilo.titulo}>Fornecedores</h1>
         <p className={estilo.subtitulo}>
           Cinco perguntas eliminam a maioria dos candidatos antes de você perder tempo. Uma delas
-          descarta sozinha: quem vende direto na mesma vitrine tem preço de fábrica e você tem o
-          preço dele — não há margem a disputar. Em branco não é “não”: é “ainda não sei”, e o
-          sistema não decide nada com o que não sabe.
+          descarta sozinha: quem vende direto na mesma vitrine tem preço de fábrica, e você tem o
+          preço dele. Em branco não é “não”: é “ainda não sei”, e o sistema não decide nada com o
+          que não sabe.
         </p>
       </header>
 
@@ -67,20 +67,42 @@ export default async function PaginaDeFornecedores({
 
       <Painel contagem={contagem} />
 
-      <section aria-labelledby="lista-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="lista-titulo">
-          Cadastrados
-        </h2>
-        {diagnostico !== null && <AvisoDaAcao aviso={diagnostico} />}
-        <Lista confiabilidades={confiabilidades} fornecedores={fornecedores} vendedor={vendedor} />
-      </section>
+      <div className={estilo.grade}>
+        <section aria-labelledby="lista-titulo" className={estilo.bloco}>
+          <h2 className={estilo.blocoTitulo} id="lista-titulo">
+            Cadastrados
+          </h2>
+          <p className={estilo.blocoTexto}>
+            Cada fornecedor com o veredito da triagem, as respostas que já tem e a mensagem para
+            perguntar o que falta.
+          </p>
+          {diagnostico !== null && <AvisoDaAcao aviso={diagnostico} />}
+          <Lista
+            confiabilidades={confiabilidades}
+            fornecedores={fornecedores}
+            vendedor={vendedor}
+          />
+        </section>
 
-      <section aria-labelledby="cadastro-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="cadastro-titulo">
-          Cadastrar fornecedor
-        </h2>
-        <FormularioDeCadastro />
-      </section>
+        <div className={estilo.coluna}>
+          <section aria-labelledby="cadastro-titulo" className={estilo.bloco}>
+            <h2 className={estilo.blocoTitulo} id="cadastro-titulo">
+              Cadastrar fornecedor
+            </h2>
+            <p className={estilo.blocoTexto}>
+              As cinco perguntas começam em branco, e é isso que você vai perguntar.
+            </p>
+            <FormularioDeCadastro />
+          </section>
+
+          <section aria-labelledby="perguntas-titulo" className={estilo.bloco}>
+            <h2 className={estilo.blocoTitulo} id="perguntas-titulo">
+              As cinco perguntas
+            </h2>
+            <CincoPerguntas />
+          </section>
+        </div>
+      </div>
     </main>
   );
 }

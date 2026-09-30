@@ -69,9 +69,9 @@ export function vitrineEmTexto(valor: boolean | null, fonte: Fonte | null): stri
 export function confiabilidadeEmTexto(medida: Confiabilidade | undefined): string {
   if (medida === undefined || medida.tipo === 'sem_pedidos') return 'sem pedido medido';
   if (medida.tipo === 'poucos') {
-    return `${contagem(medida.medidos, 'pedido medido', 'pedidos medidos')} — a nota sai com ${String(MINIMO_DE_PEDIDOS_MEDIDOS)}`;
+    return `${contagem(medida.medidos, 'pedido medido', 'pedidos medidos')}; a nota sai com ${String(MINIMO_DE_PEDIDOS_MEDIDOS)}`;
   }
-  return `${String(medida.nota)} de 5 — ${String(medida.noPrazo)} de ${String(medida.medidos)} postados no prazo`;
+  return `${String(medida.nota)} de 5: ${String(medida.noPrazo)} de ${String(medida.medidos)} postados no prazo`;
 }
 
 /** O que a confiabilidade mede, para quem quer saber de onde vem o número. */
@@ -149,7 +149,7 @@ export function conferenciaNaTela(conferencia: Conferencia): ConferenciaNaTela {
       textoDoCadastro = 'CPF: pessoa física, sem cadastro público para consultar.';
       break;
     case 'invalido':
-      textoDoCadastro = `O documento cadastrado não confere — ${cadastro.motivo}`;
+      textoDoCadastro = `O documento cadastrado não confere: ${cadastro.motivo}`;
       cadastroPreocupa = true;
       break;
     case 'inexistente':
@@ -168,7 +168,7 @@ export function conferenciaNaTela(conferencia: Conferencia): ConferenciaNaTela {
   let textoDaVitrine: string;
   if (vitrine.lojas.length > 0) {
     textoDaVitrine =
-      'Achou loja própria com esse nome: ele vende na mesma vitrine. Confira no link — se não for ele, responda "não" nas perguntas.';
+      'Achou loja própria com esse nome: ele vende na mesma vitrine. Confira no link. Se não for ele, responda "não" nas perguntas.';
   } else if (!vitrineConcluida(conferencia)) {
     const feitas =
       vitrine.conferidas.length === 0
@@ -249,7 +249,7 @@ export function descreverAviso(codigo: string | undefined): Aviso | null {
         tom: 'ok',
         titulo: 'Fornecedor cadastrado',
         corpo:
-          'As cinco perguntas começam em branco. Use a mensagem de primeiro contato — ela já vem com o que falta perguntar.',
+          'As cinco perguntas começam em branco. Use a mensagem de primeiro contato: ela já vem com o que falta perguntar.',
       };
     case 'respondido':
       return {
@@ -275,7 +275,7 @@ export function descreverAviso(codigo: string | undefined): Aviso | null {
         tom: 'atencao',
         titulo: 'O CNPJ não confere',
         corpo:
-          'O dígito verificador não bate — um número trocado na digitação vira o CNPJ de ninguém. Nada foi gravado: confira e cadastre de novo, ou deixe o CNPJ em branco.',
+          'O dígito verificador não bate: um número trocado na digitação vira o CNPJ de ninguém. Nada foi gravado: confira e cadastre de novo, ou deixe o CNPJ em branco.',
       };
     case 'conferido':
       return {
@@ -288,7 +288,7 @@ export function descreverAviso(codigo: string | undefined): Aviso | null {
         tom: 'atencao',
         titulo: 'Achou loja própria na vitrine',
         corpo:
-          'O fornecedor foi descartado: vende na mesma vitrine. O link está no cartão — se não for ele, responda "não" nas perguntas.',
+          'O fornecedor foi descartado: vende na mesma vitrine. O link está no cartão. Se não for ele, responda "não" nas perguntas.',
       };
     case 'conferido_incompleto':
       return {
@@ -323,7 +323,7 @@ export function estadoDaBase(
       tom: 'atencao',
       titulo: 'Nenhum fornecedor cadastrado',
       corpo:
-        'Cadastre o primeiro abaixo. O sistema não decide por você: ele faz as cinco perguntas que eliminam a maioria dos candidatos antes de você perder tempo.',
+        'Cadastre o primeiro ao lado. O sistema não decide por você: ele faz as cinco perguntas que eliminam a maioria dos candidatos antes de você perder tempo.',
     };
   }
   if (porVeredito.aprovado === 0 && porVeredito.perguntar > 0) {

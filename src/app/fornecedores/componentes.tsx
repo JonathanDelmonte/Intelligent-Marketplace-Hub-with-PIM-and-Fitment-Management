@@ -6,11 +6,14 @@
  * mensagem de primeiro contato fica num `textarea` justamente para poder ser
  * copiada sem precisar de script.
  */
+import type { ReactNode } from 'react';
 import type { Confiabilidade } from '@/dominio/fornecedores/confiabilidade';
 import type { FornecedorGravado } from '@/dominio/fornecedores/repositorio';
 import { mensagemDePrimeiroContato } from '@/dominio/fornecedores/contato';
 import { CANAIS, ORIGENS } from '@/dominio/fornecedores/repositorio';
 import { contagem } from '@/lib/texto';
+import { FaixaDeNumeros, type TomDoNumero } from '../ui/numeros';
+import { SinalAlerta, SinalCerto, SinalFechar, SinalRelogio } from '../ui/sinais';
 import { cadastrarFornecedor, conferirAgora, responderPerguntas } from './acoes';
 import {
   COMO_SE_MEDE_A_CONFIABILIDADE,
@@ -44,8 +47,9 @@ export function AvisoDaAcao({ aviso }: { readonly aviso: Aviso }) {
   );
 }
 
+/** Os quatro números do alto. O escuro é o dos aprovados, que é de quem se compra. */
 export function Painel({
-  contagem,
+  contagem: porVeredito,
 }: {
   readonly contagem: {
     readonly aprovado: number;
@@ -54,22 +58,78 @@ export function Painel({
     readonly descartar: number;
   };
 }) {
-  const cartoes = [
-    { rotulo: 'Aprovados', valor: contagem.aprovado, nota: 'passam nas cinco perguntas' },
-    { rotulo: 'Com ressalva', valor: contagem.ressalva, nota: 'servem, e custam algo' },
-    { rotulo: 'Falta perguntar', valor: contagem.perguntar, nota: 'é tarefa, não reprovação' },
-    { rotulo: 'Descartados', valor: contagem.descartar, nota: 'vendem na mesma vitrine' },
+  const cartoes: readonly {
+    readonly rotulo: string;
+    readonly valor: number;
+    readonly nota: string;
+    readonly tom: TomDoNumero;
+    readonly icone: ReactNode;
+  }[] = [
+    {
+      rotulo: 'Aprovados',
+      valor: porVeredito.aprovado,
+      nota: 'passam nas cinco perguntas',
+      tom: porVeredito.aprovado === 0 ? 'neutro' : 'alta',
+      icone: <SinalCerto />,
+    },
+    {
+      rotulo: 'Com ressalva',
+      valor: porVeredito.ressalva,
+      nota: 'servem, e custam algo',
+      tom: porVeredito.ressalva === 0 ? 'neutro' : 'atencao',
+      icone: <SinalAlerta />,
+    },
+    {
+      rotulo: 'Falta perguntar',
+      valor: porVeredito.perguntar,
+      nota: 'é tarefa, não reprovação',
+      tom: 'neutro',
+      icone: <SinalRelogio />,
+    },
+    {
+      rotulo: 'Descartados',
+      valor: porVeredito.descartar,
+      nota: 'vendem na mesma vitrine',
+      tom: porVeredito.descartar === 0 ? 'neutro' : 'baixa',
+      icone: <SinalFechar />,
+    },
   ];
   return (
-    <div className={estilo.painel}>
-      {cartoes.map((c) => (
-        <div className={estilo.cartao} key={c.rotulo}>
-          <span className={estilo.cartaoNumero}>{c.valor}</span>
-          <span className={estilo.cartaoRotulo}>{c.rotulo}</span>
-          <span className={estilo.cartaoNota}>{c.nota}</span>
-        </div>
+    <FaixaDeNumeros
+      itens={cartoes.map((c, indice) => ({
+        rotulo: c.rotulo,
+        valor: c.valor.toLocaleString('pt-BR'),
+        nota: c.nota,
+        tom: c.tom,
+        icone: c.icone,
+        escuro: indice === 0,
+      }))}
+      rotulo="Os fornecedores em números"
+    />
+  );
+}
+
+/**
+ * As cinco perguntas, com o porquê de cada uma. Mora ao lado do cadastro: é o que vai ser
+ * perguntado a quem entrar, e a pessoa decide melhor sabendo o que pesa.
+ */
+export function CincoPerguntas() {
+  const perguntas = [
+    ['Posta com a etiqueta do marketplace?', 'Sem isso, cada venda vira um envio seu.'],
+    ['Emite nota fiscal de venda?', 'A nota é o que deixa a venda sair da plataforma.'],
+    ['Em quantos dias posta?', 'O prazo dele entra no seu prazo de postagem.'],
+    ['Qual é o pedido mínimo?', 'Mínimo alto prende dinheiro em estoque parado.'],
+    ['Vende direto na mesma vitrine?', 'Se vende, tem preço de fábrica: descarta sozinho.'],
+  ] as const;
+  return (
+    <ol className={estilo.perguntas}>
+      {perguntas.map(([pergunta, porque]) => (
+        <li key={pergunta}>
+          <span className={estilo.perguntaTexto}>{pergunta}</span>
+          <span className={estilo.perguntaPorque}>{porque}</span>
+        </li>
       ))}
-    </div>
+    </ol>
   );
 }
 
@@ -87,7 +147,7 @@ function TresEstados({
     <label className={estilo.campo}>
       <span>{rotulo}</span>
       <select className={estilo.entrada} defaultValue="" name={nome}>
-        <option value="">— deixar como está ({respostaEmTexto(atual)})</option>
+        <option value="">Deixar como está ({respostaEmTexto(atual)})</option>
         <option value="sim">sim</option>
         <option value="nao">não</option>
         <option value="nao_sei">ainda não perguntei</option>
@@ -285,7 +345,7 @@ export function CartaoDoFornecedor({
             Gravar respostas
           </button>
           <p className={estilo.dica}>
-            Campo em branco fica como está. “Ainda não perguntei” apaga a resposta de propósito — é
+            Campo em branco fica como está. “Ainda não perguntei” apaga a resposta de propósito: é
             diferente de “não”, e o sistema trata as duas coisas de formas diferentes.
           </p>
         </form>
@@ -322,9 +382,9 @@ export function Lista({
   readonly vendedor: string;
   readonly confiabilidades: ReadonlyMap<string, Confiabilidade>;
 }) {
-  if (fornecedores.length === 0) {
-    return <p className={estilo.vazio}>Nenhum fornecedor cadastrado.</p>;
-  }
+  // Lista vazia não diz nada aqui: o aviso do estado da base, logo acima, já diz o que
+  // falta e onde cadastrar.
+  if (fornecedores.length === 0) return null;
   return (
     <ul className={estilo.lista}>
       {fornecedores.map((f) => (
@@ -358,7 +418,7 @@ export function FormularioDeCadastro() {
         <label className={estilo.campo}>
           <span>Canal</span>
           <select className={estilo.entrada} defaultValue="" name="canal">
-            <option value="">—</option>
+            <option value="">Não informado</option>
             {CANAIS.map((c) => (
               <option key={c} value={c}>
                 {c}
@@ -369,7 +429,7 @@ export function FormularioDeCadastro() {
         <label className={estilo.campo}>
           <span>Origem</span>
           <select className={estilo.entrada} defaultValue="" name="origem">
-            <option value="">—</option>
+            <option value="">Não informada</option>
             {ORIGENS.map((o) => (
               <option key={o} value={o}>
                 {o}
@@ -385,10 +445,6 @@ export function FormularioDeCadastro() {
       <button className={estilo.botao} type="submit">
         Cadastrar fornecedor
       </button>
-      <p className={estilo.dica}>
-        As cinco perguntas ficam em branco no começo, e é isso que você vai perguntar. Em branco não
-        é “não”: é “ainda não sei”, e o sistema não decide nada com o que não sabe.
-      </p>
     </form>
   );
 }
