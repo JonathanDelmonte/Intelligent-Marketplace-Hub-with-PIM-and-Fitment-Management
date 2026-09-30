@@ -64,40 +64,47 @@ export default async function PaginaDeConsignacao({
         <h1 className={estilo.titulo}>Consignação</h1>
         <p className={estilo.subtitulo}>
           Peça de parceiro que você anuncia como sua. O risco é a loja vender no balcão o que está
-          anunciado aqui — daí a conferência, e daí ela ser por unidade exposta e não por data.
+          anunciado aqui: daí a conferência, e daí ela ser por unidade exposta e não por data.
         </p>
-        <p className={estilo.resumo}>{resumoDoQuadro(quadro)}</p>
       </header>
 
       {aviso !== null && <AvisoDaAcao aviso={aviso} />}
 
       <Painel quadro={quadro} />
 
-      <section aria-labelledby="quadro-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="quadro-titulo">
-          Conferir
-        </h2>
-        <Quadro quadro={quadro} />
-      </section>
+      <div className={estilo.grade}>
+        <div className={estilo.coluna}>
+          <section aria-labelledby="quadro-titulo" className={estilo.bloco}>
+            <h2 className={estilo.blocoTitulo} id="quadro-titulo">
+              Conferir
+            </h2>
+            <p className={estilo.blocoTexto}>{resumoDoQuadro(quadro)}</p>
+            <Quadro quadro={quadro} />
+          </section>
 
-      <section aria-labelledby="fechamento-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="fechamento-titulo">
-          Fechamento do mês
-        </h2>
-        <FechamentoDoMes fechamento={fechamento} />
-        <p className={estilo.dica}>
-          O repasse por unidade sai do acordo atual de cada linha. Não há histórico de preço
-          acordado ainda, então mudar o acordo hoje muda este número — por isso a conta aparece
-          aberta, parceiro por parceiro, em vez de só o total.
-        </p>
-      </section>
+          <section aria-labelledby="fechamento-titulo" className={estilo.bloco}>
+            <h2 className={estilo.blocoTitulo} id="fechamento-titulo">
+              Fechamento do mês
+            </h2>
+            <FechamentoDoMes fechamento={fechamento} />
+            <p className={estilo.dica}>
+              O repasse por unidade sai do acordo atual de cada linha. Não há histórico de preço
+              acordado ainda, então mudar o acordo hoje muda este número: por isso a conta aparece
+              aberta, parceiro por parceiro, em vez de só o total.
+            </p>
+          </section>
+        </div>
 
-      <section aria-labelledby="cadastro-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="cadastro-titulo">
-          Cadastrar item em consignação
-        </h2>
-        <Cadastro skus={skus.map((s) => ({ id: s.id, titulo: s.tituloInterno }))} />
-      </section>
+        <section aria-labelledby="cadastro-titulo" className={estilo.bloco}>
+          <h2 className={estilo.blocoTitulo} id="cadastro-titulo">
+            Cadastrar item em consignação
+          </h2>
+          <p className={estilo.blocoTexto}>
+            O produto vem do catálogo: é ele que casa a venda com a peça do parceiro.
+          </p>
+          <Cadastro skus={skus.map((s) => ({ id: s.id, titulo: s.tituloInterno }))} />
+        </section>
+      </div>
     </main>
   );
 }

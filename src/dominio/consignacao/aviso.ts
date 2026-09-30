@@ -78,7 +78,7 @@ export function avisoDeVenda(params: ParametrosDoAvisoDeVenda): string {
 
   const prazo =
     params.prazoPostagemAte === null
-      ? 'Preciso postar assim que possível — a plataforma não informou o prazo, e sem prazo eu trabalho com o mais curto.'
+      ? 'Preciso postar assim que possível: a plataforma não informou o prazo, e sem prazo eu trabalho com o mais curto.'
       : `Preciso postar até ${dataEHoraNoFuso(params.prazoPostagemAte, params.fuso ?? FUSO_PADRAO)}.`;
 
   return [
@@ -88,7 +88,7 @@ export function avisoDeVenda(params: ParametrosDoAvisoDeVenda): string {
     '',
     `Pode separar para eu retirar? ${prazo}`,
     '',
-    'Me confirma que separou, por favor — assim eu sei que posso contar com a peça.',
+    'Me confirma que separou, por favor? Assim eu sei que posso contar com a peça.',
     '',
     params.vendedor,
   ].join('\n');
@@ -137,7 +137,7 @@ export function pedidoDeConferencia(params: ParametrosDoPedidoDeConferencia): st
   return [
     saudacao,
     '',
-    `${desdeQuando} Como eu mantenho esses itens anunciados, preciso confirmar o que ainda está com você — se vender aqui o que já saiu no balcão, eu tenho de cancelar, e cancelamento pesa na minha conta.`,
+    `${desdeQuando} Como eu mantenho esses itens anunciados, preciso confirmar o que ainda está com você. Se vender aqui o que já saiu no balcão, eu tenho de cancelar, e cancelamento pesa na minha conta.`,
     '',
     ...lista,
     '',

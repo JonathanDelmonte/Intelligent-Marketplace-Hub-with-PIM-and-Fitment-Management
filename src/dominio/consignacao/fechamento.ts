@@ -109,7 +109,7 @@ export function fecharPeriodo(
         tituloDoProduto: v.tituloDoProduto,
         qtd: v.qtd,
         motivo:
-          'Sem preço de repasse combinado para este item. Combine o valor e lance à mão — somar zero faria você dever dinheiro que o fechamento diz que não deve.',
+          'Sem preço de repasse combinado para este item. Combine o valor e lance à mão: somar zero faria você dever dinheiro que o fechamento diz que não deve.',
       }));
 
     return {

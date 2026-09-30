@@ -51,7 +51,7 @@ export function desdeAUltimaEmTexto(dias: number | null): string {
  */
 export function resumoDoQuadro(quadro: QuadroDeConferencia): string {
   if (quadro.itens.length === 0) {
-    return 'Nenhum item em consignação. Quando um parceiro deixar peça com você, cadastre aqui para não vender o que já saiu no balcão dele.';
+    return 'Nenhum item em consignação. Quando um parceiro deixar peça com você, cadastre ao lado para não vender o que já saiu no balcão dele.';
   }
 
   if (quadro.unidadesEmRisco === 0) {
@@ -65,7 +65,7 @@ export function resumoDoQuadro(quadro: QuadroDeConferencia): string {
       : `em ${String(parceiros.length)} parceiros`;
 
   const unidades = contagem(quadro.unidadesEmRisco, 'unidade anunciada', 'unidades anunciadas');
-  return `${unidades} sem conferência ${onde}. Se vender o que já saiu no balcão, é cancelamento — e cancelamento pesa na conta.`;
+  return `${unidades} sem conferência ${onde}. Se vender o que já saiu no balcão, é cancelamento, e cancelamento pesa na conta.`;
 }
 
 /** O fechamento em uma linha, dizendo se dá para pagar sem conversa. */
@@ -79,7 +79,7 @@ export function resumoDoFechamento(fechamento: Fechamento): string {
   if (fechamento.completo) return `${base} Sem pendência: dá para pagar.`;
 
   const pendentes = fechamento.porParceiro.filter((p) => !p.completo).length;
-  return `${base} ${contagem(pendentes, 'parceiro', 'parceiros')} com item sem preço de repasse combinado — o total ainda vai subir.`;
+  return `${base} ${contagem(pendentes, 'parceiro', 'parceiros')} com item sem preço de repasse combinado: o total ainda vai subir.`;
 }
 
 /** O mês do fechamento como as pessoas o escrevem: `setembro de 2026`. */
@@ -123,7 +123,7 @@ export function descreverAviso(codigo: string | undefined): Aviso | null {
       return {
         tom: 'ok',
         titulo: 'Item em consignação cadastrado',
-        corpo: 'Entra como nunca conferido, no topo do quadro — é o estado honesto.',
+        corpo: 'Entra como nunca conferido, no topo do quadro: é o estado honesto.',
       };
     case 'nao_encontrado':
       return {

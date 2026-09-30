@@ -5,10 +5,13 @@
  * servidor. A conferência de verdade acontece no balcão da loja, com o celular na
  * mão, então a tela precisa funcionar em rede ruim e com a aba recarregada.
  */
+import type { ReactNode } from 'react';
 import type { ItemDaConferencia, QuadroDeConferencia } from '@/dominio/consignacao/conferencia';
 import type { Fechamento } from '@/dominio/consignacao/fechamento';
 import { formatarBRL } from '@/lib/dinheiro';
 import { contagem } from '@/lib/texto';
+import { FaixaDeNumeros, type TomDoNumero } from '../ui/numeros';
+import { SinalAlerta, SinalCaixa, SinalCerto, SinalRelogio } from '../ui/sinais';
 import { cadastrarConsignacao, registrarConferencia } from './acoes';
 import {
   desdeAUltimaEmTexto,
@@ -35,27 +38,59 @@ export function AvisoDaAcao({ aviso }: { readonly aviso: Aviso }) {
   );
 }
 
+/** Os quatro números do alto. O escuro é o das unidades em risco, que é o que custa. */
 export function Painel({ quadro }: { readonly quadro: QuadroDeConferencia }) {
-  const cartoes = [
+  const cartoes: readonly {
+    readonly rotulo: string;
+    readonly valor: number;
+    readonly nota: string;
+    readonly tom: TomDoNumero;
+    readonly icone: ReactNode;
+  }[] = [
     {
       rotulo: 'Unidades em risco',
       valor: quadro.unidadesEmRisco,
-      nota: 'anunciadas e não conferidas',
+      nota:
+        quadro.unidadesEmRisco === 0
+          ? 'nada anunciado sem conferir'
+          : 'anunciadas e não conferidas',
+      tom: quadro.unidadesEmRisco === 0 ? 'alta' : 'baixa',
+      icone: <SinalAlerta />,
     },
-    { rotulo: 'Nunca conferidos', valor: quadro.porEstado.nunca, nota: 'ninguém olhou ainda' },
-    { rotulo: 'Atrasados', valor: quadro.porEstado.vencida, nota: 'passou do prazo' },
-    { rotulo: 'Em dia', valor: quadro.porEstado.em_dia, nota: 'nada a fazer' },
+    {
+      rotulo: 'Nunca conferidos',
+      valor: quadro.porEstado.nunca,
+      nota: 'ninguém olhou ainda',
+      tom: quadro.porEstado.nunca === 0 ? 'neutro' : 'atencao',
+      icone: <SinalCaixa />,
+    },
+    {
+      rotulo: 'Atrasados',
+      valor: quadro.porEstado.vencida,
+      nota: 'passou do prazo',
+      tom: quadro.porEstado.vencida === 0 ? 'neutro' : 'baixa',
+      icone: <SinalRelogio />,
+    },
+    {
+      rotulo: 'Em dia',
+      valor: quadro.porEstado.em_dia,
+      nota: 'nada a fazer',
+      tom: quadro.porEstado.em_dia === 0 ? 'neutro' : 'alta',
+      icone: <SinalCerto />,
+    },
   ];
   return (
-    <div className={estilo.painel}>
-      {cartoes.map((c) => (
-        <div className={estilo.cartao} key={c.rotulo}>
-          <span className={estilo.cartaoNumero}>{c.valor}</span>
-          <span className={estilo.cartaoRotulo}>{c.rotulo}</span>
-          <span className={estilo.cartaoNota}>{c.nota}</span>
-        </div>
-      ))}
-    </div>
+    <FaixaDeNumeros
+      itens={cartoes.map((c, indice) => ({
+        rotulo: c.rotulo,
+        valor: c.valor.toLocaleString('pt-BR'),
+        nota: c.nota,
+        tom: c.tom,
+        icone: c.icone,
+        escuro: indice === 0,
+      }))}
+      rotulo="A consignação em números"
+    />
   );
 }
 
@@ -91,7 +126,7 @@ function CartaoDoItem({ item }: { readonly item: ItemDaConferencia }) {
       <form action={registrarConferencia} className={estilo.formulario}>
         <input name="consignacaoId" type="hidden" value={item.id} />
         <label className={estilo.campo}>
-          Quantas o parceiro tem agora
+          <span className={estilo.rotulo}>Quantas o parceiro tem agora</span>
           <input
             className={estilo.entrada}
             defaultValue={item.qtdDisponivel}
@@ -102,7 +137,7 @@ function CartaoDoItem({ item }: { readonly item: ItemDaConferencia }) {
             type="number"
           />
         </label>
-        <button className={estilo.botaoSim} type="submit">
+        <button className={estilo.botao} type="submit">
           Registrar conferência
         </button>
       </form>
@@ -111,9 +146,8 @@ function CartaoDoItem({ item }: { readonly item: ItemDaConferencia }) {
 }
 
 export function Quadro({ quadro }: { readonly quadro: QuadroDeConferencia }) {
-  if (quadro.itens.length === 0) {
-    return <p className={estilo.vazio}>Nada em consignação ainda.</p>;
-  }
+  // Vazio, o resumo logo acima já diz que não há nada e onde cadastrar.
+  if (quadro.itens.length === 0) return null;
   return (
     <ul className={estilo.fila}>
       {quadro.itens.map((i) => (
@@ -126,21 +160,25 @@ export function Quadro({ quadro }: { readonly quadro: QuadroDeConferencia }) {
 export function FechamentoDoMes({ fechamento }: { readonly fechamento: Fechamento }) {
   return (
     <>
-      <p className={estilo.resumo}>
-        {mesEmTexto(fechamento.de)}: {resumoDoFechamento(fechamento)}
+      <p className={estilo.blocoTexto}>
+        {mesEmTexto(fechamento.de).charAt(0).toUpperCase() + mesEmTexto(fechamento.de).slice(1)}:{' '}
+        {resumoDoFechamento(fechamento)}
       </p>
 
       {fechamento.porParceiro.length > 0 && (
         <ul className={estilo.lista}>
           {fechamento.porParceiro.map((p) => (
-            <li key={p.parceiroNome}>
-              <strong>{p.parceiroNome}</strong>: {formatarBRL(p.aRepassar)} ·{' '}
-              {contagem(p.unidades, 'unidade', 'unidades')}
+            <li className={estilo.parceiro} key={p.parceiroNome}>
+              <span className={estilo.parceiroNome}>{p.parceiroNome}</span>
+              <span className={estilo.parceiroValor}>{formatarBRL(p.aRepassar)}</span>
+              <span className={estilo.parceiroUnidades}>
+                {contagem(p.unidades, 'unidade', 'unidades')}
+              </span>
               {p.pendencias.length > 0 && (
                 <ul className={estilo.pendencias}>
                   {p.pendencias.map((pend) => (
                     <li key={pend.pedidoId}>
-                      {pend.tituloDoProduto ?? 'produto sem título'} ({pend.qtd} un.) — sem preço de
+                      {pend.tituloDoProduto ?? 'produto sem título'} ({pend.qtd} un.): sem preço de
                       repasse combinado, então está fora do total.
                     </li>
                   ))}
@@ -170,8 +208,8 @@ export function Cadastro({ skus }: { readonly skus: readonly OpcaoDeSku[] }) {
   if (skus.length === 0) {
     return (
       <p className={estilo.vazio}>
-        Nenhum produto no catálogo ainda. Consignação precisa de um SKU para poder casar a venda com
-        a peça do parceiro — cadastre o produto primeiro.
+        Nenhum produto no catálogo ainda. Consignação precisa de um produto para poder casar a venda
+        com a peça do parceiro: cadastre o produto primeiro.
       </p>
     );
   }
@@ -179,15 +217,15 @@ export function Cadastro({ skus }: { readonly skus: readonly OpcaoDeSku[] }) {
   return (
     <form action={cadastrarConsignacao} className={estilo.cadastro}>
       <label className={estilo.campo}>
-        Parceiro
+        <span className={estilo.rotulo}>Parceiro</span>
         <input className={estilo.entrada} name="parceiroNome" required type="text" />
       </label>
       <label className={estilo.campo}>
-        Contato do parceiro (opcional)
+        <span className={estilo.rotulo}>Contato (opcional)</span>
         <input className={estilo.entrada} name="parceiroContato" type="text" />
       </label>
-      <label className={estilo.campo}>
-        Produto
+      <label className={estilo.campoLargo}>
+        <span className={estilo.rotulo}>Produto</span>
         <select className={estilo.entrada} name="skuId" required>
           {skus.map((s) => (
             <option key={s.id} value={s.id}>
@@ -197,7 +235,7 @@ export function Cadastro({ skus }: { readonly skus: readonly OpcaoDeSku[] }) {
         </select>
       </label>
       <label className={estilo.campo}>
-        Quantidade que está lá
+        <span className={estilo.rotulo}>Quantidade que está lá</span>
         <input
           className={estilo.entrada}
           defaultValue={1}
@@ -209,11 +247,12 @@ export function Cadastro({ skus }: { readonly skus: readonly OpcaoDeSku[] }) {
         />
       </label>
       <label className={estilo.campo}>
-        Repasse por unidade, em reais (opcional)
+        <span className={estilo.rotulo}>Repasse por peça (opcional)</span>
         <input
           className={estilo.entrada}
           inputMode="decimal"
           name="precoAcordadoRepasse"
+          placeholder="25,00"
           type="text"
         />
       </label>
