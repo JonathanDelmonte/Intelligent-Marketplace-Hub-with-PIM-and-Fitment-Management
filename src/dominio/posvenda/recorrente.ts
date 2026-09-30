@@ -197,19 +197,19 @@ export function duvidasRecorrentes(
 export function oQueAcrescentar(assunto: AssuntoDaPergunta): string {
   switch (assunto.tema) {
     case 'compatibilidade':
-      return `Cinco pessoas ou mais perguntaram por ${assunto.codigo ?? 'um modelo'}. Se ele serve, ponha o código no título e na tabela de compatibilidade da descrição; se não serve, diga isso na descrição — "não serve em X" evita devolução e evita a pergunta.`;
+      return `Cinco pessoas ou mais perguntaram por ${assunto.codigo ?? 'um modelo'}. Se ele serve, ponha o código no título e na tabela de compatibilidade da descrição; se não serve, diga isso na descrição. "Não serve em X" evita devolução e evita a pergunta.`;
     case 'medida':
       return 'A medida não está na descrição, e é o que decide se a peça encaixa. Acrescente as medidas em milímetros, com o que cada uma significa.';
     case 'voltagem':
-      return 'A voltagem não está clara. Diga na descrição se é 110 V, 220 V ou bivolt — e se for um só, diga no título também: voltagem errada é devolução.';
+      return 'A voltagem não está clara. Diga na descrição se é 110 V, 220 V ou bivolt. Se for um só, diga no título também: voltagem errada é devolução.';
     case 'quantidade':
       return 'Quantas peças vêm na embalagem não está explícito. Ponha no título ("kit com 2") e na descrição.';
     case 'prazo':
-      return 'O prazo de entrega está sendo perguntado, e isso costuma ser prazo de manuseio alto ou frete não configurado — confira a configuração antes de mexer na descrição.';
+      return 'O prazo de entrega está sendo perguntado, e isso costuma ser prazo de manuseio alto ou frete não configurado. Confira a configuração antes de mexer na descrição.';
     case 'garantia':
       return 'A garantia e a política de troca não estão na descrição. Escreva o prazo e o que cobre, em uma linha.';
     case 'originalidade':
-      return 'As pessoas querem saber se é original ou paralelo. Diga na descrição qual é, com a marca e o código do fabricante — omitir isso gera devolução por expectativa errada.';
+      return 'As pessoas querem saber se é original ou paralelo. Diga na descrição qual é, com a marca e o código do fabricante: omitir isso gera devolução por expectativa errada.';
     case 'outro':
       return 'A mesma dúvida se repetiu e não caiu em nenhum tema conhecido. Vale ler os exemplos e acrescentar a resposta à descrição.';
   }

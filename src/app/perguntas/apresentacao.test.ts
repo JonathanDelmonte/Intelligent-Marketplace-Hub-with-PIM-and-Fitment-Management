@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { duvidasRecorrentes, type PerguntaRecebida } from '@/dominio/posvenda/recorrente';
+import {
+  duvidasRecorrentes,
+  type DuvidaRecorrente,
+  type PerguntaRecebida,
+} from '@/dominio/posvenda/recorrente';
 import {
   MAXIMO_POR_LOTE,
   MINIMO_DE_CARACTERES,
@@ -7,6 +11,8 @@ import {
   inteiroDaUrl,
   lerPerguntas,
   resumoDasDuvidas,
+  numerosDasPerguntas,
+  ROTULO_DO_TEMA,
 } from './apresentacao';
 
 describe('lerPerguntas', () => {
@@ -100,5 +106,39 @@ describe('descreverAviso', () => {
     expect(descreverAviso('gravado', -1)?.titulo).toBe('0 perguntas guardadas');
     expect(inteiroDaUrl('x')).toBeNull();
     expect(inteiroDaUrl('7')).toBe(7);
+  });
+});
+
+describe('numerosDasPerguntas', () => {
+  const duvida = (vezes: number, anuncios: readonly string[]): DuvidaRecorrente => ({
+    chave: `voltagem-${String(vezes)}`,
+    tema: 'voltagem',
+    codigo: null,
+    vezes,
+    anuncios,
+    exemplos: [],
+    oQueAcrescentar: 'Diga a voltagem.',
+  });
+
+  it('conta os anúncios acusados sem repetir o mesmo anúncio', () => {
+    const numeros = numerosDasPerguntas({
+      duvidas: [duvida(5, ['MLB-1', 'MLB-2']), duvida(7, ['MLB-2'])],
+      perguntasNaJanela: 30,
+      dias: 90,
+    });
+    expect(numeros.map((n) => [n.chave, n.valor])).toEqual([
+      ['guardadas', '30'],
+      ['duvidas', '2'],
+      ['anuncios', '2'],
+      ['maior', '7'],
+    ]);
+    expect(numeros[0]?.nota).toBe('nos últimos 90 dias');
+    expect(numeros[3]).toMatchObject({ resto: 'vezes', nota: ROTULO_DO_TEMA.voltagem });
+  });
+
+  it('sem dúvida repetida, nenhum anúncio acusado é dito em verde', () => {
+    const numeros = numerosDasPerguntas({ duvidas: [], perguntasNaJanela: 4, dias: 90 });
+    expect(numeros[2]).toMatchObject({ valor: '0', tom: 'alta', nota: 'nenhum por enquanto' });
+    expect(numeros[3]).toMatchObject({ valor: '0', resto: null, nota: 'nenhuma dúvida repetida' });
   });
 });

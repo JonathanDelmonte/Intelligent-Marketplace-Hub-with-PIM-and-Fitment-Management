@@ -94,7 +94,7 @@ export function resumoDasDuvidas(params: {
   readonly perguntasNaJanela: number;
 }): string {
   if (params.perguntasNaJanela === 0) {
-    return 'Nenhuma pergunta guardada ainda. Cole as perguntas de um anúncio abaixo — a conta de repetição precisa de histórico, e é por isso que elas ficam guardadas.';
+    return 'Nenhuma pergunta guardada ainda. Cole as perguntas de um anúncio ao lado: a conta de repetição precisa de histórico, e é por isso que elas ficam guardadas.';
   }
 
   if (params.duvidas.length === 0) {
@@ -103,6 +103,68 @@ export function resumoDasDuvidas(params: {
 
   const anuncios = new Set(params.duvidas.flatMap((d) => d.anuncios)).size;
   return `${String(params.duvidas.length)} ${params.duvidas.length === 1 ? 'dúvida está acusando' : 'dúvidas estão acusando'} ${String(anuncios)} ${anuncios === 1 ? 'anúncio' : 'anúncios'}.`;
+}
+
+export interface NumeroDasPerguntas {
+  readonly chave: 'guardadas' | 'duvidas' | 'anuncios' | 'maior';
+  readonly rotulo: string;
+  readonly valor: string;
+  /** Texto menor logo depois do número: "vezes". */
+  readonly resto: string | null;
+  readonly nota: string;
+  readonly tom: 'neutro' | 'alta' | 'baixa' | 'atencao';
+}
+
+/**
+ * Os quatro números do alto: quanto está guardado, quantas dúvidas se repetem, quantos
+ * anúncios elas acusam, e a que mais se repetiu. O escuro é o dos anúncios, que é onde o
+ * conserto acontece.
+ */
+export function numerosDasPerguntas(params: {
+  readonly duvidas: readonly DuvidaRecorrente[];
+  readonly perguntasNaJanela: number;
+  readonly dias: number;
+}): readonly NumeroDasPerguntas[] {
+  const { duvidas, perguntasNaJanela, dias } = params;
+  const anuncios = new Set(duvidas.flatMap((d) => d.anuncios)).size;
+  const maior = duvidas.reduce<DuvidaRecorrente | null>(
+    (atual, d) => (atual === null || d.vezes > atual.vezes ? d : atual),
+    null,
+  );
+  return [
+    {
+      chave: 'guardadas',
+      rotulo: 'Perguntas guardadas',
+      valor: perguntasNaJanela.toLocaleString('pt-BR'),
+      resto: null,
+      nota: `nos últimos ${String(dias)} dias`,
+      tom: 'neutro',
+    },
+    {
+      chave: 'duvidas',
+      rotulo: 'Dúvidas que se repetem',
+      valor: duvidas.length.toLocaleString('pt-BR'),
+      resto: null,
+      nota: `${String(REPETICOES_QUE_ACUSAM)} vezes ou mais`,
+      tom: duvidas.length === 0 ? 'neutro' : 'atencao',
+    },
+    {
+      chave: 'anuncios',
+      rotulo: 'Anúncios pedindo conserto',
+      valor: anuncios.toLocaleString('pt-BR'),
+      resto: null,
+      nota: anuncios === 0 ? 'nenhum por enquanto' : 'acrescente o que falta neles',
+      tom: anuncios === 0 ? 'alta' : 'atencao',
+    },
+    {
+      chave: 'maior',
+      rotulo: 'A que mais se repetiu',
+      valor: maior === null ? '0' : maior.vezes.toLocaleString('pt-BR'),
+      resto: maior === null ? null : 'vezes',
+      nota: maior === null ? 'nenhuma dúvida repetida' : ROTULO_DO_TEMA[maior.tema],
+      tom: 'neutro',
+    },
+  ];
 }
 
 export const CODIGOS_DE_AVISO = ['gravado', 'nada', 'so_repetidas', 'falha'] as const;
@@ -143,7 +205,7 @@ export function descreverAviso(
         tom: 'atencao',
         titulo: 'Todas já estavam guardadas.',
         corpo:
-          'Nada foi duplicado. Colar a lista do painel de novo é o uso normal — o que já existia fica como está.',
+          'Nada foi duplicado. Colar a lista do painel de novo é o uso normal, e o que já existia fica como está.',
       };
     case 'falha':
       return {

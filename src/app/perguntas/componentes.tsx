@@ -2,17 +2,25 @@
  * Componentes da tela de perguntas. Servidor, sem estado, sem JavaScript no cliente.
  *
  * A ordem do cartão de dúvida é a entrega: **o que acrescentar ao anúncio** vem antes
- * dos exemplos. A contagem é o gatilho, não a informação — saber que doze pessoas
+ * dos exemplos. A contagem é o gatilho, não a informação: saber que doze pessoas
  * perguntaram a voltagem não conserta nada; saber que a voltagem tem de estar no
  * título conserta.
  */
+import type { ReactNode } from 'react';
 import { REPETICOES_QUE_ACUSAM, type DuvidaRecorrente } from '@/dominio/posvenda/recorrente';
 import type { PerguntaRecebida } from '@/dominio/posvenda/recorrente';
 import { PLATAFORMAS, type Plataforma } from '@/dominio/precificacao/tipos';
+import { FaixaDeNumeros } from '../ui/numeros';
 import { ROTULO_DA_PLATAFORMA } from '../ui/rotulos';
+import { SinalAlerta, SinalEtiqueta, SinalGrafico, SinalLapis, SinalSino } from '../ui/sinais';
 import { formatarRelativo } from '../ui/tempo';
 import { guardarPerguntas } from './acoes';
-import { ROTULO_DO_TEMA, type Aviso } from './apresentacao';
+import {
+  ROTULO_DO_TEMA,
+  numerosDasPerguntas,
+  type Aviso,
+  type NumeroDasPerguntas,
+} from './apresentacao';
 import { EXEMPLOS_NA_TELA } from './constantes';
 import estilo from './perguntas.module.css';
 
@@ -28,6 +36,35 @@ export function AvisoDaAcao({ aviso }: { readonly aviso: Aviso }) {
       <strong className={estilo.avisoTitulo}>{aviso.titulo}</strong>
       <span className={estilo.avisoCorpo}>{aviso.corpo}</span>
     </div>
+  );
+}
+
+const ICONE_DO_NUMERO: Readonly<Record<NumeroDasPerguntas['chave'], ReactNode>> = {
+  guardadas: <SinalSino />,
+  duvidas: <SinalAlerta />,
+  anuncios: <SinalEtiqueta />,
+  maior: <SinalGrafico />,
+};
+
+/** Os quatro números do alto. O escuro é o dos anúncios, onde o conserto acontece. */
+export function Numeros(props: {
+  readonly duvidas: readonly DuvidaRecorrente[];
+  readonly perguntasNaJanela: number;
+  readonly dias: number;
+}) {
+  return (
+    <FaixaDeNumeros
+      itens={numerosDasPerguntas(props).map((numero) => ({
+        rotulo: numero.rotulo,
+        valor: numero.valor,
+        ...(numero.resto === null ? {} : { resto: numero.resto }),
+        nota: numero.nota,
+        tom: numero.tom,
+        icone: ICONE_DO_NUMERO[numero.chave],
+        escuro: numero.chave === 'anuncios',
+      }))}
+      rotulo="As perguntas em números"
+    />
   );
 }
 
@@ -54,7 +91,7 @@ export function FormularioDeColar({
       {voltar !== undefined && <input name="voltar" type="hidden" value={voltar} />}
       {loja === undefined ? (
         <label className={estilo.campo}>
-          De qual loja
+          <span className={estilo.rotulo}>De qual loja</span>
           <select className={estilo.entrada} defaultValue="" name="plataforma">
             <option value="">Não sei dizer</option>
             {PLATAFORMAS.map((p) => (
@@ -68,7 +105,7 @@ export function FormularioDeColar({
         <input name="plataforma" type="hidden" value={loja} />
       )}
       <label className={estilo.campo}>
-        De qual anúncio
+        <span className={estilo.rotulo}>De qual anúncio</span>
         <input
           className={estilo.entrada}
           name="anuncio"
@@ -81,8 +118,8 @@ export function FormularioDeColar({
         </span>
       </label>
 
-      <label className={estilo.campoLargo}>
-        As perguntas, uma por linha
+      <label className={estilo.campo}>
+        <span className={estilo.rotulo}>As perguntas, uma por linha</span>
         <textarea
           className={estilo.entrada}
           name="texto"
@@ -99,35 +136,50 @@ export function FormularioDeColar({
   );
 }
 
+/**
+ * Uma dúvida que se repete: quantas vezes, o assunto, onde, e o que acrescentar.
+ *
+ * A contagem fica num quadrado à esquerda, grande, porque é o que decide a ordem da
+ * lista; a frase do que acrescentar vem antes dos exemplos, porque é a entrega.
+ */
 function Duvida({ duvida }: { readonly duvida: DuvidaRecorrente }) {
   return (
-    <li className={estilo.item}>
-      <div className={estilo.itemCabecalho}>
-        <div>
-          <h3 className={estilo.itemTitulo}>
-            {ROTULO_DO_TEMA[duvida.tema]}
-            {duvida.codigo === null ? '' : ` · ${duvida.codigo}`}
-          </h3>
-          <p className={estilo.itemSub}>
-            {duvida.anuncios.length === 1
-              ? `no anúncio ${duvida.anuncios[0] ?? ''}`
-              : `em ${String(duvida.anuncios.length)} anúncios`}
+    <li className={estilo.duvida}>
+      <span className={estilo.vezes}>
+        <span className={estilo.vezesNumero}>{duvida.vezes}</span>
+        <span className={estilo.vezesRotulo}>vezes</span>
+      </span>
+      <div className={estilo.duvidaCorpo}>
+        <h3 className={estilo.duvidaTitulo}>
+          {ROTULO_DO_TEMA[duvida.tema]}
+          {duvida.codigo === null ? '' : ` · ${duvida.codigo}`}
+        </h3>
+        <p className={estilo.duvidaOnde}>
+          {duvida.anuncios.length === 1
+            ? `No anúncio ${duvida.anuncios[0] ?? ''}`
+            : `Em ${String(duvida.anuncios.length)} anúncios`}
+        </p>
+
+        {/* A entrega, antes dos exemplos. */}
+        <div className={estilo.acrescentar}>
+          <span aria-hidden="true" className={estilo.acrescentarSinal}>
+            <SinalLapis />
+          </span>
+          <p className={estilo.acrescentarTexto}>
+            <span className={estilo.acrescentarRotulo}>O que acrescentar: </span>
+            {duvida.oQueAcrescentar}
           </p>
         </div>
-        <span className={`${estilo.etiqueta} ${estilo.etiquetaAtencao}`}>{duvida.vezes} vezes</span>
+
+        <details className={estilo.exemplos}>
+          <summary className={estilo.exemplosResumo}>Ver como as pessoas perguntaram</summary>
+          <ul className={estilo.listaDeExemplos}>
+            {duvida.exemplos.slice(0, EXEMPLOS_NA_TELA).map((exemplo) => (
+              <li key={exemplo}>{exemplo}</li>
+            ))}
+          </ul>
+        </details>
       </div>
-
-      {/* A entrega, antes dos exemplos. */}
-      <p className={estilo.acrescentar}>{duvida.oQueAcrescentar}</p>
-
-      <details className={estilo.exemplos}>
-        <summary className={estilo.exemplosResumo}>ver como as pessoas perguntaram</summary>
-        <ul className={estilo.listaDeExemplos}>
-          {duvida.exemplos.slice(0, EXEMPLOS_NA_TELA).map((exemplo) => (
-            <li key={exemplo}>{exemplo}</li>
-          ))}
-        </ul>
-      </details>
     </li>
   );
 }
@@ -144,7 +196,7 @@ export function Duvidas({ duvidas }: { readonly duvidas: readonly DuvidaRecorren
   }
 
   return (
-    <ul className={estilo.lista}>
+    <ul className={estilo.duvidas}>
       {duvidas.map((duvida) => (
         <Duvida duvida={duvida} key={duvida.chave} />
       ))}
@@ -171,13 +223,13 @@ export function PerguntasCruas({
   return (
     <details className={estilo.cruas}>
       <summary className={estilo.exemplosResumo}>
-        ver as {perguntas.length} perguntas guardadas
+        Ver as {perguntas.length} perguntas guardadas
       </summary>
       <ul className={estilo.listaDeCruas}>
         {perguntas.map((pergunta) => (
           <li className={estilo.crua} key={pergunta.id}>
             <span>{pergunta.texto}</span>
-            <span className={estilo.itemSub}>
+            <span className={estilo.cruaOnde}>
               {pergunta.anuncioId} · {formatarRelativo(pergunta.em, agora)}
             </span>
           </li>

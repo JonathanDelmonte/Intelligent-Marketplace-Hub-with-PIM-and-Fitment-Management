@@ -16,11 +16,11 @@
 import type { Metadata } from 'next';
 import { lerAmbiente } from '@/config/ambiente';
 import { carregarPerfil } from '@/dominio/perfil';
-import { duvidasRecorrentes } from '@/dominio/posvenda/recorrente';
+import { REPETICOES_QUE_ACUSAM, duvidasRecorrentes } from '@/dominio/posvenda/recorrente';
 import { RepositorioDePerguntas } from '@/dominio/posvenda/repositorio';
 import { banco } from '@/infra/banco/cliente';
 import { descreverAviso, inteiroDaUrl, resumoDasDuvidas } from './apresentacao';
-import { AvisoDaAcao, Duvidas, FormularioDeColar, PerguntasCruas } from './componentes';
+import { AvisoDaAcao, Duvidas, FormularioDeColar, Numeros, PerguntasCruas } from './componentes';
 import { JANELA_DIAS, LIMITE_DE_PERGUNTAS } from './constantes';
 import estilo from './perguntas.module.css';
 
@@ -56,30 +56,42 @@ export default async function PaginaDePerguntas({
         <h1 className={estilo.titulo}>Perguntas de comprador</h1>
         <p className={estilo.subtitulo}>
           A mesma dúvida repetida não é falta de atenção de quem pergunta: é o anúncio dizendo o que
-          falta nele. Aqui as perguntas ficam guardadas, e a que repetir cinco vezes nos últimos{' '}
-          {JANELA_DIAS} dias vira uma linha para acrescentar na descrição.
-        </p>
-        <p className={estilo.resumo}>
-          {resumoDasDuvidas({ duvidas, perguntasNaJanela: perguntas.length })}
+          falta nele. Aqui as perguntas ficam guardadas, e a que repetir {REPETICOES_QUE_ACUSAM}{' '}
+          vezes nos últimos {JANELA_DIAS} dias vira uma linha para acrescentar na descrição.
         </p>
       </header>
 
       {aviso !== null && <AvisoDaAcao aviso={aviso} />}
 
-      <section aria-labelledby="duvidas-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="duvidas-titulo">
-          O que acrescentar ao anúncio
-        </h2>
-        <Duvidas duvidas={duvidas} />
-      </section>
+      <Numeros dias={JANELA_DIAS} duvidas={duvidas} perguntasNaJanela={perguntas.length} />
 
-      <section aria-labelledby="colar-titulo" className={estilo.secao}>
-        <h2 className={estilo.secaoTitulo} id="colar-titulo">
-          Colar perguntas
-        </h2>
-        <FormularioDeColar />
-        <PerguntasCruas agora={agora} perguntas={perguntas} />
-      </section>
+      <div className={estilo.grade}>
+        <section aria-labelledby="duvidas-titulo" className={estilo.bloco}>
+          <div className={estilo.blocoTopo}>
+            <div>
+              <h2 className={estilo.blocoTitulo} id="duvidas-titulo">
+                O que acrescentar ao anúncio
+              </h2>
+              <p className={estilo.blocoTexto}>
+                {resumoDasDuvidas({ duvidas, perguntasNaJanela: perguntas.length })}
+              </p>
+            </div>
+          </div>
+          <Duvidas duvidas={duvidas} />
+        </section>
+
+        <section aria-labelledby="colar-titulo" className={estilo.bloco}>
+          <h2 className={estilo.blocoTitulo} id="colar-titulo">
+            Colar perguntas
+          </h2>
+          <p className={estilo.blocoTexto}>
+            Abra as perguntas de um anúncio no painel da loja, copie e cole aqui. Colar a mesma
+            lista de novo não duplica nada.
+          </p>
+          <FormularioDeColar />
+          <PerguntasCruas agora={agora} perguntas={perguntas} />
+        </section>
+      </div>
     </main>
   );
 }
